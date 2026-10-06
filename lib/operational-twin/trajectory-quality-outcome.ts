@@ -158,28 +158,6 @@ function emptyAggregate(): Aggregate {
   };
 }
 
-function addAggregate(target: Aggregate, source: Aggregate): void {
-  target.pairedSamples += source.pairedSamples;
-  target.canonicalAbsoluteErrorFtSum += source.canonicalAbsoluteErrorFtSum;
-  target.qualityAbsoluteErrorFtSum += source.qualityAbsoluteErrorFtSum;
-  target.qualityWins += source.qualityWins;
-  target.canonicalWins += source.canonicalWins;
-  target.ties += source.ties;
-}
-
-function aggregateSample(target: Aggregate, pending: PendingTrajectoryQualitySample, truthAltitudeFt: number): void {
-  const canonicalError = Math.abs(pending.canonicalAltitudeFt - truthAltitudeFt);
-  const qualityError = Math.abs(pending.qualityAltitudeFt - truthAltitudeFt);
-  target.pairedSamples += 1;
-  target.canonicalAbsoluteErrorFtSum += canonicalError;
-  target.qualityAbsoluteErrorFtSum += qualityError;
-
-  const delta = canonicalError - qualityError;
-  if (Math.abs(delta) <= TIE_TOLERANCE_FT) target.ties += 1;
-  else if (delta > 0) target.qualityWins += 1;
-  else target.canonicalWins += 1;
-}
-
 function sliceFromAggregate(value: Aggregate): OperationalTwinTrajectoryQualityOutcomeSlice {
   if (!value.pairedSamples) {
     return {
