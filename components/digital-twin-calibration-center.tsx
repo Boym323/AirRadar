@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import type { AircraftOperationalFocusOutcomeReport } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
 import type {
   OperationalTwinEventOutcomeReport,
   OperationalTwinOutcomeReport,
@@ -35,6 +36,7 @@ type CalibrationCenterReport = {
   generatedAt: string;
   corridor: OperationalTwinOutcomeReport;
   event: OperationalTwinEventOutcomeReport;
+  focus: AircraftOperationalFocusOutcomeReport;
   truthFirst: OperationalTwinTruthFirstReport;
   windTiming: OperationalTwinWindTimingGraduationReport;
   regionalAttention: RegionalAttentionOutcomeReport;
@@ -205,6 +207,26 @@ export function DigitalTwinCalibrationCenter() {
                 <Metric label={t.calibrationCenter.timingMae} value={seconds(report.event.overall.meanAbsoluteTimingErrorSeconds)} />
               </div>
               <small>{t.calibrationCenter.eventFootnote}</small>
+            </section>
+
+            <section className="statistics-card" data-testid="calibration-focus-outcome">
+              <DecisionHeader
+                title={t.calibrationCenter.focusOutcome}
+                decision={report.focus.decision}
+                reasons={report.focus.reasons}
+              />
+              <div className={styles.metrics}>
+                <Metric label={t.calibrationCenter.predictions} value={report.focus.overall.predictions} />
+                <Metric label={t.calibrationCenter.scoreable} value={report.focus.overall.scoreable} />
+                <Metric label={t.calibrationCenter.precision} value={pct(report.focus.overall.precision)} />
+                <Metric label={t.calibrationCenter.timingMae} value={seconds(report.focus.overall.meanAbsoluteTimingErrorSeconds)} />
+                <Metric label={t.calibrationCenter.expiredTruth} value={pct(report.focus.overall.missingTruthRate)} />
+                <Metric
+                  label={t.calibrationCenter.focusUnscored}
+                  value={Object.values(report.focus.byType).reduce((sum, item) => sum + item.unscoredCaptures, 0)}
+                />
+              </div>
+              <small>{t.calibrationCenter.focusFootnote}</small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-truth-first">
