@@ -235,6 +235,20 @@ export function DigitalTwinCalibrationCenter() {
                   );
                 })}
               </div>
+              <div className={styles.horizonGrid}>
+                {Object.entries(report.trajectoryQuality.phases)
+                  .filter(([, slice]) => slice.pairedSamples > 0)
+                  .map(([phase, slice]) => (
+                    <span className={styles.horizon} key={phase}>
+                      <strong>{phase}</strong>
+                      <small>
+                        {slice.pairedSamples} {t.calibrationCenter.pairedSamples.toLowerCase()}
+                        {" · "}{slice.qualityMeanAbsoluteErrorFt ?? t.common.emptyValue} ft
+                        {" · "}{pct(slice.qualityWinRate)}
+                      </small>
+                    </span>
+                  ))}
+              </div>
               <small>{t.calibrationCenter.trajectoryQualityFootnote}</small>
             </section>
 
