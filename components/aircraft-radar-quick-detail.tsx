@@ -14,6 +14,7 @@ import type { WeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intel
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
+import type { OperationalTwinApiResponse } from "@/lib/operational-twin/types";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
@@ -23,6 +24,7 @@ import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";
 import { RadarTrafficHero } from "@/components/radar/radar-traffic-hero";
+import { RadarOperationalFocusSummary } from "@/components/radar/radar-operational-focus-summary";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { AircraftObservedWeather } from "@/components/aircraft-observed-weather";
 import {
@@ -63,6 +65,9 @@ export interface AircraftRadarQuickDetailProps {
   routeCorridor?: RouteCorridorSnapshot | null;
   routeConformance?: TrajectoryConformanceSnapshot | null;
   intelligenceEvents?: FlightIntelligenceEvent[];
+  operationalTwin?: OperationalTwinApiResponse | null;
+  operationalFocusItemId?: string | null;
+  onOperationalFocus?: (itemId: string) => void;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -707,6 +712,9 @@ export function AircraftRadarQuickDetail({
   routeCorridor = null,
   routeConformance = null,
   intelligenceEvents = [],
+  operationalTwin = null,
+  operationalFocusItemId = null,
+  onOperationalFocus,
   watchlisted,
   onBack,
   onClose,
@@ -738,6 +746,10 @@ export function AircraftRadarQuickDetail({
   });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
   const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
+  const operationalFocus = operationalTwin?.status === "available"
+    && operationalTwin.aircraft.icaoHex.toUpperCase() === aircraft.icaoHex.toUpperCase()
+    ? operationalTwin.operationalFocus ?? null
+    : null;
 
   return <div className="aircraft-quick-detail detail-content" data-testid="aircraft-quick-detail">
     <header className="aircraft-quick-header">
@@ -770,6 +782,11 @@ export function AircraftRadarQuickDetail({
       <FlightStateSection aircraft={aircraft} />
     </div>}
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
+      {operationalFocus && onOperationalFocus ? <RadarOperationalFocusSummary
+        focus={operationalFocus}
+        activeItemId={operationalFocusItemId}
+        onFocus={onOperationalFocus}
+      /> : null}
       <SituationSummarySection summary={situation} />
       <NavigationIntegritySection aircraft={aircraft} />
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
