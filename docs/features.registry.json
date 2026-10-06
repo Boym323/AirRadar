@@ -486,7 +486,9 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay.",
-      "pages": [],
+      "pages": [
+        "/navigation-integrity"
+      ],
       "apis": [
         "/api/navigation-integrity/current",
         "/api/navigation-integrity/aircraft/:hex",
@@ -780,8 +782,13 @@
         "/routes/:origin/:destination"
       ],
       "apis": [],
-      "changelogScopes": ["route-network-explorer"],
-      "changelogKeywords": ["route network", "route explorer"]
+      "changelogScopes": [
+        "route-network-explorer"
+      ],
+      "changelogKeywords": [
+        "route network",
+        "route explorer"
+      ]
     },
     {
       "id": "aircraft-discovery",
@@ -790,10 +797,17 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Bounded discovery page for notable aircraft.",
-      "pages": ["/discover"],
+      "pages": [
+        "/discover"
+      ],
       "apis": [],
-      "changelogScopes": ["aircraft-discovery"],
-      "changelogKeywords": ["aircraft discovery", "discover aircraft"]
+      "changelogScopes": [
+        "aircraft-discovery"
+      ],
+      "changelogKeywords": [
+        "aircraft discovery",
+        "discover aircraft"
+      ]
     },
     {
       "id": "explainable-prediction",
