@@ -33,6 +33,21 @@ historicky přiřazený.
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 
+## Receiver Explorer V2
+
+`/receiver/coverage` nyní spojuje existující receiver analytiku do jednoho
+omezeného Explorer pohledu. Historická data za 7/30 dní znovu používají
+`/api/statistics/coverage-intelligence` pro 10° směrový medián, P95 a maximum
+denního dosahu, dosah podle výškových pásem, denní trend, rekordy a existující
+rolling model slabých sektorů. Stránka zároveň zachovává stávající
+network-reference capture polar z `/api/receiver/coverage` jako samostatně
+označenou diagnostiku.
+
+Živý poměr ADS-B/MLAT se odvozuje pouze z existujícího LOCAL SSE snapshotu a je
+výslovně prezentovaný jako aktuální telemetrie, nikoli jako historická
+distribuce zdrojů. Explorer nepřidává nový upstream provider, poller, databázovou
+tabulku, migraci ani write cestu do receiver hot path.
+
 ## Proaktivní monitoring receiveru V1
 
 Odpověď systémového statusu nyní obsahuje omezenou projekci

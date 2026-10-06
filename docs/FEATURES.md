@@ -33,6 +33,21 @@ not yet been historically attributed.
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 
+## Receiver Explorer V2
+
+`/receiver/coverage` now combines the existing receiver analytics into one
+bounded Explorer surface. Historical 7/30-day data reuses
+`/api/statistics/coverage-intelligence` for 10° directional median, P95 and
+maximum daily range, altitude-band reach, daily trends, records and the
+existing rolling weak-sector health model. The page also keeps the existing
+`/api/receiver/coverage` network-reference capture polar as a separately
+labelled diagnostic.
+
+Live ADS-B/MLAT source mix is derived only from the existing LOCAL SSE
+snapshot and is explicitly presented as current telemetry rather than a
+historical source-distribution statistic. The Explorer adds no new upstream
+provider, poller, database table, migration or receiver hot-path write.
+
 ## Proactive Receiver Monitoring V1
 
 The system status response now includes a bounded `receiver.readsb.monitoring`

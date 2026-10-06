@@ -332,6 +332,7 @@ export function aggregateCoverageIntelligence(options: {
       currentDate: options.to,
       statsRows: options.statsRows,
       coverageRows: options.coverageRows,
+      historyDays: periodDays,
     }),
     intelligenceV2: buildReceiverCoverageIntelligenceV2({
       now: new Date(options.generatedAt),
