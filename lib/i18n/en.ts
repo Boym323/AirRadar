@@ -13,6 +13,15 @@ export const en = {
     unlimited: "unlimited",
     more: "More",
   },
+  pwa: {
+    install: "Install AirRadar",
+    enablePush: "Enable push notifications",
+    pushEnabled: "Push notifications are enabled",
+    offline: "Offline mode: last state is available",
+    favorites: "Favorite airport",
+    favoriteAdd: "Add to favorite airports",
+    favoriteRemove: "Remove from favorite airports",
+  },
   calibrationCenter: {
     title: "Digital Twin Calibration Center",
     subtitle: "Outcome quality, truth-first recall, graduation evidence and persistence health.",

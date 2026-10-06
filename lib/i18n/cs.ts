@@ -11,6 +11,15 @@ export const cs = {
     unlimited: "neomezená",
     more: "Další",
   },
+  pwa: {
+    install: "Nainstalovat AirRadar",
+    enablePush: "Povolit push upozornění",
+    pushEnabled: "Push upozornění jsou zapnutá",
+    offline: "Offline režim: poslední stav je k dispozici",
+    favorites: "Oblíbené letiště",
+    favoriteAdd: "Přidat do oblíbených letišť",
+    favoriteRemove: "Odebrat z oblíbených letišť",
+  },
   calibrationCenter: {
     title: "Centrum kalibrace Digital Twin",
     subtitle: "Kvalita outcome, truth-first recall, graduation evidence a stav persistence.",

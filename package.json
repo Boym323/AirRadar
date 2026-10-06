@@ -92,6 +92,7 @@
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.9",
     "@tanstack/react-query": "^5.104.0",
+    "@types/web-push": "^3.6.4",
     "cheerio": "^1.2.0",
     "csv-parse": "^7.0.3",
     "dotenv": "^18.0.5",
@@ -107,6 +108,7 @@
     "react-dom": "^19.3.0",
     "shapefile": "^0.6.6",
     "temporal-polyfill": "1.0.5",
+    "web-push": "^3.6.7",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },

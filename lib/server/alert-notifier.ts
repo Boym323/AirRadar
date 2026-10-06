@@ -1,6 +1,7 @@
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { AlertRule } from "@/lib/server/alert-config";
 import type { AlertHistoryReason, AlertHistoryRecordValue, AlertHistoryEventType } from "@/lib/server/alert-history";
+import { WebPushNotifier } from "@/lib/server/web-push";
 
 export type { AlertHistoryReason, AlertHistoryRecordValue, AlertHistoryEventType };
 
@@ -33,6 +34,21 @@ export interface AlertNotifier {
   readonly name: string;
   readonly enabled: boolean;
   send(alert: AircraftAlert): Promise<void>;
+}
+
+class CompositeAlertNotifier implements AlertNotifier {
+  readonly name: string;
+  readonly enabled: boolean;
+  constructor(private readonly notifiers: AlertNotifier[]) {
+    this.name = notifiers.map((notifier) => notifier.name).join(",");
+    this.enabled = notifiers.some((notifier) => notifier.enabled);
+  }
+  async send(alert: AircraftAlert): Promise<void> {
+    const active = this.notifiers.filter((notifier) => notifier.enabled);
+    const results = await Promise.allSettled(active.map((notifier) => notifier.send(alert)));
+    const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (failure) throw failure.reason;
+  }
 }
 
 export class AlertDeliveryError extends Error {
@@ -183,10 +199,11 @@ export function createAlertNotifier(): AlertNotifier {
   const enabled = process.env.PUSHOVER_ENABLED?.trim().toLowerCase() === "true";
   const userKey = process.env.PUSHOVER_USER_KEY?.trim();
   const apiToken = process.env.PUSHOVER_API_TOKEN?.trim();
-  if (!enabled) return new NoopAlertNotifier();
-  if (!userKey || !apiToken) {
+  const pushover = enabled && userKey && apiToken ? new PushoverNotifier(userKey, apiToken) : new NoopAlertNotifier();
+  const webPush = new WebPushNotifier();
+  if (!pushover.enabled && !webPush.enabled) {
     console.error("AirRadar Pushover notifier disabled: credentials are not configured");
     return new NoopAlertNotifier();
   }
-  return new PushoverNotifier(userKey, apiToken);
+  return new CompositeAlertNotifier([pushover, webPush]);
 }
