@@ -571,3 +571,5 @@ proto explicitně nese omezení `OPERATIONAL_CONTEXT_ONLY`,
 `SOURCE_SEMANTICS_PRESERVED` a `NO_ALL_CLEAR_INFERENCE`.
 
 Detail letadla tento souhrn zobrazuje před jednotlivými timeline počasí, Navigation Integrity a dalších událostí. UI zachovává backendový level i význam zdrojů, ukazuje omezené počty ATTENTION/WATCH a opakuje omezení no-all-clear / no-safety-alert místo toho, aby si vytvářelo silnější stav pouze na úrovni prezentace.
+
+Každá zobrazená focus položka odkazuje zpět na živý radar s identitou letadla a ID focus položky. Radar znovu používá už načtenou odpověď Operational Digital Twin, zvýrazní pouze projektovaný úsek corridoru do daného offsetu, označí pozici zdrojové evidence, pokud je dostupná, a kameru vycentruje jen jednou. Chybějící nebo zastaralé focus ID fail-closed nevytvoří syntetický mapový cíl ani další provider/API polling cestu.
