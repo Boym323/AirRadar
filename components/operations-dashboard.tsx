@@ -276,7 +276,7 @@ export function OperationsDashboard() {
   const generatedAt = situation?.generatedAt ?? snapshot?.fetchedAt ?? null;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-testid="operations-dashboard-v1">
       <PageHeader
         kicker="AIRRADAR / OPERATIONS"
         title={t.operations.title}
@@ -295,7 +295,7 @@ export function OperationsDashboard() {
         <div className={styles.warning}>{t.operations.partialData}</div>
       ) : null}
 
-      <Panel className={styles.heroPanel}>
+      <Panel className={styles.heroPanel} data-testid="operations-live-traffic">
         <SectionHeader
           kicker={t.operations.liveTrafficKicker}
           title={t.operations.liveTraffic}
@@ -394,7 +394,7 @@ export function OperationsDashboard() {
           )}
         </Panel>
 
-        <Panel className={styles.panel + " " + styles.attentionPanel}>
+        <Panel className={styles.panel + " " + styles.attentionPanel} data-testid="operations-attention">
           <SectionHeader
             kicker={t.operations.attentionKicker}
             title={t.operations.attention}
