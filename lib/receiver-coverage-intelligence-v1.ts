@@ -115,7 +115,8 @@ export function buildReceiverCoverageIntelligenceV1(input: {
     .sort((a, b) => a.date.localeCompare(b.date));
   const historyDays = Math.min(30, Math.max(1, Math.trunc(input.historyDays ?? 7)));
   const completedLimit = Math.max(0, historyDays - (currentDay ? 1 : 0));
-  const recentCompleted = completedLimit > 0 ? completed.slice(-completedLimit) : [];\n  const recentDays = [...recentCompleted, ...(currentDay ? [currentDay] : [])];
+  const recentCompleted = completedLimit > 0 ? completed.slice(-completedLimit) : [];
+  const recentDays = [...recentCompleted, ...(currentDay ? [currentDay] : [])];
 
   const eligibleCompleted = completed.filter((point) =>
     point.medianSectorRangeKm !== null && point.populatedSectors >= 12,
