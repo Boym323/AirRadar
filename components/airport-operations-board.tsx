@@ -14,6 +14,7 @@ import {
 } from "@/lib/airport-intelligence/v3";
 import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import { buildAirportArrivalFlowIntelligence } from "@/lib/airport-intelligence/arrival-flow-v8";
+import { buildAirportTerminalOutlook } from "@/lib/airport-intelligence/terminal-outlook-v1";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -331,6 +332,11 @@ export function AirportOperationsBoard({
     runwayFlow,
     referenceTime: arrivalSequence.generatedAt ?? operations?.generatedAt ?? null,
   });
+  const terminalOutlook = buildAirportTerminalOutlook({
+    arrivalFlow,
+    flowPressure: pressure,
+    runwayFlow,
+  });
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -569,6 +575,49 @@ export function AirportOperationsBoard({
         </li>)}
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV7ArrivalNoArrivals}</p>}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV7ArrivalDisclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-terminal-outlook-v1" aria-labelledby="airport-terminal-outlook-title">
+      <div className="airport-live-flow-heading">
+        <div>
+          <span className="ui-kicker">{t.airport.terminalOutlookKicker}</span>
+          <h3 id="airport-terminal-outlook-title">{t.airport.terminalOutlookTitle}</h3>
+        </div>
+        <span>{t.airport.terminalOutlookStatus[terminalOutlook.status]}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard
+          label={t.airport.terminalOutlookDemand}
+          value={`${terminalOutlook.arrivalDemand.within5Minutes} / ${terminalOutlook.arrivalDemand.within15Minutes} / ${terminalOutlook.arrivalDemand.within30Minutes}`}
+          detail={t.airport.liveBoardV8DemandWindows}
+        />
+        <MetricCard
+          label={t.airport.terminalOutlookPressure}
+          value={arrivalPressureLabel(terminalOutlook.pressure.level)}
+          detail={t.airport.liveBoardV8PressureDetail(terminalOutlook.pressure.score, terminalOutlook.pressure.holding, terminalOutlook.pressure.goAround)}
+        />
+        <MetricCard
+          label={t.airport.terminalOutlookQueue}
+          value={approachQueueLabel(terminalOutlook.queue.state)}
+          detail={t.airport.liveBoardV8QueueDetail(terminalOutlook.queue.approachOrFinal, terminalOutlook.queue.holding)}
+        />
+        <MetricCard
+          label={t.airport.terminalOutlookObservedRunway}
+          value={terminalOutlook.runway.observed ? `RWY ${terminalOutlook.runway.observed}` : "—"}
+          detail={runwayFlowStateLabel(terminalOutlook.runway.flowState)}
+        />
+        <MetricCard
+          label={t.airport.terminalOutlookPredictedRunway}
+          value={terminalOutlook.runway.predicted ? `RWY ${terminalOutlook.runway.predicted}` : "—"}
+          detail={arrivalRunwayAlignmentLabel(terminalOutlook.runway.alignment)}
+        />
+        <MetricCard
+          label={t.airport.terminalOutlookExceptions}
+          value={`${terminalOutlook.recentExceptions.holding} / ${terminalOutlook.recentExceptions.goAround}`}
+          detail={t.airport.terminalOutlookExceptionsDetail}
+        />
+      </MetricStrip>
+      <p className="airport-v3-disclaimer">{t.airport.terminalOutlookDisclaimer}</p>
     </section>
 
     <section className="airport-live-flow-pressure airport-live-arrival-flow-v8" data-testid="airport-live-board-v8-arrival-flow" aria-labelledby="airport-live-v8-arrival-flow-title">
