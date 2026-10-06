@@ -18,6 +18,50 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.338] - 2026-10-06
+
+Changes since v1.0.337.
+
+**Features touched:** Watchlist Intelligence V2, Watchlist, Alerts & Fleet.
+
+### Added
+
+- Add Watchlist Intelligence V2 (96e92fb7)
+- Integrate Watchlist Intelligence V2 (d21c00d7)
+
+### Documentation
+
+- Register Watchlist Intelligence V2 (c75f0334)
+- Document Watchlist Intelligence V2 (009f2afa)
+- Localize Watchlist Intelligence V2 (f4c864e0)
+- Add Watchlist Intelligence V2 changelog (f52cc0fc)
+- Sync feature registry tables (1b444d3a)
+
+### Maintenance
+
+- Add watchlist intelligence v2 (95558aa6)
+- Guard Watchlist Intelligence V2 boundary (21e09df1)
+- Sync generated repository metadata (#459) (3d2b4846)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Watchlist Intelligence V2 (96e92fb7)
+- style: add watchlist intelligence v2 (95558aa6)
+- feat: integrate Watchlist Intelligence V2 (d21c00d7)
+- test: guard Watchlist Intelligence V2 boundary (21e09df1)
+- docs: register Watchlist Intelligence V2 (c75f0334)
+- docs: document Watchlist Intelligence V2 (009f2afa)
+- docs: localize Watchlist Intelligence V2 (f4c864e0)
+- docs: add Watchlist Intelligence V2 changelog (f52cc0fc)
+- merge main into watchlist intelligence (7408853f)
+- merge main into watchlist intelligence (445a329f)
+- chore(metadata): sync generated repository metadata (#459) (3d2b4846)
+- docs(cs): sync feature registry tables (1b444d3a)
+- Merge pull request #453 from Boym323/feat/watchlist-intelligence-v2 (3f90885f)
+
+</details>
+
 ## [1.0.333] - 2026-10-06
 
 Changes since v1.0.332.
