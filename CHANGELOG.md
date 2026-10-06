@@ -6,6 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
+- Add Explainable Prediction V1 `Why?/Proč?` panels for readiness-gated ETA, runway, runway-change and trajectory advisories using whitelisted canonical prediction evidence.
 - Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.
 - Add Live Airport Network V1 to `/airports`, prioritizing browser-local favorite airports and live-route-active airports with canonical Airport Operations, receiver-only approach queue, likely runway, bounded next-arrival estimates, and direct Live Board navigation.
 - Add Event Replay V1: replayable Flight Intelligence events can open Time Machine in a bounded ±10-minute window with the matching aircraft preselected when historical data is available.
