@@ -30,6 +30,7 @@ export interface AirportOperationsResponse {
   goArounds: AirportMovement[];
   holding: AirportMovement[];
   diagnostics: AirportMovementsResponse["diagnostics"];
+  terminalDemandHorizon?: import("@/lib/server/airport-terminal-demand-horizon-v9").AirportTerminalDemandHorizonV9;
 }
 
 function activity(count: number): AirportActivity {
