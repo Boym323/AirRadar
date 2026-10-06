@@ -4,6 +4,12 @@ import type { OperationalTwinEventOutcomeReport, OperationalTwinEventOutcomeSlic
 export const OPERATIONAL_FOCUS_OUTCOME_VERSION = "operational-focus-outcome-v1" as const;
 
 export type OperationalFocusOutcomeAvailability = "AVAILABLE" | "UNAVAILABLE";
+export type OperationalFocusOutcomeReason =
+  | "sigmet_samples_insufficient"
+  | "sigmet_timing_samples_insufficient"
+  | "sigmet_precision_low"
+  | "sigmet_missing_truth_high"
+  | "sigmet_timing_error_high";
 
 export interface OperationalFocusOutcomeTypeReport {
   type: AircraftOperationalFocusType;
@@ -23,6 +29,7 @@ export interface OperationalFocusOutcomeReport {
   version: typeof OPERATIONAL_FOCUS_OUTCOME_VERSION;
   generatedAt: string;
   decision: "PASS" | "WAIT" | "FAIL";
+  reasons: OperationalFocusOutcomeReason[];
   scoreableTypes: AircraftOperationalFocusType[];
   byType: Record<AircraftOperationalFocusType, OperationalFocusOutcomeTypeReport>;
   limitations: Array<
@@ -75,20 +82,31 @@ export function buildOperationalFocusOutcomeReport(
     TRAJECTORY: unavailable("TRAJECTORY", "INDEPENDENT_TRAJECTORY_FOCUS_TRUTH_NOT_AVAILABLE"),
   };
 
-  const enoughEvidence = weather.scoreable >= 20 && weather.timingSamples >= 10;
-  const qualityPass = enoughEvidence
-    && weather.precision !== null
-    && weather.precision >= 0.70
-    && weather.missingTruthRate !== null
-    && weather.missingTruthRate <= 0.40
-    && weather.meanAbsoluteTimingErrorSeconds !== null
-    && weather.meanAbsoluteTimingErrorSeconds <= 240;
-  const qualityFail = enoughEvidence && !qualityPass;
+  const evidenceReasons: OperationalFocusOutcomeReason[] = [];
+  if (weather.scoreable < 20) evidenceReasons.push("sigmet_samples_insufficient");
+  if (weather.timingSamples < 10) evidenceReasons.push("sigmet_timing_samples_insufficient");
+  const enoughEvidence = evidenceReasons.length === 0;
+
+  const qualityReasons: OperationalFocusOutcomeReason[] = [];
+  if (enoughEvidence && (weather.precision === null || weather.precision < 0.70)) {
+    qualityReasons.push("sigmet_precision_low");
+  }
+  if (enoughEvidence && (weather.missingTruthRate === null || weather.missingTruthRate > 0.40)) {
+    qualityReasons.push("sigmet_missing_truth_high");
+  }
+  if (
+    enoughEvidence
+    && (weather.meanAbsoluteTimingErrorSeconds === null || weather.meanAbsoluteTimingErrorSeconds > 240)
+  ) {
+    qualityReasons.push("sigmet_timing_error_high");
+  }
+  const reasons = enoughEvidence ? qualityReasons : evidenceReasons;
 
   return {
     version: OPERATIONAL_FOCUS_OUTCOME_VERSION,
     generatedAt: eventOutcome.generatedAt,
-    decision: !enoughEvidence ? "WAIT" : qualityFail ? "FAIL" : "PASS",
+    decision: !enoughEvidence ? "WAIT" : qualityReasons.length ? "FAIL" : "PASS",
+    reasons,
     scoreableTypes: ["WEATHER"],
     byType,
     limitations: [
