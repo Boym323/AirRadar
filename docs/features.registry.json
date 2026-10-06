@@ -150,7 +150,8 @@
       "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion.",
       "pages": [
         "/airports",
-        "/airports/:icao"
+        "/airports/:icao",
+        "/compare/airports"
       ],
       "apis": [
         "/api/airports",
