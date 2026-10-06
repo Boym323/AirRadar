@@ -629,6 +629,16 @@ Capture zůstává request-driven z existujícího Digital Twin builderu a truth
 
 Decision V2 vyjadřuje pouze připravenost evidence: WAIT znamená nedostatečné observační okno nebo paired horizon evidence, FAIL je vyhrazen pro zralou evidenci s nedostatečným LOCAL truth coverage a PASS znamená, že triple-paired evidence je dostatečně kompletní pro pozdější V3 graduation vrstvu. V3 nikdy automaticky negraduje ani nepromuje.
 
+## Trajectory Quality V3 Graduation V1
+
+Trajectory Quality V3 Graduation je přísnější rozhodovací vrstva nad Outcome Validation V2. Je odvozena výhradně z restart-stable triple-paired evidence a nepřidává žádný capture, polling ani persistence. Stávající V2 graduation a promotion cesta zůstává nezávislá a beze změny.
+
+Evidence floor vyžaduje alespoň 240 minut, 120 triple-paired vzorků, nejméně 24 vzorků v každém horizontu 5/15/30 minut a alespoň 75% pokrytí LOCAL receiver truth. Po jeho splnění musí V3 zlepšit altitude MAE proti V2 alespoň o 5 %, dosáhnout nejméně 55% rozhodného head-to-head win rate proti V2 a současně zlepšit MAE proti canonical alespoň o 8 %.
+
+Regression guardy porovnávají V3 přímo s V2. Graduation fail-closed selže, pokud V3 regresuje o více než 4 % v některém dostatečně zastoupeném horizontu, o více než 6 % ve flight phase s alespoň 12 vzorky, o více než 8 % v performance class s alespoň 12 vzorky nebo o více než 8 % ve V3 profilu s alespoň 12 vzorky. Řídké segmenty graduation neblokují, dokud nedosáhnou svého guard sample floor.
+
+PASS pouze nastaví `manualPromotionEligible=true`. `autoPromotion=false`, `v3PromotionImplemented=false` a současná V2 promotion cesta zůstává nezávislá. V3 Graduation tedy nemůže změnit produkční trajektorii, dokud nebude implementována samostatná fail-closed V3 Promotion vrstva.
+
 ## Trajectory Quality Outcome Validation V1
 
 Trajectory Quality Outcome Validation V1 prospektivně páruje canonical projekci výšky a Trajectory Quality V2 shadow proti stejné pozdější LOCAL receiver truth v horizontech 5, 15 a 30 minut. Capture je request-driven z existujícího Digital Twin builderu včetně stávajících omezených refresh-sampled kalibračních requestů. Truth se pozoruje z běžného LOCAL receiver refreshu; nevzniká další timer, provider call, endpoint ani síťový request.
