@@ -24,5 +24,10 @@ describe("production release branch resolution", () => {
     expect(updateRepository).not.toContain("merge-base HEAD FETCH_HEAD");
     expect(updateRepository).not.toContain("merge --ff-only FETCH_HEAD");
     expect(updateRepository).not.toContain("reset --hard FETCH_HEAD");
+
+    const afterTagFetch = updateRepository.slice(
+      updateRepository.indexOf("git_cmd fetch --force --tags origin"),
+    );
+    expect(afterTagFetch).not.toContain("FETCH_HEAD");
   });
 });
