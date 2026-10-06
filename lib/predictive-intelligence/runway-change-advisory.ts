@@ -24,7 +24,7 @@ export interface PublicRunwayChangeAdvisory {
   confidence: PredictionConfidence;
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminRunwayChangeAdvisoryPreview {
@@ -46,7 +46,7 @@ export interface AdminRunwayChangeAdvisoryPreview {
   independentChangeTruthAvailable: boolean;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type RunwayChangeReadinessResult = PredictiveReadinessCapabilityResult<RunwayChangeReadinessEvidence>;
