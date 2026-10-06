@@ -109,12 +109,12 @@ function regressionForSlice(
   };
 }
 
-function regressionsForRecord(
-  record: Record<string, OperationalTwinTrajectoryQualityOutcomeV2Slice>,
+function regressionsForRecord<K extends string>(
+  record: Record<K, OperationalTwinTrajectoryQualityOutcomeV2Slice>,
   maximumRegressionFraction: number,
   minimumSamples: number,
 ): OperationalTwinTrajectoryQualityV3Regression[] {
-  return Object.entries(record)
+  return (Object.entries(record) as Array<[K, OperationalTwinTrajectoryQualityOutcomeV2Slice]>)
     .map(([key, slice]) => regressionForSlice(key, slice, maximumRegressionFraction, minimumSamples))
     .filter((value): value is OperationalTwinTrajectoryQualityV3Regression => value !== null);
 }
