@@ -52,6 +52,8 @@ export const cs = {
     scoreableEvidence: "Vyhodnotitelná evidence",
     publicSemanticsCanonical: "veřejná sémantika WATCH/ATTENTION zůstává canonical",
     regionalAttentionOutcome: "Outcome Regional Attention",
+    operationalFocusOutcome: "Outcome Operational Focus",
+    operationalFocusOutcomeFootnote: "V1 používá nezávislou SIGMET Event Outcome truth pouze pro WEATHER. Navigation integrity, plánovaný vzdušný prostor a trajectory focus zůstávají explicitně bez skóre.",
     destinationClustersUnscored: "Nevyhodnocené destination clustery",
     minuteSuffix: "min",
     calibrationPersistence: "Persistence kalibrace",
