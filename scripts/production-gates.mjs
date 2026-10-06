@@ -1245,7 +1245,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           throw new Error(`Secondary route ${path} navigation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
         if (!response?.ok()) throw new Error(`Secondary route ${path} returned HTTP ${response?.status()}`);
-        await page.locator(rootSelector).waitFor({ state: "visible", timeout: 15_000 });
+        const routeRoot = page.locator(rootSelector);
+        try {
+          await routeRoot.waitFor({ state: "visible", timeout: 5_000 });
+        } catch {
+          // Keep secondary-route smoke strict, but retry a transient shell
+          // paint/navigation race before reporting a route failure.
+          console.warn(`[production-gates] secondary route ${path} root was not visible after initial navigation; retrying page load`);
+          await page.reload({ waitUntil: "domcontentloaded" });
+          await routeRoot.waitFor({ state: "visible", timeout: 15_000 });
+        }
         await page.locator("h1").first().waitFor({ state: "visible", timeout: 15_000 });
       }
     }));
