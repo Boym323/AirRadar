@@ -94,7 +94,7 @@ function navigationIntegrity(
 function twinEvent(
   type: OperationalTwinEvent["type"],
   offsetMinutes: number,
-  title = type,
+  title: string = type,
 ): OperationalTwinEvent {
   return {
     id: `${type}:${offsetMinutes}:${title}`,
