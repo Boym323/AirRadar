@@ -96,6 +96,11 @@ export const en = {
       benefit_inconclusive: "benefit inconclusive",
       shadow_regression: "shadow regression",
       precision_low: "precision low",
+      sigmet_samples_insufficient: "insufficient SIGMET focus samples",
+      sigmet_timing_samples_insufficient: "insufficient SIGMET timing samples",
+      sigmet_precision_low: "SIGMET focus precision is low",
+      sigmet_missing_truth_high: "SIGMET focus truth coverage is low",
+      sigmet_timing_error_high: "SIGMET focus timing error is high",
     },
   },
   brand: {
