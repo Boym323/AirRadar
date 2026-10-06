@@ -177,6 +177,30 @@
   border-top: 1px solid rgba(153,181,207,.1);
 }
 
+.focusItemLink {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.focusItemLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.focusItemLink:hover .focusMapAction,
+.focusItemLink:focus-visible .focusMapAction {
+  color: var(--accent);
+}
+
+.focusMapAction {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
 .weatherTime {
   display: grid;
   align-content: start;
@@ -347,4 +371,5 @@
   .weatherHeading { display: block; }
   .weatherHeading > strong { display: inline-block; margin-top: var(--space-2); }
   .weatherTimeline li { grid-template-columns: 68px minmax(0, 1fr); }
+  .focusItemLink { grid-template-columns: 68px minmax(0, 1fr); }
 }
