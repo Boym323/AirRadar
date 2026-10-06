@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useEffect, useMemo, useState } from "react";
 import type { StatisticsTrafficRange, StatisticsTrafficResponse, StatisticsTrafficRouteItem } from "@/lib/statistics-traffic";
 import { formatNumber, t } from "@/lib/i18n";
@@ -17,8 +18,8 @@ function airportHref(code: string) {
   return { pathname: "/airports/" + encodeURIComponent(code) } as const;
 }
 
-function routeDetailHref(origin: string, destination: string) {
-  return `/routes/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}`;
+function routeDetailHref(origin: string, destination: string): Route {
+  return ("/routes/" + encodeURIComponent(origin) + "/" + encodeURIComponent(destination)) as Route;
 }
 
 export function RouteNetworkExplorer() {
