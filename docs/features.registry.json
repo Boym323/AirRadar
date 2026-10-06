@@ -785,24 +785,25 @@
       ]
     },
     {
-      "id": "radar-presets",
-      "name": "Radar Presets",
-      "category": "radar",
+      "id": "aircraft-discovery",
+      "name": "Aircraft Discovery",
+      "category": "discovery / spotting",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Browser-local named radar presets that restore camera, coverage/source filters, aviation/weather/airspace layers, range rings, color mode, radar opacity, and wind level without server persistence.",
+      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft using the existing Logbook Summary and direct watchlist handoff.",
       "pages": [
-        "/"
+        "/discover"
       ],
       "apis": [],
       "changelogScopes": [
-        "radar-presets"
+        "aircraft-discovery"
       ],
       "changelogKeywords": [
-        "radar presets",
-        "saved radar view",
-        "saved map view",
-        "browser-local preset"
+        "aircraft discovery",
+        "discover aircraft",
+        "rare aircraft",
+        "returning aircraft",
+        "new aircraft"
       ]
     }
   ]
