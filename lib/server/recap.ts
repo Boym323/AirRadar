@@ -285,7 +285,8 @@ async function loadDailyIntelligence(
       } catch {
         return { available: false as const, rows: [] };
       }
-    })(),  ]);
+    })(),
+  ]);
   const flightRows = flightRowsRaw as unknown as Array<{ startTime: Temporal.Instant | Date; airline: string | null }>;
   const eventAggregates = eventAggregatesRaw as unknown as DailyRecapEventAggregateInput[];
   const eventRows = eventRowsRaw as unknown as Array<Omit<DailyRecapEventInput, "occurredAt"> & { occurredAt: Temporal.Instant | Date }>;
@@ -326,8 +327,7 @@ async function loadDailyIntelligence(
     timezone: getAppTimezone(),
     complete: alerts.nextPage === null
       && flightRows.length <= DAILY_INTELLIGENCE_FLIGHT_LIMIT
-      && eventRows.length <= DAILY_INTELLIGENCE_EVENT_LIMIT
-      && weatherStatus === "available",
+      && eventRows.length <= DAILY_INTELLIGENCE_EVENT_LIMIT,
   });
 }
 
