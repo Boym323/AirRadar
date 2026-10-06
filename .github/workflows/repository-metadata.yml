@@ -143,10 +143,12 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --exit-status
 
-          echo "Verifying required PR checks before merge."
-          gh pr checks "${pr_number}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --required
+          # The validation run is dispatched explicitly for this metadata
+          # commit. GitHub does not expose workflow_dispatch runs as PR checks,
+          # so `gh pr checks --required` reports no checks even after the run
+          # succeeds. `gh run watch --exit-status` above is the authoritative
+          # validation gate for this automation PR.
+          echo "Metadata CI run #${run_id} succeeded; merging PR #${pr_number}."
 
           gh pr merge "${pr_number}" \
             --repo "${GITHUB_REPOSITORY}" \
