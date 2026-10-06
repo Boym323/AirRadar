@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
@@ -67,6 +67,7 @@ export interface AircraftRadarQuickDetailProps {
   intelligenceEvents?: FlightIntelligenceEvent[];
   operationalTwin?: OperationalTwinApiResponse | null;
   operationalFocusItemId?: string | null;
+  operationalFocusRevealVersion?: number;
   onOperationalFocus?: (itemId: string) => void;
   watchlisted: boolean;
   onBack: () => void;
@@ -714,6 +715,7 @@ export function AircraftRadarQuickDetail({
   intelligenceEvents = [],
   operationalTwin = null,
   operationalFocusItemId = null,
+  operationalFocusRevealVersion = 0,
   onOperationalFocus,
   watchlisted,
   onBack,
@@ -750,6 +752,11 @@ export function AircraftRadarQuickDetail({
     && operationalTwin.aircraft.icaoHex.toUpperCase() === aircraft.icaoHex.toUpperCase()
     ? operationalTwin.operationalFocus ?? null
     : null;
+
+  useEffect(() => {
+    if (!operationalFocusItemId) return;
+    setActiveTab("situation");
+  }, [operationalFocusItemId, operationalFocusRevealVersion]);
 
   return <div className="aircraft-quick-detail detail-content" data-testid="aircraft-quick-detail">
     <header className="aircraft-quick-header">

@@ -17,8 +17,12 @@ export function RadarOperationalFocusSummary({
   activeItemId: string | null;
   onFocus: (itemId: string) => void;
 }) {
-  const hiddenCount = Math.max(0, focus.items.length - 4);
-  const visibleItems = focus.items.slice(0, 4);
+  const activeItem = activeItemId ? focus.items.find((item) => item.id === activeItemId) ?? null : null;
+  const firstItems = focus.items.slice(0, 4);
+  const visibleItems = activeItem && !firstItems.some((item) => item.id === activeItem.id)
+    ? [...firstItems.slice(0, 3), activeItem]
+    : firstItems;
+  const hiddenCount = Math.max(0, focus.items.length - visibleItems.length);
 
   return (
     <section className={styles.section} aria-labelledby="aircraft-quick-operational-focus-title" data-testid="aircraft-operational-focus-drawer">

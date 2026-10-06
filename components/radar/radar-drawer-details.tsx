@@ -38,6 +38,7 @@ interface RadarDrawerDetailsProps {
   intelligenceEvents: FlightIntelligenceEvent[];
   operationalTwin: AircraftRadarQuickDetailProps["operationalTwin"];
   operationalFocusItemId: AircraftRadarQuickDetailProps["operationalFocusItemId"];
+  operationalFocusRevealVersion: AircraftRadarQuickDetailProps["operationalFocusRevealVersion"];
   onOperationalFocus: NonNullable<AircraftRadarQuickDetailProps["onOperationalFocus"]>;
   sectorTraffic: AircraftRadarQuickDetailProps["sectorTraffic"];
   watchlisted: boolean;
@@ -70,6 +71,7 @@ export function RadarDrawerDetails({
   intelligenceEvents,
   operationalTwin,
   operationalFocusItemId,
+  operationalFocusRevealVersion,
   onOperationalFocus,
   sectorTraffic,
   watchlisted,
@@ -107,6 +109,7 @@ export function RadarDrawerDetails({
       intelligenceEvents={intelligenceEvents}
       operationalTwin={operationalTwin}
       operationalFocusItemId={operationalFocusItemId}
+      operationalFocusRevealVersion={operationalFocusRevealVersion}
       onOperationalFocus={onOperationalFocus}
       sectorTraffic={sectorTraffic}
       watchlisted={watchlisted}
