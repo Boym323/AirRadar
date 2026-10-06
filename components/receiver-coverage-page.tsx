@@ -151,7 +151,7 @@ export default function ReceiverCoveragePage() {
   );
 
   const trendMax = useMemo(
-    () => Math.max(...(intelligence?.intelligence.trend.recentDays.map((day) => day.maxDistanceKm) ?? []), 1),
+    () => Math.max(...(intelligence?.intelligence.trend.recentDays.map((day) => day.maxDistanceKm ?? 0) ?? []), 1),
     [intelligence],
   );
 
@@ -357,7 +357,7 @@ export default function ReceiverCoveragePage() {
                 <div className={styles.trendRow} key={day.date}>
                   <strong>{day.date.slice(5)}</strong>
                   <div className={styles.trendTrack} title={`Maximum ${formatDistance(day.maxDistanceKm)}`}>
-                    <div className={styles.trendFill} style={{ width: `${Math.max(2, day.maxDistanceKm / trendMax * 100)}%` }} />
+                    <div className={styles.trendFill} style={{ width: `${Math.max(2, (day.maxDistanceKm ?? 0) / trendMax * 100)}%` }} />
                   </div>
                   <span>{formatDistance(day.medianSectorRangeKm)}</span>
                   <span>{formatDistance(day.maxDistanceKm)}</span>
