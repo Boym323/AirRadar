@@ -54,6 +54,8 @@ export const en = {
     scoreableEvidence: "Scoreable evidence",
     publicSemanticsCanonical: "public WATCH/ATTENTION semantics remain canonical",
     regionalAttentionOutcome: "Regional Attention outcome",
+    operationalFocusOutcome: "Operational Focus outcome",
+    operationalFocusOutcomeFootnote: "V1 uses independent SIGMET Event Outcome truth for WEATHER only. Navigation integrity, planned airspace and trajectory focus remain explicitly unscored.",
     destinationClustersUnscored: "Destination clusters unscored",
     minuteSuffix: "min",
     calibrationPersistence: "Calibration persistence",
