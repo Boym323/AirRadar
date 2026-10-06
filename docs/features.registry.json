@@ -764,6 +764,30 @@
       ]
     },
     {
+      "id": "route-network-explorer",
+      "name": "Route Network Explorer",
+      "category": "analytics / routes",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded route aggregate explorer.",
+      "pages": ["/routes"],
+      "apis": [],
+      "changelogScopes": ["route-network-explorer"],
+      "changelogKeywords": ["route network", "route explorer"]
+    },
+    {
+      "id": "aircraft-discovery",
+      "name": "Aircraft Discovery",
+      "category": "discovery / spotting",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded discovery page for notable aircraft.",
+      "pages": ["/discover"],
+      "apis": [],
+      "changelogScopes": ["aircraft-discovery"],
+      "changelogKeywords": ["aircraft discovery", "discover aircraft"]
+    },
+    {
       "id": "explainable-prediction",
       "name": "Explainable Prediction",
       "category": "intelligence / prediction",

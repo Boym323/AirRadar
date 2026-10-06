@@ -1,0 +1,204 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+
+.meta {
+  display: grid;
+  justify-items: end;
+  gap: .35rem;
+  color: var(--text-muted);
+}
+
+.filters {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.filters button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  padding: .45rem .72rem;
+  cursor: pointer;
+}
+
+.filters button[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-elevated));
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(17rem, .55fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.interestingPanel {
+  min-width: 0;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .6rem;
+  margin-top: .8rem;
+}
+
+.card {
+  display: grid;
+  gap: .65rem;
+  min-width: 0;
+  padding: .8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  gap: .6rem;
+  align-items: start;
+}
+
+.cardHead > div {
+  display: grid;
+  gap: .12rem;
+  min-width: 0;
+}
+
+.cardHead strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardHead span {
+  color: var(--text-muted);
+  font-size: .72rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+}
+
+.badges span {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  padding: .24rem .42rem;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.badges span[data-reason="emergency"] {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.badges span[data-reason="record"] {
+  background: color-mix(in srgb, var(--warning) 13%, transparent);
+  color: var(--warning);
+}
+
+.card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .4rem;
+  margin: 0;
+}
+
+.card dl div {
+  display: grid;
+  gap: .1rem;
+}
+
+.card dt {
+  color: var(--text-muted);
+  font-size: .65rem;
+}
+
+.card dd {
+  margin: 0;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.actions a {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  padding: .38rem .55rem;
+  text-decoration: none;
+  font-size: .72rem;
+}
+
+.actions a:hover {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  color: var(--accent);
+}
+
+.records {
+  display: grid;
+  gap: .55rem;
+  margin-top: .8rem;
+}
+
+.record {
+  display: grid;
+  gap: .2rem;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.record > span,
+.record small {
+  color: var(--text-muted);
+  font-size: .7rem;
+}
+
+.record strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.record a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.loading {
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .meta {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 620px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -26,10 +26,14 @@ async function start() {
   const standaloneReadyMarker = new URL("../.next/standalone/.airradar-runtime-ready", import.meta.url);
   let standaloneAvailable = false;
   try {
-    loadCommonJs.resolve("../.next/standalone/server.js");
-    standaloneAvailable = existsSync(standaloneReadyMarker);
+    // Resolve the server using the absolute URL we import below.  Using
+    // require.resolve with a parent ESM URL is sensitive to the loader's
+    // resolution context and can incorrectly fall back to `next start` even
+    // when the staged standalone build is complete.
+    standaloneAvailable = existsSync(standaloneServer) && existsSync(standaloneReadyMarker);
+    console.error(`[AirRadar start] standalone=${standaloneAvailable} server=${standaloneServer.pathname} marker=${standaloneReadyMarker.pathname}`);
   } catch (error) {
-    if (error?.code !== "MODULE_NOT_FOUND") throw error;
+    throw error;
   }
 
   if (standaloneAvailable) {

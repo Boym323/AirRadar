@@ -1,0 +1,136 @@
+.panel {
+  display: grid;
+  gap: .9rem;
+}
+
+.historyLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.metrics {
+  margin-top: .15rem;
+}
+
+.ruleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .6rem;
+}
+
+.ruleCard {
+  display: grid;
+  gap: .65rem;
+  min-width: 0;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+}
+
+.ruleHead {
+  display: flex;
+  justify-content: space-between;
+  gap: .6rem;
+  align-items: start;
+}
+
+.ruleHead > div {
+  display: grid;
+  gap: .12rem;
+  min-width: 0;
+}
+
+.ruleHead strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ruleHead small,
+.lastActivity span,
+.lastActivity small,
+.bound {
+  color: var(--text-muted);
+  font-size: .68rem;
+}
+
+.ruleStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  margin: 0;
+}
+
+.ruleStats div {
+  display: grid;
+  gap: .1rem;
+}
+
+.ruleStats dt {
+  color: var(--text-muted);
+  font-size: .65rem;
+}
+
+.ruleStats dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+.matches {
+  display: flex;
+  gap: .35rem;
+  flex-wrap: wrap;
+}
+
+.matches a {
+  display: grid;
+  gap: .05rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  padding: .35rem .45rem;
+  text-decoration: none;
+}
+
+.matches a:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+}
+
+.matches small {
+  color: var(--text-muted);
+  font-size: .62rem;
+}
+
+.lastActivity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: .45rem;
+  align-items: baseline;
+}
+
+.lastActivity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .ruleGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lastActivity {
+    grid-template-columns: 1fr;
+  }
+}
