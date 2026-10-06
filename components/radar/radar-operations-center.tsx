@@ -18,6 +18,7 @@ import {
 } from "@/lib/intelligence/operations-center";
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
+import type { RegionalFocusQueue, RegionalFocusQueueItem } from "@/lib/operational-twin/regional-focus-queue";
 import type { RegionalSituationGraph } from "@/lib/operational-twin/regional-situation";
 import {
   REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
@@ -51,6 +52,7 @@ type RegionalAttentionGraduationStatus = {
 
 type RegionalOperationsResponse = RegionalSituationGraph & {
   attention: OperationalAttentionSummary;
+  focusQueue: RegionalFocusQueue;
   attentionGraduation: RegionalAttentionGraduationStatus;
 };
 
@@ -378,10 +380,10 @@ export function RadarOperationsCenter() {
   const regionalGeneratedAt = regionalSituation ? Date.parse(regionalSituation.generatedAt) : Number.NaN;
   const regionalStale = regionalSituation !== null
     && (!Number.isFinite(regionalGeneratedAt) || regionalGeneratedAt + REGIONAL_STALE_AFTER_MS < now);
-  const regionalAttentionCount = regionalSituation?.attention.attention ?? 0;
+  const regionalAttentionCount = regionalSituation?.focusQueue.attention ?? regionalSituation?.attention.attention ?? 0;
   const totalAttentionCount = attentionCount + regionalAttentionCount;
   const regionalItems = useMemo(
-    () => (regionalSituation?.attention.items ?? []).filter((item) =>
+    () => (regionalSituation?.focusQueue.items ?? []).filter((item) =>
       item.type !== "REGIONAL_COPRESENCE"
       || item.projectedOffsetMinutes === null
       || item.projectedOffsetMinutes <= regionalHorizon
@@ -394,7 +396,7 @@ export function RadarOperationsCenter() {
 
   useEffect(() => {
     if (!regionalMapFocusId) return;
-    const activeItem = regionalSituation?.attention.items.find((item) => item.id === regionalMapFocusId);
+    const activeItem = regionalSituation?.focusQueue.items.find((item) => item.id === regionalMapFocusId);
     if (
       !open
       || !regionalGraduated
@@ -407,7 +409,7 @@ export function RadarOperationsCenter() {
     }
   }, [open, regionalGraduated, regionalMapFocusId, regionalSituation]);
 
-  const focusRegionalItem = (item: OperationalAttentionSummary["items"][number]) => {
+  const focusRegionalItem = (item: RegionalFocusQueueItem) => {
     if (
       !regionalGraduated
       || item.type !== "REGIONAL_COPRESENCE"
@@ -486,6 +488,12 @@ export function RadarOperationsCenter() {
                       : t.intelligence.operationsRegionalHint}
                   </small>
                 </div>
+                {regionalSituation ? (
+                  <div className={styles.regionalQueueSummary} data-testid="regional-focus-queue">
+                    <strong>{t.intelligence.operationsRegionalQueueTitle}</strong>
+                    <span>{t.intelligence.operationsRegionalQueueSummary(regionalSituation.focusQueue.attention, regionalSituation.focusQueue.watch)}</span>
+                  </div>
+                ) : null}
                 {regionalSituation ? (
                   <div className={styles.regionalToolbar}>
                     <div
