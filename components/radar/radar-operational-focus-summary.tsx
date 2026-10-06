@@ -1,4 +1,5 @@
 import type { AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
+import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/operational-focus-change";
 import { formatTime, t } from "@/lib/i18n";
 import { StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { aircraftOperationalFocusNavigation } from "@/lib/operational-twin/aircraft-operational-focus-ui";
@@ -11,10 +12,12 @@ function offsetLabel(minutes: number): string {
 
 export function RadarOperationalFocusSummary({
   focus,
+  changes,
   activeItemId,
   onFocus,
 }: {
   focus: AircraftOperationalFocusSummary;
+  changes: AircraftOperationalFocusChangeSummary | null;
   activeItemId: string | null;
   onFocus: (itemId: string) => void;
 }) {
@@ -42,6 +45,28 @@ export function RadarOperationalFocusSummary({
         <span>{t.operationalTwin.operationalFocusSummary(focus.attention, focus.watch)}</span>
         {focus.truncated ? <small>{t.operationalTwin.operationalFocusTruncated}</small> : null}
       </div>
+
+      {changes?.changes.length ? (
+        <div className={styles.changes} data-testid="aircraft-operational-focus-changes">
+          <strong>{t.operationalTwin.operationalFocusChangesTitle}</strong>
+          {changes.changes.slice(0, 3).map((change) => (
+            <button
+              key={`${change.kind}:${change.itemId}`}
+              type="button"
+              className={styles.change}
+              data-kind={change.kind}
+              disabled={change.kind === "RESOLVED"}
+              onClick={() => {
+                if (change.kind !== "RESOLVED") onFocus(change.itemId);
+              }}
+            >
+              <span>{t.operationalTwin.operationalFocusChangeKinds[change.kind]}</span>
+              <b>{t.operationalTwin.operationalFocusTypes[change.type]}</b>
+              <small>{change.label}</small>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {focus.items.length ? (
         <div className={styles.navigation} role="group" aria-label={t.operationalTwin.operationalFocusDrawerNavigation}>
