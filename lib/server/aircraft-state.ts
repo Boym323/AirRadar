@@ -514,6 +514,7 @@ export class AircraftStateService {
     trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
+    operationalTwinTrajectoryQualityOutcome: ReturnType<OperationalTwinTrajectoryQualityOutcomeValidator["report"]>;
     operationalFocusOutcome: ReturnType<AircraftOperationalFocusOutcomeValidator["report"]>;
     regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
     regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
