@@ -762,6 +762,28 @@
         "approach queue",
         "next arrival"
       ]
+    },
+    {
+      "id": "aircraft-discovery",
+      "name": "Aircraft Discovery",
+      "category": "discovery / spotting",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft using the existing Logbook Summary and direct watchlist handoff.",
+      "pages": [
+        "/discover"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "aircraft-discovery"
+      ],
+      "changelogKeywords": [
+        "aircraft discovery",
+        "discover aircraft",
+        "rare aircraft",
+        "returning aircraft",
+        "new aircraft"
+      ]
     }
   ]
 }
