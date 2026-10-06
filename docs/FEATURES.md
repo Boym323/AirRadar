@@ -26,6 +26,7 @@ not yet been historically attributed.
 | Operations Dashboard | production | operations | Pre-registry | `/operations` | — | Live operational dashboard combining canonical local traffic, airport flow, bounded next-30-minute arrival context, Regional Attention, and Flight Intelligence without creating a parallel intelligence engine. |
 | Radar Presets | production | radar | Pre-registry | `/` | — | Browser-local named radar presets that restore camera, coverage/source filters, aviation/weather/airspace layers, range rings, color mode, radar opacity, and wind level without server persistence. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
+| Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap` | Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence. |
@@ -702,6 +703,10 @@ The Operational Digital Twin intersects its existing sampled 30-minute corridor 
 ## Wind Timing Graduation V1
 
 Event Outcome V2 now compares canonical and wind-adjusted timing for the same waypoint against one identical LOCAL truth observation. The process-local graduation gate is fail-closed: it requires sufficient span, paired sample volume, meaningful wind adjustments and truth coverage; PASS additionally requires at least 5% MAE improvement and a 55% shadow win rate. PASS only marks the model eligible for manual graduation — canonical timing remains active and there is no automatic promotion.
+
+### Route Network Explorer V1
+
+`/routes` reuses the existing bounded statistics traffic API to explore the most frequently observed origin/destination pairs for today, 7 days, or 30 days. The product layer shows route share, origin and destination rankings, and direct airport navigation. It introduces no route ingest, no new database query path, and never scans `FlightPosition`.
 
 ### Radar Presets V1
 
