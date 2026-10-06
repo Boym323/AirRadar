@@ -68,6 +68,7 @@ export * from "./events";
 export * from "./outcome";
 export * from "./wind-timing-shadow";
 export * from "./trajectory-quality-v2";
+export * from "./trajectory-quality-v3";
 export * from "./event-outcome";
 export * from "./navigation-integrity-corridor";
 export * from "./aircraft-operational-focus";
