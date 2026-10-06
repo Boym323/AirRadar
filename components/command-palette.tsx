@@ -331,7 +331,7 @@ export function CommandPalette() {
     }
 
     if (item.type === "recent") {
-      if (item.recent.key === "command:operations" && pathname === "/") {
+      if (item.recent.key === "command:operations-center" && pathname === "/") {
         setOpen(false);
         requestOperationsCenterOpen();
         return;
