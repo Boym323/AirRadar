@@ -2320,6 +2320,22 @@ export const cs = {
     windTimingShadowMaxDelta: "Max. časový posun",
     windTimingShadowCheckpoint: (horizon: number, delta: string) => `+${horizon} min baseline · Δ ${delta} s`,
     windTimingShadowNoData: "Shadow timing nelze z dostupných wind sample bezpečně odvodit.",
+    trajectoryQualityPromotionTitle: "Promotion Trajectory Quality V2",
+    trajectoryQualityPromotionSummary: "Ruční policy mění pouze prezentovaný výškový profil corridoru; kalibrace, weather, eventy a ATC sémantika zůstávají canonical.",
+    trajectoryQualityPromotionConfigured: "Nastavená policy",
+    trajectoryQualityPromotionEffective: "Efektivní policy",
+    trajectoryQualityPromotionGraduation: "Graduation",
+    trajectoryQualityPromotionActive: "V2 výškový profil je aktivní pouze pro prezentaci corridoru.",
+    trajectoryQualityPromotionPolicies: {
+      CANONICAL: "canonical",
+      TRAJECTORY_QUALITY_V2: "Trajectory Quality V2",
+    },
+    trajectoryQualityPromotionFallback: {
+      configured_canonical: "Je nastaven canonical profil.",
+      graduation_not_pass: "Fail-closed: graduation není PASS.",
+      trajectory_quality_unavailable: "Fail-closed: aktuální V2 profil není dostupný.",
+      geometry_mismatch: "Fail-closed: V2 neodpovídá canonical horizontální geometrii.",
+    },
         limitations: "Omezení modelu",
 
     limitationText: {
