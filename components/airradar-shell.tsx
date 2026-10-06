@@ -42,7 +42,7 @@ function pathMatches(pathname: string, href: string): boolean {
 
 function isMorePath(pathname: string): boolean {
   return moreNavigation.some(({ href }) => pathMatches(pathname, href))
-    || ["/aircraft", "/airports", "/flights"].some((prefix) => pathname.startsWith(prefix));
+    || ["/aircraft", "/airports", "/flights", "/operations"].some((prefix) => pathname.startsWith(prefix));
 }
 
 export function UtcClock() {
