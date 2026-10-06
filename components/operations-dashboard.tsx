@@ -328,7 +328,7 @@ export function OperationsDashboard() {
               {airportFlows.map((flow) => {
                 const operations = airportOperations[flow.icao];
                 return (
-                  <Link href={"/airports/" + encodeURIComponent(flow.icao)} className={styles.airportRow} key={flow.icao}>
+                  <Link href={{ pathname: "/airports/" + encodeURIComponent(flow.icao) }} className={styles.airportRow} key={flow.icao}>
                     <span className={styles.airportIdentity}>
                       <strong>{flow.icao}</strong>
                       <small>{operations?.activity ?? t.operations.liveRoutes}</small>
@@ -360,7 +360,7 @@ export function OperationsDashboard() {
               {predictedArrivals.map((item) => {
                 const eta = item.etaAdvisory!;
                 return (
-                  <Link href={"/aircraft/" + encodeURIComponent(item.icaoHex)} className={styles.timelineRow} key={item.icaoHex}>
+                  <Link href={{ pathname: "/aircraft/" + encodeURIComponent(item.icaoHex) }} className={styles.timelineRow} key={item.icaoHex}>
                     <span className={styles.timelineTime}>+{eta.horizonMinutes} min</span>
                     <span className={styles.timelineBody}>
                       <strong>{item.label}</strong>
@@ -379,7 +379,7 @@ export function OperationsDashboard() {
               </div>
               <div className={styles.timeline}>
                 {terminalArrivals.map(({ airport, item, runway }) => (
-                  <Link href={"/aircraft/" + encodeURIComponent(item.icaoHex)} className={styles.timelineRow} key={airport + "-" + item.icaoHex}>
+                  <Link href={{ pathname: "/aircraft/" + encodeURIComponent(item.icaoHex) }} className={styles.timelineRow} key={airport + "-" + item.icaoHex}>
                     <span className={styles.timelineTime}>{relativeMinutes(item.etaMinutes)}</span>
                     <span className={styles.timelineBody}>
                       <strong>{item.label}</strong>
@@ -411,7 +411,7 @@ export function OperationsDashboard() {
           {situation?.focusQueue.items.length ? (
             <div className={styles.focusList}>
               {situation.focusQueue.items.slice(0, 8).map((item) => (
-                <Link href={"/aircraft/" + encodeURIComponent(item.icaoHex)} className={styles.focusRow} key={item.icaoHex}>
+                <Link href={{ pathname: "/aircraft/" + encodeURIComponent(item.icaoHex) }} className={styles.focusRow} key={item.icaoHex}>
                   <span className={styles.focusLevel} data-level={item.level}>{item.level}</span>
                   <span className={styles.focusIdentity}>
                     <strong>{item.label}</strong>
@@ -445,7 +445,7 @@ export function OperationsDashboard() {
           {notableEvents.length > 0 ? (
             <div className={styles.eventList}>
               {notableEvents.map((event) => (
-                <Link href={"/aircraft/" + encodeURIComponent(event.icaoHex)} className={styles.eventRow} key={event.eventKey}>
+                <Link href={{ pathname: "/aircraft/" + encodeURIComponent(event.icaoHex) }} className={styles.eventRow} key={event.eventKey}>
                   <span className={styles.eventType}>{eventLabel(event.type)}</span>
                   <span className={styles.eventIdentity}>
                     <strong>{event.callsign ?? event.registration ?? event.icaoHex}</strong>
