@@ -177,6 +177,8 @@ function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">):
   return `${lat.toFixed(2)}:${lon.toFixed(2)}:${altitude === null ? "unknown" : Math.round(altitude / 1000)}`;
 }
 
+const OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS = 60_000;
+
 export class AircraftStateService {
   private readonly provider: AircraftProvider;
   private readonly networkProvider: NetworkAircraftProvider;
@@ -202,7 +204,7 @@ export class AircraftStateService {
   private readonly trackFusionReadiness = new TrackFusionReadinessMonitor();
   /** Prospective canonical-vs-fused outcome validation against future LOCAL observations. */
   private readonly trackFusionOutcome = new TrackFusionOutcomeValidator();
-  /** Request-driven Operational Digital Twin calibration against future LOCAL receiver truth. */
+  /** Request + bounded refresh-sampled Operational Digital Twin calibration against future LOCAL receiver truth. */
   private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
   /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
   private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
@@ -241,6 +243,10 @@ export class AircraftStateService {
   private readonly predictive = new PredictiveStateStore();
   private readonly predictiveEvaluatedAt = new Map<string, number>();
   private predictiveAlertEvaluationInFlight = false;
+  /** One bounded Digital Twin calibration sample at a time, paced by the existing receiver refresh loop. */
+  private operationalTwinCalibrationSamplePromise: Promise<void> | null = null;
+  private lastOperationalTwinCalibrationSampleAt = 0;
+  private operationalTwinCalibrationSampleCursor = 0;
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
@@ -324,6 +330,7 @@ export class AircraftStateService {
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
     await this.awaitUntil(this.predictive.flushProspective(), deadline);
+    await this.awaitUntil(this.operationalTwinCalibrationSamplePromise, deadline);
     await this.awaitUntil(this.operationalTwinCalibrationPersistence.stop(), deadline);
     // Weather coalescing is intentionally lossy on crashes, but a normal
     // restart gets a bounded best-effort flush of representative samples.
@@ -875,7 +882,44 @@ export class AircraftStateService {
     for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.operationalTwinCalibrationPersistence.scheduleFlush();
     this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
+    this.scheduleOperationalTwinCalibrationSample(now);
     this.invalidateSnapshotCache();
+  }
+
+  private scheduleOperationalTwinCalibrationSample(now: number): void {
+    if (this.shuttingDown || !this.running || this.operationalTwinCalibrationSamplePromise) return;
+    if (!Number.isFinite(now) || now - this.lastOperationalTwinCalibrationSampleAt < OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS) return;
+
+    const candidates = [...this.localAircraft.values()]
+      .filter((aircraft) => (
+        !aircraft.onGround
+        && Boolean(aircraft.enrichment?.route)
+        && typeof aircraft.lat === "number" && Number.isFinite(aircraft.lat)
+        && typeof aircraft.lon === "number" && Number.isFinite(aircraft.lon)
+        && typeof aircraft.groundSpeed === "number" && Number.isFinite(aircraft.groundSpeed) && aircraft.groundSpeed >= 30
+        && (aircraft.seenPosSeconds === null || aircraft.seenPosSeconds <= 60)
+      ))
+      .sort((left, right) => left.icaoHex.localeCompare(right.icaoHex));
+    if (!candidates.length) return;
+
+    const candidate = candidates[this.operationalTwinCalibrationSampleCursor % candidates.length]!;
+    this.operationalTwinCalibrationSampleCursor = (this.operationalTwinCalibrationSampleCursor + 1) % candidates.length;
+    this.lastOperationalTwinCalibrationSampleAt = now;
+
+    const sample = (async () => {
+      // Deferred import avoids a static aircraft-state <-> operational-twin cycle while
+      // reusing the exact canonical Digital Twin builder used by the public situation API.
+      const { getOperationalTwinForAircraft } = await import("@/lib/server/operational-twin");
+      await getOperationalTwinForAircraft(candidate.icaoHex, undefined, new Date(now));
+    })().catch((error) => {
+      // Calibration is observational only; a provider/context failure must never
+      // degrade or delay the receiver refresh loop.
+      logger.debug({ error, icaoHex: candidate.icaoHex }, "Operational Digital Twin calibration sample skipped");
+    });
+
+    this.operationalTwinCalibrationSamplePromise = sample.finally(() => {
+      this.operationalTwinCalibrationSamplePromise = null;
+    });
   }
 
   private evaluatePredictiveShadow(aircraft: Aircraft, now: number): PredictiveFlightState | null {
