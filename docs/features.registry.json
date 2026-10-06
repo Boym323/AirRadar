@@ -769,7 +769,7 @@
       "category": "analytics / routes",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans.",
+      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates.",
       "pages": [
         "/routes"
       ],
@@ -779,9 +779,7 @@
       ],
       "changelogKeywords": [
         "route network",
-        "route explorer",
-        "top routes",
-        "origin destination"
+        "route explorer"
       ]
     },
     {
@@ -790,7 +788,7 @@
       "category": "discovery / spotting",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft using the existing Logbook Summary and direct watchlist handoff.",
+      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft.",
       "pages": [
         "/discover"
       ],
@@ -800,10 +798,28 @@
       ],
       "changelogKeywords": [
         "aircraft discovery",
-        "discover aircraft",
-        "rare aircraft",
-        "returning aircraft",
-        "new aircraft"
+        "discover aircraft"
+      ]
+    },
+    {
+      "id": "watchlist-intelligence-v2",
+      "name": "Watchlist Intelligence V2",
+      "category": "alerts / monitoring",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Read-only watchlist intelligence dashboard combining current per-rule matches with one bounded 50-event activity feed for recent rule activity and notification-delivery outcomes.",
+      "pages": [
+        "/watchlist"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "watchlist-intelligence"
+      ],
+      "changelogKeywords": [
+        "watchlist intelligence",
+        "matching rules",
+        "matching aircraft",
+        "recent watchlist activity"
       ]
     }
   ]

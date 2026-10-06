@@ -12,6 +12,7 @@ historicky přiřazený.
 | Funkce | Stav | Kategorie | Zavedeno | Stránky | API | Shrnutí |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
+| Aircraft Discovery | production | discovery / spotting | Pre-registry | `/discover` | — | Omezená stránka pro objevování živých, nových, vzácných a vracejících se letadel. |
 | Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/navigation/data`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Časová osa a stream lifecycle/transition intelligence událostí s omezenými odkazy Event Replay pro významné uložené události. |
@@ -707,6 +708,5 @@ Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejn
 
 `/routes` používá existující bounded Statistics Traffic API a zobrazuje nejčastější origin/destination dvojice pro dnešek, 7 nebo 30 dní. Ukazuje podíl trasy, pořadí odletových a příletových letišť a přímé odkazy na letiště. Nepřidává nový route ingest, novou databázovou cestu ani scan `FlightPosition`.
 
-### Radar Presets V1
 
 Živý radar umí uložit až osm pojmenovaných presetů pouze v prohlížeči. Preset obnoví kameru a existující coverage/source filtry, letecké, meteorologické a airspace vrstvy, range rings, barevný režim letadel, průhlednost meteorologického radaru a hladinu větru. Neukládá vybrané letadlo, živý provoz ani serverový stav a nepřidává žádné API ani databázovou závislost.
