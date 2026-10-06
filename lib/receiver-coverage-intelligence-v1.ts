@@ -106,13 +106,16 @@ export function buildReceiverCoverageIntelligenceV1(input: {
   currentDate: string;
   statsRows: readonly ReceiverCoverageTrendStatsRow[];
   coverageRows: readonly ReceiverCoverageTrendCoverageRow[];
+  historyDays?: number;
 }): ReceiverCoverageIntelligenceV1 {
   const points = buildPoints(input.statsRows, input.coverageRows, input.currentDate);
   const currentDay = points.find((point) => point.date === input.currentDate) ?? null;
   const completed = points
     .filter((point) => point.complete)
     .sort((a, b) => a.date.localeCompare(b.date));
-  const recentDays = [...completed.slice(-7), ...(currentDay ? [currentDay] : [])];
+  const historyDays = Math.min(30, Math.max(1, Math.trunc(input.historyDays ?? 7)));
+  const completedLimit = Math.max(0, historyDays - (currentDay ? 1 : 0));
+  const recentDays = [...completed.slice(-completedLimit), ...(currentDay ? [currentDay] : [])];
 
   const eligibleCompleted = completed.filter((point) =>
     point.medianSectorRangeKm !== null && point.populatedSectors >= 12,
