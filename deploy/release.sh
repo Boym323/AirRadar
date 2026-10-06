@@ -36,6 +36,7 @@ DRY_RUN=0
 ALLOW_DIRTY=0
 AUTOMATED=0
 EXPECTED_COMMIT=""
+PREPARED_BUILD_ROOT=""
 OLD_SHA=""
 NEW_SHA=""
 RESTART_ATTEMPTED=0
@@ -62,6 +63,7 @@ Options:
   --channel MODE    Release channel: stable (default) or rc.
   --automated       Deploy an already CI-validated commit; skip duplicate quality gates.
   --commit SHA       Require the release branch to resolve to this exact commit.
+  --prepared-build DIR  Use a CI-produced .next artifact instead of rebuilding locally (automated releases only).
   --allow-dirty    Release uncommitted changes without updating from origin.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
@@ -236,6 +238,11 @@ parse_args() {
         EXPECTED_COMMIT="${2,,}"
         shift 2
         ;;
+      --prepared-build)
+        (( $# >= 2 )) || die "--prepared-build requires an artifact directory."
+        PREPARED_BUILD_ROOT="$2"
+        shift 2
+        ;;
       --dry-run)
         DRY_RUN=1
         shift
@@ -380,8 +387,15 @@ preflight() {
   require_command mktemp
   require_command cmp
   require_command mv
+  require_command cp
   clean_automated_generated_changes
   check_repository
+  if [[ -n "${PREPARED_BUILD_ROOT}" ]]; then
+    (( AUTOMATED == 1 )) || die "--prepared-build is only supported with --automated."
+    PREPARED_BUILD_ROOT="$(cd -- "${PREPARED_BUILD_ROOT}" 2>/dev/null && pwd -P)" || die "Prepared build directory is not accessible: ${PREPARED_BUILD_ROOT}"
+    [[ -f "${PREPARED_BUILD_ROOT}/manifest.json" ]] || die "Prepared build manifest is missing: ${PREPARED_BUILD_ROOT}/manifest.json"
+    [[ -f "${PREPARED_BUILD_ROOT}/.next/BUILD_ID" ]] || die "Prepared build is missing .next/BUILD_ID."
+  fi
   check_node_version
   check_permissions
 
@@ -541,46 +555,109 @@ generate_release_changelog() {
   log "Changelog committed at ${NEW_SHA}"
 }
 
+validate_and_stage_prepared_build() {
+  local manifest_path="${PREPARED_BUILD_ROOT}/manifest.json"
+  local prepared_next="${PREPARED_BUILD_ROOT}/.next"
+  local staged_next="${APP_DIR}/${RELEASE_BUILD_DIR}"
+
+  log "Validating prepared CI build artifact"
+  RELEASE_BUILD_TIME="$(node - "${manifest_path}" "${NEW_SHA}" "${RELEASE_VERSION}" "${RELEASE_BUILD_CHANNEL}" "${prepared_next}/BUILD_ID" <<'NODE'
+const fs = require("node:fs");
+const [manifestPath, expectedCommit, expectedVersion, expectedChannel, buildIdPath] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const buildId = fs.readFileSync(buildIdPath, "utf8").trim();
+if (manifest.schemaVersion !== 1) throw new Error("Unsupported prepared-build manifest schema");
+if (manifest.runtime !== "standalone-v1") throw new Error("Prepared build is not a standalone-v1 runtime");
+if (String(manifest.commit || "").toLowerCase() !== expectedCommit.toLowerCase()) throw new Error(`Prepared build commit mismatch: ${manifest.commit} != ${expectedCommit}`);
+if (manifest.version !== expectedVersion) throw new Error(`Prepared build version mismatch: ${manifest.version} != ${expectedVersion}`);
+if (manifest.channel !== expectedChannel) throw new Error(`Prepared build channel mismatch: ${manifest.channel} != ${expectedChannel}`);
+if (manifest.buildId !== buildId) throw new Error("Prepared build BUILD_ID does not match its manifest");
+if (typeof manifest.buildTime !== "string" || !Number.isFinite(Date.parse(manifest.buildTime))) throw new Error("Prepared build has invalid buildTime");
+process.stdout.write(new Date(manifest.buildTime).toISOString());
+NODE
+)" || die "Prepared CI build artifact validation failed."
+
+  acquire_build_lock
+  rm -rf -- "${staged_next}"
+  cp -a -- "${prepared_next}" "${staged_next}"
+  [[ -f "${staged_next}/standalone/server.js" ]] || {
+    release_build_lock
+    die "Prepared CI build is missing standalone/server.js."
+  }
+  [[ -f "${staged_next}/BUILD_ID" ]] || {
+    release_build_lock
+    die "Prepared CI build could not be staged."
+  }
+  release_build_lock
+  log "Prepared CI build staged for commit ${NEW_SHA}"
+}
+
+prisma_cli() {
+  local prisma_version
+  prisma_version="$(node -e 'const fs=require("node:fs"); const pkg=JSON.parse(fs.readFileSync("package.json","utf8")); process.stdout.write(pkg.devDependencies?.prisma ?? pkg.dependencies?.prisma ?? "");')"
+  [[ "${prisma_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die "package.json does not pin an exact Prisma CLI version."
+  npm_config_prefer_offline=true npm exec --yes --package="prisma@${prisma_version}" -- prisma "$@"
+}
+
 run_release_steps() {
   cleanup_stale_smoke_validation_dirs
 
-  log "Installing dependencies"
-  npm ci --prefer-offline --no-audit --no-fund
+  if (( AUTOMATED == 1 )); then
+    log "Installing production dependencies only"
+    npm ci --omit=dev --prefer-offline --no-audit --no-fund
+    log "Generating Prisma contract with pinned CLI"
+    prisma_cli contract emit
+  else
+    log "Installing dependencies"
+    npm ci --prefer-offline --no-audit --no-fund
+    log "Generating Prisma contract"
+    npm run prisma:generate
+  fi
 
-  log "Generating Prisma contract"
-  npm run prisma:generate
-
-  # next typegen/build may rewrite tracked TypeScript declaration files. Keep
-  # the source checkout exactly as it was before the release starts.
-  snapshot_build_source_files
   if (( AUTOMATED == 1 )); then
     log "Automated release: reusing CI validation for ${NEW_SHA}; skipping duplicate quality suite"
   else
     run_quality_gates
   fi
 
-  log "Building production app"
-  acquire_build_lock
-  RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
-  export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
-  rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
-  if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
-    restore_build_source_files || true
+  if [[ -n "${PREPARED_BUILD_ROOT}" ]]; then
+    validate_and_stage_prepared_build
+  else
+    # next typegen/build may rewrite tracked TypeScript declaration files. Keep
+    # the source checkout exactly as it was before the release starts.
+    snapshot_build_source_files
+    log "Building production app"
+    acquire_build_lock
+    RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
+    export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
+    rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
+    if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
+      restore_build_source_files || true
+      release_build_lock
+      die "Production build failed; the active .next directory was not changed."
+    fi
+    if ! node scripts/prepare-standalone.mjs "${APP_DIR}/${RELEASE_BUILD_DIR}"; then
+      restore_build_source_files || true
+      release_build_lock
+      die "Standalone runtime preparation failed."
+    fi
+    restore_build_source_files || {
+      release_build_lock
+      die "Could not restore source files modified by the production build."
+    }
+    [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
+      release_build_lock
+      die "Production build completed without ${RELEASE_BUILD_DIR}/BUILD_ID."
+    }
     release_build_lock
-    die "Production build failed; the active .next directory was not changed."
   fi
-  restore_build_source_files || {
-    release_build_lock
-    die "Could not restore source files modified by the production build."
-  }
-  [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
-    release_build_lock
-    die "Production build completed without ${RELEASE_BUILD_DIR}/BUILD_ID."
-  }
-  release_build_lock
 
   log "Applying database migrations"
-  npm run prisma:deploy
+  if (( AUTOMATED == 1 )); then
+    prisma_cli db migrate
+  else
+    npm run prisma:deploy
+  fi
 }
 
 run_quality_gates() {
@@ -923,7 +1000,7 @@ print_dry_run_plan() {
   else
     [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || die "Version helper returned an invalid dry-run stable version: ${resolved_version}"
   fi
-  log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
+  log "Dry run; no repository update, dependency installation, migrations, build activation, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
   log "Candidate: version=${resolved_version} tag=v${resolved_version} channel=${RELEASE_BUILD_CHANNEL}"
   if (( WORKTREE_DIRTY == 1 )); then
