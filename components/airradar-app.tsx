@@ -2639,11 +2639,11 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
     }
 
-    if (!target) {
+    if (!target || !availableTwin) {
       if (!operationalFocusMapId) operationalFocusMapCameraKeyRef.current = null;
       return;
     }
-    const cameraKey = `${selectedOperationalTwin.aircraft.icaoHex}:${target.itemId}`;
+    const cameraKey = `${availableTwin.aircraft.icaoHex}:${target.itemId}`;
     if (operationalFocusMapCameraKeyRef.current === cameraKey) return;
     operationalFocusMapCameraKeyRef.current = cameraKey;
     map.easeTo({
