@@ -105,7 +105,6 @@ describe("Receiver Coverage Intelligence V1", () => {
     expect(result.health.state).toBe("GOOD");
     expect(result.health.reasons).toContain("coverage.unique_aircraft_below_baseline");
   });
-});
   it("supports an explicit bounded 30-day trend without changing the default", () => {
     const dates = Array.from({ length: 30 }, (_, index) => "2026-09-" + String(index + 1).padStart(2, "0"));
     const result = buildReceiverCoverageIntelligenceV1({
@@ -124,5 +123,4 @@ describe("Receiver Coverage Intelligence V1", () => {
     expect(result.trend.recentDays[0]?.date).toBe("2026-09-01");
     expect(result.trend.recentDays.at(-1)?.date).toBe("2026-09-30");
   });
-
-
+});
