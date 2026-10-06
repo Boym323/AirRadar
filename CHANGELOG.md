@@ -6,6 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
+- Add Daily Aviation Story V1 to `/recap/daily`: busiest-airport ranking, unusual-turn/orbit counts, and bounded quality-controlled aircraft-weather highlights on top of existing receiver, Flight Intelligence, alert, rare-aircraft, and reception-record data.
 - Add Prediction Timeline V1 to aircraft detail, reusing the existing Operational Twin situation response to show NOW plus chronological waypoint, ATC, airspace, SIGMET and readiness-gated public prediction events with preserved source, provenance and confidence.
 - Add Operations Dashboard V1 at `/operations`, reusing canonical live traffic, Airport Operations, Regional Attention, readiness-gated public ETA with an inferred terminal-demand fallback, and Flight Intelligence without adding a parallel intelligence engine.
 - Extend Flight Intelligence with explicit initial-climb, cruise-entry, and

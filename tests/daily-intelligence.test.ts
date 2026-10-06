@@ -46,8 +46,21 @@ describe("Daily Intelligence composer", () => {
         { type: "GO_AROUND", count: 3 },
         { type: "HOLDING", count: 4 },
         { type: "DIVERSION", count: 1 },
+        { type: "UNUSUAL_TURN", count: 2 },
+        { type: "ORBIT", count: 1 },
+      ],
+      routeAggregates: [
+        { origin: "LKPR", destination: "EGLL", count: 4 },
+        { origin: "LOWW", destination: "LKPR", count: 3 },
+        { origin: "LKPR", destination: "LOWW", count: 2 },
       ],
       events: [],
+      weather: [
+        { id: 1, aircraftHex: "49D001", callsign: "TEST1", observedAt: new Date("2026-10-03T10:10:00Z"), altitudeFt: 22000, windDirectionDeg: 270, windSpeedKt: 45, turbulenceLevel: 2, quality: "HIGH", source: "BDS_4_4" },
+        { id: 2, aircraftHex: "49D002", callsign: "TEST2", observedAt: new Date("2026-10-03T11:10:00Z"), altitudeFt: 30000, windDirectionDeg: 250, windSpeedKt: 70, turbulenceLevel: null, quality: "GOOD", source: "READSB_JSON" },
+        { id: 3, aircraftHex: "49D003", callsign: "TEST3", observedAt: new Date("2026-10-03T11:20:00Z"), altitudeFt: 31000, windDirectionDeg: 250, windSpeedKt: 90, turbulenceLevel: null, quality: "LOW", source: "READSB_JSON" },
+      ],
+      weatherStatus: "available",
       alerts: [],
       timezone: "Europe/Prague",
       complete: true,
@@ -63,7 +76,15 @@ describe("Daily Intelligence composer", () => {
       holdings: 4,
       diversions: 1,
       emergencies: 0,
+      unusualTurns: 2,
+      orbits: 1,
     });
+    expect(result.topAirports[0]).toEqual({ icao: "LKPR", movements: 9, arrivals: 3, departures: 6 });
+    expect(result.weatherHighlights).toEqual([
+      expect.objectContaining({ kind: "turbulence", icaoHex: "49D001", turbulenceLevel: 2, quality: "HIGH" }),
+      expect.objectContaining({ kind: "strong_wind", icaoHex: "49D002", windSpeedKt: 70, quality: "GOOD" }),
+    ]);
+    expect(result.weatherStatus).toBe("available");
     expect(result.complete).toBe(true);
   });
 
@@ -90,7 +111,10 @@ describe("Daily Intelligence composer", () => {
     const result = buildDailyIntelligence({
       flights: [],
       eventAggregates: [],
+      routeAggregates: [],
       events: [],
+      weather: [],
+      weatherStatus: "available",
       alerts: [legacy, v1],
       timezone: "Europe/Prague",
       complete: true,
@@ -127,7 +151,10 @@ describe("Daily Intelligence composer", () => {
     const result = buildDailyIntelligence({
       flights: [],
       eventAggregates: [],
+      routeAggregates: [],
       events: [],
+      weather: [],
+      weatherStatus: "available",
       alerts: [routineSquawk],
       timezone: "Europe/Prague",
       complete: true,
@@ -180,7 +207,10 @@ describe("Daily Intelligence composer", () => {
     const result = buildDailyIntelligence({
       flights: [],
       eventAggregates: [{ type: "GO_AROUND", count: 1 }],
+      routeAggregates: [],
       events: [...routine, goAround],
+      weather: [],
+      weatherStatus: "unavailable",
       alerts: [record, duplicatedIntelligence],
       timezone: "Europe/Prague",
       complete: false,
@@ -190,6 +220,35 @@ describe("Daily Intelligence composer", () => {
     expect(result.highlights.some((item) => item.eventType === "GO_AROUND")).toBe(true);
     expect(result.highlights.some((item) => item.kind === "reception_record" && item.distanceKm === 287)).toBe(true);
     expect(result.highlights.every((item) => item.key !== `alert:${duplicatedIntelligence.id}`)).toBe(true);
+    expect(result.weatherStatus).toBe("unavailable");
     expect(result.complete).toBe(false);
+  });
+
+  it("deduplicates weather highlights per aircraft and keeps the strongest accepted signal", () => {
+    const result = buildDailyIntelligence({
+      flights: [],
+      eventAggregates: [],
+      routeAggregates: [],
+      events: [],
+      weather: [
+        { id: 10, aircraftHex: "49DAAA", callsign: "WX1", observedAt: new Date("2026-10-03T09:00:00Z"), altitudeFt: 18000, windDirectionDeg: 210, windSpeedKt: 55, turbulenceLevel: null, quality: "GOOD", source: "READSB_JSON" },
+        { id: 11, aircraftHex: "49DAAA", callsign: "WX1", observedAt: new Date("2026-10-03T09:05:00Z"), altitudeFt: 18500, windDirectionDeg: 220, windSpeedKt: 40, turbulenceLevel: 3, quality: "HIGH", source: "BDS_4_4" },
+        { id: 12, aircraftHex: "49DBBB", callsign: "WX2", observedAt: new Date("2026-10-03T09:10:00Z"), altitudeFt: 19000, windDirectionDeg: 230, windSpeedKt: 80, turbulenceLevel: null, quality: "REJECTED", source: "BDS_4_4" },
+      ],
+      weatherStatus: "truncated",
+      alerts: [],
+      timezone: "Europe/Prague",
+      complete: false,
+    });
+
+    expect(result.weatherHighlights).toHaveLength(1);
+    expect(result.weatherHighlights[0]).toMatchObject({
+      key: "weather:11",
+      kind: "turbulence",
+      icaoHex: "49DAAA",
+      turbulenceLevel: 3,
+      quality: "HIGH",
+    });
+    expect(result.weatherStatus).toBe("truncated");
   });
 });
