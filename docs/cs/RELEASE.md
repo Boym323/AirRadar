@@ -31,6 +31,15 @@ release se má provést až po dokončení validace RC.
 Výchozí větev je `main`. Pro záměrné vydání jiné pojmenované větve je nutný
 `--branch BRANCH`. `--allow-dirty` zachová aktuální dirty checkout,
 přeskočí aktualizaci z originu a je určen jen pro výjimečné řízené použití.
+`--offline` přeskočí stažení větve i tagů a vydá právě checkoutovaný commit bez
+čtení z GitHubu:
+
+```bash
+sudo ./deploy/release.sh --branch release/local --offline
+```
+
+Skript nikdy nespouští `git push`; release commity a tagy zůstávají lokálně,
+dokud je operátor výslovně nezveřejní.
 `--dry-run` provede preflight, vypíše plán a vyřešeného kandidáta; neaktualizuje
 Git, neinstaluje závislosti, nemigruje, nebuildí, nerestartuje ani neprovádí
 health check. RC kandidáta bez mutací zkontrolujete pomocí:
@@ -90,9 +99,10 @@ stable/RC releasy nadále používají běžný příkaz výše.
    režimu se před touto kontrolou obnoví přesně ty nestageované změny
    `next-env.d.ts` a `tsconfig.json`, které generuje Next.js release; všechny
    ostatní tracked, staged nebo untracked změny stále fail-close.
-2. Získá `/var/lock/airradar-release.lock`. Čistý checkout se fetchne a
-   aktualizuje pouze fast-forwardem; divergentní historie je odmítnuta. Dirty
-   checkout povolený výjimkou zůstane beze změny.
+2. Získá `/var/lock/airradar-release.lock`. Pokud není použito `--offline`,
+   čistý checkout se fetchne a aktualizuje pouze fast-forwardem; divergentní
+   historie je odmítnuta. Offline release ponechá aktuální checkout a přeskočí
+   stažení větve i tagů. Dirty checkout povolený výjimkou zůstane beze změny.
 3. `scripts/version.mjs` vyřeší buď stabilního kandidáta
    `vMAJOR.MINOR.PATCH`, nebo pouze s `--channel rc` kanonického kandidáta
    `vMAJOR.MINOR.PATCH-rc.N`. Stable rozlišení ignoruje RC tagy; číslování RC

@@ -32,6 +32,15 @@ the stable release should be performed only after RC validation is complete.
 The default branch is `main`. `--branch BRANCH` is required to release another
 named branch deliberately. `--allow-dirty` preserves the current dirty
 checkout, skips the origin update, and is for exceptional controlled use.
+`--offline` skips branch and tag fetches and releases the currently checked-out
+commit without reading from GitHub:
+
+```bash
+sudo ./deploy/release.sh --branch release/local --offline
+```
+
+The script never runs `git push`; release commits and tags remain local until
+an operator explicitly publishes them.
 `--dry-run` performs preflight and prints the plan and resolved candidate; it
 does not update Git, install dependencies, migrate, build, restart, or
 health-check. To inspect an RC candidate without mutations, use:
@@ -103,9 +112,10 @@ normal command above.
    exact, unstaged Next.js release-generated changes to `next-env.d.ts` and
    `tsconfig.json` are restored before this check; all other tracked, staged,
    or untracked changes still fail closed.
-2. It acquires `/var/lock/airradar-release.lock`. A clean checkout is fetched
-   and updated only by fast-forward; divergent history is rejected. A dirty
-   allowed checkout is kept as-is.
+2. It acquires `/var/lock/airradar-release.lock`. Unless `--offline` is used,
+   a clean checkout is fetched and updated only by fast-forward; divergent
+   history is rejected. Offline releases keep the current checkout and skip
+   both branch and tag fetches. A dirty allowed checkout is kept as-is.
 3. `scripts/version.mjs` resolves either a stable `vMAJOR.MINOR.PATCH`
    candidate or, only with `--channel rc`, a canonical
    `vMAJOR.MINOR.PATCH-rc.N` candidate. Stable resolution ignores RC tags;
