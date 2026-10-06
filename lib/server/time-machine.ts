@@ -3,7 +3,8 @@ import { getPrisma } from "@/lib/server/db";
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
 
-export const TIME_MACHINE_MAX_WINDOW_MS = 5 * 60_000;\nexport const TIME_MACHINE_EVENT_REPLAY_MAX_WINDOW_MS = 20 * 60_000;
+export const TIME_MACHINE_MAX_WINDOW_MS = 5 * 60_000;
+export const TIME_MACHINE_EVENT_REPLAY_MAX_WINDOW_MS = 20 * 60_000;
 export const TIME_MACHINE_MAX_AIRCRAFT = 500;
 export const TIME_MACHINE_MAX_POSITIONS = 40_000;
 export const TIME_MACHINE_MAX_EVENTS = 200;
