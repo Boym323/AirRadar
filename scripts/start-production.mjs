@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { waitForBuildReady } from "./build-start-lock.mjs";
 
@@ -22,10 +23,11 @@ async function start() {
   });
 
   const standaloneServer = new URL("../.next/standalone/server.js", import.meta.url);
+  const standaloneReadyMarker = new URL("../.next/standalone/.airradar-runtime-ready", import.meta.url);
   let standaloneAvailable = false;
   try {
     loadCommonJs.resolve("../.next/standalone/server.js");
-    standaloneAvailable = true;
+    standaloneAvailable = existsSync(standaloneReadyMarker);
   } catch (error) {
     if (error?.code !== "MODULE_NOT_FOUND") throw error;
   }
@@ -37,9 +39,9 @@ async function start() {
     return;
   }
 
-  // Backward-compatible fallback for builds produced before standalone output
-  // was enabled. This can be removed after all rollback candidates contain the
-  // standalone runtime.
+  // Backward-compatible fallback for builds that do not contain a fully prepared
+  // standalone runtime. The readiness marker is written only after public/static
+  // assets have been copied, which also makes the first transition deploy safe.
   const instrumentation = loadCommonJs("../.next/server/instrumentation.js");
   await instrumentation.register();
   await import("next/dist/bin/next");
