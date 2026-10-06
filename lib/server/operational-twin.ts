@@ -19,6 +19,7 @@ import {
   buildOperationalTwinCorridor,
   buildOperationalTwinEvents,
   buildOperationalTwinSituation,
+  buildOperationalTwinTrajectoryQualityV2,
   buildOperationalTwinWindTimingShadow,
   applyOperationalTwinWindTimingPromotion,
   OPERATIONAL_TWIN_VERSION,
@@ -273,6 +274,11 @@ export async function getOperationalTwinForAircraft(
   const corridor = buildOperationalTwinCorridor(state, route, now);
   if (!corridor) return unavailable(icaoHex, "corridor_unavailable");
 
+  const trajectoryQualityV2 = buildOperationalTwinTrajectoryQualityV2({
+    aircraft: state,
+    corridor,
+  });
+
   const airspacePlan: AirspacePlanSnapshot | null = airspaceResult.value;
   const sigmets: SigmetSnapshot | null = sigmetResult.value;
 
@@ -336,6 +342,7 @@ export async function getOperationalTwinForAircraft(
     ),
   });
   situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
+  situation.trajectoryQualityV2 = trajectoryQualityV2;
 
   // Truth-first V2 observes the current independent route/SIGMET truth before
   // capturing this request's future predictions, preventing self-validation.
