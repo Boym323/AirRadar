@@ -1,0 +1,264 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+
+.headerMeta {
+  display: grid;
+  justify-items: end;
+  gap: .35rem;
+  color: var(--text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+  gap: 1rem;
+}
+
+.sectorPanel,
+.airspacePanel {
+  min-width: 0;
+}
+
+.sectorList,
+.flowList,
+.airspaceList {
+  display: grid;
+  gap: .45rem;
+  margin-top: .8rem;
+}
+
+.sectorList button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .8rem;
+  align-items: center;
+  width: 100%;
+  padding: .7rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-elevated) 84%, transparent);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sectorList button:hover,
+.sectorList button.selected {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-elevated));
+}
+
+.sectorList button > span:first-child,
+.sectorNumbers {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.sectorList small {
+  color: var(--text-muted);
+}
+
+.sectorNumbers {
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.windowButtons {
+  display: flex;
+  gap: .3rem;
+}
+
+.windowButtons button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  padding: .32rem .55rem;
+  cursor: pointer;
+}
+
+.windowButtons button[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-elevated));
+}
+
+.flowList > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .8rem;
+  padding: .62rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.flowList span {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.flowList i {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.flowList b {
+  font-variant-numeric: tabular-nums;
+}
+
+.sourceRow {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-top: .75rem;
+  color: var(--text-muted);
+}
+
+.airspaceList article {
+  display: grid;
+  gap: .28rem;
+  padding: .7rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+}
+
+.airspaceList article > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .7rem;
+}
+
+.airspaceList span {
+  font-variant-numeric: tabular-nums;
+}
+
+.airspaceList small,
+.disclaimer {
+  color: var(--text-muted);
+}
+
+.disclaimer {
+  margin: .85rem 0 0;
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
+.history {
+  display: grid;
+  gap: .8rem;
+  margin-top: .8rem;
+}
+
+.selectedSector {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .8rem;
+}
+
+.selectedSector > div {
+  display: grid;
+  gap: .15rem;
+}
+
+.selectedSector span {
+  color: var(--text-muted);
+  font-size: .72rem;
+}
+
+.historyMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .4rem;
+  margin: 0;
+}
+
+.historyMetrics div {
+  display: grid;
+  gap: .2rem;
+  padding: .6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.historyMetrics dt {
+  color: var(--text-muted);
+  font-size: .66rem;
+}
+
+.historyMetrics dd {
+  margin: 0;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+.frequencies {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin: 0;
+  align-items: center;
+}
+
+.frequencies span {
+  color: var(--text-muted);
+  font-size: .7rem;
+}
+
+.frequencies b {
+  padding: .25rem .45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: .75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.historyBuckets {
+  height: 72px;
+  display: flex;
+  align-items: end;
+  gap: .28rem;
+  padding: .55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.historyBuckets span {
+  flex: 1 1 0;
+  min-width: 3px;
+  height: max(4px, calc(var(--load) * 100%));
+  border-radius: 2px 2px 0 0;
+  background: currentColor;
+  opacity: .62;
+}
+
+@media (max-width: 920px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .headerMeta {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 620px) {
+  .sectorList button {
+    grid-template-columns: 1fr;
+  }
+
+  .sectorNumbers {
+    justify-content: space-between;
+  }
+
+  .historyMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
