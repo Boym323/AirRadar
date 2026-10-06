@@ -601,3 +601,11 @@ Drawer navíc nabízí omezenou navigaci předchozí/další přes serverem seř
 Radar porovnává po sobě jdoucí úspěšné snapshoty Operational Focus pro stejné vybrané letadlo uvnitř již existujícího 60sekundového situation refreshe v prohlížeči. Nepřidává další request, server endpoint, provider call, persistence cestu ani polling loop. Porovnání je pouze session-local a při nedostupném aktuálním situation/focus výsledku se změnový stav zahodí jako neznámý.
 
 Stabilní focus ID klasifikují změny jako `NEW`, `ESCALATED`, `DEESCALATED`, `UPDATED` nebo `RESOLVED`. Změna levelu má přednost před obecným update. `UPDATED` vznikne jen při změně confidence/semantiky nebo při posunu absolutního predikovaného času alespoň o 60 sekund; přirozený pokles relativního `offsetMinutes` s během času se za změnu nepovažuje. Chybějící data se nikdy neinterpretují jako resolution. Drawer ukazuje omezené change badge u položek a nejvýše tři právě vyřešené položky z bezprostředně předchozího validního snapshotu.
+
+## Digital Twin Trajectory Quality V2
+
+Trajectory Quality V2 je aditivní shadow profil nad existujícím canonical 30minutovým koridorem. Aktuální vertikální fázi klasifikuje jako CLIMB, CRUISE, DESCENT, LEVEL nebo UNKNOWN a pouze uvnitř shadow nahrazuje canonical desetiminutové držení vertical rate: při climb/descent se aktuální tempo drží tři minuty a potom se lineárně utlumí k nule do dvanácté minuty, zatímco cruise/level drží pozorovanou výšku.
+
+V2 shadow zachovává všechny canonical horizontální souřadnice, track, hodnoty uncertainty i timestampy. Zpřístupňuje přesné 5/15/30minutové checkpointy canonical-versus-quality výšky, aby pozdější outcome validace mohla změřit, zda taperovaný profil vertikální projekci skutečně zlepšuje. Chybějící altitude fail-closed vrací INSUFFICIENT.
+
+V2 se záměrně nepromuje. `canonicalRemainsActive=true` a `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus i veřejné event timing dál používají canonical corridor. Shadow nepřidává provider call, síťový request, databázovou cestu ani poller a výslovně nese omezení `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
