@@ -4,6 +4,7 @@ import type { FlightEventType } from "@/lib/intelligence/types";
 import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
 
 export const TIME_MACHINE_MAX_WINDOW_MS = 5 * 60_000;
+export const TIME_MACHINE_EVENT_REPLAY_MAX_WINDOW_MS = 20 * 60_000;
 export const TIME_MACHINE_MAX_AIRCRAFT = 500;
 export const TIME_MACHINE_MAX_POSITIONS = 40_000;
 export const TIME_MACHINE_MAX_EVENTS = 200;
@@ -28,10 +29,10 @@ function parseInstant(value: string | null): Date {
   if (!value || !Number.isFinite(Date.parse(value))) throw new TimeMachineValidationError("Invalid timestamp");
   return new Date(value);
 }
-function bounds(fromValue: string | null, toValue: string | null): { from: Date; to: Date } {
+function bounds(fromValue: string | null, toValue: string | null, maxWindowMs = TIME_MACHINE_MAX_WINDOW_MS): { from: Date; to: Date } {
   const from = parseInstant(fromValue); const to = parseInstant(toValue);
   if (to <= from) throw new TimeMachineValidationError("Reversed time range");
-  if (to.getTime() - from.getTime() > TIME_MACHINE_MAX_WINDOW_MS) throw new TimeMachineValidationError("Historical window is too large");
+  if (to.getTime() - from.getTime() > maxWindowMs) throw new TimeMachineValidationError("Historical window is too large");
   return { from, to };
 }
 
@@ -46,8 +47,8 @@ export async function getTimeMachineRange(): Promise<TimeMachineRange> {
   } catch { throw new TimeMachineDatabaseUnavailableError(); }
 }
 
-export async function getTimeMachineWindow(fromValue: string | null, toValue: string | null): Promise<{ windowStart: string; windowEnd: string; aircraft: HistoricalAircraftTrack[]; events: TimeMachineEvent[]; truncated: boolean }> {
-  const { from, to } = bounds(fromValue, toValue);
+export async function getTimeMachineWindow(fromValue: string | null, toValue: string | null, maxWindowMs = TIME_MACHINE_MAX_WINDOW_MS): Promise<{ windowStart: string; windowEnd: string; aircraft: HistoricalAircraftTrack[]; events: TimeMachineEvent[]; truncated: boolean }> {
+  const { from, to } = bounds(fromValue, toValue, maxWindowMs);
   const database = getPrisma() as unknown as TimeMachineDb | null;
   if (!database) throw new TimeMachineDatabaseUnavailableError();
   try {
@@ -93,4 +94,4 @@ async function getTimeMachineEvents(database: TimeMachineDb, from: Date, to: Dat
   return rows.slice(0, TIME_MACHINE_MAX_EVENTS).map((row) => ({ id: row.eventKey || String(row.id), type: row.type, icaoHex: row.icaoHex, flightId: row.flightId ?? null, occurredAt: iso(row.occurredAt), callsign: row.flight?.callsign ?? null, registration: row.aircraft?.registration ?? null, airportIcao: row.airportIcao ?? null, sectorId: row.sectorId ?? null, latitude: row.latitude ?? null, longitude: row.longitude ?? null }));
 }
 
-export function validateTimeMachineWindow(from: string | null, to: string | null): void { bounds(from, to); }
+export function validateTimeMachineWindow(from: string | null, to: string | null, maxWindowMs = TIME_MACHINE_MAX_WINDOW_MS): void { bounds(from, to, maxWindowMs); }
