@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatNumber, formatTime, t } from "@/lib/i18n";
-import type { AircraftOperationalFocusItem, OperationalTwinApiResponse, OperationalTwinEvent } from "@/lib/operational-twin";
+import { aircraftOperationalFocusRadarHref, type AircraftOperationalFocusItem, type OperationalTwinApiResponse, type OperationalTwinEvent } from "@/lib/operational-twin";
 import type { WeatherCorridorEvent } from "@/lib/weather/corridor-intelligence";
 import styles from "./aircraft-operational-twin.module.css";
 
@@ -117,21 +118,28 @@ export function AircraftOperationalTwin({
       </div>
       {operationalFocus.items.length ? <ol className={styles.weatherTimeline}>
         {operationalFocus.items.map((item) => <li key={item.id}>
-          <div className={styles.weatherTime}>
-            <strong>{relativeTime(item.offsetMinutes)}</strong>
-            <small>{formatTime(item.at)}</small>
-          </div>
-          <div className={styles.weatherEvent}>
-            <div className={styles.eventHeader}>
-              <span>{operationalFocusTypeLabel(item.type)}</span>
-              <div className={styles.badges}>
-                <span>{t.operationalTwin.operationalFocusLevel[item.level]}</span>
-                <span>{t.operationalTwin.confidence[item.confidence]}</span>
-              </div>
+          <Link
+            className={styles.focusItemLink}
+            href={aircraftOperationalFocusRadarHref(icaoHex, item.id)}
+            aria-label={t.operationalTwin.operationalFocusShowOnRadar(item.label)}
+          >
+            <div className={styles.weatherTime}>
+              <strong>{relativeTime(item.offsetMinutes)}</strong>
+              <small>{formatTime(item.at)}</small>
             </div>
-            <strong>{item.label}</strong>
-            <small>{item.source}{item.sourceReference ? ` · ${item.sourceReference}` : ""}</small>
-          </div>
+            <div className={styles.weatherEvent}>
+              <div className={styles.eventHeader}>
+                <span>{operationalFocusTypeLabel(item.type)}</span>
+                <div className={styles.badges}>
+                  <span>{t.operationalTwin.operationalFocusLevel[item.level]}</span>
+                  <span>{t.operationalTwin.confidence[item.confidence]}</span>
+                </div>
+              </div>
+              <strong>{item.label}</strong>
+              <small>{item.source}{item.sourceReference ? ` · ${item.sourceReference}` : ""}</small>
+              <small className={styles.focusMapAction}>{t.operationalTwin.operationalFocusMapAction}</small>
+            </div>
+          </Link>
         </li>)}
       </ol> : <p className={styles.status}>{t.operationalTwin.operationalFocusNoItems}</p>}
       <p className={styles.disclaimer}>{t.operationalTwin.operationalFocusDisclaimer}</p>
