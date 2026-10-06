@@ -14,6 +14,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const service = getAircraftStateService();
   const corridor = service.getOperationalTwinOutcomeReport();
+  const trajectoryQuality = service.getOperationalTwinTrajectoryQualityOutcomeReport();
   const event = service.getOperationalTwinEventOutcomeReport();
   const focus = service.getOperationalFocusOutcomeReport();
   const regionalAttention = service.getRegionalAttentionOutcomeReport();
@@ -23,6 +24,7 @@ export async function GET(request: Request): Promise<Response> {
     version: "digital-twin-calibration-center-v1",
     generatedAt: new Date().toISOString(),
     corridor,
+    trajectoryQuality,
     event,
     focus,
     truthFirst: event.truthFirst,
