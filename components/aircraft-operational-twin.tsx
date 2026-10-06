@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatNumber, formatTime, t } from "@/lib/i18n";
-import { aircraftOperationalFocusRadarHref, type AircraftOperationalFocusItem, type OperationalTwinApiResponse, type OperationalTwinEvent } from "@/lib/operational-twin";
+import type { AircraftOperationalFocusItem, OperationalTwinApiResponse, OperationalTwinEvent } from "@/lib/operational-twin/types";
+import { aircraftOperationalFocusRadarHref } from "@/lib/operational-twin/aircraft-operational-focus-ui";
 import type { WeatherCorridorEvent } from "@/lib/weather/corridor-intelligence";
 import styles from "./aircraft-operational-twin.module.css";
 
