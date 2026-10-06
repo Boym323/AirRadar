@@ -2256,6 +2256,8 @@ export const en = {
     noEvents: "No additional events can be derived from the available sources inside the next 30 minutes.",
     generated: "Computed",
     windTimingShadowTitle: "Wind-adjusted timing shadow",
+    trajectoryQualityShadowTitle: "Trajectory quality shadow V2",
+    trajectoryQualityShadowSummary: "Phase-aware vertical profile and uncertainty candidate over the same horizontal geometry. Canonical corridor remains active.",
     windTimingShadowSummary: "Experimental timing over the same geometry; canonical timing remains unchanged.",
     windTimingShadowStatus: { AVAILABLE: "available", STALE: "stale weather data", INSUFFICIENT: "insufficient data" },
     windTimingShadowGroundSpeed: "Observed groundspeed",
