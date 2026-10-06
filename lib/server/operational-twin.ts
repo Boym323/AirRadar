@@ -43,6 +43,7 @@ import {
   readPredictiveReadinessReport,
 } from "@/lib/server/predictive-readiness";
 import type { TrackFusionReadinessReport, TrackFusionTrack } from "@/lib/track-fusion";
+import { buildOperationalTwinTrajectoryQualityShadow } from "@/lib/operational-twin/trajectory-quality-shadow";
 
 const LIVE_POSITION_STALE_MS = 60_000;
 
@@ -272,6 +273,7 @@ export async function getOperationalTwinForAircraft(
   const route = routeSnapshot(live, preparedDataset, state);
   const corridor = buildOperationalTwinCorridor(state, route, now);
   if (!corridor) return unavailable(icaoHex, "corridor_unavailable");
+  const trajectoryQualityShadow = buildOperationalTwinTrajectoryQualityShadow(state, corridor);
 
   const airspacePlan: AirspacePlanSnapshot | null = airspaceResult.value;
   const sigmets: SigmetSnapshot | null = sigmetResult.value;
@@ -336,6 +338,7 @@ export async function getOperationalTwinForAircraft(
     ),
   });
   situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
+  situation.trajectoryQualityShadow = trajectoryQualityShadow;
 
   // Truth-first V2 observes the current independent route/SIGMET truth before
   // capturing this request's future predictions, preventing self-validation.
