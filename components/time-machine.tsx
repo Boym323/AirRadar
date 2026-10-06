@@ -18,6 +18,8 @@ import type { TemporalResolution } from "@/lib/map-time/types";
 import { useTimeMachinePreferences } from "@/lib/ui-preferences";
 
 const WINDOW_MS = 5 * 60_000;
+const EVENT_REPLAY_RADIUS_MINUTES = 10;
+const EVENT_REPLAY_WINDOW_MS = EVENT_REPLAY_RADIUS_MINUTES * 2 * 60_000;
 const CONTEXT_BUCKET_MS = 5 * 60_000;
 const EMPTY_CONTEXT_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/Sc6sGQAAAABJRU5ErkJggg==";
 const RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [[11.267, 52.167], [20.77, 52.167], [20.77, 48.047], [11.267, 48.047]];
