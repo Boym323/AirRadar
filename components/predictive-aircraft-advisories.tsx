@@ -10,6 +10,7 @@ import type {
   PublicRunwayAdvisory,
   PublicRunwayChangeAdvisory,
   PublicTrajectoryAdvisory,
+  type ExplainablePredictionEvidence,
 } from "@/lib/predictive-intelligence";
 import { ETA_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/eta-advisory";
 import { RUNWAY_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/runway-advisory";
@@ -18,7 +19,8 @@ import {
   RUNWAY_CHANGE_ADVISORY_STALE_AFTER_MS,
 } from "@/lib/predictive-intelligence/runway-change-advisory";
 import { TRAJECTORY_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/trajectory-advisory";
-import { formatAge, formatTime, t } from "@/lib/i18n";
+import { formatAge, formatNumber, formatTime, t } from "@/lib/i18n";
+import styles from "./predictive-aircraft-advisories.module.css";
 
 interface PredictiveAdvisoryApiResponse {
   etaAdvisory: PublicEtaAdvisory | null;
@@ -40,6 +42,98 @@ type AdvisoryConfidence =
   | AdminRunwayChangeAdvisoryPreview["confidence"]
   | PublicTrajectoryAdvisory["confidence"]
   | AdminTrajectoryAdvisoryPreview["confidence"];
+
+
+function explainabilityCopy() {
+  const cs = t.locale.startsWith("cs");
+  return cs ? {
+    why: "Proč?",
+    subtitle: "Evidence použitá canonical predikcí",
+    publicGate: "PUBLIC · readiness PASS",
+    adminGate: "Admin preview",
+    model: "Model",
+    provenance: "Provenance",
+    noEvidence: "Pro tuto advisory není k dispozici žádná publikovatelná evidence.",
+    readiness: "Readiness důvody",
+    labels: {
+      distanceRemainingNm: "Zbývající vzdálenost",
+      effectiveSpeedKt: "Efektivní rychlost",
+      phase: "Letová fáze",
+      progressWindowSec: "Okno trendu",
+      recentRunwayUsage: "Nedávný runway flow",
+      surfaceWind: "Povrchový vítr",
+      candidateMargin: "Rozdíl kandidátů",
+      crossTrackKm: "Cross-track odchylka",
+      distanceChangeKm: "Změna vzdálenosti",
+    } as Record<ExplainablePredictionEvidence["key"], string>,
+  } : {
+    why: "Why?",
+    subtitle: "Evidence used by the canonical prediction",
+    publicGate: "PUBLIC · readiness PASS",
+    adminGate: "Admin preview",
+    model: "Model",
+    provenance: "Provenance",
+    noEvidence: "No publishable evidence is available for this advisory.",
+    readiness: "Readiness reasons",
+    labels: {
+      distanceRemainingNm: "Distance remaining",
+      effectiveSpeedKt: "Effective speed",
+      phase: "Flight phase",
+      progressWindowSec: "Progress window",
+      recentRunwayUsage: "Recent runway flow",
+      surfaceWind: "Surface wind",
+      candidateMargin: "Candidate margin",
+      crossTrackKm: "Cross-track offset",
+      distanceChangeKm: "Distance change",
+    } as Record<ExplainablePredictionEvidence["key"], string>,
+  };
+}
+
+function explainableValue(item: ExplainablePredictionEvidence): string {
+  if (typeof item.value === "string") return item.value;
+  if (item.key === "distanceRemainingNm") return formatNumber(item.value, 1) + " NM";
+  if (item.key === "effectiveSpeedKt") return formatNumber(item.value, 0) + " kt";
+  if (item.key === "progressWindowSec") return formatNumber(item.value, 0) + " s";
+  if (item.key === "candidateMargin") return formatNumber(item.value, 2);
+  if (item.key === "crossTrackKm" || item.key === "distanceChangeKm") return formatNumber(item.value, 1) + " km";
+  return formatNumber(item.value);
+}
+
+function PredictionExplainability({
+  testId,
+  evidence,
+  modelVersion,
+  adminOnly,
+  readinessReasons = [],
+}: {
+  testId: string;
+  evidence: readonly ExplainablePredictionEvidence[];
+  modelVersion: string | null;
+  adminOnly: boolean;
+  readinessReasons?: readonly string[];
+}) {
+  const copy = explainabilityCopy();
+  return <details className={styles.root} data-testid={testId}>
+    <summary>{copy.why}<span>{copy.subtitle}</span></summary>
+    <div className={styles.body}>
+      <div className={styles.context}>
+        <span>{adminOnly ? copy.adminGate : copy.publicGate}</span>
+        <span>{copy.provenance}: predicted</span>
+        {modelVersion ? <span>{copy.model}: {modelVersion}</span> : null}
+      </div>
+      {evidence.length ? <ul className={styles.list}>
+        {evidence.map((item) => <li key={item.key}>
+          <span>{copy.labels[item.key]}</span>
+          <strong>{explainableValue(item)}</strong>
+        </li>)}
+      </ul> : <p className={styles.empty}>{copy.noEvidence}</p>}
+      {adminOnly && readinessReasons.length > 0 ? <>
+        <small>{copy.readiness}</small>
+        <ul className={styles.reasons}>{readinessReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+      </> : null}
+    </div>
+  </details>;
+}
 
 function confidenceLabel(value: AdvisoryConfidence): string {
   if (value === "HIGH") return t.aircraft.predictiveConfidenceHigh;
@@ -306,6 +400,13 @@ export function PredictiveAircraftAdvisories({
         {etaPreview.readinessReasons.length > 0 && <span title={etaPreview.readinessReasons.join(", ")}>{t.aircraft.predictiveReasons}: {etaPreview.readinessReasons.length}</span>}
       </div>}
 
+      <PredictionExplainability
+        testId="explainable-prediction-eta"
+        evidence={(etaAdvisory ?? etaPreview)?.evidence ?? []}
+        modelVersion={(etaAdvisory ?? etaPreview)?.modelVersion ?? null}
+        adminOnly={etaAdminOnly}
+        readinessReasons={etaPreview?.readinessReasons}
+      />
       <p className="predictive-eta-disclaimer">
         {etaAdminOnly ? t.aircraft.predictiveAdminDisclaimer : t.aircraft.predictiveDisclaimer}
       </p>
@@ -344,6 +445,13 @@ export function PredictiveAircraftAdvisories({
         {runwayPreview.readinessReasons.length > 0 && <span title={runwayPreview.readinessReasons.join(", ")}>{t.aircraft.predictiveReasons}: {runwayPreview.readinessReasons.length}</span>}
       </div>}
 
+      <PredictionExplainability
+        testId="explainable-prediction-runway"
+        evidence={(runwayAdvisory ?? runwayPreview)?.evidence ?? []}
+        modelVersion={(runwayAdvisory ?? runwayPreview)?.modelVersion ?? null}
+        adminOnly={runwayAdminOnly}
+        readinessReasons={runwayPreview?.readinessReasons}
+      />
       <p className="predictive-eta-disclaimer">
         {runwayAdminOnly ? t.aircraft.predictiveRunwayAdminDisclaimer : t.aircraft.predictiveRunwayDisclaimer}
       </p>
@@ -383,6 +491,13 @@ export function PredictiveAircraftAdvisories({
         {runwayChangePreview.readinessReasons.length > 0 && <span title={runwayChangePreview.readinessReasons.join(", ")}>{t.aircraft.predictiveReasons}: {runwayChangePreview.readinessReasons.length}</span>}
       </div>}
 
+      <PredictionExplainability
+        testId="explainable-prediction-runway-change"
+        evidence={(runwayChangeAdvisory ?? runwayChangePreview)?.evidence ?? []}
+        modelVersion={(runwayChangeAdvisory ?? runwayChangePreview)?.modelVersion ?? null}
+        adminOnly={runwayChangeAdminOnly}
+        readinessReasons={runwayChangePreview?.readinessReasons}
+      />
       <p className="predictive-eta-disclaimer">
         {runwayChangeAdminOnly ? t.aircraft.predictiveRunwayChangeAdminDisclaimer : t.aircraft.predictiveRunwayChangeDisclaimer}
       </p>
@@ -423,6 +538,13 @@ export function PredictiveAircraftAdvisories({
         {trajectoryPreview.readinessReasons.length > 0 && <span title={trajectoryPreview.readinessReasons.join(", ")}>{t.aircraft.predictiveReasons}: {trajectoryPreview.readinessReasons.length}</span>}
       </div>}
 
+      <PredictionExplainability
+        testId="explainable-prediction-trajectory"
+        evidence={(trajectoryAdvisory ?? trajectoryPreview)?.evidence ?? []}
+        modelVersion={(trajectoryAdvisory ?? trajectoryPreview)?.modelVersion ?? null}
+        adminOnly={trajectoryAdminOnly}
+        readinessReasons={trajectoryPreview?.readinessReasons}
+      />
       <p className="predictive-eta-disclaimer">
         {trajectoryAdminOnly ? t.aircraft.predictiveTrajectoryAdminDisclaimer : t.aircraft.predictiveTrajectoryDisclaimer}
       </p>
