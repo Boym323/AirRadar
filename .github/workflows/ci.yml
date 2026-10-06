@@ -11,30 +11,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
 jobs:
-  bootstrap-permission-probe:
-    name: Bootstrap permission probe
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/deploy-bootstrap-sudo'
-    runs-on: [self-hosted, linux, x64]
-    timeout-minutes: 5
-    steps:
-      - name: Inspect production checkout permissions
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          repo="/var/www/airradar"
-          echo "runner_user=$(id -un)"
-          stat -c 'repo=%U:%G mode=%a' "${repo}"
-          stat -c 'git=%U:%G mode=%a' "${repo}/.git"
-          git -c "safe.directory=${repo}" -C "${repo}" status --short >/dev/null
-          if [[ -w "${repo}/.git" && -w "${repo}/.git/FETCH_HEAD" ]]; then
-            echo "checkout_git_write=allowed"
-          else
-            echo "checkout_git_write=denied"
-          fi
-          echo "sudo_rules_begin"
-          sudo -n -l || true
-          echo "sudo_rules_end"
-
   validate:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
     runs-on: ubuntu-24.04
@@ -344,34 +320,50 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
-      - name: Align production checkout to tested commit
+      - name: Detect legacy release bootstrap
+        id: release-bootstrap
         shell: bash
         run: |
           set -Eeuo pipefail
-          repo="/var/www/airradar"
-          git_prod=(sudo -n git -c "safe.directory=${repo}" -C "${repo}")
-
-          "${git_prod[@]}" fetch origin main
-          fetched_sha="$("${git_prod[@]}" rev-parse FETCH_HEAD)"
-          if [[ "${fetched_sha}" != "${GITHUB_SHA}" ]]; then
-            echo "::error::Fetched main at ${fetched_sha}, but this deploy validated ${GITHUB_SHA}."
-            exit 1
-          fi
-
-          if [[ -n "$("${git_prod[@]}" status --porcelain)" ]]; then
-            echo "::error::Production checkout is dirty before deploy bootstrap; refusing to reset it."
-            "${git_prod[@]}" status --short
-            exit 1
-          fi
-
-          "${git_prod[@]}" reset --hard "${fetched_sha}"
-          resolved_sha="$("${git_prod[@]}" rev-parse HEAD)"
-          [[ "${resolved_sha}" == "${GITHUB_SHA}" ]] || {
-            echo "::error::Production checkout did not align to validated commit."
+          release_script="/var/www/airradar/deploy/release.sh"
+          [[ -r "${release_script}" ]] || {
+            echo "::error::Production release script is not readable: ${release_script}"
             exit 1
           }
 
-          echo "[deploy] production checkout aligned to validated commit ${resolved_sha}"
+          branch_sha_line="$(grep -nF 'remote_sha="$(git_cmd rev-parse FETCH_HEAD)"' "${release_script}" | head -n 1 | cut -d: -f1 || true)"
+          tag_fetch_line="$(grep -nF 'git_cmd fetch --force --tags origin' "${release_script}" | head -n 1 | cut -d: -f1 || true)"
+
+          if [[ -n "${branch_sha_line}" && -n "${tag_fetch_line}" ]] && (( branch_sha_line < tag_fetch_line )); then
+            echo "legacy=false" >> "${GITHUB_OUTPUT}"
+            echo "[deploy] production release script already preserves the branch SHA before tag fetch"
+          else
+            echo "legacy=true" >> "${GITHUB_OUTPUT}"
+            echo "[deploy] legacy release script detected; enabling one-shot validated-SHA bootstrap tag"
+          fi
+
+      - name: Create legacy validated-SHA bootstrap tag
+        id: legacy-bootstrap-tag
+        if: steps.release-bootstrap.outputs.legacy == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          tag="0000000000-airradar-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ref="refs/tags/${tag}"
+          payload="$(printf '{"ref":"%s","sha":"%s"}' "${ref}" "${GITHUB_SHA}")"
+
+          curl -fsS \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs" \
+            -d "${payload}" >/dev/null
+
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "[deploy] temporary bootstrap tag ${tag} pins legacy FETCH_HEAD to ${GITHUB_SHA}"
 
       - name: Deploy the tested commit locally
         run: |
@@ -380,6 +372,25 @@ jobs:
             --branch main \
             --automated \
             --commit "${GITHUB_SHA}"
+
+      - name: Remove legacy validated-SHA bootstrap tag
+        if: always() && steps.legacy-bootstrap-tag.outputs.tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BOOTSTRAP_TAG: ${{ steps.legacy-bootstrap-tag.outputs.tag }}
+        run: |
+          set -Eeuo pipefail
+          if ! curl -fsS \
+            -X DELETE \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/tags/${BOOTSTRAP_TAG}"; then
+            echo "::warning::Could not delete temporary bootstrap tag ${BOOTSTRAP_TAG}; it is non-versioned and can be removed later."
+          else
+            echo "[deploy] temporary bootstrap tag removed: ${BOOTSTRAP_TAG}"
+          fi
 
       - name: Verify deployed release identity
         shell: bash
