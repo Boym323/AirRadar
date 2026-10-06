@@ -48,6 +48,15 @@ import {
   OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
 } from "@/lib/operational-twin/map";
 import {
+  AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
+  AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
+  AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
+  AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM,
+  createAircraftOperationalFocusMapGeoJSON,
+  emptyAircraftOperationalFocusMapGeoJSON,
+  resolveAircraftOperationalFocusMapTarget,
+} from "@/lib/operational-twin/aircraft-operational-focus-ui";
+import {
   createRegionalAttentionMapFocusGeoJSON,
   emptyRegionalAttentionMapFocusGeoJSON,
   REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
@@ -491,6 +500,7 @@ export function AirRadarApp() {
   const navPointFocus = searchParams.get("navPoint");
   const focusedNavPoint = useMemo(() => parseNavPointFocus(navPointFocus), [navPointFocus]);
   const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
+  const operationalFocusMapId = searchParams.get(AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM);
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
@@ -625,6 +635,7 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+  const operationalFocusMapCameraKeyRef = useRef<string | null>(null);
   const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
 
   useEffect(() => {
@@ -1284,6 +1295,7 @@ export function AirRadarApp() {
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID, { type: "geojson", data: emptyOperationalTwinMapGeoJSON() });
+      map.addSource(AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID, { type: "geojson", data: emptyAircraftOperationalFocusMapGeoJSON() });
       map.addSource(REGIONAL_ATTENTION_MAP_SOURCE_ID, { type: "geojson", data: emptyRegionalAttentionMapFocusGeoJSON() });
       map.addLayer({
         id: REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
@@ -1430,6 +1442,38 @@ export function AirRadarApp() {
           "circle-opacity": 0.86,
           "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
           "circle-stroke-width": 1.6,
+        },
+      });
+      map.addLayer({
+        id: AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
+        type: "line",
+        source: AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "corridor"],
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": ["match", ["get", "level"],
+            "ATTENTION", AIRRADAR_MAP_THEME.hazard,
+            AIRRADAR_MAP_THEME.warning],
+          "line-opacity": 0.96,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4.2, 13, 5.4],
+        },
+      });
+      map.addLayer({
+        id: AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
+        type: "circle",
+        source: AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "target"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": ["match", ["get", "level"],
+            "ATTENTION", AIRRADAR_MAP_THEME.hazard,
+            AIRRADAR_MAP_THEME.warning],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 6, 9, 8, 13, 10],
+          "circle-opacity": 0.34,
+          "circle-stroke-color": ["match", ["get", "level"],
+            "ATTENTION", AIRRADAR_MAP_THEME.hazard,
+            AIRRADAR_MAP_THEME.selectedStrong],
+          "circle-stroke-width": 2.4,
         },
       });
       const openOperationalTwinMapEvent = (event: MapLayerMouseEvent) => {
@@ -2575,6 +2619,47 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
     }
   }, [mapReady, selectedAircraftVisible, selectedOperationalTwin]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const availableTwin = selectedAircraftVisible
+      && selectedOperationalTwin?.status === "available"
+      && aircraftFocus === selectedOperationalTwin.aircraft.icaoHex.toUpperCase()
+      ? selectedOperationalTwin
+      : null;
+    const target = resolveAircraftOperationalFocusMapTarget(availableTwin, operationalFocusMapId);
+    const source = map.getSource(AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID) as GeoJSONSource | undefined;
+    source?.setData(createAircraftOperationalFocusMapGeoJSON(availableTwin, operationalFocusMapId));
+    const visibility = target ? "visible" : "none";
+    for (const layer of [
+      AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
+      AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
+    ] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
+    }
+
+    if (!target) {
+      if (!operationalFocusMapId) operationalFocusMapCameraKeyRef.current = null;
+      return;
+    }
+    const cameraKey = `${selectedOperationalTwin.aircraft.icaoHex}:${target.itemId}`;
+    if (operationalFocusMapCameraKeyRef.current === cameraKey) return;
+    operationalFocusMapCameraKeyRef.current = cameraKey;
+    map.easeTo({
+      center: [target.lon, target.lat],
+      zoom: Math.max(map.getZoom(), 9),
+      padding: currentRadarPadding(),
+      duration: prefersReducedMotion() ? 0 : 650,
+    });
+  }, [
+    aircraftFocus,
+    currentRadarPadding,
+    mapReady,
+    operationalFocusMapId,
+    selectedAircraftVisible,
+    selectedOperationalTwin,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
