@@ -9,6 +9,8 @@ const standaloneStaticDir = resolve(standaloneDir, ".next", "static");
 const sourceStaticDir = resolve(distDir, "static");
 const sourcePublicDir = resolve("public");
 const standalonePublicDir = resolve(standaloneDir, "public");
+const sourceAtsDir = resolve("data", "ats", "generated");
+const standaloneAtsDir = resolve(standaloneDir, "data", "ats", "generated");
 const readyMarker = resolve(standaloneDir, ".airradar-runtime-ready");
 
 rmSync(readyMarker, { force: true });
@@ -26,6 +28,14 @@ if (existsSync(sourceStaticDir)) {
 rmSync(standalonePublicDir, { recursive: true, force: true });
 if (existsSync(sourcePublicDir)) {
   cpSync(sourcePublicDir, standalonePublicDir, { recursive: true });
+}
+
+// The standalone server runs with its working directory set to the standalone
+// runtime. Keep the published ATS datasets beside it; the loaders resolve their
+// default paths from process.cwd() at runtime.
+rmSync(resolve(standaloneDir, "data", "ats"), { recursive: true, force: true });
+if (existsSync(sourceAtsDir)) {
+  cpSync(sourceAtsDir, standaloneAtsDir, { recursive: true });
 }
 
 writeFileSync(readyMarker, "standalone-v1\n", "utf8");

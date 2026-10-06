@@ -8,6 +8,9 @@ describe("standalone transition safety", () => {
 
     expect(prepare).toContain(".airradar-runtime-ready");
     expect(prepare).toContain('writeFileSync(readyMarker, "standalone-v1\\n"');
+    expect(prepare).toContain('resolve("data", "ats", "generated")');
+    expect(prepare).toContain('resolve(standaloneDir, "data", "ats", "generated")');
+    expect(prepare).toContain("cpSync(sourceAtsDir, standaloneAtsDir");
     expect(start).toContain(".airradar-runtime-ready");
     expect(start).toContain("existsSync(standaloneReadyMarker)");
   });
