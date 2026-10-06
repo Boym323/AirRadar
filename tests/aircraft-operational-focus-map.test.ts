@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  aircraftOperationalFocusClearHref,
   aircraftOperationalFocusRadarHref,
   createAircraftOperationalFocusMapGeoJSON,
   resolveAircraftOperationalFocusMapTarget,
@@ -176,6 +177,11 @@ describe("Aircraft Operational Focus map interaction V1", () => {
   it("builds a stable radar href with aircraft and focus identity", () => {
     expect(aircraftOperationalFocusRadarHref("abc123", "weather:WX1"))
       .toBe("/?aircraft=ABC123&operationalFocus=weather%3AWX1");
+  });
+
+  it("builds a stable clear-focus href that keeps the selected aircraft", () => {
+    expect(aircraftOperationalFocusClearHref("abc123"))
+      .toBe("/?aircraft=ABC123");
   });
 
   it("uses the source evidence coordinate for weather and navigation-integrity focus", () => {

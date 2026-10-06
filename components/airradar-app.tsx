@@ -52,6 +52,7 @@ import {
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
   AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM,
+  aircraftOperationalFocusClearHref,
   createAircraftOperationalFocusMapGeoJSON,
   emptyAircraftOperationalFocusMapGeoJSON,
   resolveAircraftOperationalFocusMapTarget,
@@ -97,6 +98,7 @@ import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
+import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
@@ -2596,6 +2598,24 @@ export function AirRadarApp() {
   }, [contextAircraftHex, contextHasPosition]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
+  const activeOperationalFocusItem = useMemo(() => {
+    if (
+      !selectedAircraftVisible
+      || !operationalFocusMapId
+      || selectedOperationalTwin?.status !== "available"
+      || aircraftFocus !== selectedOperationalTwin.aircraft.icaoHex.toUpperCase()
+    ) return null;
+    return selectedOperationalTwin.operationalFocus?.items.find((item) => item.id === operationalFocusMapId) ?? null;
+  }, [
+    aircraftFocus,
+    operationalFocusMapId,
+    selectedAircraftVisible,
+    selectedOperationalTwin,
+  ]);
+  const clearOperationalFocusMap = useCallback(() => {
+    if (!aircraftFocus) return;
+    router.replace(aircraftOperationalFocusClearHref(aircraftFocus), { scroll: false });
+  }, [aircraftFocus, router]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2885,6 +2905,12 @@ export function AirRadarApp() {
                 onColorModeChange={setColorMode}
               />
             </div>
+            {activeOperationalFocusItem ? (
+              <RadarOperationalFocusCard
+                item={activeOperationalFocusItem}
+                onClear={clearOperationalFocusMap}
+              />
+            ) : null}
             {(showWeatherRadar && radarCatalog?.frames.length) || (showWeatherRadar && radarStatus === "unavailable") ? <div className="map-overlay-context-row">
               {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
                 <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
