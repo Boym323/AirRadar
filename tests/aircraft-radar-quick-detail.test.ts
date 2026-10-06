@@ -26,7 +26,9 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).not.toContain("FlightAware");
     expect(componentSource).not.toContain("RouteIntelligencePanel");
     expect(componentSource).not.toContain("routeIntelligence");
-    expect(componentSource).not.toContain("useEffect");
+    expect(componentSource).toContain("useEffect");
+    expect(componentSource).toContain('setActiveTab("situation")');
+    expect(componentSource).toContain("[operationalFocusItemId, operationalFocusRevealVersion]");
     expect(componentSource).not.toContain("fetch(");
     expect(componentSource).toContain('useState<DetailTab>("flight")');
     expect(componentSource).toContain('{ id: "situation", label: t.aircraft.detailSections.situation }');
