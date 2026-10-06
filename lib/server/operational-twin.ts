@@ -380,6 +380,7 @@ export async function getOperationalTwinForAircraft(
   // its own evidence or downstream weather/event/ATC semantics.
   service.captureOperationalTwinOutcome(situation);
   service.captureOperationalTwinTrajectoryQualityOutcome(situation);
+  service.captureOperationalTwinTrajectoryQualityOutcomeV2(situation);
   service.captureOperationalTwinEventOutcome(situation, { atcDataset: preparedDataset, sigmets, destination });
 
   const trajectoryPromotion = applyOperationalTwinTrajectoryQualityPromotion({
