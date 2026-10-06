@@ -23,11 +23,11 @@ describe("Global Command Palette V1 boundary", () => {
       'href: "/operations"',
       'href: "/time-machine"',
       'href: "/compare/flights"',
+      'href: "/compare/airports"',
       'href: "/navigation-integrity"',
       'href: "/statistics"',
       'href: "/system"',
     ]) expect(paletteSource).toContain(href);
-    expect(paletteSource).not.toContain('href: "/compare/airports"');
   });
 
   it("keeps keyboard navigation and traps focus inside the modal", () => {
