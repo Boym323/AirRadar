@@ -309,7 +309,8 @@
         "/heatmap",
         "/recap/daily",
         "/recap/weekly",
-        "/statistics"
+        "/statistics",
+        "/traffic/rhythm"
       ],
       "apis": [
         "/api/logbook/summary",
@@ -318,7 +319,8 @@
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic",
-        "/api/statistics/heatmap"
+        "/api/statistics/heatmap",
+        "/api/statistics/traffic-profile"
       ],
       "changelogScopes": [
         "statistics",
