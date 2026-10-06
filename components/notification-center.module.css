@@ -1,0 +1,139 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.loading {
+  margin: 0;
+  color: var(--muted);
+}
+
+.feed {
+  display: grid;
+  gap: .65rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: .9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+}
+
+.itemMain {
+  display: grid;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.itemHeading {
+  display: flex;
+  gap: .55rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.itemHeading strong {
+  font-size: .92rem;
+}
+
+.category {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: .2rem .45rem;
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.identity {
+  display: flex;
+  gap: .45rem .75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.identity a {
+  color: var(--foreground);
+  font-weight: 750;
+}
+
+.itemMain small {
+  color: var(--muted);
+}
+
+.openLink {
+  width: fit-content;
+  color: var(--foreground);
+  font-size: .78rem;
+}
+
+.itemSide {
+  display: grid;
+  gap: .35rem;
+  justify-items: end;
+  align-content: start;
+  min-width: 150px;
+}
+
+.itemSide > span:first-child {
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.itemSide time {
+  color: var(--muted);
+  font-size: .76rem;
+}
+
+@media (max-width: 840px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .item {
+    grid-template-columns: 1fr;
+  }
+
+  .itemSide {
+    justify-items: start;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding: .75rem;
+  }
+
+  .metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .item {
+    padding: .8rem;
+  }
+
+  .openLink {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
