@@ -292,7 +292,10 @@ jobs:
           set -Eeuo pipefail
           ats_tmp="$(mktemp)"
           trap 'rm -f "${ats_tmp}"' EXIT
-          curl -fsS https://airradar.pomykal.cz/api/ats/routes -o "${ats_tmp}"
+          if ! curl -fsS https://airradar.pomykal.cz/api/ats/routes -o "${ats_tmp}"; then
+            echo "[deploy] Existing production ATS routes are unavailable; continuing so this release can recover them."
+            exit 0
+          fi
           node - "${ats_tmp}" <<'NODE'
           const fs = require("node:fs");
           const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
