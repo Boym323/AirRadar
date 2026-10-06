@@ -764,6 +764,44 @@
       ]
     },
     {
+      "id": "route-network-explorer",
+      "name": "Route Network Explorer",
+      "category": "analytics / routes",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates.",
+      "pages": [
+        "/routes"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "route-network-explorer"
+      ],
+      "changelogKeywords": [
+        "route network",
+        "route explorer"
+      ]
+    },
+    {
+      "id": "aircraft-discovery",
+      "name": "Aircraft Discovery",
+      "category": "discovery / spotting",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft.",
+      "pages": [
+        "/discover"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "aircraft-discovery"
+      ],
+      "changelogKeywords": [
+        "aircraft discovery",
+        "discover aircraft"
+      ]
+    },
+    {
       "id": "watchlist-intelligence-v2",
       "name": "Watchlist Intelligence V2",
       "category": "alerts / monitoring",

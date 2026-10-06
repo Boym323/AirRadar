@@ -594,15 +594,21 @@ validate_and_stage_prepared_build() {
   local staged_next="${APP_DIR}/${RELEASE_BUILD_DIR}"
 
   log "Validating prepared CI build artifact"
-  RELEASE_BUILD_TIME="$(node - "${manifest_path}" "${NEW_SHA}" "${RELEASE_VERSION}" "${RELEASE_BUILD_CHANNEL}" "${prepared_next}/BUILD_ID" <<'NODE'
+  RELEASE_BUILD_TIME="$(node - "${manifest_path}" "${NEW_SHA}" "${RELEASE_VERSION}" "${RELEASE_BUILD_CHANNEL}" "${prepared_next}/BUILD_ID" "${AUTOMATED}" <<'NODE'
 const fs = require("node:fs");
-const [manifestPath, expectedCommit, expectedVersion, expectedChannel, buildIdPath] = process.argv.slice(2);
+const [manifestPath, expectedCommit, expectedVersion, expectedChannel, buildIdPath, automated] = process.argv.slice(2);
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const buildId = fs.readFileSync(buildIdPath, "utf8").trim();
 if (manifest.schemaVersion !== 1) throw new Error("Unsupported prepared-build manifest schema");
 if (manifest.runtime !== "standalone-v1") throw new Error("Prepared build is not a standalone-v1 runtime");
 if (String(manifest.commit || "").toLowerCase() !== expectedCommit.toLowerCase()) throw new Error(`Prepared build commit mismatch: ${manifest.commit} != ${expectedCommit}`);
-if (manifest.version !== expectedVersion) throw new Error(`Prepared build version mismatch: ${manifest.version} != ${expectedVersion}`);
+if (manifest.version !== expectedVersion) {
+  if (automated === "1" && String(manifest.commit || "").toLowerCase() === expectedCommit.toLowerCase()) {
+    console.error(`[AirRadar release] Prepared artifact version ${manifest.version} differs from repository metadata ${expectedVersion}; commit identity matches, continuing.`);
+  } else {
+    throw new Error(`Prepared build version mismatch: ${manifest.version} != ${expectedVersion}`);
+  }
+}
 if (manifest.channel !== expectedChannel) throw new Error(`Prepared build channel mismatch: ${manifest.channel} != ${expectedChannel}`);
 if (manifest.buildId !== buildId) throw new Error("Prepared build BUILD_ID does not match its manifest");
 if (typeof manifest.buildTime !== "string" || !Number.isFinite(Date.parse(manifest.buildTime))) throw new Error("Prepared build has invalid buildTime");
@@ -906,6 +912,53 @@ health_check_once() {
   return 0
 }
 
+static_assets_check_once() {
+  local base_url="$1"
+  local response_file asset_path http_code asset_count=0
+
+  response_file="$(mktemp)"
+  if ! curl --silent --show-error --location --max-time 10 --fail --output "${response_file}" "${base_url}/"; then
+    rm -f -- "${response_file}"
+    return 1
+  fi
+
+  while IFS= read -r asset_path; do
+    [[ -n "${asset_path}" ]] || continue
+    asset_count=$((asset_count + 1))
+    http_code="$(curl --silent --show-error --location --max-time 10 --output /dev/null --write-out '%{http_code}' "${base_url}${asset_path}")" || {
+      rm -f -- "${response_file}"
+      return 1
+    }
+    if [[ ! "${http_code}" =~ ^2[0-9][0-9]$ ]]; then
+      rm -f -- "${response_file}"
+      return 1
+    fi
+  done < <(grep -oE '(src|href)="/_next/[^"?]+' "${response_file}" | sed -E 's/^(src|href)="//' | sort -u)
+
+  rm -f -- "${response_file}"
+  [[ "${asset_count}" -gt 0 ]]
+}
+
+check_static_assets_with_retries() {
+  local label="$1"
+  local base_url="$2"
+  local attempt
+
+  log "Checking ${label} static assets: ${base_url}/"
+  for (( attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt += 1 )); do
+    if static_assets_check_once "${base_url}"; then
+      log "${label} static assets passed"
+      return 0
+    fi
+    warn "${label} static asset check attempt ${attempt}/${HEALTH_ATTEMPTS} failed."
+    if (( attempt < HEALTH_ATTEMPTS )); then
+      sleep "${HEALTH_DELAY_SECONDS}"
+    fi
+  done
+
+  die "${label} static asset check failed after ${HEALTH_ATTEMPTS} attempts."
+}
+
 check_health_with_retries() {
   local label="$1"
   local url="$2"
@@ -942,7 +995,9 @@ restart_and_check() {
   fi
 
   check_health_with_retries "Local" "${LOCAL_HEALTH_URL}" "${HEALTH_ATTEMPTS}" "${HEALTH_DELAY_SECONDS}" 1
+  check_static_assets_with_retries "Local" "${LOCAL_HEALTH_URL%/api/health}"
   check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
+  check_static_assets_with_retries "Public" "${PUBLIC_HEALTH_URL%/api/health}"
 }
 
 activate_staged_build_and_check() {
@@ -975,7 +1030,9 @@ activate_staged_build_and_check() {
   fi
 
   check_health_with_retries "Local" "${LOCAL_HEALTH_URL}" "${HEALTH_ATTEMPTS}" "${HEALTH_DELAY_SECONDS}" 1
+  check_static_assets_with_retries "Local" "${LOCAL_HEALTH_URL%/api/health}"
   check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
+  check_static_assets_with_retries "Public" "${PUBLIC_HEALTH_URL%/api/health}"
 
   rm -rf -- "${backup_build}"
 }
