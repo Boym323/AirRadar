@@ -247,7 +247,9 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion.",
-      "pages": [],
+      "pages": [
+        "/weather"
+      ],
       "apis": [
         "/api/aircraft/:hex/weather-fusion",
         "/api/map-context/at",
