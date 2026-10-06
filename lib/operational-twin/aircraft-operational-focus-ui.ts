@@ -82,6 +82,11 @@ export function aircraftOperationalFocusRadarHref(icaoHex: string, itemId: strin
   return `/?${params.toString()}` as Route;
 }
 
+export function aircraftOperationalFocusClearHref(icaoHex: string): Route {
+  const params = new URLSearchParams({ aircraft: icaoHex.trim().toUpperCase() });
+  return `/?${params.toString()}` as Route;
+}
+
 export function resolveAircraftOperationalFocusMapTarget(
   situation: OperationalTwinSituation | null,
   itemId: string | null,
