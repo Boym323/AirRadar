@@ -12,6 +12,7 @@ import {
   removeWorkspaceEntry,
   renameWorkspace,
   serializeWorkspaces,
+  type SavedWorkspace,
 } from "@/lib/workspaces";
 
 function workspace() {
@@ -51,7 +52,7 @@ describe("Saved Workspaces V1 model", () => {
     const initial = workspace();
     expect(renameWorkspace([initial], initial.id, "PRG OPS")[0]?.name).toBe("PRG OPS");
     expect(deleteWorkspace([initial], initial.id)).toEqual([]);
-    let items = [];
+    let items: SavedWorkspace[] = [];
     for (let index = 0; index < MAX_WORKSPACES + 3; index += 1) {
       items = createWorkspace(items, { id: `w_${index}`, name: `W ${index}`, createdAt: "2026-10-06T20:00:00.000Z" });
     }
