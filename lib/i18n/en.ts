@@ -2211,6 +2211,8 @@ export const en = {
     operationalFocusSummary: (attention: number, watch: number) => `${attention} attention · ${watch} watch`,
     operationalFocusTruncated: "showing highest-priority items",
     operationalFocusNoItems: "No prioritized focus item is present in the currently available bounded evidence.",
+    operationalFocusMapAction: "Show on live radar →",
+    operationalFocusShowOnRadar: (label: string) => `Show ${label} on the live radar`,
     operationalFocusDisclaimer: "Operational context only. NORMAL is not an all-clear, and WATCH or ATTENTION is not a safety alert, ATC instruction, or clearance inference.",
     weatherCorridorTitle: "Weather ahead",
     weatherCorridorSubtitle: "30-minute PIREP/AIREP, SIGMET and ICON-EU outlook along the projected corridor",
