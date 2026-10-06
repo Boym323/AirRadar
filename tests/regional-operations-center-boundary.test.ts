@@ -25,6 +25,12 @@ describe("Regional Operations Center V1 boundary", () => {
     expect(componentSource).not.toContain('new EventSource("/api/operations/situation');
   });
 
+  it("derives the regional focus queue from the same bounded response without Digital Twin fanout", () => {
+    expect(routeSource).toContain("buildRegionalFocusQueue(graph, attention)");
+    expect(componentSource).toContain('data-testid="regional-focus-queue"');
+    expect(componentSource).not.toContain("/api/aircraft/");
+  });
+
   it("keeps regional intelligence on one existing local snapshot", () => {
     expect(routeSource.match(/getSnapshot\(/g)).toHaveLength(1);
     expect(routeSource).toContain('coverage: "local"');
