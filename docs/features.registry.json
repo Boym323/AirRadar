@@ -297,7 +297,7 @@
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Receiver statistics, traffic intelligence, reception records and daily/weekly recaps.",
+      "summary": "Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights.",
       "pages": [
         "/statistics",
         "/recap/daily",
@@ -322,7 +322,8 @@
         "statistics",
         "daily recap",
         "weekly recap",
-        "reception records"
+        "reception records",
+        "daily aviation story"
       ]
     },
     {
