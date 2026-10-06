@@ -89,7 +89,7 @@ export function RadarFlightFollowHud({
       {etaEvent && <span className={styles.metric}>
         <small>{t.radar.followEta}</small>
         <strong>{formatTime(etaEvent.at)}</strong>
-        <em>{etaEvent.detail ?? confidenceLabel(etaEvent.confidence)}</em>
+        <em>{etaEvent.detail ? `${etaEvent.detail} · ${confidenceLabel(etaEvent.confidence)}` : confidenceLabel(etaEvent.confidence)}</em>
       </span>}
       {runway && <span className={styles.metric}>
         <small>{t.radar.followRunway}</small>
