@@ -462,23 +462,24 @@ update_repository() {
 
   log "Updating repository from origin/${DEPLOY_BRANCH}"
   git_cmd fetch origin "${DEPLOY_BRANCH}"
+
+  # Capture the branch fetch result before fetching tags. A subsequent tag
+  # fetch rewrites FETCH_HEAD, so using FETCH_HEAD after that point can resolve
+  # the release to a tag commit instead of the CI-validated branch commit.
+  git_cmd rev-parse --verify FETCH_HEAD >/dev/null 2>&1 || die "Fetched origin/${DEPLOY_BRANCH}, but FETCH_HEAD is unavailable."
+  remote_sha="$(git_cmd rev-parse FETCH_HEAD)"
+
   # Automated GitHub Releases create remote release tags after deployment.
   # Keep the production checkout's tag namespace synchronized so the
   # post-deploy release resolver can continue the stable patch sequence.
   git_cmd fetch --force --tags origin
 
-  # Some Git configurations fetch a named branch only into FETCH_HEAD and do
-  # not update the remote-tracking ref.  FETCH_HEAD is the result of this
-  # fetch, so use it for release resolution instead of potentially stale
-  # origin/${DEPLOY_BRANCH}.
-  git_cmd rev-parse --verify FETCH_HEAD >/dev/null 2>&1 || die "Fetched origin/${DEPLOY_BRANCH}, but FETCH_HEAD is unavailable."
-  remote_sha="$(git_cmd rev-parse FETCH_HEAD)"
-  merge_base="$(git_cmd merge-base HEAD FETCH_HEAD)"
+  merge_base="$(git_cmd merge-base HEAD "${remote_sha}")"
 
   if [[ "${merge_base}" != "${OLD_SHA}" && "${merge_base}" != "${remote_sha}" ]]; then
     if (( AUTOMATED == 1 )); then
       log "Automated release found divergent local history; resetting ${DEPLOY_BRANCH} to origin/${DEPLOY_BRANCH}."
-      git_cmd reset --hard FETCH_HEAD
+      git_cmd reset --hard "${remote_sha}"
     else
       die "Local ${DEPLOY_BRANCH} and origin/${DEPLOY_BRANCH} have divergent history; refusing to merge on production."
     fi
@@ -488,10 +489,10 @@ update_repository() {
     log "No new commit; validating current release."
   elif [[ "${merge_base}" == "${OLD_SHA}" ]]; then
     log "Fast-forwarding ${DEPLOY_BRANCH} to ${remote_sha}"
-    git_cmd merge --ff-only FETCH_HEAD
+    git_cmd merge --ff-only "${remote_sha}"
   elif (( AUTOMATED == 1 )); then
     log "Automated release aligning ${DEPLOY_BRANCH} to ${remote_sha}."
-    git_cmd reset --hard FETCH_HEAD
+    git_cmd reset --hard "${remote_sha}"
   else
     log "Local ${DEPLOY_BRANCH} is ahead of origin/${DEPLOY_BRANCH}; keeping the local fast-forward-only state."
   fi
