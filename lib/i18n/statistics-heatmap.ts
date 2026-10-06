@@ -12,8 +12,11 @@ const cs = {
   noData: "Pro zvolené období nejsou uložená pozorování.",
   sampled: "pozic ve vzorku",
   maxCell: "maximum v buňce",
+  mostActive: "Nejaktivnější buňky",
+  approximateArea: "Přibližný střed buňky",
+  gridContract: "Globální grid 28 × 28 · maximálně 60 000 pozic ve vzorku",
   exportCsv: "Export heatmapy CSV",
-  disclaimer: "Heatmapa zobrazuje hustotu uložených pozic přijímače, nikoli skutečnou hustotu provozu ani přesné hranice pokrytí.",
+  disclaimer: "Heatmapa zobrazuje vzorkovanou hustotu uložených pozic přijímače, nikoli skutečnou hustotu provozu ani přesné hranice pokrytí. Souřadnice v žebříčku jsou pouze středy hrubých grid buněk.",
 };
 
 const en = {
@@ -28,8 +31,11 @@ const en = {
   noData: "No persisted observations are available for the selected period.",
   sampled: "sampled positions",
   maxCell: "maximum in a cell",
+  mostActive: "Most active cells",
+  approximateArea: "Approximate cell center",
+  gridContract: "Global 28 × 28 grid · at most 60,000 sampled positions",
   exportCsv: "Export heatmap CSV",
-  disclaimer: "The heatmap shows persisted receiver positions, not actual traffic density or exact coverage boundaries.",
+  disclaimer: "The heatmap shows sampled persisted receiver positions, not actual traffic density or exact coverage boundaries. Ranked coordinates are only the centers of coarse grid cells.",
 };
 
 export const statisticsHeatmapText = t.locale.startsWith("cs") ? cs : en;
