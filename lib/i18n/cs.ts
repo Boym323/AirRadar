@@ -94,6 +94,11 @@ export const cs = {
       benefit_inconclusive: "přínos je neprůkazný",
       shadow_regression: "shadow vykazuje regresi",
       precision_low: "nízká precision",
+      sigmet_samples_insufficient: "nedostatek SIGMET focus vzorků",
+      sigmet_timing_samples_insufficient: "nedostatek SIGMET timing vzorků",
+      sigmet_precision_low: "nízká precision SIGMET fokusu",
+      sigmet_missing_truth_high: "nízké pokrytí truth pro SIGMET fokus",
+      sigmet_timing_error_high: "vysoká chyba časování SIGMET fokusu",
     },
   },
   brand: {
