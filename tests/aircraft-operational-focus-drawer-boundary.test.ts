@@ -9,6 +9,14 @@ const enSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "ut
 const csSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
 
 describe("Aircraft Operational Focus drawer V1 boundary", () => {
+  it("derives change intelligence from the existing situation refresh", () => {
+    expect(appSource).toContain("compareAircraftOperationalFocus(previous, value.operationalFocus)");
+    expect(appSource).toContain("operationalFocusSnapshotsRef");
+    expect(appSource).toContain("operationalFocusChanges={selectedOperationalFocusChanges}");
+    expect(summarySource).toContain('data-testid="aircraft-operational-focus-changes"');
+    expect(summarySource).not.toContain("fetch(");
+  });
+
   it("reuses the selected Operational Twin response without adding another request", () => {
     expect(appSource).toContain("operationalTwin={selectedOperationalTwin}");
     expect(drawerSource).toContain("operationalTwin={operationalTwin}");

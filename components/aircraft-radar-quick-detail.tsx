@@ -15,6 +15,7 @@ import type { AircraftDestinationWindContext, AircraftWindAheadProfile, Aircraft
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin/types";
+import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/aircraft-operational-focus-change";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
@@ -66,6 +67,7 @@ export interface AircraftRadarQuickDetailProps {
   routeConformance?: TrajectoryConformanceSnapshot | null;
   intelligenceEvents?: FlightIntelligenceEvent[];
   operationalTwin?: OperationalTwinApiResponse | null;
+  operationalFocusChanges?: AircraftOperationalFocusChangeSummary | null;
   operationalFocusItemId?: string | null;
   operationalFocusRevealVersion?: number;
   onOperationalFocus?: (itemId: string) => void;
@@ -714,6 +716,7 @@ export function AircraftRadarQuickDetail({
   routeConformance = null,
   intelligenceEvents = [],
   operationalTwin = null,
+  operationalFocusChanges = null,
   operationalFocusItemId = null,
   operationalFocusRevealVersion = 0,
   onOperationalFocus,
@@ -791,6 +794,7 @@ export function AircraftRadarQuickDetail({
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
       {operationalFocus && onOperationalFocus ? <RadarOperationalFocusSummary
         focus={operationalFocus}
+        changes={operationalFocusChanges}
         activeItemId={operationalFocusItemId}
         onFocus={onOperationalFocus}
       /> : null}

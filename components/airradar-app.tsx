@@ -48,6 +48,11 @@ import {
   OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
 } from "@/lib/operational-twin/map";
 import {
+  compareAircraftOperationalFocus,
+  type AircraftOperationalFocusChangeSummary,
+} from "@/lib/operational-twin/aircraft-operational-focus-change";
+import type { AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
+import {
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
@@ -516,6 +521,8 @@ export function AirRadarApp() {
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
   const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
   const [selectedOperationalTwin, setSelectedOperationalTwin] = useState<OperationalTwinApiResponse | null>(null);
+  const [selectedOperationalFocusChanges, setSelectedOperationalFocusChanges] = useState<AircraftOperationalFocusChangeSummary | null>(null);
+  const operationalFocusSnapshotsRef = useRef<Map<string, AircraftOperationalFocusSummary>>(new Map());
   const [operationalFocusRevealVersion, setOperationalFocusRevealVersion] = useState(0);
   const [selectedIntelligenceEvents, setSelectedIntelligenceEvents] = useState<FlightIntelligenceEvent[]>([]);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
@@ -2594,6 +2601,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     setSelectedOperationalTwin(null);
+    setSelectedOperationalFocusChanges(null);
     if (!contextAircraftHex || !contextHasPosition) return;
     let active = true;
     let timer: number | null = null;
@@ -2603,8 +2611,23 @@ export function AirRadarApp() {
           if (!response.ok && response.status >= 500) throw new Error("operational twin unavailable");
           return await response.json() as OperationalTwinApiResponse;
         })
-        .then((value) => { if (active) setSelectedOperationalTwin(value); })
-        .catch(() => { if (active) setSelectedOperationalTwin(null); });
+        .then((value) => {
+          if (!active) return;
+          setSelectedOperationalTwin(value);
+          if (value.status !== "available" || !value.operationalFocus) {
+            setSelectedOperationalFocusChanges(null);
+            return;
+          }
+          const hex = value.aircraft.icaoHex.toUpperCase();
+          const previous = operationalFocusSnapshotsRef.current.get(hex) ?? null;
+          setSelectedOperationalFocusChanges(compareAircraftOperationalFocus(previous, value.operationalFocus));
+          operationalFocusSnapshotsRef.current.set(hex, value.operationalFocus);
+        })
+        .catch(() => {
+          if (!active) return;
+          setSelectedOperationalTwin(null);
+          setSelectedOperationalFocusChanges(null);
+        });
     };
     refresh();
     const schedule = () => {
@@ -3049,6 +3072,7 @@ export function AirRadarApp() {
             routeConformance={selectedRouteCorridor.conformance}
             intelligenceEvents={selectedIntelligenceEvents}
             operationalTwin={selectedOperationalTwin}
+            operationalFocusChanges={selectedOperationalFocusChanges}
             operationalFocusItemId={operationalFocusMapId}
             operationalFocusRevealVersion={operationalFocusRevealVersion}
             onOperationalFocus={focusOperationalItemFromDrawer}

@@ -37,6 +37,7 @@ interface RadarDrawerDetailsProps {
   routeConformance: AircraftRadarQuickDetailProps["routeConformance"];
   intelligenceEvents: FlightIntelligenceEvent[];
   operationalTwin: AircraftRadarQuickDetailProps["operationalTwin"];
+  operationalFocusChanges: AircraftRadarQuickDetailProps["operationalFocusChanges"];
   operationalFocusItemId: AircraftRadarQuickDetailProps["operationalFocusItemId"];
   operationalFocusRevealVersion: AircraftRadarQuickDetailProps["operationalFocusRevealVersion"];
   onOperationalFocus: NonNullable<AircraftRadarQuickDetailProps["onOperationalFocus"]>;
@@ -70,6 +71,7 @@ export function RadarDrawerDetails({
   routeConformance,
   intelligenceEvents,
   operationalTwin,
+  operationalFocusChanges,
   operationalFocusItemId,
   operationalFocusRevealVersion,
   onOperationalFocus,
@@ -108,6 +110,7 @@ export function RadarDrawerDetails({
       routeConformance={routeConformance}
       intelligenceEvents={intelligenceEvents}
       operationalTwin={operationalTwin}
+      operationalFocusChanges={operationalFocusChanges}
       operationalFocusItemId={operationalFocusItemId}
       operationalFocusRevealVersion={operationalFocusRevealVersion}
       onOperationalFocus={onOperationalFocus}
