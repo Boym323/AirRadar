@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
@@ -257,7 +258,7 @@ export function SavedWorkspaces() {
             {selected.entries.map((entry) => <article key={entry.id} className={styles.entry}>
               <div><span>{entry.type.replaceAll("-", " ")}</span><strong>{entry.label}</strong><code>{entry.href}</code></div>
               <div className={styles.entryActions}>
-                <Link href={entry.href}>{copy.open}</Link>
+                <Link href={entry.href as Route}>{copy.open}</Link>
                 <button type="button" onClick={() => setWorkspaces(removeWorkspaceEntry(workspaces, selected.id, entry.id))}>{copy.remove}</button>
               </div>
             </article>)}
