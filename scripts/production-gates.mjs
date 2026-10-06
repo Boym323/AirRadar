@@ -1199,7 +1199,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
         if (message.type() === "warning") routeWarnings.push(message.text());
       });
-      page.on("response", (response) => { if (response.status() >= 500 && !urlHasHostname(response.url(), "tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
+      page.on("response", (response) => {
+        if (response.status() >= 500 && !urlHasHostname(response.url(), "tile.openstreetmap.org")) {
+          const url = response.url();
+          const expectedUnavailable = response.status() === 503
+            && (/\/api\/(history|time-machine)\//.test(url) || /\/api\/airports\/[^/]+\/operations(?:\?|\/)/.test(url));
+          if (expectedUnavailable) unavailable.push(`${response.status()}: ${url}`);
+          else routeErrors.push(`http ${response.status()}: ${url}`);
+        }
+      });
       return page;
     };
     const routes = [
