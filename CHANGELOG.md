@@ -39,6 +39,102 @@ Changes since v1.0.323.
 
 </details>
 
+## [1.0.323] - 2026-10-06
+
+Changes since v1.0.322.
+
+**Features touched:** Operational Digital Twin, System Observability.
+
+### Added
+
+- Add prospective outcome validator (4ac1b8a5)
+- Export outcome validator (2d36f29a)
+- Wire outcome validation into live state (cdd7b867)
+- Persist regional attention outcome aggregates (e996946b)
+- Capture prospective outcome samples (6cd43e68)
+- Add admin outcome diagnostics endpoint (50649050)
+- Expose regional attention outcome diagnostics (8ae8efa3)
+- Add Regional Attention Outcome Validation V1 (#373) (7a65fd98)
+
+### Changed
+
+- Export elevated truth thresholds (97e5ab6c)
+
+### Fixed
+
+- Normalize exported elevated thresholds (79a47150)
+- Avoid empty calibration buckets (1dd3ae64)
+- Sample Digital Twin calibration from receiver refresh (12a23503)
+- Expose refresh-driven calibration sampling (89098bca)
+
+### Documentation
+
+- Document outcome validation V1 (e8afef72)
+- Document outcome validation V1 (79af70a8)
+- Document outcome validation V1 (2360a200)
+- Document outcome validation V1 (2c08751b)
+- Register regional attention outcome V1 (36a2a83b)
+- Regenerate regional attention outcome summary (f5a262a0)
+
+### Maintenance
+
+- Cover prospective outcome validation (1e111ff5)
+- Lock outcome validation boundaries (7e27f686)
+- Lock refresh-driven calibration sampling boundary (66cf9790)
+- Bump source-map-js to patched 1.2.2 (3a0f7508)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(regional-attention): add prospective outcome validator (4ac1b8a5)
+- refactor(regional-situation): export elevated truth thresholds (97e5ab6c)
+- fix(regional-situation): normalize exported elevated thresholds (79a47150)
+- feat(regional-attention): export outcome validator (2d36f29a)
+- feat(regional-attention): wire outcome validation into live state (cdd7b867)
+- feat(calibration): persist regional attention outcome aggregates (e996946b)
+- feat(regional-attention): capture prospective outcome samples (6cd43e68)
+- feat(regional-attention): add admin outcome diagnostics endpoint (50649050)
+- feat(system): expose regional attention outcome diagnostics (8ae8efa3)
+- test(regional-attention): cover prospective outcome validation (1e111ff5)
+- test(regional-attention): lock outcome validation boundaries (7e27f686)
+- docs(regional-attention): document outcome validation V1 (e8afef72)
+- docs(regional-attention): document outcome validation V1 (79af70a8)
+- docs(regional-attention): document outcome validation V1 (2360a200)
+- docs(regional-attention): document outcome validation V1 (2c08751b)
+- docs(features): register regional attention outcome V1 (36a2a83b)
+- docs(features): regenerate regional attention outcome summary (f5a262a0)
+- fix(regional-attention): avoid empty calibration buckets (1dd3ae64)
+- feat: add Regional Attention Outcome Validation V1 (#373) (7a65fd98)
+- fix: sample Digital Twin calibration from receiver refresh (12a23503)
+- fix: expose refresh-driven calibration sampling (89098bca)
+- test: lock refresh-driven calibration sampling boundary (66cf9790)
+- chore: bump source-map-js to patched 1.2.2 (3a0f7508)
+- Merge pull request #383 from Boym323/fix/digital-twin-calibration-sampling-v1 (f0709c6d)
+
+</details>
+
+## [1.0.322] - 2026-10-05
+
+Changes since v1.0.321.
+
+### Added
+
+- Add Digital Twin Truth-first Validation V2 (#371) (6397a586)
+
+### Maintenance
+
+- Sync generated repository metadata (#370) (0ee56540)
+- Split PR and release validation (ac0534d1)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#370) (0ee56540)
+- feat: add Digital Twin Truth-first Validation V2 (#371) (6397a586)
+- ci: split PR and release validation (ac0534d1)
+- Merge pull request #372 from Boym323/ci/optimize-pr-main-validation (4100abb9)
+
+</details>
 ## [1.0.321] - 2026-10-05
 
 Changes since v1.0.320.
