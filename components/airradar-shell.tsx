@@ -32,6 +32,7 @@ const moreNavigation = [
   { href: "/weather", label: t.locale.startsWith("cs") ? "Počasí" : "Weather" },
   { href: "/routes", label: t.locale.startsWith("cs") ? "Trasy" : "Routes" },
   { href: "/navigation", label: t.locale.startsWith("cs") ? "Navigace" : "Navigation" },
+  { href: "/procedures", label: t.locale.startsWith("cs") ? "Procedury" : "Procedures" },
   { href: "/spotter", label: "Spotter" },
   { href: "/operations", label: t.operations.title },
   { href: "/intelligence", label: t.intelligence.title },
@@ -210,6 +211,7 @@ export function MobileBottomNav() {
           <Link href="/operations">{t.operations.title}</Link>
           <Link href="/routes">{t.locale.startsWith("cs") ? "Trasy" : "Routes"}</Link>
           <Link href="/navigation">{t.locale.startsWith("cs") ? "Navigace" : "Navigation"}</Link>
+          <Link href="/procedures">{t.locale.startsWith("cs") ? "Procedury" : "Procedures"}</Link>
           <Link href="/spotter">Spotter</Link>
           <Link href="/fleet">{t.fleet.title}</Link>
           <Link href="/intelligence">{t.intelligence.title}</Link>
