@@ -68,7 +68,7 @@ describe("Spotter Upcoming Sky V1", () => {
   it("drops departing and distant passes", () => {
     const ranked = rankUpcomingSky([
       aircraft("AWAY01", 14.02, 90, "A388"),
-      aircraft("FAR001", 13.2, 90, "A388", 100),
+      { ...aircraft("FAR001", 13.2, 90, "A388", 100), lat: 50.1 },
     ], observer, new Map(), null, { maxClosestDistanceKm: 5 });
     expect(ranked).toEqual([]);
   });
