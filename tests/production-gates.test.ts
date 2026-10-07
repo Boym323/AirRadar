@@ -104,8 +104,18 @@ describe("production release metadata gate", () => {
     expect(source).toContain('["/receiver/coverage", \'[data-testid="receiver-explorer-v2"]\']');
     expect(source).toContain('const mobileMoreHref = await mobileMoreLink.getAttribute("href")');
     expect(source).toContain("const mobileMoreTarget = new URL(mobileMoreHref, baseUrl)");
-    expect(source).toContain("url.pathname === mobileMoreTarget.pathname && url.search === mobileMoreTarget.search");
+    expect(source).toContain('clickAndWaitForNavigation(routeSmoke, mobileMoreLink, mobileMoreTarget, "Mobile More link")');
     expect(source).not.toContain("alerts|fleet|intelligence|operations|recap|system|watchlist");
+  });
+
+  it("retries client-side route clicks once after hydration without bypassing the link", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const clickAndWaitForNavigation = async");
+    expect(source).toContain('waitUntil: "domcontentloaded"');
+    expect(source).toContain("if (matchesTarget(page.url())) return");
+    expect(source).toContain("await page.waitForTimeout(500)");
+    expect(source).toContain('clickAndWaitForNavigation(routeSmoke, historyLink, new URL("/history", baseUrl), "History link")');
+    expect(source).toContain("link.click()");
   });
 
   it("treats bounded diagnostic API rate limits as expected browser-smoke responses", () => {
