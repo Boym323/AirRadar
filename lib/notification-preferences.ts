@@ -38,8 +38,9 @@ export function parseNotificationPreferenceValues(input: unknown): NotificationP
   const record = input as Record<string, unknown>;
   const values = { ...DEFAULT_NOTIFICATION_PREFERENCES };
   for (const key of NOTIFICATION_PREFERENCE_KEYS) {
-    if (!isNotificationPreferenceMode(record[key])) return null;
-    values[key] = record[key];
+    const mode = record[key];
+    if (!isNotificationPreferenceMode(mode)) return null;
+    values[key] = mode;
   }
   return values;
 }
@@ -52,8 +53,9 @@ export function parseNotificationPreferencePatch(input: unknown): Partial<Notifi
   if (!keys.length || keys.some((key) => !allowed.has(key))) return null;
   const patch: Partial<NotificationPreferenceValues> = {};
   for (const key of keys) {
-    if (!isNotificationPreferenceMode(record[key])) return null;
-    patch[key as NotificationPreferenceKey] = record[key] as NotificationPreferenceMode;
+    const mode = record[key];
+    if (!isNotificationPreferenceMode(mode)) return null;
+    patch[key as NotificationPreferenceKey] = mode;
   }
   return patch;
 }
