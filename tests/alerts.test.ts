@@ -163,17 +163,22 @@ describe("server alerts", () => {
 
   it("persists durable new-aircraft deduplication across restarts", async () => {
     const state = new MemoryAlertStateStore();
+    const history = testHistory();
     const firstNotifier = recordingNotifier();
-    const first = createTestAlertEngine({ notifier: firstNotifier, state });
+    const first = createTestAlertEngine({ notifier: firstNotifier, state, history });
     first.observeNewAircraft(aircraft());
     await flushAlerts();
-    expect(firstNotifier.calls).toHaveLength(1);
+    expect(firstNotifier.calls).toHaveLength(0);
+    expect(history.recordDetected).toHaveBeenCalledTimes(1);
+    expect(history.recordNotification).toHaveBeenCalledWith("new:ABC123", "disabled");
+    expect(state.load().permanent).toContainEqual(["new:ABC123", expect.any(Number)]);
 
     const secondNotifier = recordingNotifier();
-    const second = createTestAlertEngine({ notifier: secondNotifier, state });
+    const second = createTestAlertEngine({ notifier: secondNotifier, state, history });
     second.observeNewAircraft(aircraft());
     await flushAlerts();
     expect(secondNotifier.calls).toHaveLength(0);
+    expect(history.recordDetected).toHaveBeenCalledTimes(1);
   });
 
   it("persists the last trigger time for a watchlist rule", () => {

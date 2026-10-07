@@ -480,7 +480,16 @@ export class AlertEngine {
   observeNewAircraft(aircraft: Aircraft): void {
     const id = `new:${aircraft.icaoHex.toUpperCase()}`;
     if (this.permanentEvents.has(id)) return;
-    const accepted = this.enqueue({ aircraft, matchedRules: [], emergency: false, priority: "normal", type: "new_aircraft", reason: "new", eventId: id });
+    const accepted = this.enqueue({
+      aircraft,
+      matchedRules: [],
+      emergency: false,
+      priority: "normal",
+      deliveryMode: "history_only",
+      type: "new_aircraft",
+      reason: "new",
+      eventId: id,
+    });
     if (!accepted) return;
     this.rememberPermanentEvent(id);
     this.persistState();
@@ -502,7 +511,17 @@ export class AlertEngine {
       recordedAt: current.recordedAt,
       previousDistanceKm: previous?.distanceKm ?? null,
     };
-    const accepted = this.enqueue({ aircraft: aircraftFromRecord(current), matchedRules: [], emergency: false, priority: "normal", type: "reception_record", reason: "record", eventId: id, record });
+    const accepted = this.enqueue({
+      aircraft: aircraftFromRecord(current),
+      matchedRules: [],
+      emergency: false,
+      priority: "normal",
+      deliveryMode: "history_only",
+      type: "reception_record",
+      reason: "record",
+      eventId: id,
+      record,
+    });
     if (!accepted) return;
     this.rememberPermanentEvent(id);
     this.reserve(cooldownKey, this.now());
