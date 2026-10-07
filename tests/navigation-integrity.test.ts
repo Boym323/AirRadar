@@ -4,6 +4,8 @@ import { buildBaseline } from "@/lib/navigation-integrity/baseline";
 import { classifyNavigationIntegrity } from "@/lib/navigation-integrity/classification";
 import { detectNavigationIntegrityAnomalies } from "@/lib/navigation-integrity/detector";
 import type { NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
+import { normalizeAircraft } from "@/lib/aircraft/normalize";
+import { NavigationIntegrityService } from "@/lib/server/navigation-integrity";
 
 function observation(hex: string, lat: number, lon: number, nic = 8, nacP = 8): NavigationIntegrityObservation {
   const at = "2026-09-28T10:00:00.000Z";
@@ -66,5 +68,46 @@ describe("navigation integrity", () => {
     expect(baseline.aircraftCount).toBe(8);
     expect(baseline.timeBucketCount).toBe(6);
     expect(baseline.maturity).toBe("STRONG");
+  });
+
+  it("reuses a current-window computation and invalidates it after a collection", () => {
+    const receiver = { lat: 49.2, lon: 16.6, name: "TEST" };
+    const firstAt = new Date("2026-10-07T12:00:00.000Z");
+    const makeAircraft = (hex: string, at: Date, lon: number) => normalizeAircraft({
+      hex,
+      type: "adsb_icao",
+      lat: 49.2,
+      lon,
+      alt_baro: 30_000,
+      seen: 0,
+      seen_pos: 0,
+      nic: 8,
+      nac_p: 8,
+      nac_v: 3,
+      sil: 3,
+      sda: 3,
+      gva: 3,
+      version: 2,
+    }, receiver, at);
+
+    const firstAircraft = makeAircraft("ABC001", firstAt, 16.6);
+    if (!firstAircraft) throw new Error("test aircraft could not be normalized");
+    const service = new NavigationIntegrityService();
+    service.observe([firstAircraft], firstAt);
+
+    const first = service.getCurrent("15m", new Date(firstAt.getTime() + 1_000));
+    const cached = service.getCurrent("15m", new Date(firstAt.getTime() + 1_500));
+    expect(cached.cells).toBe(first.cells);
+    expect(cached.summary.aircraft).toBe(1);
+
+    const secondAt = new Date(firstAt.getTime() + 16_000);
+    const refreshedFirst = makeAircraft("ABC001", secondAt, 16.61);
+    const secondAircraft = makeAircraft("ABC002", secondAt, 16.62);
+    if (!refreshedFirst || !secondAircraft) throw new Error("test aircraft could not be normalized");
+    service.observe([refreshedFirst, secondAircraft], secondAt);
+
+    const afterCollection = service.getCurrent("15m", new Date(secondAt.getTime() + 1_000));
+    expect(afterCollection.cells).not.toBe(first.cells);
+    expect(afterCollection.summary.aircraft).toBe(2);
   });
 });
