@@ -31,6 +31,7 @@ const moreNavigation = [
   { href: "/airspace", label: t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace" },
   { href: "/weather", label: t.locale.startsWith("cs") ? "Počasí" : "Weather" },
   { href: "/routes", label: t.locale.startsWith("cs") ? "Trasy" : "Routes" },
+  { href: "/navigation", label: t.locale.startsWith("cs") ? "Navigace" : "Navigation" },
   { href: "/spotter", label: "Spotter" },
   { href: "/operations", label: t.operations.title },
   { href: "/intelligence", label: t.intelligence.title },
@@ -208,6 +209,7 @@ export function MobileBottomNav() {
           <Link href="/weather">{t.locale.startsWith("cs") ? "Počasí" : "Weather"}</Link>
           <Link href="/operations">{t.operations.title}</Link>
           <Link href="/routes">{t.locale.startsWith("cs") ? "Trasy" : "Routes"}</Link>
+          <Link href="/navigation">{t.locale.startsWith("cs") ? "Navigace" : "Navigation"}</Link>
           <Link href="/spotter">Spotter</Link>
           <Link href="/fleet">{t.fleet.title}</Link>
           <Link href="/intelligence">{t.intelligence.title}</Link>
