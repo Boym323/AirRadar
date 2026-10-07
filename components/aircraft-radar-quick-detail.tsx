@@ -581,10 +581,6 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
         <span className="aircraft-quick-live-state"><span aria-hidden="true">●</span> {t.status.liveShort}</span>
       </div>
       {emergency || emergencySquawk ? <div className="aircraft-quick-status-row" role="status"><StatusBadge variant="danger">{emergency ?? `${t.aircraft.squawk} ${emergencySquawk}`}</StatusBadge></div> : null}
-      <RadarTrafficHero sourceLabel={trafficSourcePresentation(aircraft).detailLabel}
-        primaryLabel={aircraft.callsign || aircraft.registration || aircraft.icaoHex}
-        secondaryLabel={aircraft.aircraftType || null}
-        altitude={formatAltitude(aircraft.altitude)} speed={formatSpeed(aircraft.groundSpeed)} track={formatTrack(aircraft.track)} verticalRate={verticalRateLabel(aircraft.verticalRate)} />
       <nav className="aircraft-quick-actions" aria-label={t.aircraft.quickActions}>
         <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
         <button type="button" className={`aircraft-quick-action${watchlisted ? " active" : ""}`} aria-pressed={watchlisted} onClick={onToggleWatchlist}>{watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft}</button>
@@ -662,8 +658,6 @@ function DataSection({ aircraft }: { aircraft: AircraftView }) {
     <div className="aircraft-quick-data-source"><span className="source-badge source-badge-prominent">{aircraftPositionSourceLabel(aircraft)}</span><span>{t.aircraft.positionSource}</span></div>
     <div className="aircraft-quick-detail-grid">
       <DetailValue label={t.aircraft.seenBy} value={aircraftSourceLabel(aircraft)} />
-      <DetailValue label={t.aircraft.dataSource} value={classifyAircraftSource(aircraft)} />
-      <DetailValue label={t.aircraft.source} value={aircraft.sourceType ?? aircraft.source} />
       <DetailValue label={t.aircraft.positionOrigin} value={aircraft.provenance?.positionOrigin ?? null} />
       <DetailValue label={t.intelligence.freshness} value={aircraft.seenPosSeconds === null || aircraft.seenPosSeconds > 60 ? t.intelligence.stale : t.intelligence.fresh} />
       <DetailValue label={t.aircraft.lastLocalObservation} value={observationAge(aircraft.provenance?.lastLocalSeen)} />
@@ -772,7 +766,24 @@ export function AircraftRadarQuickDetail({
           <span className="aircraft-quick-eyebrow">{t.history.aircraftDetail}</span>
           <h1>{aircraft.callsign || registration || aircraft.icaoHex}</h1>
           {(operator || headerType || registration) && <p>{[operator, headerType, registration].filter(Boolean).join(" · ")}</p>}
+          <RadarTrafficHero
+            className="aircraft-quick-header-hero"
+            showIdentity={false}
+            sourceLabel={trafficSourcePresentation(aircraft).detailLabel}
+            primaryLabel={aircraft.callsign || registration || aircraft.icaoHex}
+            secondaryLabel={headerType}
+            altitude={formatAltitude(aircraft.altitude)}
+            speed={formatSpeed(aircraft.groundSpeed)}
+            track={formatTrack(aircraft.track)}
+            verticalRate={verticalRateLabel(aircraft.verticalRate)}
+          />
+          <div className="aircraft-quick-header-context" aria-label={t.aircraft.liveTrackingTitle}>
+            <span><strong>{formatDistance(aircraft.distanceKm)}</strong> {t.aircraft.distance}</span>
+            {sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}
+            {phase && <strong>{phase}</strong>}
+          </div>
           <RouteSection route={route} visible={hasRouteData} />
+          {!hasRouteData && <p className="aircraft-quick-route-state">{t.aircraft.noRouteData}</p>}
         </div>
         <button type="button" className={`aircraft-quick-watchlist ${watchlisted ? "active" : ""}`} aria-pressed={watchlisted} aria-label={watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft} onClick={onToggleWatchlist}>
           <span aria-hidden="true">{watchlisted ? "★" : "☆"}</span>
@@ -780,14 +791,9 @@ export function AircraftRadarQuickDetail({
       </div>
     </header>
 
-    {(sourceAge || phase) && <div className="aircraft-quick-source-header">{sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}{phase && <strong>{phase}</strong>}</div>}
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
       <AircraftOverview aircraft={aircraft} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} watchlisted={watchlisted} onToggleWatchlist={onToggleWatchlist} historyTrail={historyTrail} />
-      <QuickSection id="aircraft-quick-flight-title" title={t.route.context} className="aircraft-quick-flight">
-        <RouteSection route={route} callsign={aircraft.callsign || aircraft.icaoHex} visible={hasRouteData} />
-        {!hasRouteData && <p className="aircraft-quick-empty">{t.aircraft.noRouteData}</p>}
-      </QuickSection>
       <RouteCorridorSection corridor={routeCorridor} conformance={routeConformance} />
       <FlightStateSection aircraft={aircraft} />
     </div>}
