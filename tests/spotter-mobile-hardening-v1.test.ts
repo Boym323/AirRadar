@@ -12,6 +12,7 @@ describe("Spotter Mobile Hardening V1", () => {
 
   it("suspends the canonical aircraft stream while the page is hidden", () => {
     expect(component).toContain("document.visibilityState");
+    expect(component).toContain('document.addEventListener("visibilitychange"');
     expect(component).toContain("enabled: pageVisible");
     expect(stream).toContain("if (!enabled)");
     expect(component).not.toContain("new EventSource");
