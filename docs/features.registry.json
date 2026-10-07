@@ -150,7 +150,8 @@
       "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion.",
       "pages": [
         "/airports",
-        "/airports/:icao"
+        "/airports/:icao",
+        "/compare/airports"
       ],
       "apis": [
         "/api/airports",
@@ -305,9 +306,15 @@
       "introducedVersion": null,
       "summary": "Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights.",
       "pages": [
-        "/statistics",
+        "/heatmap",
         "/recap/daily",
-        "/recap/weekly"
+        "/recap/weekly",
+        "/statistics",
+        "/records",
+        "/aircraft-types",
+        "/operators",
+        "/traffic/rhythm",
+        "/traffic/geography"
       ],
       "apis": [
         "/api/logbook/summary",
@@ -316,7 +323,8 @@
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic",
-        "/api/statistics/heatmap"
+        "/api/statistics/heatmap",
+        "/api/statistics/traffic-profile"
       ],
       "changelogScopes": [
         "statistics",
@@ -828,6 +836,30 @@
         "prediction evidence",
         "why prediction",
         "prediction rationale"
+      ]
+    },
+    {
+      "id": "investigation-links",
+      "name": "Investigation Links",
+      "category": "productivity",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bookmarkable URL state for existing analytical surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
+      "pages": [
+        "/airspace",
+        "/compare/airports",
+        "/compare/flights",
+        "/navigation-integrity",
+        "/time-machine"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "investigation-links"
+      ],
+      "changelogKeywords": [
+        "investigation links",
+        "deep links",
+        "bookmarkable state"
       ]
     },
     {
