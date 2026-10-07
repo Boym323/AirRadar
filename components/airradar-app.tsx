@@ -142,7 +142,7 @@ import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
 import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
-import { AIRRADAR_BASE_MAP_STYLE_URL, AIRRADAR_MAP_ATTRIBUTION } from "@/lib/map-style";
+import { AIRRADAR_BASE_MAP_STYLE_URL, AIRRADAR_MAP_ATTRIBUTION, applyAirRadarBasemapReadability } from "@/lib/map-style";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
@@ -1390,7 +1390,12 @@ export function AirRadarApp() {
           },
         },
       });
-      map.addLayer({ id: "map-tint", type: "fill", source: "map-tint", paint: { "fill-color": AIRRADAR_MAP_THEME.mapTint, "fill-opacity": 0.16 } });
+      const firstBasemapSymbolLayerId = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
+      map.addLayer(
+        { id: "map-tint", type: "fill", source: "map-tint", paint: { "fill-color": AIRRADAR_MAP_THEME.mapTint, "fill-opacity": 0.13 } },
+        firstBasemapSymbolLayerId,
+      );
+      applyAirRadarBasemapReadability(map);
       map.addSource("weather-radar-image", { type: "image", url: EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
       map.addLayer({ id: "weather-radar-layer", type: "raster", source: "weather-radar-image", layout: { visibility: "none" }, paint: { "raster-opacity": 0.42, "raster-fade-duration": 0 } });
       map.addSource("navigation-integrity", { type: "geojson", data: EMPTY_NAVIGATION_INTEGRITY_GEOJSON });
