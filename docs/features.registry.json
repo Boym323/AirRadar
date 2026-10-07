@@ -310,6 +310,7 @@
         "/recap/daily",
         "/recap/weekly",
         "/statistics",
+        "/records",
         "/aircraft-types"
       ],
       "apis": [
