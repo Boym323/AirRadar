@@ -1,4 +1,5 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
+import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 
 /** Canonical AirRadar/OpenFreeMap basemap shared by live and historical maps. */
 export const AIRRADAR_BASE_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
@@ -23,8 +24,8 @@ export function applyAirRadarBasemapReadability(map: MapLibreMap): void {
     try {
       if (layer.type === "symbol" && (PLACE_LABEL_LAYER.test(id) || AIRPORT_LABEL_LAYER.test(id))) {
         const airport = AIRPORT_LABEL_LAYER.test(id);
-        map.setPaintProperty(id, "text-color", airport ? "#d7e3e7" : "#a9bfcb");
-        map.setPaintProperty(id, "text-halo-color", "#07131f");
+        map.setPaintProperty(id, "text-color", airport ? AIRRADAR_MAP_THEME.basemap.airportLabel : AIRRADAR_MAP_THEME.basemap.placeLabel);
+        map.setPaintProperty(id, "text-halo-color", AIRRADAR_MAP_THEME.outline);
         map.setPaintProperty(id, "text-halo-width", airport ? 1.3 : 1.1);
         map.setPaintProperty(id, "text-opacity", [
           "interpolate", ["linear"], ["zoom"],
@@ -33,7 +34,7 @@ export function applyAirRadarBasemapReadability(map: MapLibreMap): void {
           9, airport ? 0.9 : 0.78,
         ]);
       } else if (layer.type === "line" && BOUNDARY_LAYER.test(id)) {
-        map.setPaintProperty(id, "line-color", "#6f8798");
+        map.setPaintProperty(id, "line-color", AIRRADAR_MAP_THEME.basemap.boundary);
         map.setPaintProperty(id, "line-opacity", [
           "interpolate", ["linear"], ["zoom"],
           3, 0.34,
