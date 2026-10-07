@@ -13,6 +13,7 @@ import { findRecentObserverPasses } from "@/lib/spotter-history";
 import { isSpotterInteresting, scoreSpotterInterest, type SpotterInterestReasonCode } from "@/lib/spotter-interest";
 import { DEFAULT_SPOTTER_ALERT_PREFERENCES, readSpotterAlertPreferences, shouldTriggerSpotterAlert, spotterAlertTag, writeSpotterAlertPreferences, type SpotterAlertPreferences } from "@/lib/spotter-alerts";
 import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } from "@/lib/spotter-sky-finder";
+import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -313,6 +314,25 @@ export function MobileSpotterMode() {
     updateAlertPreferences({ ...alertPreferences, reasons });
   };
 
+  const skyStory = useMemo(() => {
+    if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
+    const aircraft = interestingAircraft[0]?.aircraft
+      ?? upcomingPasses[0]?.aircraft
+      ?? visibleAircraft[0]?.aircraft;
+    if (!aircraft) return null;
+    const closestApproach = predictClosestApproach(aircraft, observer);
+    const interest = scoreSpotterInterest(
+      aircraft,
+      labelsByHex.get(aircraft.icaoHex) ?? [],
+      closestApproach?.closestHorizontalDistanceKm ?? null,
+      discovery?.todayReceptionRecord?.icaoHex ?? null,
+    );
+    return {
+      aircraft,
+      story: buildSpotterSkyStory(aircraft, interest, closestApproach),
+    };
+  }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, interestingAircraft, labelsByHex, observer, upcomingPasses, visibleAircraft]);
+
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = interestingAircraft[0]
@@ -443,6 +463,50 @@ export function MobileSpotterMode() {
         ? <small className={styles.locationAccuracy}>{copy.accuracy}: ±{formatNumber(observer.accuracyMeters)} m</small>
         : null}
     </Panel>
+
+    {distanceOrigin === "observer" && observerState === "ready" && skyStory ? <Panel className={styles.skyStoryPanel}>
+      <SectionHeader kicker="MY SKY / STORY" title={copy.skyCardTitle} description={copy.skyCardDescription} />
+      <article className={styles.skyStory}>
+        <div className={styles.skyStoryTop}>
+          <div>
+            <span className={styles.skyStoryEyebrow}>{skyStory.story.operator ?? "LOCAL"}</span>
+            <strong className={styles.skyStoryIdentity}>{skyStory.story.identity}</strong>
+            <span>{skyStory.story.registration ?? skyStory.aircraft.icaoHex}</span>
+          </div>
+          <div className={styles.skyStoryScore}>
+            <strong>{skyStory.story.interest.score}</strong>
+            <span>{copy.interestScore}</span>
+          </div>
+        </div>
+        <div className={styles.skyStoryRoute}>
+          {skyStory.story.origin || skyStory.story.destination
+            ? <>
+              <div><strong>{skyStory.story.origin ?? "—"}</strong><small>{skyStory.story.originName ?? ""}</small></div>
+              <span aria-hidden="true">→</span>
+              <div><strong>{skyStory.story.destination ?? "—"}</strong><small>{skyStory.story.destinationName ?? ""}</small></div>
+            </>
+            : <span>{copy.routeUnknown}</span>}
+        </div>
+        <dl className={styles.skyStoryMetrics}>
+          <div><dt>{copy.aircraftInfo}</dt><dd>{skyStory.story.aircraftType ?? "—"}</dd></div>
+          <div><dt>{copy.closestPass}</dt><dd>{formatDistance(skyStory.story.closestApproachKm)}</dd></div>
+          <div><dt>{copy.altitude}</dt><dd>{formatAltitude(skyStory.story.altitudeFt)}</dd></div>
+          <div><dt>{copy.speed}</dt><dd>{skyStory.story.groundSpeedKt === null ? "—" : formatNumber(skyStory.story.groundSpeedKt) + " kt"}</dd></div>
+          <div><dt>{copy.elevation}</dt><dd>{skyStory.story.elevationAtClosestDeg === null ? "—" : formatNumber(skyStory.story.elevationAtClosestDeg) + "°"}</dd></div>
+          <div><dt>{copy.verticalTrend}</dt><dd>{copy.verticalTrends[verticalTrend(skyStory.story.verticalRateFpm)]}</dd></div>
+          {skyStory.story.estimatedArrival ? <div><dt>{copy.eta}</dt><dd>{formatDateTime(skyStory.story.estimatedArrival, t)}</dd></div> : null}
+        </dl>
+        <div className={styles.interestReasons}>
+          {skyStory.story.interest.reasons.map((reason) => <span key={reason.code}>
+            {copy.interestReasons[reason.code as SpotterInterestReasonCode]} +{reason.points}
+          </span>)}
+        </div>
+        <div className={styles.actions}>
+          <Link href={("/aircraft/" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.detail}</Link>
+          <Link href={("/?aircraft=" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.radar}</Link>
+        </div>
+      </article>
+    </Panel> : null}
 
     {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
       <SectionHeader

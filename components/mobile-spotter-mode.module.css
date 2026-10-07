@@ -414,3 +414,109 @@
   }
 }
 
+.skyStoryPanel {
+  overflow: hidden;
+}
+
+.skyStory {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.skyStoryTop {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.skyStoryTop > div:first-child {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.skyStoryEyebrow {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.skyStoryIdentity {
+  font-size: clamp(1.8rem, 6vw, 3.4rem);
+  line-height: .95;
+}
+
+.skyStoryScore {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+
+.skyStoryScore strong {
+  font-size: var(--font-size-2xl);
+}
+
+.skyStoryScore span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.skyStoryRoute {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.skyStoryRoute div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.skyStoryRoute div:last-child {
+  text-align: right;
+}
+
+.skyStoryRoute small,
+.skyStoryRoute > span {
+  color: var(--muted);
+}
+
+.skyStoryMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.skyStoryMetrics div {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.skyStoryMetrics dt {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.skyStoryMetrics dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+@media (max-width: 540px) {
+  .skyStoryMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
