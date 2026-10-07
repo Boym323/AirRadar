@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
 import { formatDateTime, t } from "@/lib/i18n";
 import {
-  filterNotificationGroups,
   groupNotificationEntries,
   NOTIFICATION_CENTER_PAGE_SIZE,
   NOTIFICATION_CENTER_STORAGE_KEY,
@@ -87,6 +86,30 @@ function groupRuleNames(group: NotificationGroup): string[] {
   return [...new Set(group.entries.flatMap((entry) => entry.ruleNames))];
 }
 
+function historyFilter(category: NotificationCategoryFilter): string {
+  if (category === "WATCHLIST") return "watchlist";
+  if (category === "EMERGENCY") return "emergency";
+  if (category === "INTELLIGENCE") return "intelligence";
+  if (category === "RECORDS") return "records";
+  return "all";
+}
+
+function historyDelivery(delivery: NotificationDeliveryFilter): string | null {
+  if (delivery === "DELIVERED") return "delivered";
+  if (delivery === "FAILED") return "failed";
+  if (delivery === "CENTER_ONLY") return "center_only";
+  return null;
+}
+
+function historyQueryUrl(page: number, category: NotificationCategoryFilter, delivery: NotificationDeliveryFilter, query: string): string {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(NOTIFICATION_CENTER_PAGE_SIZE), filter: historyFilter(category) });
+  const deliveryValue = historyDelivery(delivery);
+  if (deliveryValue) params.set("delivery", deliveryValue);
+  const trimmed = query.trim();
+  if (trimmed) params.set("q", trimmed);
+  return `/api/alerts?${params.toString()}`;
+}
+
 export function NotificationCenter() {
   const cs = t.locale.startsWith("cs");
   const copy = t.notificationCenter;
@@ -104,6 +127,7 @@ export function NotificationCenter() {
   const [categoryFilter, setCategoryFilter] = useState<NotificationCategoryFilter>("ALL");
   const [deliveryFilter, setDeliveryFilter] = useState<NotificationDeliveryFilter>("ALL");
   const [query, setQuery] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const openedAt = new Date().toISOString();
@@ -118,24 +142,26 @@ export function NotificationCenter() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/alerts?page=0&pageSize=${NOTIFICATION_CENTER_PAGE_SIZE}&filter=all`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("notification history unavailable");
-        return await response.json() as AlertHistoryPage;
+    const timer = window.setTimeout(() => {
+      void fetch(historyQueryUrl(0, categoryFilter, deliveryFilter, query), {
+        cache: "no-store",
+        signal: controller.signal,
       })
-      .then((next) => {
-        if (controller.signal.aborted) return;
-        setData(next);
-        setFailed(false);
-      })
-      .catch((error) => {
-        if ((error as Error).name !== "AbortError") setFailed(true);
-      });
-    return () => controller.abort();
-  }, []);
+        .then(async (response) => {
+          if (!response.ok) throw new Error("notification history unavailable");
+          return await response.json() as AlertHistoryPage;
+        })
+        .then((next) => {
+          if (controller.signal.aborted) return;
+          setData(next);
+          setFailed(false);
+        })
+        .catch((error) => {
+          if ((error as Error).name !== "AbortError") setFailed(true);
+        });
+    }, query.trim() ? 200 : 0);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [categoryFilter, deliveryFilter, query]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -204,11 +230,7 @@ export function NotificationCenter() {
   }, []);
 
   const groups = useMemo(() => groupNotificationEntries(data?.items ?? []), [data?.items]);
-  const filteredGroups = useMemo(() => filterNotificationGroups(groups, {
-    category: categoryFilter,
-    delivery: deliveryFilter,
-    query,
-  }), [groups, categoryFilter, deliveryFilter, query]);
+  const filteredGroups = groups;
   const metrics = useMemo(() => notificationCenterMetrics(data?.items ?? [], lastSeen), [data?.items, lastSeen]);
 
   function updatePreference(key: NotificationPreferenceKey, mode: NotificationPreferenceMode) {
@@ -238,6 +260,25 @@ export function NotificationCenter() {
       setPreferenceMessage(copy.saveFailed);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function loadMore() {
+    if (!data || data.nextPage === null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await fetch(historyQueryUrl(data.nextPage, categoryFilter, deliveryFilter, query), { cache: "no-store" });
+      if (!response.ok) throw new Error("notification history unavailable");
+      const next = await response.json() as AlertHistoryPage;
+      setData((current) => current ? {
+        ...current,
+        items: [...current.items, ...next.items],
+        nextPage: next.nextPage,
+      } : next);
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -423,6 +464,11 @@ export function NotificationCenter() {
             </li>;
           })}
         </ol> : <EmptyState title={data.items.length ? copy.noMatches : copy.empty} />}
+      {data && data.nextPage !== null ? <div className={styles.preferenceActions}>
+        <button className={styles.saveButton} type="button" disabled={loadingMore} onClick={() => void loadMore()}>
+          {loadingMore ? copy.loadingMore : copy.loadMore}
+        </button>
+      </div> : null}
     </Panel>
   </main>;
 }
