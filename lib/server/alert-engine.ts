@@ -12,6 +12,7 @@ import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey,
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 import { getPrisma } from "@/lib/server/db";
 import { channelsForNotificationMode, notificationModeForDurableSignal, notificationPreferenceMode } from "@/lib/server/notification-preferences";
+import { getNotificationCenterStateStore } from "@/lib/server/notification-center-state";
 import { evaluateWatchlistPredictiveRule } from "@/lib/watchlist-predictive-alerts-v2";
 import type { PublicEtaAdvisory } from "@/lib/predictive-intelligence/eta-advisory";
 import type { PublicRunwayChangeAdvisory } from "@/lib/predictive-intelligence/runway-change-advisory";
@@ -39,6 +40,7 @@ export interface AlertEngineOptions {
   history?: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   state?: AlertStateStore;
   notificationMode?: (alert: AircraftAlert) => NotificationPreferenceMode | null;
+  notificationMuted?: (aircraftIcao: string, ruleIds: readonly string[]) => boolean;
 }
 
 function aircraftMap(value: ReadonlyMap<string, Aircraft> | ReadonlyArray<Aircraft>): ReadonlyMap<string, Aircraft> {
@@ -121,6 +123,7 @@ export class AlertEngine {
   private readonly history: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   private readonly stateStore: AlertStateStore;
   private readonly notificationMode: (alert: AircraftAlert) => NotificationPreferenceMode | null;
+  private readonly notificationMuted: (aircraftIcao: string, ruleIds: readonly string[]) => boolean;
   private readonly dedupCache = new Map<string, number>();
   private readonly pending: AircraftAlert[] = [];
   private activeDeliveries = 0;
@@ -147,6 +150,8 @@ export class AlertEngine {
       const key = notificationPreferenceKeyForEvent(type, alert.emergency);
       return key ? notificationPreferenceMode(key) : null;
     });
+    this.notificationMuted = options.notificationMuted
+      ?? ((aircraftIcao, ruleIds) => getNotificationCenterStateStore().isMuted(aircraftIcao, ruleIds));
     const persisted = this.stateStore.load();
     for (const [key, timestamp] of persisted.dedup) this.dedupCache.set(key, timestamp);
     for (const [key, timestamp] of persisted.permanent) this.permanentEvents.set(key, timestamp);
@@ -445,12 +450,15 @@ export class AlertEngine {
       for (const occurrence of evaluateAlertV1(signal, config)) {
         const rule = config.rules.find((candidate) => candidate.id === occurrence.ruleId);
         if (!rule) continue;
-        const channels = channelsForNotificationMode(deliveryMode, rule.channels);
+        const muted = this.notificationMuted(occurrence.aircraft.icaoHex, [occurrence.ruleId]);
+        const effectiveMode = muted ? "CENTER_ONLY" : deliveryMode;
+        const channels = channelsForNotificationMode(effectiveMode, rule.channels);
         if (channels === null) continue;
         await getAlertsFleetsRepository().recordOccurrence({
           id: occurrence.id, ruleId: occurrence.ruleId, sourceType: occurrence.sourceType, sourceKey: occurrence.sourceKey, trigger: occurrence.trigger,
           aircraftIcao: occurrence.aircraft.icaoHex, registration: occurrence.aircraft.registration, callsign: occurrence.aircraft.callsign,
-          flightEventId: signal.sourceType === "FLIGHT_EVENT" ? signal.flightEventId ?? null : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels,
+          flightEventId: signal.sourceType === "FLIGHT_EVENT" ? signal.flightEventId ?? null : null, occurredAt: occurrence.occurredAt,
+          payload: { ...occurrence.payload, notificationDeliveryMode: effectiveMode }, channels,
         });
       }
     } catch {
@@ -601,6 +609,8 @@ export class AlertEngine {
   private enqueue(alert: AircraftAlert): boolean {
     const preferenceMode = this.notificationMode(alert);
     if (preferenceMode === "OFF") return true;
+    const ruleIds = alert.matchedRules.map((rule) => rule.id);
+    const muted = this.notificationMuted(alert.aircraft.icaoHex, ruleIds);
 
     const type: AlertHistoryEventType = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
     const reason: AlertHistoryReason = alert.reason ?? (alert.emergency ? "emergency" : "watchlisted");
@@ -611,7 +621,7 @@ export class AlertEngine {
       type,
       reason,
       aircraft: alert.aircraft,
-      ruleIds: alert.matchedRules.map((rule) => rule.id),
+      ruleIds,
       ruleNames: alert.matchedRules.map((rule) => rule.name ?? rule.id),
       radiusKm: alert.radiusKm ?? null,
       squawk: alert.squawk ?? null,
@@ -620,8 +630,8 @@ export class AlertEngine {
       metadata: alert.metadata,
     }).catch(() => undefined);
 
-    if (alert.deliveryMode === "history_only" || preferenceMode === "CENTER_ONLY") {
-      void this.history.recordNotification(eventId, "disabled").catch(() => undefined);
+    if (alert.deliveryMode === "history_only" || preferenceMode === "CENTER_ONLY" || muted) {
+      void this.history.recordNotification(eventId, "center_only").catch(() => undefined);
       return true;
     }
 

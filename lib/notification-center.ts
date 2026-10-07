@@ -90,10 +90,11 @@ function semanticEventKey(entry: AlertHistoryEntry): string | null {
 }
 
 function statusPriority(status: AlertNotificationStatus): number {
-  if (status === "failed") return 5;
-  if (status === "delivered") return 4;
-  if (status === "attempted") return 3;
-  if (status === "pending") return 2;
+  if (status === "failed") return 6;
+  if (status === "delivered") return 5;
+  if (status === "attempted") return 4;
+  if (status === "pending") return 3;
+  if (status === "center_only") return 2;
   return 1;
 }
 
@@ -212,6 +213,107 @@ export function groupNotificationEntries(entries: readonly AlertHistoryEntry[], 
     activeByAircraft.set(aircraftIcao, group);
   }
   return grouped;
+}
+
+export type NotificationCategoryFilter = "ALL" | "WATCHLIST" | "EMERGENCY" | "INTELLIGENCE" | "RECORDS";
+export type NotificationDeliveryFilter = "ALL" | "DELIVERED" | "FAILED" | "CENTER_ONLY";
+export type NotificationWhyCode =
+  | "watchlist_rule"
+  | "entered_radius"
+  | "emergency_squawk"
+  | "first_seen"
+  | "reception_record"
+  | "flight_intelligence_rule"
+  | "predictive_rule"
+  | "durable_rule"
+  | "system_signal";
+
+export interface NotificationCenterViewFilter {
+  category: NotificationCategoryFilter;
+  delivery: NotificationDeliveryFilter;
+  query: string;
+}
+
+export interface NotificationRuleReference {
+  id: string;
+  label: string;
+  kind: "watchlist" | "durable";
+}
+
+function matchesCategoryFilter(entry: AlertHistoryEntry, filter: NotificationCategoryFilter): boolean {
+  if (filter === "ALL") return true;
+  const category = notificationCategory(entry);
+  if (filter === "WATCHLIST") return category === "WATCHLIST" || category === "PREDICTIVE";
+  if (filter === "EMERGENCY") return category === "EMERGENCY";
+  if (filter === "INTELLIGENCE") return category === "INTELLIGENCE";
+  return category === "FIRST SEEN" || category === "RECEPTION RECORD";
+}
+
+function matchesDeliveryFilter(entry: AlertHistoryEntry, filter: NotificationDeliveryFilter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "DELIVERED") return entry.notificationStatus === "delivered";
+  if (filter === "FAILED") return entry.notificationStatus === "failed";
+  return entry.notificationStatus === "center_only";
+}
+
+function groupSearchText(group: NotificationGroup): string {
+  return group.entries.flatMap((entry) => [
+    entry.aircraft.icaoHex,
+    entry.aircraft.callsign ?? "",
+    entry.aircraft.registration ?? "",
+    ...entry.ruleIds,
+    ...entry.ruleNames,
+  ]).join(" ").toUpperCase();
+}
+
+export function filterNotificationGroups(
+  groups: readonly NotificationGroup[],
+  filter: NotificationCenterViewFilter,
+): NotificationGroup[] {
+  const query = filter.query.trim().toUpperCase();
+  return groups.filter((group) => {
+    if (query && !groupSearchText(group).includes(query)) return false;
+    return group.entries.some((entry) =>
+      matchesCategoryFilter(entry, filter.category) && matchesDeliveryFilter(entry, filter.delivery));
+  });
+}
+
+export function notificationWhyCode(entry: AlertHistoryEntry): NotificationWhyCode {
+  if (notificationCategory(entry) === "EMERGENCY") return "emergency_squawk";
+  if (entry.type === "entered_radius") return "entered_radius";
+  if (entry.type === "new_aircraft") return "first_seen";
+  if (entry.type === "reception_record") return "reception_record";
+  if (entry.type === "predictive_eta" || entry.type === "predictive_runway_change") return "predictive_rule";
+  if (entry.type.startsWith("intelligence_")) return "flight_intelligence_rule";
+  if (entry.type === "alert_v1") {
+    if (entry.alertV1?.sourceType === "FLIGHT_EVENT") return "flight_intelligence_rule";
+    return "durable_rule";
+  }
+  if (entry.ruleIds.length) return "watchlist_rule";
+  return "system_signal";
+}
+
+export function notificationRuleReferences(group: NotificationGroup): NotificationRuleReference[] {
+  const refs = new Map<string, NotificationRuleReference>();
+  for (const entry of group.entries) {
+    const durableRuleId = entry.alertV1?.ruleId ?? null;
+    if (durableRuleId) {
+      refs.set(`durable:${durableRuleId}`, {
+        id: durableRuleId,
+        label: entry.alertV1?.ruleName ?? durableRuleId,
+        kind: "durable",
+      });
+    }
+    entry.ruleIds.forEach((id, index) => {
+      if (id === durableRuleId) return;
+      refs.set(`watchlist:${id}`, {
+        id,
+        label: entry.ruleNames[index] ?? id,
+        kind: "watchlist",
+      });
+    });
+  }
+  return [...refs.values()];
 }
 
 export function notificationCenterMetrics(entries: readonly AlertHistoryEntry[], lastSeen: string | null) {

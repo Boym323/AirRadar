@@ -33,8 +33,8 @@ describe("Notification Center V1 aggregation", () => {
     expect(notificationCategory(entry("w", "watchlist", "pending", "2026-10-06T10:00:00Z"))).toBe("WATCHLIST");
     expect(notificationCategory(entry("i", "intelligence_approach", "delivered", "2026-10-06T10:01:00Z"))).toBe("INTELLIGENCE");
     expect(notificationCategory(entry("e", "emergency_7700", "failed", "2026-10-06T10:02:00Z"))).toBe("EMERGENCY");
-    expect(notificationCategory(entry("n", "new_aircraft", "disabled", "2026-10-06T10:03:00Z"))).toBe("FIRST SEEN");
-    expect(notificationCategory(entry("r", "reception_record", "disabled", "2026-10-06T10:04:00Z"))).toBe("RECEPTION RECORD");
+    expect(notificationCategory(entry("n", "new_aircraft", "center_only", "2026-10-06T10:03:00Z"))).toBe("FIRST SEEN");
+    expect(notificationCategory(entry("r", "reception_record", "center_only", "2026-10-06T10:04:00Z"))).toBe("RECEPTION RECORD");
     expect(notificationCategory(entry("p", "predictive_eta", "delivered", "2026-10-06T10:05:00Z"))).toBe("PREDICTIVE");
   });
 
@@ -53,7 +53,7 @@ describe("Notification Center V1 aggregation", () => {
     });
   });
 
-  it("keeps unread state browser-local and fails closed for corrupt data", () => {
+  it("keeps a browser-local unread fallback and fails closed for corrupt data", () => {
     expect(NOTIFICATION_CENTER_STORAGE_KEY).toBe("airradar.notifications.v1");
     expect(parseNotificationCenterLocalState("not-json")).toBeNull();
     expect(parseNotificationCenterLocalState('{"version":2,"lastSeen":"2026-10-06T10:00:00Z"}')).toBeNull();
@@ -64,21 +64,23 @@ describe("Notification Center V1 aggregation", () => {
   });
 });
 
-describe("Notification Center V1 boundaries", () => {
+describe("Notification Center V2 boundaries", () => {
   const source = readFileSync(new URL("../components/notification-center.tsx", import.meta.url), "utf8");
   const historyRoute = readFileSync(new URL("../app/api/alerts/route.ts", import.meta.url), "utf8");
   const deliveryRoute = readFileSync(new URL("../app/api/admin/alerts/delivery/route.ts", import.meta.url), "utf8");
   const engine = readFileSync(new URL("../lib/server/alert-engine.ts", import.meta.url), "utf8");
 
-  it("keeps history bounded and adds authenticated delivery preferences", () => {
+  it("keeps history bounded and reuses authenticated admin delivery state", () => {
     expect(NOTIFICATION_CENTER_PAGE_SIZE).toBe(50);
     expect(source).toContain("/api/alerts?page=0&pageSize=");
     expect(source).toContain("/api/admin/alerts/delivery?view=preferences");
+    expect(source).toContain("/api/admin/alerts/delivery?view=notification-state");
     expect(source).toContain('method: "PATCH"');
     expect(historyRoute).toContain("listAlertHistory");
     expect(deliveryRoute).toContain("isWatchlistSessionValid");
     expect(deliveryRoute).toContain("requireWatchlistMutation");
     expect(deliveryRoute).toContain("getNotificationPreferencesStore");
+    expect(deliveryRoute).toContain("getNotificationCenterStateStore");
   });
 
   it("adds no detector, scheduler or parallel notification API", () => {
@@ -87,5 +89,6 @@ describe("Notification Center V1 boundaries", () => {
     expect(source).not.toContain("EventSource");
     expect(engine).toContain("notificationModeForDurableSignal");
     expect(engine).toContain("channelsForNotificationMode");
+    expect(engine).toContain("notificationMuted");
   });
 });

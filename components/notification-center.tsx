@@ -6,22 +6,32 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
 import { formatDateTime, t } from "@/lib/i18n";
 import {
+  filterNotificationGroups,
+  groupNotificationEntries,
+  NOTIFICATION_CENTER_PAGE_SIZE,
+  NOTIFICATION_CENTER_STORAGE_KEY,
+  notificationCategory,
+  notificationCenterMetrics,
+  notificationRuleReferences,
+  notificationWhyCode,
+  parseNotificationCenterLocalState,
+  serializeNotificationCenterLocalState,
+  type NotificationCategoryFilter,
+  type NotificationDeliveryFilter,
+  type NotificationGroup,
+} from "@/lib/notification-center";
+import {
+  parseNotificationCenterServerState,
+  type NotificationCenterServerState,
+  type NotificationCenterStatePatch,
+} from "@/lib/notification-center-state";
+import {
   NOTIFICATION_PREFERENCE_KEYS,
   parseNotificationPreferenceValues,
   type NotificationPreferenceKey,
   type NotificationPreferenceMode,
   type NotificationPreferenceValues,
 } from "@/lib/notification-preferences";
-import {
-  NOTIFICATION_CENTER_PAGE_SIZE,
-  NOTIFICATION_CENTER_STORAGE_KEY,
-  groupNotificationEntries,
-  notificationCategory,
-  notificationCenterMetrics,
-  parseNotificationCenterLocalState,
-  serializeNotificationCenterLocalState,
-  type NotificationGroup,
-} from "@/lib/notification-center";
 import type { AlertHistoryEntry, AlertHistoryPage, AlertNotificationStatus } from "@/lib/server/alert-history";
 import styles from "./notification-center.module.css";
 
@@ -59,10 +69,11 @@ function statusLabel(status: AlertNotificationStatus, cs: boolean): string {
   if (status === "failed") return cs ? "SELHALO" : "FAILED";
   if (status === "attempted") return cs ? "ODESÍLÁ SE" : "ATTEMPTED";
   if (status === "pending") return cs ? "ČEKÁ" : "PENDING";
+  if (status === "center_only") return cs ? "JEN CENTRUM" : "CENTER ONLY";
   return cs ? "BEZ PUSH" : "NO PUSH";
 }
 
-type PreferenceAccess = "loading" | "ready" | "locked" | "error";
+type AdminAccess = "loading" | "ready" | "locked" | "error";
 
 function preferenceLabel(key: NotificationPreferenceKey) {
   return t.notificationCenter.categories[key];
@@ -82,10 +93,17 @@ export function NotificationCenter() {
   const [data, setData] = useState<AlertHistoryPage | null>(null);
   const [failed, setFailed] = useState(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
-  const [preferenceAccess, setPreferenceAccess] = useState<PreferenceAccess>("loading");
+  const [preferenceAccess, setPreferenceAccess] = useState<AdminAccess>("loading");
   const [preferenceDraft, setPreferenceDraft] = useState<NotificationPreferenceValues | null>(null);
+  const [stateAccess, setStateAccess] = useState<AdminAccess>("loading");
+  const [serverState, setServerState] = useState<NotificationCenterServerState | null>(null);
   const [saving, setSaving] = useState(false);
   const [preferenceMessage, setPreferenceMessage] = useState<string | null>(null);
+  const [mutePending, setMutePending] = useState<string | null>(null);
+  const [muteMessage, setMuteMessage] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<NotificationCategoryFilter>("ALL");
+  const [deliveryFilter, setDeliveryFilter] = useState<NotificationDeliveryFilter>("ALL");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const openedAt = new Date().toISOString();
@@ -146,7 +164,51 @@ export function NotificationCenter() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const openedAt = new Date().toISOString();
+    void fetch("/api/admin/alerts/delivery?view=notification-state", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (response.status === 401 || response.status === 403 || response.status === 503) {
+          if (!controller.signal.aborted) setStateAccess("locked");
+          return null;
+        }
+        if (!response.ok) throw new Error("notification state unavailable");
+        return await response.json() as { notificationState?: unknown };
+      })
+      .then(async (payload) => {
+        if (!payload || controller.signal.aborted) return;
+        const state = parseNotificationCenterServerState(payload.notificationState);
+        if (!state) throw new Error("invalid notification state");
+        setLastSeen(state.lastSeen);
+        setServerState(state);
+        setStateAccess("ready");
+        const response = await fetch("/api/admin/alerts/delivery?view=notification-state", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lastSeen: openedAt }),
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const updated = await response.json() as { notificationState?: unknown };
+        const next = parseNotificationCenterServerState(updated.notificationState);
+        if (next && !controller.signal.aborted) setServerState(next);
+      })
+      .catch((error) => {
+        if ((error as Error).name !== "AbortError") setStateAccess("error");
+      });
+    return () => controller.abort();
+  }, []);
+
   const groups = useMemo(() => groupNotificationEntries(data?.items ?? []), [data?.items]);
+  const filteredGroups = useMemo(() => filterNotificationGroups(groups, {
+    category: categoryFilter,
+    delivery: deliveryFilter,
+    query,
+  }), [groups, categoryFilter, deliveryFilter, query]);
   const metrics = useMemo(() => notificationCenterMetrics(data?.items ?? [], lastSeen), [data?.items, lastSeen]);
 
   function updatePreference(key: NotificationPreferenceKey, mode: NotificationPreferenceMode) {
@@ -179,7 +241,29 @@ export function NotificationCenter() {
     }
   }
 
-  return <main className={styles.page} data-testid="notification-center-v1">
+  async function updateNotificationState(patch: NotificationCenterStatePatch, key: string) {
+    if (stateAccess !== "ready" || mutePending) return;
+    setMutePending(key);
+    setMuteMessage(null);
+    try {
+      const response = await fetch("/api/admin/alerts/delivery?view=notification-state", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!response.ok) throw new Error("notification state update failed");
+      const payload = await response.json() as { notificationState?: unknown };
+      const next = parseNotificationCenterServerState(payload.notificationState);
+      if (!next) throw new Error("invalid notification state");
+      setServerState(next);
+    } catch {
+      setMuteMessage(copy.muteFailed);
+    } finally {
+      setMutePending(null);
+    }
+  }
+
+  return <main className={styles.page} data-testid="notification-center-v2">
     <PageHeader
       kicker="AIRRADAR / NOTIFICATIONS"
       title={copy.title}
@@ -191,7 +275,7 @@ export function NotificationCenter() {
       <MetricCard value={data ? metrics.recent : "—"} label={copy.recent} />
       <MetricCard value={data ? metrics.delivered : "—"} label={copy.delivered} />
       <MetricCard value={data ? metrics.failed : "—"} label={copy.failed} />
-      <MetricCard value={data ? metrics.unread : "—"} label={copy.unread} detail={copy.localUnread} />
+      <MetricCard value={data ? metrics.unread : "—"} label={copy.unread} detail={stateAccess === "ready" ? copy.serverUnread : copy.localUnread} />
     </MetricStrip>
 
     <Panel>
@@ -231,22 +315,46 @@ export function NotificationCenter() {
     </Panel>
 
     <Panel>
-      <SectionHeader kicker="FEED" title={copy.feed} description={copy.feedDescription} />
+      <SectionHeader kicker="CENTER V2" title={copy.feed} description={copy.feedDescription} />
+      <div className={styles.filters} aria-label={copy.filters}>
+        <label>
+          <span>{copy.categoryFilter}</span>
+          <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as NotificationCategoryFilter)}>
+            {(["ALL", "WATCHLIST", "EMERGENCY", "INTELLIGENCE", "RECORDS"] as const).map((value) =>
+              <option key={value} value={value}>{copy.filterCategories[value]}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>{copy.deliveryFilter}</span>
+          <select value={deliveryFilter} onChange={(event) => setDeliveryFilter(event.target.value as NotificationDeliveryFilter)}>
+            {(["ALL", "DELIVERED", "FAILED", "CENTER_ONLY"] as const).map((value) =>
+              <option key={value} value={value}>{copy.filterDelivery[value]}</option>)}
+          </select>
+        </label>
+        <label className={styles.searchField}>
+          <span>{copy.search}</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} type="search" placeholder={copy.search} />
+        </label>
+      </div>
+      {muteMessage ? <p className={styles.inlineError} role="status">{muteMessage}</p> : null}
       {failed && !data ? <EmptyState title={copy.unavailable} />
         : !data ? <p className={styles.loading}>{t.common.loading}</p>
-        : groups.length ? <ol className={styles.feed}>
-          {groups.map((group) => {
+        : filteredGroups.length ? <ol className={styles.feed}>
+          {filteredGroups.map((group) => {
             const primary = group.primary;
             const identity = groupIdentity(group);
             const name = identity.aircraft.callsign ?? identity.aircraft.registration ?? group.aircraftIcao;
             const category = notificationCategory(primary);
             const rules = groupRuleNames(group);
+            const ruleRefs = notificationRuleReferences(group);
+            const aircraftMuted = serverState?.mutedAircraft.includes(group.aircraftIcao) ?? false;
             return <li key={group.id} className={styles.item}>
               <div className={styles.itemMain}>
                 <div className={styles.itemHeading}>
                   <span className={styles.category}>{category}</span>
                   <strong>{eventTitle(primary, cs)}</strong>
                   {group.entries.length > 1 ? <span className={styles.threadCount}>{copy.groupedEvents(group.entries.length)}</span> : null}
+                  {aircraftMuted ? <span className={styles.mutedBadge}>{copy.muted}</span> : null}
                 </div>
                 <div className={styles.identity}>
                   <Link href={`/aircraft/${encodeURIComponent(group.aircraftIcao)}` as Route}>{name}</Link>
@@ -256,6 +364,32 @@ export function NotificationCenter() {
                   {primary.intelligence?.sectorId ? <span>{primary.intelligence.sectorId}</span> : null}
                 </div>
                 {rules.length ? <small>{rules.join(", ")}</small> : null}
+
+                <div className={styles.whyBlock}>
+                  <strong>{copy.why}</strong>
+                  <span>{copy.whyReasons[notificationWhyCode(primary)]}</span>
+                </div>
+
+                {ruleRefs.length ? <div className={styles.ruleRefs}>
+                  <strong>{copy.rules}</strong>
+                  <div>
+                    {ruleRefs.map((rule) => {
+                      const muted = serverState?.mutedRuleIds.includes(rule.id) ?? false;
+                      const href = (rule.kind === "durable"
+                        ? `/admin/alerts?rule=${encodeURIComponent(rule.id)}`
+                        : `/watchlist?rule=${encodeURIComponent(rule.id)}`) as Route;
+                      const key = `rule:${rule.id}`;
+                      return <span key={`${rule.kind}:${rule.id}`} className={styles.ruleRef}>
+                        <Link href={href}>{rule.label}</Link>
+                        {stateAccess === "ready" ? <button
+                          type="button"
+                          disabled={mutePending !== null}
+                          onClick={() => void updateNotificationState({ rule: { id: rule.id, muted: !muted } }, key)}
+                        >{muted ? copy.unmuteRule : copy.muteRule}</button> : null}
+                      </span>;
+                    })}
+                  </div>
+                </div> : null}
 
                 {group.entries.length > 1 ? <div className={styles.timeline}>
                   <span className={styles.timelineLabel}>{copy.timeline}</span>
@@ -272,7 +406,14 @@ export function NotificationCenter() {
                   </ol>
                 </div> : null}
 
-                <Link className={styles.openLink} href={`/aircraft/${encodeURIComponent(group.aircraftIcao)}` as Route}>{copy.open} →</Link>
+                <div className={styles.itemActions}>
+                  <Link className={styles.openLink} href={`/aircraft/${encodeURIComponent(group.aircraftIcao)}` as Route}>{copy.open} →</Link>
+                  {stateAccess === "ready" ? <button
+                    type="button"
+                    disabled={mutePending !== null}
+                    onClick={() => void updateNotificationState({ aircraft: { icaoHex: group.aircraftIcao, muted: !aircraftMuted } }, `aircraft:${group.aircraftIcao}`)}
+                  >{aircraftMuted ? copy.unmuteAircraft : copy.muteAircraft}</button> : null}
+                </div>
               </div>
               <div className={styles.itemSide}>
                 <span>{group.entries.length > 1 ? copy.latest : copy.detected}</span>
@@ -281,7 +422,7 @@ export function NotificationCenter() {
               </div>
             </li>;
           })}
-        </ol> : <EmptyState title={copy.empty} />}
+        </ol> : <EmptyState title={data.items.length ? copy.noMatches : copy.empty} />}
     </Panel>
   </main>;
 }

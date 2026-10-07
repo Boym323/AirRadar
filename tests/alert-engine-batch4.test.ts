@@ -68,8 +68,8 @@ describe("batch 4 alert transitions", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(history.detected.map((entry) => entry.type)).toEqual(["new_aircraft", "reception_record"]);
     expect(history.recordNotification).toHaveBeenCalledTimes(2);
-    expect(history.recordNotification).toHaveBeenNthCalledWith(1, "new:ABC123", "disabled");
-    expect(history.recordNotification).toHaveBeenNthCalledWith(2, expect.stringContaining("record:daily:2026-09-08:ABC123:"), "disabled");
+    expect(history.recordNotification).toHaveBeenNthCalledWith(1, "new:ABC123", "center_only");
+    expect(history.recordNotification).toHaveBeenNthCalledWith(2, expect.stringContaining("record:daily:2026-09-08:ABC123:"), "center_only");
     expect(send).not.toHaveBeenCalled();
   });
 
