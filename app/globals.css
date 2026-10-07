@@ -1025,7 +1025,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .time-machine-context-availability-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
 .time-machine-context-availability-grid > div { display:grid; gap:2px; min-width:0; padding:7px 8px; border:1px solid var(--border-default); border-radius:var(--radius-md); background:var(--surface-interactive); }
 .time-machine-context-availability-grid strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; letter-spacing:0; text-transform:none; }
-.time-machine-context-availability-grid span, .time-machine-context-availability-grid small { color:var(--muted); font-size:9px; line-height:1.35; }
+.time-machine-context-availability-grid span, .time-machine-context-availability-grid small { color:var(--muted); font-size:var(--font-size-2xs); line-height:1.35; }
 .time-machine-context-availability-grid .available { border-color:color-mix(in srgb,var(--success) 38%,var(--border-default)); }
 .time-machine-context-availability-grid .available > span { color:var(--success); }
 .time-machine-context-availability-grid .outside { border-color:color-mix(in srgb,var(--danger) 38%,var(--border-default)); }
