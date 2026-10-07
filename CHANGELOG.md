@@ -17,23 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.351] - 2026-10-07
-
-Changes since v1.0.350.
-
-### Maintenance
-
-- Sync generated repository metadata (#560) (66b45670)
-- Enhance summary styling and layout adjustments (0dad942d)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#560) (66b45670)
-- style(radar-preset-menu): enhance summary styling and layout adjustments (0dad942d)
-
-</details>
-
 ## [1.0.350] - 2026-10-07
 
 Changes since v1.0.349.
@@ -55,6 +38,7 @@ Changes since v1.0.349.
 - feat(beast-decoder): implement geometry tracking and update expiry logic feat(navigation-integrity): enhance observation queuing and independent collection test(beast-decoder): add test for track capacity and expiry behavior test(navigation-integrity): verify independent collection of local and network observations (d8096123)
 
 </details>
+
 ## [1.0.349] - 2026-10-07
 
 Changes since v1.0.348.
@@ -76,6 +60,7 @@ Changes since v1.0.348.
 - perf(history): add measured persistence batching canary (#558) (6cdbaf4b)
 
 </details>
+
 ## [1.0.348] - 2026-10-07
 
 Changes since v1.0.347.
@@ -95,6 +80,7 @@ Changes since v1.0.347.
 - perf(predictive): reduce live prediction runtime overhead (#556) (7f7ed907)
 
 </details>
+
 ## [1.0.347] - 2026-10-07
 
 Changes since v1.0.346.
@@ -116,6 +102,7 @@ Changes since v1.0.346.
 - perf(runtime): reduce telemetry and outcome allocation churn (#554) (34e38de9)
 
 </details>
+
 ## [1.0.346] - 2026-10-07
 
 Changes since v1.0.345.
@@ -144,6 +131,7 @@ Changes since v1.0.345.
 - perf(runtime): instrument hot paths and optimize aircraft lookup (#552) (5765b892)
 
 </details>
+
 ## [1.0.345] - 2026-10-07
 
 Changes since v1.0.344.
@@ -237,6 +225,7 @@ Changes since v1.0.344.
 - fix(navigation): ensure mobile bottom nav is hydrated before interaction (ba914104)
 
 </details>
+
 ## [1.0.344] - 2026-10-07
 
 Changes since v1.0.343.
@@ -277,6 +266,7 @@ Changes since v1.0.343.
 - Merge pull request #535 from Boym323/feat/spotter-visual-intelligence-v1-integration (d2a59181)
 
 </details>
+
 ## [1.0.343] - 2026-10-07
 
 Changes since v1.0.342.
@@ -294,6 +284,7 @@ Changes since v1.0.342.
 - Merge pull request #519 from Boym323/feat/spotter-prg-arrival-context-v1 (885318f3)
 
 </details>
+
 ## [1.0.342] - 2026-10-07
 
 Changes since v1.0.341.
@@ -353,6 +344,7 @@ Changes since v1.0.341.
 - Merge pull request #525 from Boym323/fix/failover-position-type-narrowing (3c637e5c)
 
 </details>
+
 ## [1.0.341] - 2026-10-07
 
 Changes since v1.0.340.
