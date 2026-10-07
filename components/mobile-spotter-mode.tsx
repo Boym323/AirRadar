@@ -24,6 +24,7 @@ import { observerFromGeolocation, observerGeometry, predictClosestApproach, type
 import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotter-visual-acquisition";
 import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
+import { buildSpotterBriefing } from "@/lib/spotter-briefing";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -513,6 +514,19 @@ export function MobileSpotterMode() {
     [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
   );
 
+  const briefingSky = useMemo(
+    () => distanceOrigin === "observer" && observer
+      ? rankUpcomingSky(
+          visibleAircraft.map((item) => item.aircraft),
+          observer,
+          labelsByHex,
+          discovery?.todayReceptionRecord?.icaoHex ?? null,
+          { horizonSeconds: 60 * 60, maxClosestDistanceKm: 30, limit: 20 },
+        )
+      : [],
+    [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
+  );
+
   const skyStory = (() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const aircraft = interestingAircraft[0]?.aircraft
@@ -592,6 +606,27 @@ export function MobileSpotterMode() {
         || a.closestApproach.secondsUntilClosest - b.closestApproach.secondsUntilClosest
         || a.aircraft.icaoHex.localeCompare(b.aircraft.icaoHex));
   }, [nearestMetar, observer, snapshot?.fetchedAt, upcomingSky]);
+
+  const briefingSkyWithPhoto = useMemo(() => {
+    if (!observer) return [];
+    const at = snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date();
+    const sun = solarPosition(at, observer);
+    return briefingSky.map((item) => {
+      const geometry = observerGeometry(item.aircraft, observer);
+      if (!geometry) return { ...item, photoOpportunity: null };
+      const visual = evaluateVisualAcquisition(item.aircraft, observer, nearestMetar);
+      const light = lightGeometry(sun, geometry.bearingDeg);
+      return {
+        ...item,
+        photoOpportunity: scorePhotoOpportunity(item.interest, visual, light),
+      };
+    });
+  }, [briefingSky, nearestMetar, observer, snapshot?.fetchedAt]);
+
+  const mySkyBriefing = useMemo(
+    () => buildSpotterBriefing(briefingSkyWithPhoto, 60, 4),
+    [briefingSkyWithPhoto],
+  );
 
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
@@ -706,6 +741,46 @@ export function MobileSpotterMode() {
         ? <small className={styles.locationAccuracy}>{copy.accuracy}: ±{formatNumber(observer.accuracyMeters)} m</small>
         : null}
     </Panel>
+
+    {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / BRIEFING"
+        title={copy.mySkyBriefing}
+        description={copy.mySkyBriefingDescription}
+        actions={<StatusBadge variant={
+          mySkyBriefing.condition === "EXCELLENT" || mySkyBriefing.condition === "GOOD" ? "live"
+            : mySkyBriefing.condition === "POOR" ? "danger"
+              : mySkyBriefing.condition === "MIXED" ? "stale"
+                : "neutral"
+        }>{copy.briefingCondition[mySkyBriefing.condition]}</StatusBadge>}
+      />
+      <MetricStrip className={styles.metrics}>
+        <MetricCard value={mySkyBriefing.horizonMinutes + " min"} label={copy.briefingWindow} />
+        <MetricCard value={formatNumber(mySkyBriefing.totalPasses)} label={copy.briefingPasses} />
+        <MetricCard value={formatNumber(mySkyBriefing.interestingPasses)} label={copy.briefingInteresting} />
+        <MetricCard value={formatNumber(mySkyBriefing.iconicPasses)} label={copy.briefingIconic} />
+        <MetricCard value={formatNumber(mySkyBriefing.highOpportunityPasses)} label={copy.briefingHighPhoto} />
+        <MetricCard value={mySkyBriefing.bestPhotoScore === null ? "—" : mySkyBriefing.bestPhotoScore + "/100"} label={copy.briefingBestPhoto} />
+      </MetricStrip>
+      {mySkyBriefing.top.length ? <div className={styles.passList}>
+        {mySkyBriefing.top.map((item) => {
+          const route = item.aircraft.enrichment?.route;
+          const leadMinutes = Math.max(1, Math.round(item.closestApproach.secondsUntilClosest / 60));
+          return <article className={styles.passCard} key={item.aircraft.icaoHex}>
+            <div>
+              <strong>{item.aircraft.callsign ?? item.aircraft.registration ?? item.aircraft.icaoHex}</strong>
+              <span>{item.aircraft.aircraftType ?? item.aircraft.enrichment?.metadata?.icaoTypeCode ?? item.aircraft.icaoHex}</span>
+              {route?.origin || route?.destination ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small> : null}
+            </div>
+            <div className={styles.passMetrics}>
+              <strong>{item.photoOpportunity ? item.photoOpportunity.score + "/100" : "—"}</strong>
+              <span>{copy.inPrefix} {leadMinutes} min</span>
+              <small>{copy.closestPass}: {formatDistance(item.closestApproach.closestHorizontalDistanceKm)}</small>
+            </div>
+          </article>;
+        })}
+      </div> : <EmptyState title={copy.briefingCondition.EMPTY} />}
+    </Panel> : null}
 
     {distanceOrigin === "observer" && observerState === "ready" && skyStory ? <Panel className={styles.skyStoryPanel}>
       <SectionHeader kicker="MY SKY / STORY" title={copy.skyCardTitle} description={copy.skyCardDescription} />
