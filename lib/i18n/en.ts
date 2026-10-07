@@ -114,6 +114,12 @@ export const en = {
     distanceFromYou: "from you",
     bearingFromYou: "bearing from you",
     discoveryWarning: "Discovery badges may be temporarily incomplete.",
+    comingOverhead: "Coming overhead",
+    comingOverheadDescription: "Bounded 10-minute projection from current position, track and ground speed. It is not a flight plan.",
+    closestPass: "Closest pass",
+    inPrefix: "in",
+    now: "now",
+    elevation: "elevation",
   },
   notificationCenter: {
     title: "Notification Center",

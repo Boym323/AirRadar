@@ -107,3 +107,90 @@ export function observerFromGeolocation(position: GeolocationPosition): SpotterO
     capturedAt: new Date(position.timestamp).toISOString(),
   };
 }
+
+export type SpotterPassPhase = "approaching" | "overhead" | "departing" | "unknown";
+
+export interface SpotterClosestApproach {
+  secondsUntilClosest: number;
+  currentHorizontalDistanceKm: number;
+  closestHorizontalDistanceKm: number;
+  closestSlantDistanceKm: number | null;
+  elevationAtClosestDeg: number | null;
+  phase: SpotterPassPhase;
+}
+
+const KNOT_TO_METERS_PER_SECOND = 0.514444;
+const FEET_PER_MINUTE_TO_METERS_PER_SECOND = 0.00508;
+
+export function predictClosestApproach(
+  aircraft: Pick<AircraftView, "lat" | "lon" | "altitude" | "groundSpeed" | "track" | "verticalRate">,
+  observer: SpotterObserverPosition,
+  horizonSeconds = 10 * 60,
+): SpotterClosestApproach | null {
+  const geometry = observerGeometry(aircraft, observer);
+  if (!geometry) return null;
+
+  const speedKt = aircraft.groundSpeed;
+  const trackDeg = aircraft.track;
+  if (
+    speedKt === null
+    || trackDeg === null
+    || !Number.isFinite(speedKt)
+    || !Number.isFinite(trackDeg)
+    || speedKt <= 1
+  ) {
+    return {
+      secondsUntilClosest: 0,
+      currentHorizontalDistanceKm: geometry.horizontalDistanceKm,
+      closestHorizontalDistanceKm: geometry.horizontalDistanceKm,
+      closestSlantDistanceKm: geometry.slantDistanceKm,
+      elevationAtClosestDeg: geometry.elevationDeg,
+      phase: geometry.horizontalDistanceKm <= 1 ? "overhead" : "unknown",
+    };
+  }
+
+  const distanceMeters = geometry.horizontalDistanceKm * 1000;
+  const bearingRad = toRadians(geometry.bearingDeg);
+  const x = Math.sin(bearingRad) * distanceMeters;
+  const y = Math.cos(bearingRad) * distanceMeters;
+
+  const speedMs = speedKt * KNOT_TO_METERS_PER_SECOND;
+  const trackRad = toRadians(trackDeg);
+  const vx = Math.sin(trackRad) * speedMs;
+  const vy = Math.cos(trackRad) * speedMs;
+  const speedSquared = vx * vx + vy * vy;
+
+  const rawSeconds = speedSquared > 0 ? -(x * vx + y * vy) / speedSquared : 0;
+  const secondsUntilClosest = Math.max(0, Math.min(horizonSeconds, rawSeconds));
+  const closestX = x + vx * secondsUntilClosest;
+  const closestY = y + vy * secondsUntilClosest;
+  const closestHorizontalMeters = Math.hypot(closestX, closestY);
+  const closestHorizontalDistanceKm = closestHorizontalMeters / 1000;
+
+  let closestSlantDistanceKm: number | null = null;
+  let elevationAtClosestDeg: number | null = null;
+  if (aircraft.altitude !== null && observer.altitudeMeters !== null) {
+    const verticalRateMs = (aircraft.verticalRate ?? 0) * FEET_PER_MINUTE_TO_METERS_PER_SECOND;
+    const aircraftAltitudeMeters = aircraft.altitude * FEET_TO_METERS + verticalRateMs * secondsUntilClosest;
+    const verticalMeters = aircraftAltitudeMeters - observer.altitudeMeters;
+    closestSlantDistanceKm = Math.hypot(closestHorizontalMeters, verticalMeters) / 1000;
+    elevationAtClosestDeg = toDegrees(Math.atan2(verticalMeters, Math.max(closestHorizontalMeters, 0.1)));
+  }
+
+  const approaching = rawSeconds > 5 && closestHorizontalDistanceKm + 0.05 < geometry.horizontalDistanceKm;
+  const phase: SpotterPassPhase = geometry.horizontalDistanceKm <= 1
+    ? "overhead"
+    : approaching
+      ? "approaching"
+      : "departing";
+
+  return {
+    secondsUntilClosest,
+    currentHorizontalDistanceKm: geometry.horizontalDistanceKm,
+    closestHorizontalDistanceKm,
+    closestSlantDistanceKm,
+    elevationAtClosestDeg,
+    phase,
+  };
+}
+

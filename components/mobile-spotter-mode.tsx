@@ -8,7 +8,7 @@ import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
-import { observerFromGeolocation, observerGeometry, type SpotterObserverPosition } from "@/lib/spotter-location";
+import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -134,6 +134,20 @@ export function MobileSpotterMode() {
         || a.aircraft.icaoHex.localeCompare(b.aircraft.icaoHex));
   }, [distanceOrigin, filteredAircraft, maxDistanceKm, observer]);
 
+  const upcomingPasses = useMemo(() => {
+    if (distanceOrigin !== "observer" || !observer) return [];
+    return visibleAircraft
+      .map((item) => ({
+        ...item,
+        closestApproach: predictClosestApproach(item.aircraft, observer),
+      }))
+      .filter((item) => item.closestApproach?.phase === "approaching"
+        && item.closestApproach.secondsUntilClosest <= 10 * 60)
+      .sort((a, b) => a.closestApproach!.secondsUntilClosest - b.closestApproach!.secondsUntilClosest
+        || a.closestApproach!.closestHorizontalDistanceKm - b.closestApproach!.closestHorizontalDistanceKm)
+      .slice(0, 5);
+  }, [distanceOrigin, observer, visibleAircraft]);
+
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
     : connected ? "loading" : "unavailable";
@@ -223,6 +237,35 @@ export function MobileSpotterMode() {
         <input value={aircraftType} maxLength={32} onChange={(event) => setAircraftType(event.target.value)} placeholder="A320 / B738" />
       </label>
     </Panel>
+
+    {distanceOrigin === "observer" && observerState === "ready" && upcomingPasses.length ? <Panel>
+      <SectionHeader kicker="MY SKY / CPA" title={copy.comingOverhead} description={copy.comingOverheadDescription} />
+      <div className={styles.passList}>
+        {upcomingPasses.map(({ aircraft, closestApproach }) => {
+          const route = aircraft.enrichment?.route;
+          const identity = aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex;
+          const lead = closestApproach!.secondsUntilClosest < 30
+            ? copy.now
+            : Math.max(1, Math.round(closestApproach!.secondsUntilClosest / 60)) + " min";
+          return <article className={styles.passCard} key={aircraft.icaoHex}>
+            <div>
+              <strong>{identity}</strong>
+              <span>{aircraft.aircraftType ?? aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.icaoHex}</span>
+              {route?.origin || route?.destination
+                ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small>
+                : null}
+            </div>
+            <div className={styles.passMetrics}>
+              <strong>{formatDistance(closestApproach!.closestHorizontalDistanceKm)}</strong>
+              <span>{copy.inPrefix} {lead}</span>
+              {closestApproach!.elevationAtClosestDeg !== null
+                ? <small>{copy.elevation} {formatNumber(closestApproach!.elevationAtClosestDeg)}°</small>
+                : null}
+            </div>
+          </article>;
+        })}
+      </div>
+    </Panel> : null}
 
     <Panel>
       <SectionHeader kicker="LOCAL RECEIVER" title={copy.aircraft} description={copy.aircraftDescription} />
