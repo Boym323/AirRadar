@@ -21,6 +21,7 @@ function LogoMark() {
 
 const primaryNavigation = [
   { href: "/", label: t.radar.liveAirPicture },
+  { href: "/my-airradar", label: t.myAirRadar.title },
   { href: "/time-machine", label: t.timeMachine.title },
   { href: "/history", label: t.history.title },
   { href: "/statistics", label: t.statistics.title },
@@ -206,6 +207,7 @@ export function MobileBottomNav() {
           <span>{t.common.more}</span>
         </summary>
         <div>
+          <Link href="/my-airradar">{t.myAirRadar.title}</Link>
           <Link href="/airspace">{t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace"}</Link>
           <Link href="/weather">{t.locale.startsWith("cs") ? "Počasí" : "Weather"}</Link>
           <Link href="/operations">{t.operations.title}</Link>

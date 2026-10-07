@@ -941,6 +941,27 @@
         "sighting story",
         "mobile hardening"
       ]
+    },
+    {
+      "id": "my-airradar-home",
+      "name": "My AirRadar",
+      "category": "personal / productivity",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Personal home surface that composes canonical LOCAL traffic, favorite-airport operations, watchlist matches, bounded alert history, explicit Saved Spots, and browser-local Spotter logbook state without creating a parallel intelligence engine or requesting observer GPS.",
+      "pages": [
+        "/my-airradar"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "my-airradar",
+        "personal-home"
+      ],
+      "changelogKeywords": [
+        "my airradar",
+        "personal home",
+        "personal dashboard"
+      ]
     }
   ]
 }
