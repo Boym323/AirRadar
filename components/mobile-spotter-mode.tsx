@@ -18,6 +18,7 @@ import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { rankUpcomingSky } from "@/lib/spotter-upcoming";
 import { SPOTTER_LOGBOOK_STORAGE_KEY, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
 import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
+import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-share-card";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -56,6 +57,7 @@ export function MobileSpotterMode() {
   const [spotRadiusKm, setSpotRadiusKm] = useState(5);
   const [spotSaving, setSpotSaving] = useState(false);
   const [spotMessage, setSpotMessage] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -306,6 +308,44 @@ export function MobileSpotterMode() {
       window.localStorage.setItem(SPOTTER_LOGBOOK_STORAGE_KEY, serializeSpotterLogbook(next));
     } catch {
       // Browser storage is optional; keep the current-session copy in memory.
+    }
+  };
+
+  const shareSkyStory = async () => {
+    if (!skyStory) return;
+    setShareMessage(null);
+    const svg = buildSpotterShareCardSvg({
+      story: skyStory.story,
+      generatedAt: new Date().toISOString(),
+      locale: t.locale,
+    });
+    const filename = spotterShareFilename(skyStory.story);
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const file = new File([blob], filename, { type: "image/svg+xml" });
+    try {
+      if (typeof navigator.share === "function" && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({
+          title: "AirRadar · " + skyStory.story.identity,
+          text: [
+            skyStory.story.operator,
+            skyStory.story.origin && skyStory.story.destination
+              ? skyStory.story.origin + " → " + skyStory.story.destination
+              : null,
+          ].filter(Boolean).join(" · "),
+          files: [file],
+        });
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.rel = "noopener";
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setShareMessage(copy.shareFallback);
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") setShareMessage(copy.shareFailed);
     }
   };
 
@@ -630,8 +670,11 @@ export function MobileSpotterMode() {
           <Link href={("/aircraft/" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.detail}</Link>
           <Link href={("/?aircraft=" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.radar}</Link>
           <Button size="compact" variant="secondary" onClick={markSkyStorySeen}>{copy.markSeen}</Button>
+          <Button size="compact" variant="secondary" onClick={() => void shareSkyStory()}>{copy.shareCard}</Button>
         </div>
         {logbookMessage ? <small className={styles.locationAccuracy}>{logbookMessage}</small> : null}
+        {shareMessage ? <small className={styles.locationAccuracy}>{shareMessage}</small> : null}
+        <small className={styles.locationAccuracy}>{copy.shareCardDescription}</small>
       </article>
     </Panel> : null}
 
