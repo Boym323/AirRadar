@@ -346,7 +346,7 @@
       "category": "alerts",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, filtering/search, rationale, and reversible aircraft/rule delivery mutes.",
+      "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, filtering/search, rationale, and reversible aircraft/rule delivery mutes, and authenticated dry-run alert rule simulation.",
       "pages": [
         "/watchlist",
         "/alerts",
@@ -368,7 +368,7 @@
         "/api/admin/alerts/geofences",
         "/api/admin/alerts/geofences/:id",
         "/api/admin/alerts/history",
-        "/api/admin/alerts/rules",
+        "/api/admin/alerts/rules",\n        "/api/admin/alerts/simulator",
         "/api/admin/alerts/rules/:id"
       ],
       "changelogScopes": [
