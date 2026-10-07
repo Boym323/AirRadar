@@ -11,17 +11,27 @@ export type RuntimePerformanceMetric = {
   samplesMs: number[];
 };
 
+type RuntimePerformanceMetricState = RuntimePerformanceMetric & {
+  sampleCursor: number;
+};
+
 const globalStore = globalThis as typeof globalThis & {
-  __airRadarRuntimePerformance?: Map<string, RuntimePerformanceMetric>;
+  __airRadarRuntimePerformance?: Map<string, RuntimePerformanceMetricState>;
 };
 const metrics = globalStore.__airRadarRuntimePerformance ??= new Map();
 
-function metric(name: string): RuntimePerformanceMetric {
+function metric(name: string): RuntimePerformanceMetricState {
   let value = metrics.get(name);
   if (!value) {
-    if (metrics.size >= MAX_METRICS) return { calls: 0, totalMs: 0, maxMs: 0, processedAircraft: 0, samplesMs: [] };
-    value = { calls: 0, totalMs: 0, maxMs: 0, processedAircraft: 0, samplesMs: [] };
+    if (metrics.size >= MAX_METRICS) {
+      return { calls: 0, totalMs: 0, maxMs: 0, processedAircraft: 0, samplesMs: [], sampleCursor: 0 };
+    }
+    value = { calls: 0, totalMs: 0, maxMs: 0, processedAircraft: 0, samplesMs: [], sampleCursor: 0 };
     metrics.set(name, value);
+  } else if (!Number.isInteger(value.sampleCursor)) {
+    // Preserve compatibility with process-local state created by the previous
+    // implementation during a hot reload.
+    value.sampleCursor = 0;
   }
   return value;
 }
@@ -32,8 +42,12 @@ function record(name: string, durationMs: number, processedAircraft: number): vo
   value.totalMs += durationMs;
   value.maxMs = Math.max(value.maxMs, durationMs);
   value.processedAircraft += Math.max(0, processedAircraft);
-  value.samplesMs.push(durationMs);
-  if (value.samplesMs.length > MAX_SAMPLES) value.samplesMs.shift();
+  if (value.samplesMs.length < MAX_SAMPLES) {
+    value.samplesMs.push(durationMs);
+    return;
+  }
+  value.samplesMs[value.sampleCursor] = durationMs;
+  value.sampleCursor = (value.sampleCursor + 1) % MAX_SAMPLES;
 }
 
 export function measureRuntime<T>(name: string, processedAircraft: number, operation: () => T): T {
@@ -54,22 +68,35 @@ export async function measureRuntimeAsync<T>(name: string, processedAircraft: nu
   }
 }
 
-function percentile(samples: number[], fraction: number): number {
-  if (!samples.length) return 0;
-  const sorted = [...samples].sort((left, right) => left - right);
-  return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1)] ?? 0;
+function orderedSamples(value: RuntimePerformanceMetricState): number[] {
+  if (value.samplesMs.length < MAX_SAMPLES || value.sampleCursor === 0) return value.samplesMs.slice();
+  return [
+    ...value.samplesMs.slice(value.sampleCursor),
+    ...value.samplesMs.slice(0, value.sampleCursor),
+  ];
+}
+
+function percentile(sortedSamples: readonly number[], fraction: number): number {
+  if (!sortedSamples.length) return 0;
+  return sortedSamples[Math.min(sortedSamples.length - 1, Math.ceil(sortedSamples.length * fraction) - 1)] ?? 0;
 }
 
 export function getRuntimePerformanceDiagnostics(): Record<string, RuntimePerformanceMetric & { avgMs: number; p50Ms: number; p95Ms: number; p99Ms: number }> {
-  return Object.fromEntries([...metrics.entries()].map(([name, value]) => ({
-    name,
-    ...value,
-    avgMs: value.calls ? value.totalMs / value.calls : 0,
-    p50Ms: percentile(value.samplesMs, 0.5),
-    p95Ms: percentile(value.samplesMs, 0.95),
-    p99Ms: percentile(value.samplesMs, 0.99),
-    samplesMs: value.samplesMs.slice(),
-  })).map(({ name, ...value }) => [name, value]));
+  return Object.fromEntries([...metrics.entries()].map(([name, value]) => {
+    const samplesMs = orderedSamples(value);
+    const sortedSamples = [...samplesMs].sort((left, right) => left - right);
+    return [name, {
+      calls: value.calls,
+      totalMs: value.totalMs,
+      maxMs: value.maxMs,
+      processedAircraft: value.processedAircraft,
+      avgMs: value.calls ? value.totalMs / value.calls : 0,
+      p50Ms: percentile(sortedSamples, 0.5),
+      p95Ms: percentile(sortedSamples, 0.95),
+      p99Ms: percentile(sortedSamples, 0.99),
+      samplesMs,
+    }];
+  }));
 }
 
 export function resetRuntimePerformanceDiagnosticsForTests(): void {
