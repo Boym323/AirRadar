@@ -19,7 +19,8 @@ describe("Flight Intelligence Analytics V1 boundary", () => {
     expect(server).toContain('groupBy("type")');
     expect(server).toContain('groupBy("icaoHex")');
     expect(server).toContain("database.sql.public.flightEvent");
-    expect(server).not.toContain("FlightPosition");
+    expect(server).not.toContain("schema.FlightPosition");
+    expect(server).not.toContain("sql.public.flightPosition");
     expect(ui).not.toContain("/api/intelligence/events");
   });
 
