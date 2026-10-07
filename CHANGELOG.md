@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.346] - 2026-10-07
+
+Changes since v1.0.345.
+
+**Features touched:** Live Radar, System Observability.
+
+### Fixed
+
+- Optimize aircraft data handling and history queue logic (177bbdbe)
+
+### Performance
+
+- Reduce live runtime hot-path load (#551) (95f94fcd)
+- Instrument hot paths and optimize aircraft lookup (#552) (5765b892)
+
+### Maintenance
+
+- Sync generated repository metadata (#550) (cfddfc31)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#550) (cfddfc31)
+- fix(aircraft-state): optimize aircraft data handling and history queue logic (177bbdbe)
+- perf: reduce live runtime hot-path load (#551) (95f94fcd)
+- perf(runtime): instrument hot paths and optimize aircraft lookup (#552) (5765b892)
+
+</details>
 ## [1.0.345] - 2026-10-07
 
 Changes since v1.0.344.
