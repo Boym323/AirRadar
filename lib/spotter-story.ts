@@ -25,13 +25,7 @@ export interface SpotterSkyStory {
   interest: SpotterInterestScore;
 }
 
-function airportName(value: AircraftView["enrichment"] extends infer E
-  ? E extends { route?: infer R }
-    ? R extends { originAirport?: infer A }
-      ? A
-      : never
-    : never
-  : never): string | null {
+function airportName(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
   const name = typeof record.name === "string" ? record.name.trim() : "";
