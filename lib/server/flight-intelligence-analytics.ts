@@ -115,7 +115,7 @@ export function aggregateIntelligenceAnalytics(options: {
 /**
  * Date-bounded FlightEvent aggregation. PostgreSQL performs the temporal
  * grouping and ORM groupBy handles semantic rankings; raw event rows are never
- * returned to the browser and FlightPosition is not queried.
+ * returned to the browser and the position-history table is not queried.
  */
 export async function getFlightIntelligenceAnalytics(
   range: IntelligenceAnalyticsRange,
@@ -153,7 +153,7 @@ export async function getFlightIntelligenceAnalytics(
       boundedEvents().groupBy("icaoHex").aggregate((aggregate) => ({ count: aggregate.count() })) as Promise<Array<{ icaoHex: string | null; count: number }>>,
       boundedEvents().groupBy("airportIcao").aggregate((aggregate) => ({ count: aggregate.count() })) as Promise<Array<{ airportIcao: string | null; count: number }>>,
       boundedEvents().groupBy("sectorId").aggregate((aggregate) => ({ count: aggregate.count() })) as Promise<Array<{ sectorId: string | null; count: number }>>,
-      database.runtime().query(hourPlan) as Promise<HourRow[]>,
+      database.runtime().query(hourPlan),
     ]);
 
     return aggregateIntelligenceAnalytics({
@@ -161,7 +161,7 @@ export async function getFlightIntelligenceAnalytics(
       now,
       timezone,
       typeRows,
-      hourRows,
+      hourRows: hourRows as HourRow[],
       aircraftRows: aircraftRaw.map((row) => ({ name: row.icaoHex, count: row.count })),
       airportRows: airportRaw.map((row) => ({ name: row.airportIcao, count: row.count })),
       sectorRows: sectorRaw.map((row) => ({ name: row.sectorId, count: row.count })),
