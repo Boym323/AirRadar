@@ -11,6 +11,7 @@ import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
+import { historyPersistenceCanary, type HistoryPersistenceCanaryDiagnostics } from "@/lib/server/history-persistence-canary";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -68,6 +69,7 @@ export interface HistoryPersistenceStatus {
   failureCount: number;
   writes?: ReturnType<typeof getAircraftPersistenceDiagnostics>;
   retention?: HistoryRetentionDiagnostics;
+  batchCanary?: HistoryPersistenceCanaryDiagnostics;
 }
 
 export const HISTORY_POSITION_LIMIT = 2_000;
@@ -272,6 +274,7 @@ export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
     failureCount: historyPersistenceFailureCount,
     writes: getAircraftPersistenceDiagnostics(),
     retention: { ...historyRetentionDiagnostics },
+    batchCanary: historyPersistenceCanary.diagnostics(),
   };
 }
 
