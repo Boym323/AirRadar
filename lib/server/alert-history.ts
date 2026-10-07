@@ -29,7 +29,7 @@ export type AlertHistoryEventType =
   // PostgreSQL-backed Alerts & Fleets V1 occurrence.
   // Kept generic so unknown future V1 trigger families still render safely.
 export type AlertHistoryEventTypeWithV1 = AlertHistoryEventType | "alert_v1";
-export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
+export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "center_only" | "disabled";
 export type AlertHistoryReason =
   | "watchlisted"
   | "appeared"
@@ -91,6 +91,7 @@ export interface AlertHistoryEntry {
   metadata?: Record<string, string | number | boolean | null>;
   alertV1?: {
     occurrenceId: string;
+    ruleId?: string | null;
     sourceType: string;
     sourceKey: string;
     trigger: string;
@@ -228,7 +229,7 @@ function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | nul
   if (record.kind === "notification" && typeof record.id === "string"
     && typeof record.status === "string" && typeof record.at === "string") {
     const status = record.status as AlertNotificationStatus;
-    if (["pending", "attempted", "delivered", "failed", "disabled"].includes(status)) {
+    if (["pending", "attempted", "delivered", "failed", "center_only", "disabled"].includes(status)) {
       return { kind: "notification", id: record.id, status, at: record.at };
     }
   }
@@ -250,8 +251,8 @@ function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): bo
   return entry.type === "new_aircraft" || entry.type === "reception_record";
 }
 
-function v1DeliveryStatus(row: AlertV1HistoryRow): AlertNotificationStatus {
-  if (!row.deliveries.length) return "disabled";
+function v1DeliveryStatus(row: AlertV1HistoryRow, payload: Record<string, unknown>): AlertNotificationStatus {
+  if (!row.deliveries.length) return payload.notificationDeliveryMode === "CENTER_ONLY" ? "center_only" : "disabled";
   if (row.deliveries.some((delivery) => delivery.status === "FAILED")) return "failed";
   if (row.deliveries.some((delivery) => delivery.status === "PROCESSING")) return "attempted";
   if (row.deliveries.every((delivery) => delivery.status === "SENT")) return "delivered";
@@ -263,6 +264,7 @@ function entryFromV1(row: AlertV1HistoryRow): AlertHistoryEntry {
   const payload = parseJson<Record<string, unknown>>(occurrence.payloadJson);
   const event = row.flightEvent;
   const flightEventType = typeof event?.type === "string" ? event.type : typeof payload.flightEventType === "string" ? payload.flightEventType : null;
+  const deliveryStatus = v1DeliveryStatus(row, payload);
   return {
     id: `alert-v1:${String(occurrence.id)}`,
     detectedAt: validTimestamp(String(occurrence.occurredAt)),
@@ -271,8 +273,8 @@ function entryFromV1(row: AlertV1HistoryRow): AlertHistoryEntry {
     aircraft: { icaoHex: cleanText(String(occurrence.aircraftIcao), 16) ?? "UNKNOWN", registration: cleanText(typeof occurrence.registration === "string" ? occurrence.registration : null), callsign: cleanText(typeof occurrence.callsign === "string" ? occurrence.callsign : null), aircraftType: null },
     ruleIds: typeof occurrence.ruleId === "string" ? [occurrence.ruleId] : [],
     ruleNames: row.ruleName ? [row.ruleName] : [], radiusKm: null, squawk: typeof payload.squawk === "string" ? payload.squawk : null, record: null,
-    notificationStatus: v1DeliveryStatus(row), notificationAttemptedAt: null, intelligence: null,
-    alertV1: { occurrenceId: String(occurrence.id), sourceType: String(occurrence.sourceType), sourceKey: String(occurrence.sourceKey), trigger: String(occurrence.trigger), ruleName: row.ruleName, flightEventId: typeof occurrence.flightEventId === "number" && Number.isInteger(occurrence.flightEventId) ? occurrence.flightEventId : null, flightEventType, airportIcao: typeof event?.airportIcao === "string" ? event.airportIcao : null, runway: typeof event?.runway === "string" ? event.runway : null, geofenceId: typeof occurrence.geofenceId === "string" ? occurrence.geofenceId : null, deliveryStatus: v1DeliveryStatus(row) },
+    notificationStatus: deliveryStatus, notificationAttemptedAt: null, intelligence: null,
+    alertV1: { occurrenceId: String(occurrence.id), ruleId: typeof occurrence.ruleId === "string" ? occurrence.ruleId : null, sourceType: String(occurrence.sourceType), sourceKey: String(occurrence.sourceKey), trigger: String(occurrence.trigger), ruleName: row.ruleName, flightEventId: typeof occurrence.flightEventId === "number" && Number.isInteger(occurrence.flightEventId) ? occurrence.flightEventId : null, flightEventType, airportIcao: typeof event?.airportIcao === "string" ? event.airportIcao : null, runway: typeof event?.runway === "string" ? event.runway : null, geofenceId: typeof occurrence.geofenceId === "string" ? occurrence.geofenceId : null, deliveryStatus },
   };
 }
 
