@@ -31,9 +31,11 @@ historicky přiřazený.
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Omezené historické přehrávání všech letadel, historický mapový kontext a Event Replay ±10 minut z Flight Intelligence. |
 | Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex` | Shadow-only per-field multi-source state estimator with source-quality scoring, position residuals, bounded handover validation, short gap estimation and admin diagnostics; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
-| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/notifications`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlisty, integrovaná rule-scoped aktivita, historie alertů, read-only Notification Center, mutace pravidel a fleet pohledy. |
+| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/notifications`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Panely Proč? pro readiness-gated ETA, runway, runway-change a trajectory advisory používají malý capability-specific whitelist z existující canonical prediction evidence. |
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Omezený explorer agregovaných tras. |
+| Investigation Links | production | productivity | Pre-registry | `/airspace`<br>`/compare/airports`<br>`/compare/flights`<br>`/navigation-integrity`<br>`/time-machine` | — | Bookmarkovatelný URL stav existujících analytických ploch s fail-closed parsováním a obnovou přes browser back/forward bez serverové persistence. |
+| Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Pojmenované browser-local kolekce canonical odkazů AirRadaru a bezpečného URL/query kontextu, omezené na 12 workspace po 12 položkách. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -707,6 +709,32 @@ Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejn
 ### Explainable Prediction V1
 
 Prediktivní karty na detailu letadla mají rozbalovací panel `Proč?` pro ETA, runway, runway-change a trajectory. Evidence pochází ze stejného canonical prediction vyhodnocení a ven prochází pouze přes existující readiness-gated advisory buildery. Capability-specific whitelist dovoluje jen produktově bezpečné vstupy, například zbývající vzdálenost, efektivní rychlost, fázi letu, recent runway usage, povrchový vítr, candidate margin a trajectory geometrii. Nevzniká druhý prediction request ani paralelní model.
+
+
+## Investigation Links V1
+
+Analytický stav Airspace, Navigation Integrity, Flight Compare a Airport Compare
+se ukládá do omezených a čitelných query parametrů. Neplatné hodnoty fail-closed
+přecházejí na bezpečné výchozí nastavení a browser back/forward obnovuje
+odpovídající UI. Existující Time Machine deep-link kontrakt `at`, `replay`,
+`hex` a `flightId` zůstává zachován bez zásahu do paralelní V3 práce.
+
+V1 nepřidává serverové session ID, API, databázovou persistenci ani skrytý share
+token. Zkopírované URL je úplný bookmarkovatelný investigation stav podporovaných
+ovládacích prvků.
+
+
+## Saved Workspaces V1
+
+`/workspaces` ukládá pojmenované pracovní kontexty výhradně do local storage
+prohlížeče. Každý workspace obsahuje pouze canonical odkazy AirRadaru a bezpečný
+query stav, který už je součástí daného odkazu. V1 kontrakt je verzovaný,
+poškozená data odmítá fail-closed a omezuje úložiště na 12 workspace po
+12 položkách.
+
+Saved Workspaces nepřidává API, databázovou tabulku, účet, sdílení ani cloudovou
+synchronizaci. Otevření položky naviguje na existující canonical plochu, která
+si obnoví svůj vlastní URL stav.
 
 
 ## Notification Center V1

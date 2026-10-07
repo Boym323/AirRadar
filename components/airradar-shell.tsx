@@ -38,6 +38,7 @@ const moreNavigation = [
   { href: "/recap/daily", label: t.recap.daily },
   { href: "/recap/weekly", label: t.recap.weekly },
   { href: "/watchlist", label: t.watchlist.title },
+  { href: "/workspaces", label: t.locale.startsWith("cs") ? "Workspace" : "Workspaces" },
   { href: "/system", label: t.system.title },
 ] as const;
 
@@ -213,6 +214,7 @@ export function MobileBottomNav() {
           <Link href="/recap/daily">{t.recap.daily}</Link>
           <Link href="/recap/weekly">{t.recap.weekly}</Link>
           <Link href="/watchlist">{t.watchlist.title}</Link>
+          <Link href="/workspaces">{t.locale.startsWith("cs") ? "Workspace" : "Workspaces"}</Link>
           <Link href="/system">{t.system.title}</Link>
         </div>
       </details>

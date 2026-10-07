@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { HistoryFlightDetail, HistoryFlightSummary } from "@/lib/server/history";
 import { formatNumber, t } from "@/lib/i18n";
 import { EmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
+import { buildFlightCompareInvestigation, investigationHref, parseFlightCompareInvestigation } from "@/lib/investigation-links";
 import styles from "./flight-compare.module.css";
 
 interface HistoryListResponse {
@@ -167,6 +168,8 @@ export function FlightCompare() {
   const [detailB, setDetailB] = useState<HistoryFlightDetail | null>(null);
   const [failed, setFailed] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [investigationUrlReady, setInvestigationUrlReady] = useState(false);
+  const restoringInvestigationUrl = useRef(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -180,9 +183,9 @@ export function FlightCompare() {
       .then((payload) => {
         if (!active) return;
         setRecent(payload.flights);
-        const params = new URLSearchParams(window.location.search);
-        const requestedA = parseFlightId(params.get("a"));
-        const requestedB = parseFlightId(params.get("b"));
+        const parsed = parseFlightCompareInvestigation(window.location.search);
+        const requestedA = parsed.a;
+        const requestedB = parsed.b;
         const ids = new Set(payload.flights.map((flight) => flight.id));
         const a = requestedA && ids.has(requestedA) ? requestedA : payload.flights[0]?.id ?? null;
         const b = requestedB && ids.has(requestedB) && requestedB !== a
@@ -190,6 +193,8 @@ export function FlightCompare() {
           : payload.flights.find((flight) => flight.id !== a)?.id ?? null;
         setFlightAId(a);
         setFlightBId(b);
+        restoringInvestigationUrl.current = true;
+        setInvestigationUrlReady(true);
       })
       .catch((error) => {
         if (!active || (error as Error).name === "AbortError") return;
@@ -200,6 +205,37 @@ export function FlightCompare() {
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!investigationUrlReady) return;
+    const ids = new Set(recent.map((flight) => flight.id));
+    const restore = () => {
+      const parsed = parseFlightCompareInvestigation(window.location.search);
+      if (!parsed.a || !parsed.b || !ids.has(parsed.a) || !ids.has(parsed.b) || parsed.a === parsed.b) return;
+      restoringInvestigationUrl.current = true;
+      setFlightAId(parsed.a);
+      setFlightBId(parsed.b);
+    };
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [investigationUrlReady, recent]);
+
+  useEffect(() => {
+    if (!investigationUrlReady || !flightAId || !flightBId || flightAId === flightBId) return;
+    const query = buildFlightCompareInvestigation({ a: flightAId, b: flightBId });
+    const href = investigationHref("/compare/flights", query);
+    const currentHref = window.location.pathname + window.location.search;
+    if (currentHref === href) {
+      restoringInvestigationUrl.current = false;
+      return;
+    }
+    if (restoringInvestigationUrl.current) {
+      window.history.replaceState(null, "", href);
+      restoringInvestigationUrl.current = false;
+    } else {
+      window.history.pushState(null, "", href);
+    }
+  }, [flightAId, flightBId, investigationUrlReady]);
 
   useEffect(() => {
     if (!flightAId || !flightBId || flightAId === flightBId) {
@@ -221,10 +257,6 @@ export function FlightCompare() {
       if (!active) return;
       setDetailA(a);
       setDetailB(b);
-      const url = new URL(window.location.href);
-      url.searchParams.set("a", String(flightAId));
-      url.searchParams.set("b", String(flightBId));
-      window.history.replaceState(null, "", url);
     }).catch((error) => {
       if (!active || (error as Error).name === "AbortError") return;
       setFailed(true);
