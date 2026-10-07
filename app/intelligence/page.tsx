@@ -19,7 +19,7 @@ export default async function IntelligencePage() {
         <h1>{t.intelligence.title}</h1>
         <p>{t.intelligence.description}</p>
       </div>
-      <div className="intelligence-header-meta"><strong>{events.length}</strong><span>{t.intelligence.recentEvents}</span></div>
+      <div className="intelligence-header-meta"><Link href="/intelligence/analytics">Analytics</Link><strong>{events.length}</strong><span>{t.intelligence.recentEvents}</span></div>
     </header>
     <div className="intelligence-note">{t.intelligence.disclaimer}</div>
     <section className="intelligence-summary" aria-label={t.intelligence.summary}>
