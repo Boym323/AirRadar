@@ -1200,8 +1200,9 @@ export async function recordAircraftSnapshot(
       // Flight or inserting the bad FlightPosition. Coordinate range checks
       // alone cannot catch a valid-looking CPR position hundreds of km away.
       if (flight && !callsignChanged && !continuityBroken) {
+        const currentFlight = flight;
         const previousPosition = await statement(() => schema.FlightPosition
-          .where({ flightId: flight.id })
+          .where({ flightId: currentFlight.id })
           .orderBy((position) => position.recordedAt.desc())
           .first());
         if (previousPosition && effectiveRecordedAt.getTime() > timestampAsDate(previousPosition.recordedAt).getTime()
@@ -1216,9 +1217,10 @@ export async function recordAircraftSnapshot(
       const firstDurableFlight = priorFlights !== null && priorFlights.length === 0 && !flight;
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
-          await statement(() => schema.Flight.where({ id: flight.id }).update(
+          const previousFlight = flight;
+          await statement(() => schema.Flight.where({ id: previousFlight.id }).update(
             continuityBroken
-              ? { endTime: timestampAsInstant(flight.lastSeenAt) }
+              ? { endTime: timestampAsInstant(previousFlight.lastSeenAt) }
               : { endTime: recordedAtInstant, lastSeenAt: recordedAtInstant },
           ));
         }
@@ -1240,26 +1242,29 @@ export async function recordAircraftSnapshot(
           lastSeenAt: recordedAtInstant,
         }));
       } else {
+        const currentFlight = flight;
         const route = item.enrichment?.route;
-        const destinationObservation = observeDestination((flight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
-        await statement(() => schema.Flight.where({ id: flight.id }).update({
-          callsign: flight.callsign ?? item.callsign,
-          registration: flight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
-          aircraftType: flight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
-          airline: flight.airline ?? item.enrichment?.route?.airline,
-          origin: flight.origin ?? item.enrichment?.route?.origin,
-          destination: flight.destination ?? route?.destination,
+        const destinationObservation = observeDestination((currentFlight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
+        await statement(() => schema.Flight.where({ id: currentFlight.id }).update({
+          callsign: currentFlight.callsign ?? item.callsign,
+          registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
+          aircraftType: currentFlight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
+          airline: currentFlight.airline ?? item.enrichment?.route?.airline,
+          origin: currentFlight.origin ?? item.enrichment?.route?.origin,
+          destination: currentFlight.destination ?? route?.destination,
           ...(destinationObservation.changed ? { destinationProvenanceJson: destinationObservation.value } : {}),
-          maxAltitude: Math.max(flight.maxAltitude ?? 0, altitude ?? 0) || null,
-          minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
+          maxAltitude: Math.max(currentFlight.maxAltitude ?? 0, altitude ?? 0) || null,
+          minDistanceKm: Math.min(currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
             ? null
-            : Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
+            : Math.min(currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
           lastSeenAt: recordedAtInstant,
         }));
       }
 
+      if (!flight) throw new Error("Flight persistence returned no row");
+      const persistedFlight = flight;
       await statement(() => schema.FlightPosition.create({
-        flightId: flight.id,
+        flightId: persistedFlight.id,
         recordedAt: recordedAtInstant,
         lat: latitude,
         lon: longitude,
@@ -1276,16 +1281,18 @@ export async function recordAircraftSnapshot(
         ...(track === undefined ? {} : { track }),
         ...(verticalRate === undefined ? {} : { verticalRate }),
       }));
-      if (item.altitudeDecision?.anomaly && shouldPersistAltitudeAnomaly(item.icaoHex, item.altitudeDecision.anomaly, recordedAt.getTime())) {
+      const altitudeDecision = item.altitudeDecision;
+      const anomalyType = altitudeDecision?.anomaly ?? null;
+      if (anomalyType && altitudeDecision && shouldPersistAltitudeAnomaly(item.icaoHex, anomalyType, recordedAt.getTime())) {
         await statement(() => schema.AltitudeAnomaly.create({
           icaoHex: item.icaoHex,
-          flightId: flight.id,
+          flightId: persistedFlight.id,
           observedAt: timestampAsInstant(new Date(item.altitudeObservation?.observedAt ?? recordedAt)),
           selectedAltitude: item.altitudeObservation?.valueFt ?? null,
           selectedSource: item.altitudeObservation?.source ?? null,
-          decisionReason: item.altitudeDecision.reason,
-          anomalyType: item.altitudeDecision.anomaly,
-          candidatesJson: JSON.stringify(item.altitudeDecision.candidates.slice(0, 8)),
+          decisionReason: altitudeDecision.reason,
+          anomalyType,
+          candidatesJson: JSON.stringify(altitudeDecision.candidates.slice(0, 8)),
         }));
       }
       return firstDurableFlight;
