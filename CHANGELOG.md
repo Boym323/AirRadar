@@ -17,6 +17,23 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.343] - 2026-10-07
+
+Changes since v1.0.342.
+
+**Features touched:** Mobile Spotter Mode.
+
+### Added
+
+- Add PRG arrival context (52a3b8c9)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(spotter): add PRG arrival context (52a3b8c9)
+- Merge pull request #519 from Boym323/feat/spotter-prg-arrival-context-v1 (885318f3)
+
+</details>
 ## [1.0.342] - 2026-10-07
 
 Changes since v1.0.341.
