@@ -667,7 +667,7 @@ export function MobileSpotterMode() {
       .sort((a, b) => (b.photoOpportunity?.score ?? -1) - (a.photoOpportunity?.score ?? -1)
         || a.closestApproach.secondsUntilClosest - b.closestApproach.secondsUntilClosest
         || a.aircraft.icaoHex.localeCompare(b.aircraft.icaoHex));
-  }, [nearestMetar, observer, snapshot?.fetchedAt, upcomingSky]);
+  }, [nearestMetar, observer, snapshot, upcomingSky]);
 
   const briefingSkyWithPhoto = useMemo(() => {
     if (!observer) return [];
@@ -683,7 +683,7 @@ export function MobileSpotterMode() {
         photoOpportunity: scorePhotoOpportunity(item.interest, visual, light),
       };
     });
-  }, [briefingSky, nearestMetar, observer, snapshot?.fetchedAt]);
+  }, [briefingSky, nearestMetar, observer, snapshot]);
 
   const mySkyBriefing = useMemo(
     () => buildSpotterBriefing(briefingSkyWithPhoto, 60, 4),
@@ -700,7 +700,7 @@ export function MobileSpotterMode() {
           snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(),
         )
       : null,
-    [observer, prgAirport, prgOperations, snapshot?.aircraft, snapshot?.fetchedAt],
+    [observer, prgAirport, prgOperations, snapshot],
   );
 
   const recentPasses = useMemo(
