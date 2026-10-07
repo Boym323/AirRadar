@@ -11,7 +11,7 @@ export const ALERT_V1_EVENT_TYPES = [
 ] as const;
 export type AlertV1FlightEventType = (typeof ALERT_V1_EVENT_TYPES)[number];
 export type AlertV1TriggerType = "FLIGHT_EVENT" | "SQUAWK" | "GEOFENCE_ENTER" | "GEOFENCE_EXIT";
-export type AlertV1MatcherType = "ICAO_HEX" | "REGISTRATION" | "CALLSIGN_PREFIX";
+export type AlertV1MatcherType = "ICAO_HEX" | "REGISTRATION" | "CALLSIGN_PREFIX" | "AIRCRAFT_TYPE";
 export type AlertV1Target = { kind: "ALL_AIRCRAFT" } | { kind: "FLEET"; fleetId: string };
 
 export interface AlertV1FleetMatcher {
@@ -111,7 +111,10 @@ export function matchesAlertV1Matcher(aircraft: AlertV1AircraftIdentity | Aircra
   const value = normalizeAlertV1Matcher(matcher.type, matcher.value);
   if (matcher.type === "ICAO_HEX") return normalized(aircraft.icaoHex) === value;
   if (matcher.type === "REGISTRATION") return normalized(aircraft.registration) === value;
-  return normalized(aircraft.callsign).startsWith(value);
+  if (matcher.type === "CALLSIGN_PREFIX") return normalized(aircraft.callsign).startsWith(value);
+  if (!("aircraftType" in aircraft)) return false;
+  const aircraftType = aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType;
+  return normalized(aircraftType) === value;
 }
 
 export function matchingAlertV1Fleets(aircraft: AlertV1AircraftIdentity | Aircraft, fleets: readonly AlertV1Fleet[]): string[] {
