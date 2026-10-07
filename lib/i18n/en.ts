@@ -170,6 +170,10 @@ export const en = {
     savedSpotRemoved: "Spot removed.",
     savedSpotFailed: "The Spot could not be saved.",
     savedSpotPrivacy: "This is the only Spotter feature that persists coordinates on the server after confirmation.",
+    shareCard: "Share pass",
+    shareCardDescription: "Creates a local visual card from the current Sky Card. Nothing is uploaded for rendering.",
+    shareFailed: "Sharing failed.",
+    shareFallback: "The card was prepared as SVG.",
     verticalTrends: {
       climbing: "climbing",
       descending: "descending",
