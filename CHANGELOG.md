@@ -17,6 +17,46 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.344] - 2026-10-07
+
+Changes since v1.0.343.
+
+**Features touched:** Mobile Spotter Mode.
+
+### Added
+
+- Add ranked upcoming sky (2ef6e252)
+- Add personal logbook (830a83fc)
+- Integrate visual spotting intelligence BI-BO (bd3ab467)
+- Spotter Saved Spots V1 (#522) (884c9685)
+
+### Fixed
+
+- Suspend geolocation while hidden (8a281e99)
+
+### Maintenance
+
+- Sync generated repository metadata (#526) (be9c2c21)
+- Sync generated repository metadata (#527) (7fb84962)
+- Guard visibility lifecycle listener (38e637a8)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(spotter): add ranked upcoming sky (2ef6e252)
+- Merge pull request #520 from Boym323/feat/spotter-upcoming-sky-v1 (d196a5bf)
+- chore(metadata): sync generated repository metadata (#526) (be9c2c21)
+- feat(spotter): add personal logbook (830a83fc)
+- Merge pull request #521 from Boym323/feat/spotter-personal-logbook-v1 (10b7d65b)
+- chore(metadata): sync generated repository metadata (#527) (7fb84962)
+- feat(spotter): integrate visual spotting intelligence BI-BO (bd3ab467)
+- test(spotter): guard visibility lifecycle listener (38e637a8)
+- feat: Spotter Saved Spots V1 (#522) (884c9685)
+- merge main into spotter visual integration (8a84bdf3)
+- fix(spotter): suspend geolocation while hidden (8a281e99)
+- Merge pull request #535 from Boym323/feat/spotter-visual-intelligence-v1-integration (d2a59181)
+
+</details>
 ## [1.0.343] - 2026-10-07
 
 Changes since v1.0.342.
