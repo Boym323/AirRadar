@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { useEffect, useMemo, useState } from "react";
 import { useFavoriteAirports } from "@/components/pwa-register";
 import { EmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
+import { TrustStamp } from "@/components/trust-stamp";
 import { formatDateTime, t } from "@/lib/i18n";
 import {
   alertFeedItems,
@@ -123,7 +124,7 @@ export function AviationEventFeed() {
         {items.map((item) => <li key={item.id} className={styles[item.severity]}>
           <time dateTime={item.occurredAt}>{formatDateTime(item.occurredAt)}</time>
           <div>
-            <span className={styles.meta}>{sourceLabel(item.source)} · {item.provenance}</span>
+            <span className={styles.meta}><TrustStamp compact provenance={{ kind: item.provenance, source: sourceLabel(item.source), observedAt: item.occurredAt, staleAfterMs: 60 * 60_000 }} /></span>
             <strong>{item.title}</strong>
             {item.subject ? <span>{item.subject}</span> : null}
             {item.context ? <small>{item.context}</small> : null}
