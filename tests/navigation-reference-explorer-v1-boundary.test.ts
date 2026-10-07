@@ -18,7 +18,7 @@ describe("Navigation Reference Explorer V1 boundary", () => {
     expect(explorer).toContain("radiusNm=25");
     expect(explorer).toContain("MAX_NEARBY = 12");
     expect(explorer).toContain("MAX_ROUTES = 24");
-    expect(api).toContain("requestedIdentifiers.ids.slice(0, 24)");
+    expect(api).toContain("parsed.slice(0, 24)");
   });
 
   it("deep-links to the canonical radar navPoint focus without new persistence", () => {
