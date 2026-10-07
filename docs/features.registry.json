@@ -883,6 +883,26 @@
         "browser-local workspace",
         "workspace links"
       ]
+    },
+    {
+      "id": "mobile-spotter-mode",
+      "name": "Mobile Spotter Mode",
+      "category": "mobile / radar",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Mobile-first LOCAL receiver view with distance sorting, bounded filters, Discovery badges and canonical radar/watchlist/detail actions.",
+      "pages": [
+        "/spotter"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "spotter"
+      ],
+      "changelogKeywords": [
+        "spotter mode",
+        "mobile spotter",
+        "local receiver"
+      ]
     }
   ]
 }

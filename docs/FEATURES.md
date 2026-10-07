@@ -23,6 +23,7 @@ not yet been historically attributed.
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | `/weather` | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
 | Mobile / PWA mode | production | platform | Pre-registry | `/`<br>`/airports/:icao` | `/api/push/vapid-public-key`<br>`/api/push/subscribe` | Installable mobile PWA with offline last-state caching, browser-local favorite airports, and optional Web Push notifications for emergency squawks, watchlist aircraft, and geofence events. |
+| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL receiver view with distance sorting, bounded filters, Discovery badges and canonical radar/watchlist/detail actions. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | `/navigation-integrity` | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Operational Digital Twin | production | intelligence | Pre-registry | `/aircraft/:hex`<br>`/`<br>`/admin/operational-twin/calibration` | `/api/admin/operational-twin/calibration`<br>`/api/admin/operational-twin/event-outcome`<br>`/api/admin/operational-twin/outcome`<br>`/api/admin/operational-twin/regional-attention-graduation`<br>`/api/admin/operational-twin/regional-attention-outcome`<br>`/api/aircraft/:hex/situation`<br>`/api/operations/situation` | Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity, a canonical Prediction Timeline V1 on aircraft detail, readiness-gated PUBLIC predictive context, prospective outcome validation, wind timing graduation/promotion, regional multi-aircraft attention with LOCAL outcome calibration and graduation-gated 5/15/30-minute map context, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates. |
@@ -749,3 +750,17 @@ no polling.
 Unread state is optional browser-local metadata stored under
 `airradar.notifications.v1`. V1 adds no alert engine, push provider, delivery
 worker, scheduler, database table or server-side notification persistence.
+
+
+## Mobile Spotter Mode V1
+
+`/spotter` is a portrait-friendly live surface for aircraft with explicit
+LOCAL receiver evidence. It reuses the existing local SSE stream and
+`/api/logbook/summary` at the same 30-second Discovery cadence for NEW, RARE
+and RETURNING badges. Aircraft remain fail-closed to LOCAL evidence and are
+sorted by receiver distance, not phone location.
+
+V1 uses no browser geolocation, new stream, receiver-distance backend, history
+scan or social/photo-upload feature. Radar selection, aircraft detail and
+Watchlist actions all use existing canonical product routes. Loss of the LOCAL
+feed is shown explicitly as stale or unavailable.

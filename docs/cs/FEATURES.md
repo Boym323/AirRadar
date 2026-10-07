@@ -36,6 +36,7 @@ historicky přiřazený.
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Omezený explorer agregovaných tras. |
 | Investigation Links | production | productivity | Pre-registry | `/airspace`<br>`/compare/airports`<br>`/compare/flights`<br>`/navigation-integrity`<br>`/time-machine` | — | Bookmarkovatelný URL stav existujících analytických ploch s fail-closed parsováním a obnovou přes browser back/forward bez serverové persistence. |
 | Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Pojmenované browser-local kolekce canonical odkazů AirRadaru a bezpečného URL/query kontextu, omezené na 12 workspace po 12 položkách. |
+| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL receiver pohled s řazením podle vzdálenosti, omezenými filtry, Discovery badge a canonical akcemi radar/watchlist/detail. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -749,3 +750,17 @@ Unread stav je volitelná browser-local metadata pod klíčem
 `airradar.notifications.v1`. V1 nepřidává alert engine, push provider,
 delivery worker, scheduler, databázovou tabulku ani serverovou persistenci
 oznámení.
+
+
+## Mobile Spotter Mode V1
+
+`/spotter` je portrait-friendly živá plocha pro letadla s explicitní LOCAL
+receiver evidencí. Znovu používá existující local SSE stream a
+`/api/logbook/summary` ve stejné 30sekundové Discovery cadence pro badge NEW,
+RARE a RETURNING. Letadla zůstávají fail-closed na LOCAL evidenci a řadí se
+podle vzdálenosti od přijímače, nikoli od telefonu.
+
+V1 nepoužívá browser geolocation, nový stream, receiver-distance backend,
+history scan ani social/photo-upload funkce. Výběr na radaru, detail letadla
+a Watchlist používají existující canonical produktové route. Ztráta LOCAL feedu
+je explicitně zobrazena jako stale nebo unavailable.
