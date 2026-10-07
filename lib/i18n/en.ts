@@ -120,6 +120,11 @@ export const en = {
     inPrefix: "in",
     now: "now",
     elevation: "elevation",
+    justOverhead: "Just overhead",
+    justOverheadDescription: "Last 20 minutes from existing Time Machine history; your location is never sent to the API.",
+    historyUnavailable: "Recent pass history is temporarily unavailable.",
+    historyTruncated: "The historical window was truncated; some passes may be missing.",
+    closestAt: "closest",
   },
   notificationCenter: {
     title: "Notification Center",
