@@ -17,6 +17,52 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.338] - 2026-10-07
+
+Changes since v1.0.337.
+
+### Added
+
+- Group aircraft event timelines (74a5ca23)
+- Localize grouped timelines (4b900e97)
+- Localize grouped timelines (895ce6b4)
+- Render grouped aircraft timelines (13e5a028)
+- Style grouped event timeline (08668563)
+
+### Fixed
+
+- Advance semantic dedup anchor (decc7249)
+- Preserve durable intelligence priority (b2fa8383)
+- Pluralize grouped event count (41fd8306)
+
+### Documentation
+
+- Register notification grouping (5139955a)
+- Describe notification grouping (c6b2a719)
+- Localize notification grouping (a6a36d6c)
+
+### Maintenance
+
+- Cover dedup and timeline grouping (b4ae7c2c)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(notifications): group aircraft event timelines (74a5ca23)
+- fix(notifications): advance semantic dedup anchor (decc7249)
+- feat(notifications): localize grouped timelines (4b900e97)
+- feat(notifications): localize grouped timelines (895ce6b4)
+- feat(notifications): render grouped aircraft timelines (13e5a028)
+- feat(notifications): style grouped event timeline (08668563)
+- test(notifications): cover dedup and timeline grouping (b4ae7c2c)
+- docs(features): register notification grouping (5139955a)
+- docs(features): describe notification grouping (c6b2a719)
+- docs(features): localize notification grouping (a6a36d6c)
+- fix(notifications): preserve durable intelligence priority (b2fa8383)
+- fix(notifications): pluralize grouped event count (41fd8306)
+- Merge pull request #499 from Boym323/feat/notification-dedup-grouping-v1 (965303d4)
+
+</details>
 ## [1.0.337] - 2026-10-07
 
 Changes since v1.0.336.
