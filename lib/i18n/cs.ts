@@ -752,7 +752,7 @@ export const cs = {
     previousRecord: "Předchozí rekord",
     types: { watchlist: "Sledované", newAircraft: "Nové letadlo", dailyRecord: "Denní rekord", lifetimeRecord: "Rekord celkem", emergency: "Nouze" },
     reasons: { watchlist: "Odpovídalo serverové pravidlo sledování.", newAircraft: "První historické zachycení bylo potvrzeno uložením.", record: "Byl překonán skutečný rekord příjmu.", emergency: "Byl nahlášen přechod do nouzového stavu." },
-    notificationStatuses: { pending: "Čeká", attempted: "Pokus", delivered: "Doručeno", failed: "Selhalo", disabled: "Notifier vypnutý" },
+    notificationStatuses: { pending: "Čeká", attempted: "Pokus", delivered: "Doručeno", failed: "Selhalo", center_only: "Jen centrum", disabled: "Notifier vypnutý" },
     v1: { event: "Pravidlo upozornění", flightEvent: "Událost letu", squawk: "Squawk", geofenceEnter: "Vstup do geozóny", geofenceExit: "Výstup z geozóny", fallback: "Událost upozornění", rule: "Pravidlo", context: "Kontext", airport: "Letiště", runway: "Dráha", source: "Zdroj", previousPage: "Předchozí stránka", nextPage: "Další stránka" },
   },
   intelligence: {
