@@ -520,3 +520,34 @@
   }
 }
 
+.arrivalContext {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.arrivalContext div {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.arrivalContext dt {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.arrivalContext dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+@media (max-width: 540px) {
+  .arrivalContext {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
