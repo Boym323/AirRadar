@@ -8,7 +8,7 @@ import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryReco
 import { createAlertStateStore, type AlertStateStore } from "@/lib/server/alert-state";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
-import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
+import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, ruleTargetMatches, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 import { getPrisma } from "@/lib/server/db";
 import { channelsForNotificationMode, notificationModeForDurableSignal, notificationPreferenceMode } from "@/lib/server/notification-preferences";
@@ -348,7 +348,13 @@ export class AlertEngine {
         for (const geofence of config.geofences) {
           const transition = this.durableTransitions.observeGeofence(aircraft.icaoHex, geofence, aircraft.lat, aircraft.lon);
           if (!transition) continue;
-          if (transition.transition === "ENTER" && config.rules.some((rule) => rule.enabled && rule.trigger === "GEOFENCE_ENTER" && rule.geofenceId === geofence.id)) {
+          const matchingEnterRules = config.rules.filter((rule) =>
+            rule.enabled
+            && rule.trigger === "GEOFENCE_ENTER"
+            && rule.geofenceId === geofence.id
+            && ruleTargetMatches(rule, aircraft, config.fleets)
+          );
+          if (transition.transition === "ENTER" && matchingEnterRules.length) {
             this.enqueue({
               aircraft,
               matchedRules: [],
