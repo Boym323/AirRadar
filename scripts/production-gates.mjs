@@ -1263,14 +1263,24 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Secondary route smoke failed: ${routeErrors.join(" | ")}`);
     if (unavailable.length) console.log(`[production-gates] expected unavailable API responses observed=${unavailable.length}`);
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-    await routeSmoke.locator('a[href="/history"]:visible').first().click();
-    await routeSmoke.waitForURL("**/history");
+    // The radar shell can expose more than one navigation surface. Resolve
+    // the link by its exact href and arm the navigation waiter before the
+    // click so a fast client-side transition cannot be missed.
+    const historyLink = routeSmoke.locator('a[href="/history"]:visible').first();
+    await historyLink.waitFor({ state: "visible", timeout: 15_000 });
+    await Promise.all([
+      routeSmoke.waitForURL((url) => url.pathname === "/history", { timeout: 15_000 }),
+      historyLink.click(),
+    ]);
     await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
     await routeSmoke.setViewportSize({ width: 390, height: 844 });
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
-    await routeSmoke.locator(".mobile-bottom-more a").first().click();
-    await routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|operations|recap|system|watchlist)/);
+    const mobileMoreLink = routeSmoke.locator(".mobile-bottom-more a").first();
+    await Promise.all([
+      routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|operations|recap|system|watchlist)/),
+      mobileMoreLink.click(),
+    ]);
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await closePage(routeSmoke);
