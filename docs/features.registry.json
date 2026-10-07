@@ -962,6 +962,91 @@
         "personal home",
         "personal dashboard"
       ]
+    },
+    {
+      "id": "aviation-event-feed",
+      "name": "Aviation Event Feed",
+      "category": "intelligence / productivity",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded chronological composition of existing Flight Intelligence, alert history, Navigation Integrity anomalies, and notable favorite-airport operations without a new detector or persistence layer.",
+      "pages": [
+        "/events"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "aviation-event-feed"
+      ],
+      "changelogKeywords": [
+        "aviation event feed",
+        "event timeline",
+        "unified events"
+      ]
+    },
+    {
+      "id": "followed-journeys",
+      "name": "Follow Flight / Journey",
+      "category": "personal / flights",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Browser-local following of a specific journey using durable Flight Intelligence flight/lifecycle identity when available, explicit provisional identity otherwise, canonical event timelines, and automatic landing completion without turning an aircraft watchlist into a journey tracker.",
+      "pages": [
+        "/journeys",
+        "/aircraft/:hex"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "follow-flight",
+        "journeys"
+      ],
+      "changelogKeywords": [
+        "follow flight",
+        "followed journey",
+        "journey timeline"
+      ]
+    },
+    {
+      "id": "historical-baselines",
+      "name": "Historical Baselines",
+      "category": "analytics / intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Descriptive today-so-far comparison against the median of at least seven completed days from the existing 30-day receiver statistics aggregate, explicitly avoiding raw FlightPosition scans and statistical-significance claims.",
+      "pages": [
+        "/baselines"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "historical-baselines"
+      ],
+      "changelogKeywords": [
+        "historical baseline",
+        "today vs baseline",
+        "30 day median"
+      ]
+    },
+    {
+      "id": "trust-provenance-ui",
+      "name": "Trust & Provenance UI",
+      "category": "platform / trust",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Shared evidence presentation for observed, inferred, predicted, system, and browser-local context with explicit source, freshness and optional confidence; it never changes underlying evidence or creates a data source.",
+      "pages": [
+        "/my-airradar",
+        "/events",
+        "/journeys",
+        "/baselines"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "trust-provenance"
+      ],
+      "changelogKeywords": [
+        "trust provenance",
+        "evidence stamp",
+        "source freshness"
+      ]
     }
   ]
 }

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFavoriteAirports } from "@/components/pwa-register";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
+import { TrustStamp } from "@/components/trust-stamp";
 import type { PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import { isSpotterInteresting, scoreSpotterInterest } from "@/lib/spotter-interest";
@@ -111,7 +112,7 @@ export function MyAirRadarHome() {
 
   return <main className={styles.page} data-testid="my-airradar-home-v1">
     <PageHeader kicker="AIRRADAR / PERSONAL" title={copy.title} description={copy.subtitle}
-      actions={<StatusBadge variant={stream.connected ? "live" : snapshot ? "stale" : "neutral"}>{stream.connected ? copy.live : snapshot ? copy.stale : copy.connecting}</StatusBadge>} />
+      actions={<div className={styles.headerTrust}><StatusBadge variant={stream.connected ? "live" : snapshot ? "stale" : "neutral"}>{stream.connected ? copy.live : snapshot ? copy.stale : copy.connecting}</StatusBadge><TrustStamp compact provenance={{ kind: "OBSERVED", source: "LOCAL", observedAt: snapshot?.lastSourceUpdate, staleAfterMs: 60_000 }} /></div>} />
 
     <MetricStrip>
       <MetricCard value={formatNumber(snapshot?.aircraft.length ?? 0)} label={copy.localAircraft} />
