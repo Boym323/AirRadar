@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.350] - 2026-10-07
+
+Changes since v1.0.349.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Implement geometry tracking and update expiry logic feat(navigation-integrity): enhance observation queuing and independent collection test(beast-decoder): add test for track capacity and expiry behavior test(navigation-integrity): verify independent collection of local and network observations (d8096123)
+
+### Maintenance
+
+- Sync generated repository metadata (#559) (19b5e3d9)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#559) (19b5e3d9)
+- feat(beast-decoder): implement geometry tracking and update expiry logic feat(navigation-integrity): enhance observation queuing and independent collection test(beast-decoder): add test for track capacity and expiry behavior test(navigation-integrity): verify independent collection of local and network observations (d8096123)
+
+</details>
 ## [1.0.349] - 2026-10-07
 
 Changes since v1.0.348.
