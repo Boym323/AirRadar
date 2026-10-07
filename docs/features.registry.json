@@ -913,7 +913,9 @@
       "pages": [
         "/spotter"
       ],
-      "apis": [],
+      "apis": [
+        "/api/admin/spotter/saved-spots"
+      ],
       "changelogScopes": [
         "spotter"
       ],
