@@ -116,6 +116,7 @@ const CAPTURE_DEDUP_MS = 55_000;
 const EARLY_MS = 5 * 60_000;
 const LATE_MS = 8 * 60_000;
 const CONTINUITY_TOLERANCE_MS = 90_000;
+const CLEANUP_INTERVAL_MS = 60_000;
 const MAX_PENDING = 2_000;
 const MAX_RECORDS = 8_000;
 
@@ -232,6 +233,7 @@ export class AircraftOperationalFocusOutcomeValidator {
   private resolutions: Resolution[] = [];
   private firstObservedAt: number | null = null;
   private duplicateCaptureSkips = 0;
+  private lastCleanupAt = Number.NEGATIVE_INFINITY;
 
   capture(
     situation: OperationalTwinSituation,
@@ -291,7 +293,10 @@ export class AircraftOperationalFocusOutcomeValidator {
         lastFreshObservationAt: null,
       });
       if (this.pending.size > MAX_PENDING) {
-        const oldest = [...this.pending.values()].sort((a, b) => a.capturedAt - b.capturedAt)[0];
+        let oldest: PendingWeatherFocus | null = null;
+        for (const candidate of this.pending.values()) {
+          if (!oldest || candidate.capturedAt < oldest.capturedAt) oldest = candidate;
+        }
         if (oldest) this.pending.delete(oldest.id);
       }
     }
@@ -305,7 +310,7 @@ export class AircraftOperationalFocusOutcomeValidator {
       ? new Map((aircraft as readonly Aircraft[]).map((item) => [item.icaoHex, item] as const))
       : aircraft as ReadonlyMap<string, Aircraft>;
 
-    for (const pending of [...this.pending.values()]) {
+    for (const pending of this.pending.values()) {
       if (nowMs < pending.earlyAt) continue;
       const current = byHex.get(pending.icaoHex);
       const observedAt = current ? freshObservationAt(current, nowMs) : null;
@@ -348,7 +353,7 @@ export class AircraftOperationalFocusOutcomeValidator {
 
   report(now = new Date()): AircraftOperationalFocusOutcomeReport {
     const nowMs = now.getTime();
-    this.cleanup(nowMs);
+    this.cleanup(nowMs, true);
     const cutoff = nowMs - WINDOW_MS;
     const captures = this.captures.filter((item) => item.capturedAt >= cutoff);
     const resolutions = this.resolutions.filter((item) => item.resolvedAt >= cutoff);
@@ -408,7 +413,17 @@ export class AircraftOperationalFocusOutcomeValidator {
     };
   }
 
-  private cleanup(now: number): void {
+  private cleanup(now: number, force = false): void {
+    if (
+      !force
+      && now >= this.lastCleanupAt
+      && now - this.lastCleanupAt < CLEANUP_INTERVAL_MS
+      && this.captures.length <= MAX_RECORDS
+      && this.resolutions.length <= MAX_RECORDS
+    ) {
+      return;
+    }
+    this.lastCleanupAt = now;
     const cutoff = now - WINDOW_MS;
     this.captures = this.captures.filter((item) => item.capturedAt >= cutoff).slice(-MAX_RECORDS);
     this.resolutions = this.resolutions.filter((item) => item.resolvedAt >= cutoff).slice(-MAX_RECORDS);
