@@ -415,7 +415,8 @@
       "introducedVersion": null,
       "summary": "ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data.",
       "pages": [
-        "/airspace"
+        "/airspace",
+        "/navigation"
       ],
       "apis": [
         "/api/airspace/activity",
@@ -443,7 +444,8 @@
         "procedure",
         "navaid",
         "waypoint",
-        "navigation data"
+        "navigation data",
+        "navigation reference explorer"
       ]
     },
     {

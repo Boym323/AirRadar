@@ -1,0 +1,152 @@
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 24px 44px;
+}
+.searchPanel {
+  margin: 18px 0 16px;
+}
+.searchForm {
+  display: grid;
+  gap: 8px;
+}
+.searchForm label {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.searchRow input {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(153, 181, 207, .18);
+  border-radius: 8px;
+  background: rgba(5, 12, 20, .65);
+  color: var(--text);
+  font: inherit;
+  text-transform: uppercase;
+}
+.searchRow button {
+  padding: 0 18px;
+  border: 1px solid rgba(153, 181, 207, .2);
+  border-radius: 8px;
+  background: rgba(153, 181, 207, .08);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.searchRow button:disabled {
+  cursor: wait;
+  opacity: .55;
+}
+.validation,
+.status,
+.source,
+.disclosure {
+  color: var(--muted);
+  font-size: 11px;
+}
+.validation {
+  margin: 0;
+  color: var(--amber);
+}
+.metrics {
+  margin-bottom: 16px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 16px;
+}
+.full {
+  grid-column: 1 / -1;
+}
+.pointList,
+.compactList,
+.routeList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.pointList article {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid rgba(153, 181, 207, .12);
+  border-radius: 9px;
+}
+.pointHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pointHead > div {
+  display: grid;
+  gap: 2px;
+}
+.pointHead strong,
+.routeList strong {
+  font-size: 14px;
+}
+.pointHead span,
+.pointList p,
+.pointList small,
+.compactList small,
+.routeList span,
+.routeList small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.pointList p,
+.pointList small {
+  margin: 0;
+}
+.pointList a,
+.compactList a {
+  color: var(--text);
+}
+.compactList a {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(153, 181, 207, .1);
+  text-decoration: none;
+}
+.compactList a > span {
+  display: grid;
+  gap: 2px;
+}
+.routeList > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(153, 181, 207, .1);
+}
+.source,
+.disclosure {
+  line-height: 1.55;
+}
+.disclosure {
+  margin: 14px 0 0;
+}
+@media (max-width: 760px) {
+  .page { padding: 20px 14px 34px; }
+  .grid { grid-template-columns: 1fr; }
+  .full { grid-column: auto; }
+  .routeList > div { grid-template-columns: 72px 1fr; }
+  .routeList small { grid-column: 2; }
+}
+@media (max-width: 520px) {
+  .searchRow { grid-template-columns: 1fr; }
+  .searchRow button { min-height: 42px; }
+  .compactList a { flex-direction: column; }
+}
