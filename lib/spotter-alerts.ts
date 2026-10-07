@@ -93,7 +93,6 @@ export function shouldTriggerSpotterAlert(
   return candidate.interest.reasons.some((reason) => preferences.reasons.includes(reason.code));
 }
 
-export function spotterAlertTag(candidate: Pick<SpotterAlertCandidate, "icaoHex" | "closestApproach">): string {
-  const bucket = Math.floor((candidate.closestApproach?.secondsUntilClosest ?? 0) / 60);
-  return "airradar-spotter-" + candidate.icaoHex.toUpperCase() + "-" + bucket;
+export function spotterAlertTag(candidate: Pick<SpotterAlertCandidate, "icaoHex">): string {
+  return "airradar-spotter-" + candidate.icaoHex.toUpperCase();
 }
