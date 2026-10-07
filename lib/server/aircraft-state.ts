@@ -247,7 +247,6 @@ export class AircraftStateService {
   private historyWriteActive = false;
   private pendingHistorySnapshot: ProviderSnapshot | null = null;
   private historyDrainPromise: Promise<void> | null = null;
-  private lastHistoryQueueAt = 0;
   private shuttingDown = false;
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
@@ -1011,7 +1010,7 @@ export class AircraftStateService {
     }
     for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.operationalTwinCalibrationPersistence.scheduleFlush();
-    measureRuntime("snapshot.navigationIntegrity", activeAircraft.length, () => this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt)));
+    measureRuntime("snapshot.navigationIntegrity", activeAircraft.length, () => this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt), "local"));
     this.operationalFocusOutcome.observe(this.localAircraft, new Date(snapshot.fetchedAt));
     this.scheduleOperationalTwinCalibrationSample(now);
     this.invalidateSnapshotCache();
@@ -1152,7 +1151,7 @@ export class AircraftStateService {
     for (const hex of previousObservedHexes) fusionKeys.add(hex);
     for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
     this.observeTrackFusionShadow(now, fusionKeys);
-    measureRuntime("snapshot.navigationIntegrity", this.networkAircraft.size, () => this.navigationIntegrity.observe(this.networkAircraft.values(), new Date(snapshot.fetchedAt ?? new Date().toISOString())));
+    measureRuntime("snapshot.navigationIntegrity", this.networkAircraft.size, () => this.navigationIntegrity.observe(this.networkAircraft.values(), new Date(snapshot.fetchedAt ?? new Date().toISOString()), "network"));
     this.invalidateSnapshotCache();
   }
 
@@ -1434,12 +1433,8 @@ export class AircraftStateService {
 
   private queueHistory(snapshot: ProviderSnapshot): void {
     if (!this.running) return;
-    // The live provider refreshes every 3s, while history sampling is
-    // configured at 20s. Avoid replaying the complete snapshot and its shadow
-    // persistence checks on every live tick when no position can be due yet.
-    const sampledAt = Date.parse(snapshot.fetchedAt);
-    if (Number.isFinite(sampledAt) && sampledAt - this.lastHistoryQueueAt < getHistorySampleIntervalMs()) return;
-    if (Number.isFinite(sampledAt)) this.lastHistoryQueueAt = sampledAt;
+    // Sampling remains per ICAO so first sightings and failed-write retries
+    // are processed on the next live poll.
     this.pendingHistorySnapshot = snapshot;
     if (this.historyWriteActive) return;
     this.historyWriteActive = true;

@@ -14,6 +14,10 @@ const RETENTION_MS = 2 * 60 * 60_000;
 const MAX_OBSERVATIONS = 10_000;
 const HEARTBEAT_MS = 120_000;
 const MOVEMENT_DEDUP_DEGREES = 0.1;
+const MAX_PENDING_OBSERVATIONS = 2_048;
+const collectionTimes = new Map<string, number>();
+const pendingObservations = new Map<string, NavigationIntegrityObservation>();
+let observationDrainActive = false;
 
 type IntegrityStore = {
   observations: NavigationIntegrityObservation[];
@@ -133,6 +137,42 @@ function enqueue(work: () => Promise<void>): void {
   store.writeTail = store.writeTail.then(work, work).catch(() => undefined);
 }
 
+function queueObservation(observation: NavigationIntegrityObservation): boolean {
+  const key = dedupKey(observation);
+  if (!pendingObservations.has(key) && pendingObservations.size >= MAX_PENDING_OBSERVATIONS) {
+    addRejection("persistence_queue_capacity");
+    return false;
+  }
+  pendingObservations.set(key, observation);
+  if (!observationDrainActive) {
+    observationDrainActive = true;
+    enqueue(async () => {
+      try {
+        // Yield the serial writer after a small group so anomaly lifecycle
+        // writes are not starved by continuous observation ingestion.
+        for (let count = 0; count < 64 && pendingObservations.size; count++) {
+          const [key, item] = pendingObservations.entries().next().value!;
+          pendingObservations.delete(key);
+          try {
+            if (!getPrisma()) continue;
+            await persistObservation(item);
+            store.diagnostics.persisted += 1;
+            store.diagnostics.lastPersistedAt = item.observedAt;
+          } catch {
+            // Retry on the next collection rather than memoizing a failed write.
+            if (store.lastPersisted.get(item.aircraftHex) === item) store.lastPersisted.delete(item.aircraftHex);
+          }
+        }
+      } finally {
+        observationDrainActive = false;
+        const next = pendingObservations.values().next().value;
+        if (next) queueObservation(next);
+      }
+    });
+  }
+  return true;
+}
+
 function prune(now: number): void {
   const cutoff = now - RETENTION_MS;
   store.observations = store.observations.filter((item) => Date.parse(item.receivedAt) >= cutoff);
@@ -190,8 +230,9 @@ function evaluate(now: Date): void {
 }
 
 export class NavigationIntegrityService {
-  observe(aircraft: Iterable<Aircraft>, now = new Date()): void {
-    if (now.getTime() - store.lastCollectionAt < 15_000) return;
+  observe(aircraft: Iterable<Aircraft>, now = new Date(), lane: "local" | "network" | "default" = "default"): void {
+    if (now.getTime() - (collectionTimes.get(lane) ?? 0) < 15_000) return;
+    collectionTimes.set(lane, now.getTime());
     store.lastCollectionAt = now.getTime();
     prune(now.getTime());
     store.currentVersion += 1;
@@ -205,10 +246,7 @@ export class NavigationIntegrityService {
       store.diagnostics.confidence[observation.confidence] += 0;
       const previous = store.lastPersisted.get(observation.aircraftHex);
       if (!changedMeaningfully(previous, observation)) { store.diagnostics.deduplicated += 1; continue; }
-      store.lastPersisted.set(observation.aircraftHex, observation);
-      store.diagnostics.persisted += 1;
-      store.diagnostics.lastPersistedAt = observation.observedAt;
-      enqueue(async () => { try { await persistObservation(observation); } catch { /* database is optional */ } });
+      if (queueObservation(observation)) store.lastPersisted.set(observation.aircraftHex, observation);
     }
     const contributors = new Set<string>();
     for (const item of store.observations) contributors.add(item.aircraftHex);

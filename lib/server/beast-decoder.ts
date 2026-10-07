@@ -208,6 +208,8 @@ function callsignField(bytes: Buffer): string | null {
 
 export class BeastDecoder {
   private readonly tracks = new Map<string, Track>();
+  private lastExpiryAt = Number.NEGATIVE_INFINITY;
+  private readonly geometry = new Map<string, { lat: number; lon: number; receiverLat: number; receiverLon: number; distanceKm: number; bearing: number }>();
   private readonly bdsCounters = { commBDecoded: 0, commBAmbiguous: 0, commBRejected: 0, bds40: 0, bds44: 0, bds50: 0, bds60: 0 };
   private lastBeastTimestamp: bigint | null = null;
   private lastObservationAt: number | null = null;
@@ -484,7 +486,7 @@ export class BeastDecoder {
         a.provenance = provenanceWithFields(a, this.origin, fields);
       }
     }
-    const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - observedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.beastSignal = frame.signal; a.messages = (a.messages ?? 0) + 1; a.baroRate ??= null; a.geomRate ??= null; a.provenance = { ...(a.provenance ?? {}), seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
+    const lat = a.lat ?? null; const lon = a.lon ?? null; this.updateGeometry(icaoHex, a, lat, lon); a.seenSeconds = Math.max(0, (Date.now() - observedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.beastSignal = frame.signal; a.messages = (a.messages ?? 0) + 1; a.baroRate ??= null; a.geomRate ??= null; a.provenance = { ...(a.provenance ?? {}), seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
     a.observationTimes = { altitude: track.altitudeAt, baroAltitude: track.baroAltitudeAt, geomAltitude: track.geomAltitudeAt, groundSpeed: track.groundSpeedAt, track: track.trackAt, verticalRate: track.verticalRateAt, position: track.lastPositionAt, extendedTelemetry: track.extendedTelemetryAt, signal: observedAt };
     if (track.altitudeAt !== null && a.altitude !== null && a.altitude !== undefined) {
       const altitudeObservedAt = new Date(track.altitudeAt).toISOString();
@@ -501,13 +503,35 @@ export class BeastDecoder {
         recordBeastAltitudeDecode(icaoHex, altitudeObservation, altitudeDecision);
       }
     }
-    this.expire(observedAt); return a as Aircraft;
+    if (observedAt - this.lastExpiryAt >= 1_000 || this.tracks.size > this.maxAircraft) {
+      this.expire(observedAt);
+      this.lastExpiryAt = observedAt;
+    }
+    return a as Aircraft;
   }
   snapshot(now = Date.now()): Aircraft[] { this.expire(now); return [...this.tracks.values()].map((track) => ({ ...track.aircraft, trail: track.aircraft.trail ?? [] } as Aircraft)); }
   getDiagnostics(): typeof this.bdsCounters & { timestampFallbacks: number; timestampDiscontinuities: number } {
     return { ...this.bdsCounters, timestampFallbacks: this.timestampFallbacks, timestampDiscontinuities: this.timestampDiscontinuities };
   }
-  private expire(now: number): void { for (const [hex, track] of this.tracks) if (now - track.lastMessageAt > this.expiryMs) this.tracks.delete(hex); while (this.tracks.size > this.maxAircraft) { let oldestHex: string | null = null; let oldestAt = Number.POSITIVE_INFINITY; for (const [hex, track] of this.tracks) if (track.lastMessageAt < oldestAt) { oldestAt = track.lastMessageAt; oldestHex = hex; } if (!oldestHex) break; this.tracks.delete(oldestHex); } }
+  getTrackCount(): number { return this.tracks.size; }
+  private updateGeometry(hex: string, aircraft: Partial<Aircraft>, lat: number | null, lon: number | null): void {
+    if (lat === null || lon === null) {
+      aircraft.distanceKm = null;
+      aircraft.bearing = null;
+      this.geometry.delete(hex);
+      return;
+    }
+    let cached = this.geometry.get(hex);
+    if (!cached || cached.lat !== lat || cached.lon !== lon || cached.receiverLat !== this.receiver.lat || cached.receiverLon !== this.receiver.lon) {
+      cached = { lat, lon, receiverLat: this.receiver.lat, receiverLon: this.receiver.lon,
+        distanceKm: haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon),
+        bearing: initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) };
+      this.geometry.set(hex, cached);
+    }
+    aircraft.distanceKm = cached.distanceKm;
+    aircraft.bearing = cached.bearing;
+  }
+  private expire(now: number): void { for (const [hex, track] of this.tracks) if (now - track.lastMessageAt > this.expiryMs) { this.tracks.delete(hex); this.geometry.delete(hex); } while (this.tracks.size > this.maxAircraft) { let oldestHex: string | null = null; let oldestAt = Number.POSITIVE_INFINITY; for (const [hex, track] of this.tracks) if (track.lastMessageAt < oldestAt) { oldestAt = track.lastMessageAt; oldestHex = hex; } if (!oldestHex) break; this.tracks.delete(oldestHex); this.geometry.delete(oldestHex); } }
   private observationTime(frame: BeastFrame, receivedAt: number): number {
     if (frame.timestamp.length !== 6 || frame.timestamp.every((value) => value === 0)) {
       this.timestampFallbacks += 1;

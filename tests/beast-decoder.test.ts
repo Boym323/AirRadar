@@ -43,6 +43,15 @@ function apFrame(df: number, icao: number, body: [number, number]): Buffer {
 }
 
 describe("BeastDecoder", () => {
+  it("keeps capacity bounded between expiry sweeps and expires at snapshot time", () => {
+    const decoder = new BeastDecoder(receiver, 1, 100);
+    decoder.decode(df17Frame(0xabc001, "202cc371c32ce0"), 1_000);
+    decoder.decode(df17Frame(0xabc002, "202cc371c32ce0"), 1_001);
+    expect(decoder.getTrackCount()).toBe(1);
+    expect(decoder.snapshot(1_002)[0].icaoHex).toBe("ABC002");
+    expect(decoder.snapshot(1_102)).toHaveLength(0);
+    expect(decoder.getTrackCount()).toBe(0);
+  });
   it("decodes ICAO and callsign from a deterministic DF17 identification frame", () => {
     const aircraft = new BeastDecoder(receiver).decode(frame("8d4840d6202cc371c32ce0576098"), Date.parse("2026-01-01T00:00:00Z"));
     expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", category: "A4", source: "ADS-B" });

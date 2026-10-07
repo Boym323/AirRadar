@@ -17,6 +17,16 @@ function observation(hex: string, lat: number, lon: number, nic = 8, nacP = 8): 
 }
 
 describe("navigation integrity", () => {
+  it("collects local and network observations independently at the same instant", () => {
+    const at = new Date("2026-10-07T11:00:00Z");
+    const receiver = { lat: 49.2, lon: 16.6, name: "TEST" };
+    const local = normalizeAircraft({ hex: "ABC010", lat: 49.2, lon: 16.6, alt_baro: 30000, seen: 0, seen_pos: 0, nic: 8, nac_p: 8 }, receiver, at)!;
+    const network = { ...local, icaoHex: "ABC011", origin: "adsblol" as const };
+    const service = new NavigationIntegrityService();
+    service.observe([local], at, "local");
+    service.observe([network], at, "network");
+    expect(service.getCurrent("15m", at).summary.aircraft).toBe(2);
+  });
   it("keeps original fields distinct and classifies one degraded aircraft conservatively", () => {
     const item = observation("ABC001", 49.2, 16.6, 4, 8);
     expect(item.nic).not.toBe(item.nacP);

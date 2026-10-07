@@ -171,7 +171,7 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
       : Math.max(0, (receivedAt - latestPositionReceivedAt) / 1000);
     next.origin = "adsbhub";
     next.provenance = { ...(next.provenance ?? { seenLocal: false, seenNetwork: true, lastLocalSeen: null, lastNetworkSeen: null, positionOrigin: null, positionSource: "UNKNOWN" }), seenLocal: false, seenNetwork: true, lastNetworkSeen: next.lastSeen, positionOrigin: next.lat !== null && next.lon !== null ? "adsbhub" : next.provenance?.positionOrigin ?? null, positionSource: "UNKNOWN" };
-    if (next.lat !== null && next.lon !== null) { next.distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, next.lat, next.lon); next.bearing = initialBearing(this.receiver.lat, this.receiver.lon, next.lat, next.lon); }
+    if (next.lat !== null && next.lon !== null && (!existing || next.lat !== existing.aircraft.lat || next.lon !== existing.aircraft.lon)) { next.distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, next.lat, next.lon); next.bearing = initialBearing(this.receiver.lat, this.receiver.lon, next.lat, next.lon); }
     const initialPoint = trailPointFromAircraft(next);
     next.trail = existing?.aircraft.trail?.length ? existing.aircraft.trail : (initialPoint ? [initialPoint] : []);
     this.tracks.set(incoming.icaoHex, {
