@@ -39,7 +39,7 @@ describe("visual system v2", () => {
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.placeLabel");
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.airportLabel");
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.boundary");
-    expect(css).not.toMatch(/font-size:\\s*9px;/);
+    expect(css).not.toMatch(/font-size:\s*9px;/);
     expect(css).not.toContain("font-size:9px;");
   });
 
