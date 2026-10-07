@@ -82,13 +82,16 @@ function plausiblePosition(previous: Aircraft | undefined, incoming: Aircraft): 
   const maximumKm = Math.max(MIN_POSITION_STEP_KM, MAX_PLAUSIBLE_GROUND_SPEED_KT * 1.852 * elapsedHours * 1.5);
   if (distanceKm <= maximumKm) return incoming;
 
-  // Keep the aircraft attached to its last credible position while retaining
-  // the rest of the newest observation (altitude, track, callsign, etc.).
+  // Do not publish an old coordinate as the newest observation. A rejected
+  // point must be positionless until a subsequent credible position arrives;
+  // retaining the previous latitude/longitude makes a stale marker look live.
   return {
     ...incoming,
-    lat: previousPoint.lat,
-    lon: previousPoint.lon,
+    lat: null,
+    lon: null,
     seenPosSeconds: null,
+    distanceKm: null,
+    bearing: null,
     provenance: {
       seenLocal: incoming.provenance?.seenLocal ?? incoming.origin === "local",
       seenNetwork: incoming.provenance?.seenNetwork ?? incoming.origin === "adsblol",

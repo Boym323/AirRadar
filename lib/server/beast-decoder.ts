@@ -286,9 +286,16 @@ export class BeastDecoder {
       const even = track.cprEven; const oddFrame = track.cprOdd;
       if (even && oddFrame && Math.abs(even.receivedAt - oddFrame.receivedAt) <= 10_000) {
         const j = Math.floor(59 * even.lat - 60 * oddFrame.lat + 0.5); const latEven = cprDlat(false) * (MOD(j, 60) + even.lat); const latOdd = cprDlat(true) * (MOD(j, 59) + oddFrame.lat);
-        const normalizedEven = latEven >= 270 ? latEven - 360 : latEven; const normalizedOdd = latOdd >= 270 ? latOdd - 360 : latOdd; const useOdd = oddFrame.receivedAt > even.receivedAt; const lat = useOdd ? normalizedOdd : normalizedEven; const ni = cprN(lat, useOdd); const m = Math.floor(even.lon * (ni - 1) - oddFrame.lon * ni + 0.5); const longitude = useOdd ? (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + oddFrame.lon) : (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + even.lon);
-        const normalizedLongitude = MOD(longitude + 180, 360) - 180;
-        if (lat >= -90 && lat <= 90 && Number.isFinite(normalizedLongitude)) { a.lat = lat; a.lon = normalizedLongitude; track.lastPositionAt = observedAt; }
+        const normalizedEven = latEven >= 270 ? latEven - 360 : latEven; const normalizedOdd = latOdd >= 270 ? latOdd - 360 : latOdd;
+        // A global CPR pair is valid only within one longitude-zone band.
+        // Crossing an NL boundary between even/odd frames otherwise combines
+        // incompatible values and can yield a plausible-looking point far
+        // from the aircraft.
+        if (cprN(normalizedEven, false) === cprN(normalizedOdd, false)) {
+          const useOdd = oddFrame.receivedAt > even.receivedAt; const lat = useOdd ? normalizedOdd : normalizedEven; const ni = cprN(lat, useOdd); const m = Math.floor(even.lon * (ni - 1) - oddFrame.lon * ni + 0.5); const longitude = useOdd ? (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + oddFrame.lon) : (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + even.lon);
+          const normalizedLongitude = MOD(longitude + 180, 360) - 180;
+          if (lat >= -90 && lat <= 90 && Number.isFinite(normalizedLongitude)) { a.lat = lat; a.lon = normalizedLongitude; track.lastPositionAt = observedAt; }
+        }
       }
     } else if (me && typeCode === 19) {
       const velocity = modeSValue(me);
