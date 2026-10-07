@@ -17,6 +17,28 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.342] - 2026-10-07
+
+Changes since v1.0.341.
+
+**Features touched:** Live Radar.
+
+### Fixed
+
+- Handle callsign changes to prevent incorrect position retention (551ee381)
+
+### Maintenance
+
+- Sync generated repository metadata (#516) (332db50d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#516) (332db50d)
+- fix(aircraft-state): handle callsign changes to prevent incorrect position retention (551ee381)
+
+</details>
+
 ## [1.0.341] - 2026-10-07
 
 Changes since v1.0.340.
