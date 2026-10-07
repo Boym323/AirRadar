@@ -855,13 +855,16 @@
       "category": "productivity",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bookmarkable URL state for existing analytical surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
+      "summary": "Bookmarkable URL state across analytical, comparison, navigation, procedure and sector-detail surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
       "pages": [
         "/airspace",
         "/compare/airports",
         "/compare/flights",
         "/navigation-integrity",
-        "/time-machine"
+        "/time-machine",
+        "/navigation",
+        "/procedures",
+        "/airspace/sectors/:id"
       ],
       "apis": [],
       "changelogScopes": [
@@ -870,7 +873,8 @@
       "changelogKeywords": [
         "investigation links",
         "deep links",
-        "bookmarkable state"
+        "bookmarkable state",
+        "navigation investigation links"
       ]
     },
     {
