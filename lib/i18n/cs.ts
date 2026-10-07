@@ -112,6 +112,12 @@ export const cs = {
     distanceFromYou: "od tebe",
     bearingFromYou: "směr od tebe",
     discoveryWarning: "Discovery badge mohou být dočasně neúplné.",
+    comingOverhead: "Blížící se průlety",
+    comingOverheadDescription: "Omezená 10min predikce z aktuální polohy, tracku a ground speed. Není to letový plán.",
+    closestPass: "Nejbližší průlet",
+    inPrefix: "za",
+    now: "teď",
+    elevation: "elevace",
   },
   notificationCenter: {
     title: "Centrum oznámení",
