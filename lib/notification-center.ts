@@ -146,7 +146,7 @@ export function dedupeSemanticNotificationEntries(entries: readonly AlertHistory
     }
     const existing = output[existingIndex]!;
     if (Math.abs(Date.parse(existing.detectedAt) - Date.parse(entry.detectedAt)) > NOTIFICATION_SEMANTIC_DEDUP_WINDOW_MS) {
-      semanticIndex.set(`${key}:${entry.id}`, output.length);
+      semanticIndex.set(key, output.length);
       output.push(entry);
       continue;
     }
