@@ -98,11 +98,14 @@ describe("production release metadata gate", () => {
     expect(source).toContain("if (expectedUnavailable) unavailable.push");
   });
 
-  it("keeps Operations Dashboard in secondary and mobile navigation smoke", () => {
+  it("keeps Operations Dashboard in secondary smoke and follows the actual mobile More target", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
     expect(source).toContain('["/receiver/coverage", \'[data-testid="receiver-explorer-v2"]\']');
-    expect(source).toContain("alerts|fleet|intelligence|operations|recap|system|watchlist");
+    expect(source).toContain('const mobileMoreHref = await mobileMoreLink.getAttribute("href")');
+    expect(source).toContain("const mobileMoreTarget = new URL(mobileMoreHref, baseUrl)");
+    expect(source).toContain("url.pathname === mobileMoreTarget.pathname && url.search === mobileMoreTarget.search");
+    expect(source).not.toContain("alerts|fleet|intelligence|operations|recap|system|watchlist");
   });
 
   it("treats bounded diagnostic API rate limits as expected browser-smoke responses", () => {
