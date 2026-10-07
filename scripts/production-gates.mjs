@@ -1278,7 +1278,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
     const mobileMoreLink = routeSmoke.locator(".mobile-bottom-more a").first();
     await Promise.all([
-      routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|operations|recap|system|watchlist)/),
+      routeSmoke.waitForURL(/\/(?:airspace|alerts|fleet|intelligence|operations|recap|system|watchlist)/),
       mobileMoreLink.click(),
     ]);
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
