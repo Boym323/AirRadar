@@ -180,6 +180,13 @@ export const cs = {
     weatherStation: "METAR stanice",
     slantDistance: "Šikmá vzdálenost",
     visualScore: "Viditelnost",
+    lightGeometry: "Světlo a Slunce",
+    lightGeometryDescription: "Poloha Slunce a světelný úhel vůči aktuálnímu směru na letadlo, počítané lokálně v browseru.",
+    sunAzimuth: "Slunce azimut",
+    sunElevation: "Slunce elevace",
+    lightAngle: "Úhel světla",
+    lightPeriods: { DAY: "den", GOLDEN_HOUR: "golden hour", TWILIGHT: "soumrak", NIGHT: "noc" },
+    lighting: { FRONT: "front light", SIDE: "side light", BACK: "backlight", UNAVAILABLE: "bez přímého slunce" },
     visualReasons: {
       HIGH_ELEVATION: "dobrá elevace",
       LOW_ELEVATION: "nízko nad horizontem",
