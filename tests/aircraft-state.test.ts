@@ -128,6 +128,59 @@ describe("aircraft state service", () => {
       .toEqual(metadataAircraft.map(() => "/aircraft-icons-tar1090/A320.svg"));
   });
 
+  it("patches network metadata without reapplying network positions", () => {
+    vi.useFakeTimers();
+    const observedAt = new Date("2026-10-07T12:00:00.000Z");
+    vi.setSystemTime(observedAt);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const normalized = normalizeAircraft(
+      { hex: "ABC123", flight: "NET123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 },
+      receiver,
+      observedAt,
+    );
+    if (!normalized) throw new Error("test aircraft could not be normalized");
+    const network: Aircraft = {
+      ...normalized,
+      origin: "adsblol",
+      provenance: {
+        seenLocal: false,
+        seenNetwork: true,
+        lastLocalSeen: null,
+        lastNetworkSeen: normalized.lastSeen,
+        positionOrigin: "adsblol",
+        positionSource: normalized.source,
+      },
+    };
+    const metadata: NonNullable<AircraftEnrichment["metadata"]> = {
+      registration: "OK-NET",
+      registrationCountry: "Czechia",
+      registrationCountryCode: "CZ",
+      aircraftType: "A320",
+      icaoTypeCode: "A320",
+      aircraftDescription: "Airbus A320",
+      operator: "Test Air",
+      manufacturer: "Airbus",
+      source: "tar1090-db",
+      retrievedAt: observedAt.toISOString(),
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    services.push(service);
+    const internal = service as unknown as {
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+      applyNetworkInitialMetadata: (aircraft: Aircraft[]) => void;
+    };
+
+    internal.applyNetworkSnapshot({ aircraft: [network], fetchedAt: observedAt.toISOString(), provider: "network-test" });
+    const before = service.getDiagnostics().trackFusionShadow.evaluations;
+    const beforeTrail = service.getAircraft("ABC123", "extended")?.trail.length;
+
+    internal.applyNetworkInitialMetadata([{ ...network, enrichment: { metadata } }]);
+
+    expect(service.getAircraft("ABC123", "extended")?.enrichment?.metadata?.icaoTypeCode).toBe("A320");
+    expect(service.getAircraft("ABC123", "extended")?.trail.length).toBe(beforeTrail);
+    expect(service.getDiagnostics().trackFusionShadow.evaluations).toBe(before);
+  });
+
   it("shares one cached snapshot construction across many listeners", async () => {
     const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
     services.push(service);

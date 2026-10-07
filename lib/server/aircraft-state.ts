@@ -38,7 +38,7 @@ import { logger } from "@/lib/server/logger";
 import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
-import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
+import { appendBoundedServerTrailPoint, appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
@@ -267,6 +267,8 @@ export class AircraftStateService {
   // publication. Keep its evaluation cadence bounded independently of live
   // ingest so the public radar path remains responsive.
   private lastTrackFusionEvaluationAt = 0;
+  private readonly pendingTrackFusionKeys = new Set<string>();
+  private trackFusionFullEvaluationPending = false;
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
@@ -781,7 +783,9 @@ export class AircraftStateService {
         this.continuity.observeMembership("local", previousObserved, this.localObservedHexes, now);
         this.reconcileSourcePreferences(now);
         this.removeStaleAircraft(now);
-        this.observeTrackFusionShadow(now);
+        const fusionKeys = new Set(previousObserved);
+        for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
+        this.observeTrackFusionShadow(now, fusionKeys);
         this.invalidateSnapshotCache();
       }
 
@@ -806,11 +810,14 @@ export class AircraftStateService {
     }
   }
 
-  private async hydrateInitialIconMetadata<T extends ProviderSnapshot["aircraft"]>(aircraft: T): Promise<T> {
+  private async hydrateInitialIconMetadata<T extends ProviderSnapshot["aircraft"]>(
+    aircraft: T,
+    existing: ReadonlyMap<string, Aircraft> = this.localAircraft,
+  ): Promise<T> {
     if (!this.enrichment.hasInitialMetadataProvider) return aircraft;
 
     const candidates = aircraft.filter((item) => {
-      if (this.localAircraft.get(item.icaoHex)?.enrichment?.metadata) return false;
+      if (existing.get(item.icaoHex)?.enrichment?.metadata) return false;
       return aircraftIconNeedsInitialMetadata(item);
     });
     if (candidates.length === 0) return aircraft;
@@ -855,6 +862,25 @@ export class AircraftStateService {
     }
   }
 
+  private applyNetworkInitialMetadata(aircraft: ProviderSnapshot["aircraft"]): void {
+    let changed = false;
+    for (const item of aircraft) {
+      const metadata = item.enrichment?.metadata;
+      const current = this.networkAircraft.get(item.icaoHex);
+      if (!metadata || !current || current.lastSeen !== item.lastSeen) continue;
+      if (current.enrichment?.metadata === metadata) continue;
+      this.networkAircraft.set(item.icaoHex, {
+        ...current,
+        enrichment: { ...(current.enrichment ?? {}), metadata },
+      });
+      changed = true;
+    }
+    if (changed) {
+      this.invalidateSnapshotCache();
+      this.notify();
+    }
+  }
+
   private async refreshNetwork(): Promise<void> {
     if (!this.running || this.networkRefreshing) return;
     this.networkRefreshing = true;
@@ -872,10 +898,9 @@ export class AircraftStateService {
       // Network-only aircraft should still receive the same initial metadata
       // lookup as local aircraft, but enrichment is deliberately best-effort.
       try {
-        const aircraft = await this.hydrateInitialIconMetadata(networkSnapshot.aircraft);
+        const aircraft = await this.hydrateInitialIconMetadata(networkSnapshot.aircraft, this.networkAircraft);
         if (!this.running) return;
-        this.applyNetworkSnapshot({ ...networkSnapshot, aircraft });
-        this.notify();
+        this.applyNetworkInitialMetadata(aircraft);
       } catch (error) {
         logger.debug({ error }, "AirRadar network metadata hydration skipped");
       }
@@ -930,14 +955,17 @@ export class AircraftStateService {
     this.reconcileSourcePreferences(now);
     if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, getAircraftStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
-    this.observeTrackFusionShadow(now);
+    const fusionKeys = new Set(currentHexes);
+    for (const hex of previousObservedHexes) fusionKeys.add(hex);
+    for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
+    this.observeTrackFusionShadow(now, fusionKeys);
     this.operationalTwinOutcome.observeTruth(this.localAircraft, now);
     this.operationalTwinTrajectoryQualityOutcome.observeTruth(this.localAircraft, now);
     this.operationalTwinTrajectoryQualityOutcomeV2.observeTruth(this.localAircraft, now);
     this.operationalTwinEventOutcome.observeLocal(this.localAircraft, now);
     this.regionalAttentionOutcome.observeTruth(this.localAircraft, now);
     const activeAircraft = [...this.localAircraft.values()];
-    const activeHexes = new Set(activeAircraft.map((item) => item.icaoHex));
+    const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe(activeAircraft, this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
@@ -945,7 +973,7 @@ export class AircraftStateService {
     this.intelligence.cleanup(activeHexes);
     const predictiveAlertCandidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }> = [];
     const snapshotAt = Date.parse(snapshot.fetchedAt);
-    for (const current of this.localAircraft.values()) {
+    for (const current of activeAircraft) {
       const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, snapshotAt);
       this.operationalTwinEventOutcome.observeIntelligence(events, snapshotAt);
       this.operationalTwinTruthFirst.observeIntelligence(events, snapshotAt);
@@ -959,7 +987,7 @@ export class AircraftStateService {
     for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.operationalTwinCalibrationPersistence.scheduleFlush();
     this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt));
-    this.operationalFocusOutcome.observe(activeAircraft, new Date(snapshot.fetchedAt));
+    this.operationalFocusOutcome.observe(this.localAircraft, new Date(snapshot.fetchedAt));
     this.scheduleOperationalTwinCalibrationSample(now);
     this.invalidateSnapshotCache();
   }
@@ -1086,14 +1114,29 @@ export class AircraftStateService {
     this.reconcileSourcePreferences(now);
     if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
-    this.observeTrackFusionShadow(now);
-    this.navigationIntegrity.observe([...this.networkAircraft.values()], new Date(snapshot.fetchedAt ?? new Date().toISOString()));
+    const fusionKeys = new Set(currentHexes);
+    for (const hex of previousObservedHexes) fusionKeys.add(hex);
+    for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
+    this.observeTrackFusionShadow(now, fusionKeys);
+    this.navigationIntegrity.observe(this.networkAircraft.values(), new Date(snapshot.fetchedAt ?? new Date().toISOString()));
     this.invalidateSnapshotCache();
   }
 
-  private observeTrackFusionShadow(now = Date.now()): void {
+  private observeTrackFusionShadow(now = Date.now(), keys?: Iterable<string>): void {
+    if (keys) {
+      for (const hex of keys) this.pendingTrackFusionKeys.add(hex);
+    } else {
+      this.trackFusionFullEvaluationPending = true;
+    }
     if (now - this.lastTrackFusionEvaluationAt < 5_000) return;
+
     this.lastTrackFusionEvaluationAt = now;
+    const evaluationKeys = this.trackFusionFullEvaluationPending
+      ? undefined
+      : new Set(this.pendingTrackFusionKeys);
+    this.pendingTrackFusionKeys.clear();
+    this.trackFusionFullEvaluationPending = false;
+
     const evaluatedTracks = this.trackFusionShadow.observe({
       local: this.localAircraft,
       network: this.networkAircraft,
@@ -1101,6 +1144,7 @@ export class AircraftStateService {
       localStaleAfterMs: getAircraftStaleAfterMs(),
       networkStaleAfterMs: getAdsbLolStaleAfterMs(),
       sourcePreferences: this.sourcePreferences,
+      ...(evaluationKeys ? { keys: evaluationKeys } : {}),
       now,
     });
     this.trackFusionReadiness.observe(this.trackFusionShadow.diagnostics(), now);
@@ -1225,16 +1269,16 @@ export class AircraftStateService {
         || previous.provenance.positionSource !== incoming.provenance.positionSource));
     const base = sourceChanged ? [] : previousTrail;
     const point = trailPointFromAircraft(incoming);
-    const next = point ? appendTrailPoint(base, point) : base;
-    if (incoming.origin !== "local") {
-      const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
-      const bounded = next.filter((point) => {
-        const recordedAt = Date.parse(point.recordedAt);
-        return !Number.isFinite(cutoff) || (Number.isFinite(recordedAt) && recordedAt >= cutoff);
-      });
-      return bounded.slice(-getNetworkTrailMaxPoints());
+    if (incoming.origin === "local") {
+      return point ? appendBoundedServerTrailPoint(base, point) : base;
     }
-    return next;
+    const next = point ? appendTrailPoint(base, point) : base;
+    const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
+    const bounded = next.filter((point) => {
+      const recordedAt = Date.parse(point.recordedAt);
+      return !Number.isFinite(cutoff) || (Number.isFinite(recordedAt) && recordedAt >= cutoff);
+    });
+    return bounded.slice(-getNetworkTrailMaxPoints());
   }
 
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {

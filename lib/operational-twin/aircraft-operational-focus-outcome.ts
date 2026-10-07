@@ -298,10 +298,12 @@ export class AircraftOperationalFocusOutcomeValidator {
     this.cleanup(now);
   }
 
-  observe(aircraft: readonly Aircraft[], now = new Date()): void {
+  observe(aircraft: readonly Aircraft[] | ReadonlyMap<string, Aircraft>, now = new Date()): void {
     const nowMs = now.getTime();
     if (!Number.isFinite(nowMs)) return;
-    const byHex = new Map(aircraft.map((item) => [item.icaoHex, item] as const));
+    const byHex: ReadonlyMap<string, Aircraft> = Array.isArray(aircraft)
+      ? new Map((aircraft as readonly Aircraft[]).map((item) => [item.icaoHex, item] as const))
+      : aircraft as ReadonlyMap<string, Aircraft>;
 
     for (const pending of [...this.pending.values()]) {
       if (nowMs < pending.earlyAt) continue;

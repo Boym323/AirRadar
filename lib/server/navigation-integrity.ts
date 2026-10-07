@@ -25,11 +25,13 @@ type IntegrityStore = {
   lastEvaluationAt: number;
   lastCollectionAt: number;
   writeTail: Promise<void>;
+  currentVersion: number;
+  currentCache: Map<string, { version: number; value: Omit<NavigationIntegrityCurrentResponse, "generatedAt"> }>;
 };
 
 const globalStore = globalThis as typeof globalThis & { __airRadarNavigationIntegrity?: IntegrityStore };
 const store: IntegrityStore = globalStore.__airRadarNavigationIntegrity ??= {
-  observations: [], lastPersisted: new Map(), active: new Map(), candidateHits: new Map(), normalHits: new Map(), lastEvaluationAt: 0, writeTail: Promise.resolve(),
+  observations: [], lastPersisted: new Map(), active: new Map(), candidateHits: new Map(), normalHits: new Map(), lastEvaluationAt: 0, writeTail: Promise.resolve(), currentVersion: 0, currentCache: new Map(),
   diagnostics: {
     observationsCreated: 0, persisted: 0, deduplicated: 0, rejectedInvalidOrStale: 0, aircraftContributors: 0, cellsPopulated: 0, baselineCellsReady: 0,
     anomalyCandidates: 0, anomaliesOpened: 0, anomaliesClosed: 0, confidence: { LOW: 0, MEDIUM: 0, HIGH: 0 }, rejectionReasons: {}, lastObservationAt: null, lastPersistedAt: null, baselineMaturity: { UNAVAILABLE: 0, IMMATURE: 0, PARTIAL: 0, READY: 0, STRONG: 0 },
@@ -188,10 +190,12 @@ function evaluate(now: Date): void {
 }
 
 export class NavigationIntegrityService {
-  observe(aircraft: Aircraft[], now = new Date()): void {
+  observe(aircraft: Iterable<Aircraft>, now = new Date()): void {
     if (now.getTime() - store.lastCollectionAt < 15_000) return;
     store.lastCollectionAt = now.getTime();
     prune(now.getTime());
+    store.currentVersion += 1;
+    store.currentCache.clear();
     for (const item of aircraft) {
       const observation = observationFromAircraft(item, now);
       if (!observation) { store.diagnostics.rejectedInvalidOrStale += 1; addRejection("invalid_or_stale_pair"); continue; }
@@ -206,29 +210,64 @@ export class NavigationIntegrityService {
       store.diagnostics.lastPersistedAt = observation.observedAt;
       enqueue(async () => { try { await persistObservation(observation); } catch { /* database is optional */ } });
     }
-    store.diagnostics.aircraftContributors = new Set(store.observations.map((item) => item.aircraftHex)).size;
+    const contributors = new Set<string>();
+    for (const item of store.observations) contributors.add(item.aircraftHex);
+    store.diagnostics.aircraftContributors = contributors.size;
     if (now.getTime() - store.lastEvaluationAt >= 30_000) evaluate(now);
   }
 
   getCurrent(window: "5m" | "15m" | "30m" | "60m" = "15m", now = new Date(), filters: { minAltitudeFt?: number; maxAltitudeFt?: number; source?: "LOCAL" | "NETWORK" } = {}): NavigationIntegrityCurrentResponse {
+    const nowMs = now.getTime();
+    const cacheKey = [
+      window,
+      filters.source ?? "*",
+      filters.minAltitudeFt ?? "*",
+      filters.maxAltitudeFt ?? "*",
+      Math.floor(nowMs / 5_000),
+    ].join(":");
+    const cached = store.currentCache.get(cacheKey);
+    if (cached?.version === store.currentVersion) return { ...cached.value, generatedAt: now.toISOString() };
+
     const minutes = Number(window.slice(0, -1));
-    const observations = store.observations.filter((item) => Date.parse(item.receivedAt) >= now.getTime() - minutes * 60_000
-      && (filters.minAltitudeFt === undefined || (item.altitudeFt !== null && item.altitudeFt >= filters.minAltitudeFt))
-      && (filters.maxAltitudeFt === undefined || (item.altitudeFt !== null && item.altitudeFt <= filters.maxAltitudeFt))
-      && (filters.source === undefined || item.source === filters.source));
+    const observations: NavigationIntegrityObservation[] = [];
+    const aircraftHexes = new Set<string>();
+    const reducedAircraftHexes = new Set<string>();
+    const cutoff = nowMs - minutes * 60_000;
+    for (const item of store.observations) {
+      if (Date.parse(item.receivedAt) < cutoff) continue;
+      if (filters.minAltitudeFt !== undefined && (item.altitudeFt === null || item.altitudeFt < filters.minAltitudeFt)) continue;
+      if (filters.maxAltitudeFt !== undefined && (item.altitudeFt === null || item.altitudeFt > filters.maxAltitudeFt)) continue;
+      if (filters.source !== undefined && item.source !== filters.source) continue;
+      observations.push(item);
+      aircraftHexes.add(item.aircraftHex);
+      if (classifyNavigationIntegrity(item).state !== "NORMAL") reducedAircraftHexes.add(item.aircraftHex);
+    }
     const baselines = buildBaseline(observations);
     const cells = summariseCells(observations, baselines);
-    const activeAnomalies = [...store.active.values()].filter((item) => item.endedAt === null);
-    return {
-      generatedAt: now.toISOString(), window,
-      summary: { observations: observations.length, aircraft: new Set(observations.map((item) => item.aircraftHex)).size, cells: cells.length, reducedAircraft: new Set(observations.filter((item) => classifyNavigationIntegrity(item).state !== "NORMAL").map((item) => item.aircraftHex)).size, activeAnomalies: activeAnomalies.length },
-      cells, activeAnomalies,
+    const activeAnomalies: NavigationIntegrityAnomaly[] = [];
+    for (const item of store.active.values()) if (item.endedAt === null) activeAnomalies.push(item);
+    const value: Omit<NavigationIntegrityCurrentResponse, "generatedAt"> = {
+      window,
+      summary: { observations: observations.length, aircraft: aircraftHexes.size, cells: cells.length, reducedAircraft: reducedAircraftHexes.size, activeAnomalies: activeAnomalies.length },
+      cells,
+      activeAnomalies,
     };
+    if (store.currentCache.size >= 32) store.currentCache.clear();
+    store.currentCache.set(cacheKey, { version: store.currentVersion, value });
+    return { ...value, generatedAt: now.toISOString() };
   }
 
   getAircraft(icaoHex: string, now = new Date()): { latest: NavigationIntegrityObservation | null; classification: ReturnType<typeof classifyNavigationIntegrity> | null; regionalContext: { state: string; affectedAircraft: number; anomaly: NavigationIntegrityAnomaly | null } } {
-    const latest = [...store.observations].reverse().find((item) => item.aircraftHex === icaoHex && Date.parse(item.receivedAt) >= now.getTime() - WINDOW_MS) ?? null;
-    const anomaly = [...store.active.values()].find((item) => item.evidence.independentAircraft.includes(icaoHex)) ?? null;
+    let latest: NavigationIntegrityObservation | null = null;
+    const cutoff = now.getTime() - WINDOW_MS;
+    for (let index = store.observations.length - 1; index >= 0; index -= 1) {
+      const item = store.observations[index]!;
+      if (item.aircraftHex === icaoHex && Date.parse(item.receivedAt) >= cutoff) { latest = item; break; }
+    }
+    let anomaly: NavigationIntegrityAnomaly | null = null;
+    for (const item of store.active.values()) {
+      if (item.evidence.independentAircraft.includes(icaoHex)) { anomaly = item; break; }
+    }
     return { latest, classification: latest ? classifyNavigationIntegrity(latest) : null, regionalContext: { state: anomaly?.severity ?? "NORMAL", affectedAircraft: anomaly?.affectedAircraftCount ?? 0, anomaly } };
   }
 
