@@ -312,7 +312,8 @@
         "/statistics",
         "/records",
         "/aircraft-types",
-        "/operators"
+        "/operators",
+        "/traffic/rhythm"
       ],
       "apis": [
         "/api/logbook/summary",
@@ -321,7 +322,8 @@
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic",
-        "/api/statistics/heatmap"
+        "/api/statistics/heatmap",
+        "/api/statistics/traffic-profile"
       ],
       "changelogScopes": [
         "statistics",
