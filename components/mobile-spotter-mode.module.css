@@ -287,3 +287,59 @@
   font-size: var(--font-size-xs);
 }
 
+.alertGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.alertGrid label {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.alertGrid label > span,
+.alertReasons > strong {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.alertGrid select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--foreground);
+  padding: var(--space-2);
+  font: inherit;
+}
+
+.alertReasons {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.alertReasons > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.alertReasons label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+}
+
+@media (max-width: 540px) {
+  .alertGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
