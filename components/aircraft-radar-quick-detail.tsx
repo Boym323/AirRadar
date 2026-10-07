@@ -102,14 +102,12 @@ function RouteEndpoint({ code, airport }: { code: string | null; airport: Airpor
   </span>;
 }
 
-function RouteSection({ route, callsign, visible }: { route: FlightRoute | undefined; callsign?: string; visible: boolean }) {
+function RouteSection({ route, visible }: { route: FlightRoute | undefined; visible: boolean }) {
   if (!visible || !route) return null;
   return <>
     <div className="aircraft-quick-header-route" aria-label={t.route.context}>
       <RouteEndpoint code={route.origin} airport={route.originAirport} />
       <span aria-hidden="true">→</span>
-      {callsign && <span>{callsign}</span>}
-      {callsign && <span aria-hidden="true">→</span>}
       <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
     </div>
     <p className="aircraft-quick-header-route-note">{t.route.contextDisclaimer}</p>
@@ -570,7 +568,6 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
   onToggleWatchlist: () => void;
   historyTrail: QuickHistoryTrail | null;
 }) {
-  // Shared RadarTrafficHero owns the live identity, source and metric presentation.
   const summary = trackingSummary(aircraft, historyTrail);
   const livePoint = aircraft.altitude === null ? null : { recordedAt: aircraft.lastSeen, altitude: aircraft.altitude };
   const chartPoints = historyTrail?.points ?? aircraft.trail ?? [];
@@ -778,7 +775,7 @@ export function AircraftRadarQuickDetail({
             verticalRate={verticalRateLabel(aircraft.verticalRate)}
           />
           <div className="aircraft-quick-header-context" aria-label={t.aircraft.liveTrackingTitle}>
-            <span><strong>{formatDistance(aircraft.distanceKm)}</strong> {t.aircraft.distance}</span>
+            {aircraft.distanceKm !== null && <span><strong>{formatDistance(aircraft.distanceKm)}</strong> {t.aircraft.distance}</span>}
             {sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}
             {phase && <strong>{phase}</strong>}
           </div>
