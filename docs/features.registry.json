@@ -391,11 +391,13 @@
       "introducedVersion": null,
       "summary": "Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events.",
       "pages": [
-        "/intelligence"
+        "/intelligence",
+        "/intelligence/analytics"
       ],
       "apis": [
         "/api/intelligence/events",
-        "/api/intelligence/stream"
+        "/api/intelligence/stream",
+        "/api/intelligence/analytics"
       ],
       "changelogScopes": [
         "intelligence"
@@ -404,7 +406,8 @@
         "flight intelligence",
         "go-around",
         "holding detection",
-        "transition intelligence"
+        "transition intelligence",
+        "flight intelligence analytics"
       ]
     },
     {
