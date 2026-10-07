@@ -464,7 +464,7 @@ export function NotificationCenter() {
             </li>;
           })}
         </ol> : <EmptyState title={data.items.length ? copy.noMatches : copy.empty} />}
-      {data?.nextPage !== null ? <div className={styles.preferenceActions}>
+      {data && data.nextPage !== null ? <div className={styles.preferenceActions}>
         <button className={styles.saveButton} type="button" disabled={loadingMore} onClick={() => void loadMore()}>
           {loadingMore ? copy.loadingMore : copy.loadMore}
         </button>
