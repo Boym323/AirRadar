@@ -182,6 +182,13 @@ export const en = {
     weatherStation: "METAR station",
     slantDistance: "Slant distance",
     visualScore: "Visibility",
+    lightGeometry: "Sun & light",
+    lightGeometryDescription: "Sun position and lighting angle relative to the current aircraft bearing, computed locally in the browser.",
+    sunAzimuth: "Sun azimuth",
+    sunElevation: "Sun elevation",
+    lightAngle: "Light angle",
+    lightPeriods: { DAY: "day", GOLDEN_HOUR: "golden hour", TWILIGHT: "twilight", NIGHT: "night" },
+    lighting: { FRONT: "front light", SIDE: "side light", BACK: "backlight", UNAVAILABLE: "no direct sun" },
     visualReasons: {
       HIGH_ELEVATION: "good elevation",
       LOW_ELEVATION: "low on horizon",
