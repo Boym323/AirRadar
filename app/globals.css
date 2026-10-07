@@ -35,8 +35,8 @@
   --border-selected: color-mix(in srgb, var(--selected) 42%, transparent);
   --border-danger: color-mix(in srgb, var(--danger) 46%, transparent);
 
-  --font-size-2xs: 9px;
-  --font-size-xs: 10px;
+  --font-size-2xs: 10px;
+  --font-size-xs: 11px;
   --font-size-sm: 11px;
   --font-size-md: 12px;
   --font-size-base: 14px;
@@ -5705,3 +5705,148 @@ button, input, select, textarea { color-scheme: dark; }
 .time-machine-replay-banner strong { color: var(--selected); font-size: var(--font-size-xs); letter-spacing: var(--letter-spacing-kicker); }
 .time-machine-replay-banner span { color: var(--text-secondary); font-size: var(--font-size-xs); text-align: right; }
 @media (max-width: 640px) { .intelligence-replay, .time-machine-replay-banner { align-items: flex-start; flex-direction: column; } .intelligence-replay span, .time-machine-replay-banner span { text-align: left; } }
+
+
+/* Visual System V3 / Density & hierarchy pass: one quiet map HUD and readable telemetry. */
+.map-overlay-primary {
+  width: fit-content;
+  max-width: 100%;
+  justify-content: start;
+  padding: 4px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
+  box-shadow: var(--shadow-control);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.map-overlay-primary .map-summary-card {
+  min-height: var(--control-height);
+  padding: 6px 10px;
+  border: 0;
+  border-right: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.map-overlay-primary .map-control-group-primary {
+  gap: 2px;
+  box-shadow: none;
+}
+
+.map-overlay-primary [data-testid="operations-center-trigger"],
+.map-overlay-primary .traffic-trigger,
+.map-overlay-primary > [data-testid="radar-presets-v1"] > summary,
+.map-overlay-primary > .map-layers > summary {
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.map-overlay-primary [data-testid="operations-center-trigger"]:hover,
+.map-overlay-primary .traffic-trigger:hover,
+.map-overlay-primary .traffic-trigger.active,
+.map-overlay-primary > [data-testid="radar-presets-v1"] > summary:hover,
+.map-overlay-primary > [data-testid="radar-presets-v1"][open] > summary,
+.map-overlay-primary > .map-layers > summary:hover,
+.map-overlay-primary > .map-layers[open] > summary {
+  border-color: var(--border-accent);
+  background: var(--surface-accent-soft);
+}
+
+.map-summary-item span,
+.map-summary-filter-state,
+.topbar-live-status,
+.topbar-metric span,
+.topbar-utc span,
+.radar-rail-label,
+.map-layer-group-title,
+.map-layer-subgroup-heading {
+  font-size: var(--font-size-2xs);
+}
+
+.sidebar .coverage-switch button,
+.sidebar .coverage-subcount,
+.sidebar .atc-panel-live,
+.sidebar .atc-panel-disclaimer,
+.sidebar .dashboard-logbook-metric span,
+.sidebar .dashboard-logbook-highlights h3,
+.sidebar .dashboard-record > span,
+.sidebar .dashboard-record small {
+  font-size: var(--font-size-2xs);
+}
+
+@media (min-width: 1101px) and (max-width: 1500px) {
+  :root { --radar-rail-width: 82px; }
+
+  .topbar {
+    gap: var(--space-3);
+    padding-inline: var(--space-4);
+  }
+
+  .topbar-radar .brand { min-width: 164px; }
+  .topbar-radar .global-search { flex-basis: 360px; max-width: 520px; }
+  .topbar-radar .topbar-meta { gap: var(--space-2); }
+  .topbar-ops-meta { gap: var(--space-2); }
+  .topbar-metric { min-width: 42px; padding-left: var(--space-2); }
+  .topbar-radar .topbar-receiver { padding-left: var(--space-2); }
+  .topbar-receiver-name { max-width: 126px; }
+  .radar-nav-rail { padding-inline: 6px; }
+  .radar-rail-link { min-height: 56px; }
+}
+
+@media (min-width: 821px) and (max-width: 1260px) {
+  .map-overlay-primary {
+    grid-template-columns: minmax(0, auto) auto auto;
+  }
+
+  .map-overlay-primary .map-summary-card {
+    grid-column: 1 / -1;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .map-control-group-primary {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .map-overlay-primary > [data-testid="radar-presets-v1"] {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .map-overlay-primary > .map-layers {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .map-overlay-primary > [data-testid="radar-presets-v1"] .map-control-label,
+  .map-overlay-primary > .map-layers .map-control-label {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .map-overlay-primary {
+    padding: 3px;
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(10px);
+  }
+
+  .map-overlay-primary .map-summary-card {
+    min-height: 38px;
+    border-right: 0;
+  }
+
+  .map-overlay-primary [data-testid="operations-center-trigger"],
+  .map-overlay-primary .traffic-trigger,
+  .map-overlay-primary > [data-testid="radar-presets-v1"] > summary,
+  .map-overlay-primary > .map-layers > summary {
+    min-height: var(--control-height-touch);
+  }
+}
