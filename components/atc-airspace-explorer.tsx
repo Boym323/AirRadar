@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AirspaceActivityResponse, PlannedAirspaceWindow } from "@/lib/airspace-activity/types";
@@ -119,6 +120,7 @@ export function AtcAirspaceExplorer() {
     frequencies: "Frekvence",
     updated: "Aktualizováno",
     historicalActual: "Oficiální actual záznamy (zpožděné)",
+    sectorDetail: "Detail sektoru",
   } : {
     title: "ATC & Airspace",
     subtitle: "Current sector load, inter-sector transitions and published AUP/UUP allocation in one operational view.",
@@ -149,6 +151,7 @@ export function AtcAirspaceExplorer() {
     frequencies: "Frequencies",
     updated: "Updated",
     historicalActual: "Official actual records (delayed)",
+    sectorDetail: "Sector detail",
   };
 
   const [traffic, setTraffic] = useState<SectorTrafficResponse | null>(null);
@@ -366,7 +369,7 @@ export function AtcAirspaceExplorer() {
         <SectionHeader kicker={selected?.sectorId ?? "SECTOR"} title={copy.history} description={copy.historyDescription} />
         {selected ? <div className={styles.history}>
           <div className={styles.selectedSector}>
-            <div><strong>{selected.name}</strong><span>{selected.sectorId}</span></div>
+            <div><strong>{selected.name}</strong><span>{selected.sectorId}</span><Link className={styles.detailLink} href={{ pathname: `/airspace/sectors/${selected.sectorId}` }}>{copy.sectorDetail}</Link></div>
             <StatusBadge variant={trafficVariant(selected.trafficLevel)}>{selected.trafficLevel}</StatusBadge>
           </div>
           <dl className={styles.historyMetrics}>
