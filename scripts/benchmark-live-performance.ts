@@ -3,6 +3,7 @@ import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { toPublicLiveStateSnapshot, getPublicAircraftChangeSet } from "@/lib/server/public-serialization";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
+import { mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import type { AircraftProvider } from "@/lib/server/provider";
 import type { Aircraft, ProviderSnapshot, PublicStateSnapshot } from "@/lib/aircraft/types";
 
@@ -78,8 +79,27 @@ function sseBenchmark(count: number, clients: number) {
   };
 }
 
-const counts = [50, 500, 1_000];
+function detailLookupBenchmark(count: number) {
+  const aircraft = fixtureAircraft(count);
+  const local = new Map(aircraft.map((item) => [item.icaoHex, item]));
+  const network = new Map(aircraft.map((item) => [item.icaoHex, { ...item, origin: "adsblol" as const }]));
+  const target = aircraft.at(-1)!.icaoHex;
+  const options = { localStaleAfterMs: 15_000, networkStaleAfterMs: 60_000 };
+  const iterations = 20;
+  const beforeStarted = performance.now();
+  for (let index = 0; index < iterations; index += 1) mergeAircraftMaps(local, network, receiver, options).find((item) => item.icaoHex === target);
+  const beforeMs = performance.now() - beforeStarted;
+  const afterStarted = performance.now();
+  for (let index = 0; index < iterations; index += 1) mergeAircraftObservations(local.get(target), network.get(target), receiver, options);
+  const afterMs = performance.now() - afterStarted;
+  return { count, iterations, beforeMs: Math.round(beforeMs * 100) / 100, afterMs: Math.round(afterMs * 100) / 100, speedup: Math.round((beforeMs / Math.max(afterMs, 0.001)) * 100) / 100 };
+}
+
+// Keep these sizes aligned with the runtime audit contract. The benchmark is
+// intentionally report-only; hosted runner wall-clock values are informative.
+const counts = [100, 1_000, 5_000];
 const results = [
+  ...counts.map(detailLookupBenchmark),
   ...counts.flatMap((count) => [fanoutBenchmark(count, 1, "local"), fanoutBenchmark(count, 20, "local")]),
   ...counts.map((count) => fanoutBenchmark(count, 20, "extended")),
   ...counts.map((count) => sseBenchmark(count, 20)),

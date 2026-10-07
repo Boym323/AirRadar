@@ -15,8 +15,8 @@ describe("Aircraft Operational Focus Outcome Validation V1 boundary", () => {
   });
 
   it("samples truth only from the existing LOCAL receiver refresh path", () => {
-    expect(aircraftStateSource).toContain("operationalFocusOutcome.observe([...this.localAircraft.values()]");
-    expect(aircraftStateSource).not.toContain("operationalFocusOutcome.observe([...this.networkAircraft.values()]");
+    expect(aircraftStateSource).toContain("operationalFocusOutcome.observe(this.localAircraft");
+    expect(aircraftStateSource).not.toContain("operationalFocusOutcome.observe(this.networkAircraft");
     expect(validatorSource).not.toContain("setInterval");
     expect(validatorSource).not.toContain("fetch(");
   });
