@@ -147,11 +147,32 @@ export function removeFollowedJourney(state: FollowedJourneysState, key: string)
 }
 
 export function updateJourneyFromEvents(journey: FollowedJourney, events: readonly IntelligenceIdentity[]): FollowedJourney {
-  const matching = events.filter((event) =>
+  let current = journey;
+  let matching = events.filter((event) =>
     (journey.flightId !== null && event.flightId === journey.flightId)
     || (journey.lifecycleKey !== null && event.lifecycleKey === journey.lifecycleKey)
   );
+
+  if (journey.identity === "PROVISIONAL") {
+    const promoted = [...events]
+      .filter((event) => Boolean(event.lifecycleKey))
+      .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt))[0] ?? null;
+    if (promoted) {
+      current = {
+        ...journey,
+        key: promoted.flightId ? "flight:" + promoted.flightId : "lifecycle:" + promoted.lifecycleKey,
+        identity: "DURABLE",
+        flightId: promoted.flightId,
+        lifecycleKey: promoted.lifecycleKey,
+      };
+      matching = events.filter((event) =>
+        (current.flightId !== null && event.flightId === current.flightId)
+        || event.lifecycleKey === current.lifecycleKey
+      );
+    }
+  }
+
   const landing = matching.find((event) => event.type === "LANDING");
-  if (!landing) return journey;
-  return { ...journey, status: "COMPLETED", completedAt: iso(landing.occurredAt) };
+  if (!landing) return current;
+  return { ...current, status: "COMPLETED", completedAt: iso(landing.occurredAt) };
 }
