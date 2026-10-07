@@ -15,6 +15,7 @@ import { DEFAULT_SPOTTER_ALERT_PREFERENCES, readSpotterAlertPreferences, shouldT
 import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } from "@/lib/spotter-sky-finder";
 import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
+import { rankUpcomingSky } from "@/lib/spotter-upcoming";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -314,6 +315,18 @@ export function MobileSpotterMode() {
       : [...alertPreferences.reasons, reason];
     updateAlertPreferences({ ...alertPreferences, reasons });
   };
+
+  const upcomingSky = useMemo(
+    () => distanceOrigin === "observer" && observer
+      ? rankUpcomingSky(
+          visibleAircraft.map((item) => item.aircraft),
+          observer,
+          labelsByHex,
+          discovery?.todayReceptionRecord?.icaoHex ?? null,
+        )
+      : [],
+    [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
+  );
 
   const skyStory = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
@@ -686,15 +699,15 @@ export function MobileSpotterMode() {
       </div>
     </Panel> : null}
 
-    {distanceOrigin === "observer" && observerState === "ready" && upcomingPasses.length ? <Panel>
-      <SectionHeader kicker="MY SKY / CPA" title={copy.comingOverhead} description={copy.comingOverheadDescription} />
+    {distanceOrigin === "observer" && observerState === "ready" && upcomingSky.length ? <Panel>
+      <SectionHeader kicker="MY SKY / NEXT" title={copy.whatsNext} description={copy.whatsNextDescription} />
       <div className={styles.passList}>
-        {upcomingPasses.map(({ aircraft, closestApproach }) => {
+        {upcomingSky.map(({ aircraft, closestApproach, interest, rankScore }) => {
           const route = aircraft.enrichment?.route;
           const identity = aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex;
-          const lead = closestApproach!.secondsUntilClosest < 30
+          const lead = closestApproach.secondsUntilClosest < 30
             ? copy.now
-            : Math.max(1, Math.round(closestApproach!.secondsUntilClosest / 60)) + " min";
+            : Math.max(1, Math.round(closestApproach.secondsUntilClosest / 60)) + " min";
           return <article className={styles.passCard} key={aircraft.icaoHex}>
             <div>
               <strong>{identity}</strong>
@@ -702,12 +715,13 @@ export function MobileSpotterMode() {
               {route?.origin || route?.destination
                 ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small>
                 : null}
+              <small>{copy.interestScore}: {interest.score} · {copy.rank}: {formatNumber(rankScore)}</small>
             </div>
             <div className={styles.passMetrics}>
-              <strong>{formatDistance(closestApproach!.closestHorizontalDistanceKm)}</strong>
+              <strong>{formatDistance(closestApproach.closestHorizontalDistanceKm)}</strong>
               <span>{copy.inPrefix} {lead}</span>
-              {closestApproach!.elevationAtClosestDeg !== null
-                ? <small>{copy.elevation} {formatNumber(closestApproach!.elevationAtClosestDeg)}°</small>
+              {closestApproach.elevationAtClosestDeg !== null
+                ? <small>{copy.elevation} {formatNumber(closestApproach.elevationAtClosestDeg)}°</small>
                 : null}
             </div>
           </article>;
