@@ -909,7 +909,7 @@
       "category": "mobile / radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Mobile-first LOCAL receiver view with distance sorting, bounded filters, Discovery badges and canonical radar/watchlist/detail actions.",
+      "summary": "Mobile-first LOCAL spotter with receiver/My Location geometry, bounded closest-approach projection, recent Time Machine pass history, explainable interest scoring, browser-local foreground PWA alerts, and sensor-assisted Sky Finder; observer coordinates never leave the browser.",
       "pages": [
         "/spotter"
       ],
@@ -920,6 +920,11 @@
       "changelogKeywords": [
         "spotter mode",
         "mobile spotter",
+        "my sky",
+        "closest approach",
+        "overhead history",
+        "spotter alerts",
+        "sky finder",
         "local receiver"
       ]
     }

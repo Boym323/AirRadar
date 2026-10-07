@@ -36,7 +36,7 @@ historicky přiřazený.
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Omezený explorer agregovaných tras. |
 | Investigation Links | production | productivity | Pre-registry | `/airspace`<br>`/compare/airports`<br>`/compare/flights`<br>`/navigation-integrity`<br>`/time-machine`<br>`/navigation`<br>`/procedures`<br>`/airspace/sectors/:id` | — | Bookmarkovatelný URL stav analytických, porovnávacích, navigačních, procedurálních a sektorových ploch s fail-closed parsováním a obnovou přes browser back/forward bez serverové persistence. |
 | Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Pojmenované browser-local kolekce canonical odkazů AirRadaru a bezpečného URL/query kontextu, omezené na 12 workspace po 12 položkách. |
-| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL receiver pohled s řazením podle vzdálenosti, omezenými filtry, Discovery badge a canonical akcemi radar/watchlist/detail. |
+| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL Spotter s geometrií vůči přijímači nebo Moje poloha, omezenou predikcí nejbližšího průletu, historií nedávných průletů z Time Machine, vysvětlitelným skóre zajímavosti, browser-local foreground PWA upozorněními a Sky Finderem využívajícím senzory; souřadnice pozorovatele neopouštějí prohlížeč. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2

@@ -343,3 +343,74 @@
   }
 }
 
+.skyFinder {
+  display: grid;
+  grid-template-columns: minmax(96px, 132px) 1fr;
+  gap: var(--space-4);
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+.skyCompass {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel);
+}
+
+.skyArrow {
+  display: inline-block;
+  font-size: var(--font-size-2xl);
+  transition: transform var(--motion-fast);
+}
+
+.skyTarget {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skyTarget > span {
+  color: var(--muted);
+}
+
+.skyTarget dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.skyTarget dl div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.skyTarget dt {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.skyTarget dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+.skyInstruction {
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+@media (max-width: 480px) {
+  .skyFinder {
+    grid-template-columns: 88px 1fr;
+    gap: var(--space-3);
+  }
+
+  .skyTarget dl {
+    grid-template-columns: 1fr;
+  }
+}
+
