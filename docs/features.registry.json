@@ -306,9 +306,15 @@
       "introducedVersion": null,
       "summary": "Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights.",
       "pages": [
-        "/statistics",
+        "/heatmap",
         "/recap/daily",
-        "/recap/weekly"
+        "/recap/weekly",
+        "/statistics",
+        "/records",
+        "/aircraft-types",
+        "/operators",
+        "/traffic/rhythm",
+        "/traffic/geography"
       ],
       "apis": [
         "/api/logbook/summary",
@@ -317,7 +323,8 @@
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic",
-        "/api/statistics/heatmap"
+        "/api/statistics/heatmap",
+        "/api/statistics/traffic-profile"
       ],
       "changelogScopes": [
         "statistics",
