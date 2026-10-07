@@ -195,6 +195,47 @@ export class AlertsFleetsRepository {
   }
   async listDeliveries(limit = 100): Promise<AlertV1Delivery[]> { const t = table("AlertDelivery"); if (!t) return []; return (await t.orderBy((row: { createdAt: { desc(): unknown } }) => row.createdAt.desc()).limit(Math.min(200, Math.max(1, limit))).all()).map((row) => ({ id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: String(row.status), attemptCount: Number(row.attemptCount ?? 0), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: row.claimedAt ? iso(row.claimedAt) : null, sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null })); }
 
+  async deliveryHealthSnapshot(): Promise<{
+    queueDepth: number;
+    processing: number;
+    sent: number;
+    failed: number;
+    retryPending: number;
+    totalAttempts: number;
+    terminalFailures: number;
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+    lastError: string | null;
+  }> {
+    const t = table("AlertDelivery");
+    if (!t) return { queueDepth: 0, processing: 0, sent: 0, failed: 0, retryPending: 0, totalAttempts: 0, terminalFailures: 0, lastSuccessAt: null, lastFailureAt: null, lastError: null };
+    const rows = await t.where({}).all();
+    let queueDepth = 0, processing = 0, sent = 0, failed = 0, retryPending = 0, totalAttempts = 0;
+    let lastSuccessAt: string | null = null, lastFailureAt: string | null = null, lastError: string | null = null;
+    for (const row of rows) {
+      const status = String(row.status ?? "");
+      const attempts = Number(row.attemptCount ?? 0);
+      totalAttempts += Number.isFinite(attempts) ? attempts : 0;
+      if (status === "PENDING") {
+        queueDepth += 1;
+        if (attempts > 0) retryPending += 1;
+      } else if (status === "PROCESSING") processing += 1;
+      else if (status === "SENT") {
+        sent += 1;
+        const at = row.sentAt ? iso(row.sentAt) : null;
+        if (at && (!lastSuccessAt || Date.parse(at) > Date.parse(lastSuccessAt))) lastSuccessAt = at;
+      } else if (status === "FAILED") {
+        failed += 1;
+        const at = row.updatedAt ? iso(row.updatedAt) : null;
+        if (at && (!lastFailureAt || Date.parse(at) > Date.parse(lastFailureAt))) {
+          lastFailureAt = at;
+          lastError = typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null;
+        }
+      }
+    }
+    return { queueDepth, processing, sent, failed, retryPending, totalAttempts, terminalFailures: failed, lastSuccessAt, lastFailureAt, lastError };
+  }
+
   async getOccurrenceForDelivery(id: string): Promise<AlertV1DeliveryOccurrence | null> {
     const t = table("AlertOccurrence");
     if (!t) return null;

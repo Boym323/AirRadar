@@ -16,6 +16,20 @@ function credentials(): { publicKey: string; privateKey: string; subject: string
 
 export function isWebPushConfigured(): boolean { return credentials() !== null; }
 
+const webPushHealth = {
+  attempts: 0,
+  sent: 0,
+  failed: 0,
+  staleSubscriptionsRemoved: 0,
+  lastSuccessAt: null as string | null,
+  lastFailureAt: null as string | null,
+  lastError: null as string | null,
+};
+
+export function getWebPushDiagnostics() {
+  return { configured: isWebPushConfigured(), ...webPushHealth };
+}
+
 export class WebPushNotifier implements AlertNotifier {
   readonly name = "web-push";
   readonly enabled: boolean;
@@ -28,11 +42,23 @@ export class WebPushNotifier implements AlertNotifier {
     webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
     const payload = JSON.stringify({ title: alert.emergency ? "AirRadar · nouzový squawk" : "AirRadar · upozornění", body: `${alert.aircraft.callsign || alert.aircraft.registration || alert.aircraft.icaoHex} · ${alert.squawk ? `Squawk ${alert.squawk}` : alert.type === "entered_radius" ? "vstup do sledované zóny" : "sledované letadlo"}`, url: `/aircraft/${encodeURIComponent(alert.aircraft.icaoHex)}`, tag: alert.eventId ?? alert.type ?? "airradar-alert" });
     for (const subscription of await listWebPushSubscriptions()) {
-      try { await webpush.sendNotification(subscription, payload, { TTL: 3600 }); }
-      catch (error) {
+      webPushHealth.attempts += 1;
+      try {
+        await webpush.sendNotification(subscription, payload, { TTL: 3600 });
+        webPushHealth.sent += 1;
+        webPushHealth.lastSuccessAt = new Date().toISOString();
+        webPushHealth.lastError = null;
+      } catch (error) {
         const status = error && typeof error === "object" && "statusCode" in error ? Number(error.statusCode) : 0;
-        if (status === 404 || status === 410) await removeWebPushSubscription(subscription.endpoint);
-        else throw error;
+        if (status === 404 || status === 410) {
+          await removeWebPushSubscription(subscription.endpoint);
+          webPushHealth.staleSubscriptionsRemoved += 1;
+        } else {
+          webPushHealth.failed += 1;
+          webPushHealth.lastFailureAt = new Date().toISOString();
+          webPushHealth.lastError = (error instanceof Error ? error.message : "web push failed").replace(/[\r\n]/g, " ").slice(0, 300);
+          throw error;
+        }
       }
     }
   }
