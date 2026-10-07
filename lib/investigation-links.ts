@@ -35,6 +35,7 @@ export interface AirportCompareInvestigationState {
 
 export interface NavigationReferenceInvestigationState {
   id: string | null;
+  route?: string | null;
 }
 
 export interface ProcedureInvestigationState {
@@ -93,6 +94,11 @@ function safeAirportIcao(value: string | null): string | null {
 function safeNavIdentifier(value: string | null): string | null {
   const normalized = value?.trim().toUpperCase() ?? "";
   return /^[A-Z0-9]{2,8}$/.test(normalized) ? normalized : null;
+}
+
+function safeAtsRouteDesignator(value: string | null): string | null {
+  const normalized = value?.trim().toUpperCase() ?? "";
+  return /^[A-Z0-9]{1,8}$/.test(normalized) ? normalized : null;
 }
 
 function safeProcedureDesignator(value: string | null): string {
@@ -187,13 +193,19 @@ export function buildAirportCompareInvestigation(state: AirportCompareInvestigat
 
 
 export function parseNavigationReferenceInvestigation(search: string): NavigationReferenceInvestigationState {
-  return { id: safeNavIdentifier(paramsFrom(search).get("id")) };
+  const params = paramsFrom(search);
+  return {
+    id: safeNavIdentifier(params.get("id")),
+    route: safeAtsRouteDesignator(params.get("route")),
+  };
 }
 
 export function buildNavigationReferenceInvestigation(state: NavigationReferenceInvestigationState): string {
   const params = new URLSearchParams();
   const id = safeNavIdentifier(state.id);
+  const route = safeAtsRouteDesignator(state.route ?? null);
   if (id) params.set("id", id);
+  if (route) params.set("route", route);
   return params.toString();
 }
 
