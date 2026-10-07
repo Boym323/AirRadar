@@ -113,10 +113,13 @@ describe("radar UI polish helpers", () => {
     expect(aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false, stale: true })).toContain("stale");
   });
 
-  it("keeps all primary routes reachable from the mobile radar header", () => {
+  it("keeps secondary routes reachable from the canonical mobile overflow", () => {
+    const moreNavigation = shellSource.slice(shellSource.indexOf("const moreNavigation"), shellSource.indexOf("function pathMatches"));
+    const mobile = shellSource.slice(shellSource.indexOf("export function MobileBottomNav"), shellSource.indexOf("export function AirRadarPageShell"));
     expect(shellSource).toContain("mobile-bottom-nav");
-    expect(shellSource).toContain('href="/alerts"');
-    expect(shellSource).toContain('href="/recap/daily"');
+    expect(moreNavigation).toContain('href: "/alerts"');
+    expect(moreNavigation).toContain('href: "/recap/daily"');
+    expect(mobile).toContain("moreNavigation.map");
     expect(globalCss).toContain(".mobile-bottom-more > div");
   });
 
