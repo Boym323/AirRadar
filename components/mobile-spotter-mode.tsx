@@ -7,6 +7,7 @@ import { Button, EmptyState, MetricCard, MetricStrip, PageHeader, Panel, Section
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
+import type { MetarMapObservation } from "@/lib/weather/types";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
 import { findRecentObserverPasses } from "@/lib/spotter-history";
@@ -20,6 +21,7 @@ import { SPOTTER_LOGBOOK_STORAGE_KEY, addSpotterLogbookEntry, createSpotterLogbo
 import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
 import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-share-card";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
+import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotter-visual-acquisition";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -58,6 +60,8 @@ export function MobileSpotterMode() {
   const [spotSaving, setSpotSaving] = useState(false);
   const [spotMessage, setSpotMessage] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [metarObservations, setMetarObservations] = useState<MetarMapObservation[]>([]);
+  const [metarState, setMetarState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -179,6 +183,41 @@ export function MobileSpotterMode() {
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (distanceOrigin !== "observer" || observerState !== "ready") {
+      setMetarObservations([]);
+      setMetarState("idle");
+      return;
+    }
+    let active = true;
+    let controller: AbortController | null = null;
+    const load = () => {
+      controller?.abort();
+      controller = new AbortController();
+      setMetarState("loading");
+      void fetch("/api/weather/metar-map", { cache: "no-store", signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("regional METAR unavailable");
+          return await response.json() as { observations?: MetarMapObservation[] };
+        })
+        .then((payload) => {
+          if (!active) return;
+          setMetarObservations(Array.isArray(payload.observations) ? payload.observations : []);
+          setMetarState("ready");
+        })
+        .catch((error) => {
+          if (active && (error as Error).name !== "AbortError") setMetarState("failed");
+        });
+    };
+    load();
+    const timer = window.setInterval(load, 10 * 60_000);
+    return () => {
+      active = false;
+      controller?.abort();
+      window.clearInterval(timer);
+    };
+  }, [distanceOrigin, observerState]);
 
   useEffect(() => {
     if (distanceOrigin !== "observer" || observerState !== "ready") {
@@ -495,6 +534,15 @@ export function MobileSpotterMode() {
     ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story)
     : null;
 
+  const nearestMetar = useMemo(
+    () => observer ? nearestMetarObservation(metarObservations, observer) : null,
+    [metarObservations, observer],
+  );
+
+  const visualAcquisition = skyStory && observer
+    ? evaluateVisualAcquisition(skyStory.aircraft, observer, nearestMetar)
+    : null;
+
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = interestingAircraft[0]
@@ -673,6 +721,40 @@ export function MobileSpotterMode() {
         {shareMessage ? <small className={styles.locationAccuracy}>{shareMessage}</small> : null}
         <small className={styles.locationAccuracy}>{copy.shareCardDescription}</small>
       </article>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" && visualAcquisition ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / VISUAL"
+        title={copy.visualAcquisition}
+        description={copy.visualAcquisitionDescription}
+        actions={<StatusBadge variant={
+          visualAcquisition.status === "GOOD" ? "live"
+            : visualAcquisition.status === "POOR" ? "danger"
+              : visualAcquisition.status === "POSSIBLE" ? "stale"
+                : "neutral"
+        }>{copy.visualStatus[visualAcquisition.status]} · {visualAcquisition.score}/100</StatusBadge>}
+      />
+      <dl className={styles.arrivalContext}>
+        <div><dt>{copy.elevation}</dt><dd>{visualAcquisition.elevationDeg === null ? "—" : formatNumber(visualAcquisition.elevationDeg) + "°"}</dd></div>
+        <div><dt>{copy.slantDistance}</dt><dd>{formatDistance(visualAcquisition.slantDistanceKm)}</dd></div>
+        <div><dt>{copy.visibility}</dt><dd>{
+          visualAcquisition.visibilityMeters === null
+            ? "—"
+            : visualAcquisition.visibilityMeters >= 1000
+              ? formatNumber(visualAcquisition.visibilityMeters / 1000) + " km"
+              : formatNumber(visualAcquisition.visibilityMeters) + " m"
+        }</dd></div>
+        <div><dt>{copy.ceiling}</dt><dd>{visualAcquisition.ceilingFtAgl === null ? "—" : formatNumber(visualAcquisition.ceilingFtAgl) + " ft AGL"}</dd></div>
+        <div><dt>{copy.weatherStation}</dt><dd>{
+          visualAcquisition.weatherStationId
+            ? visualAcquisition.weatherStationId + (visualAcquisition.weatherStationDistanceKm === null ? "" : " · " + formatDistance(visualAcquisition.weatherStationDistanceKm))
+            : metarState === "failed" ? "—" : "…"
+        }</dd></div>
+      </dl>
+      <div className={styles.interestReasons}>
+        {visualAcquisition.reasons.map((reason) => <span key={reason}>{copy.visualReasons[reason]}</span>)}
+      </div>
     </Panel> : null}
 
     {prgArrival ? <Panel>
