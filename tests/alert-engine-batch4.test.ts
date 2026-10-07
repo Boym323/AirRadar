@@ -88,7 +88,8 @@ describe("batch 4 alert transitions", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(history.detected.map((entry) => entry.record?.scope)).toEqual(["daily", "lifetime"]);
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(history.recordNotification).toHaveBeenCalledTimes(2);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("alerts once for confirmed holding and permits a separate lifecycle episode", async () => {
