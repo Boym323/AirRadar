@@ -982,6 +982,28 @@
         "event timeline",
         "unified events"
       ]
+    },
+    {
+      "id": "followed-journeys",
+      "name": "Follow Flight / Journey",
+      "category": "personal / flights",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Browser-local following of a specific journey using durable Flight Intelligence flight/lifecycle identity when available, explicit provisional identity otherwise, canonical event timelines, and automatic landing completion without turning an aircraft watchlist into a journey tracker.",
+      "pages": [
+        "/journeys",
+        "/aircraft/:hex"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "follow-flight",
+        "journeys"
+      ],
+      "changelogKeywords": [
+        "follow flight",
+        "followed journey",
+        "journey timeline"
+      ]
     }
   ]
 }
