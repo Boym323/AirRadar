@@ -837,6 +837,30 @@
         "why prediction",
         "prediction rationale"
       ]
+    },
+    {
+      "id": "investigation-links",
+      "name": "Investigation Links",
+      "category": "productivity",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bookmarkable URL state for existing analytical surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
+      "pages": [
+        "/airspace",
+        "/compare/airports",
+        "/compare/flights",
+        "/navigation-integrity",
+        "/time-machine"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "investigation-links"
+      ],
+      "changelogKeywords": [
+        "investigation links",
+        "deep links",
+        "bookmarkable state"
+      ]
     }
   ]
 }

@@ -18,6 +18,7 @@ not yet been historically attributed.
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Why/Proč evidence panels for readiness-gated ETA, runway, runway-change and trajectory advisories using a small capability-specific whitelist from the existing canonical prediction evidence. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
+| Investigation Links | production | productivity | Pre-registry | `/airspace`<br>`/compare/airports`<br>`/compare/flights`<br>`/navigation-integrity`<br>`/time-machine` | — | Bookmarkable URL state for existing analytical surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence. |
 | Live Airport Network | production | airports | Pre-registry | `/airports` | — | Bounded /airports operational network showing favorite and live-route-active airports with canonical Airport Operations, receiver-only approach-queue state, likely runway, next inbound estimate, and direct Live Board navigation. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | `/weather` | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
@@ -708,3 +709,16 @@ Event Outcome V2 now compares canonical and wind-adjusted timing for the same wa
 ### Explainable Prediction V1
 
 Aircraft predictive advisory cards expose a `Why?` disclosure for ETA, runway, runway-change and trajectory outputs. Evidence comes from the same canonical prediction evaluation and is passed only through the existing readiness-gated advisory builders. A capability-specific whitelist limits public evidence to product-safe inputs such as remaining distance, effective speed, phase, recent runway usage, surface wind, candidate margin and trajectory geometry. No second prediction request or parallel model is introduced.
+
+
+## Investigation Links V1
+
+Analytical state on Airspace, Navigation Integrity, Flight Compare and Airport
+Compare is encoded in bounded, human-readable query parameters. Invalid values
+fail closed to safe defaults, while browser back/forward restores the matching
+UI state. The existing Time Machine `at`, `replay`, `hex` and `flightId`
+deep-link contract is preserved without modifying its parallel V3 work.
+
+V1 adds no server-side session identifier, API, database persistence or hidden
+share token. A copied URL is the complete bookmarkable investigation state for
+the supported controls.
