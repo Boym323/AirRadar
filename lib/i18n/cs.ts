@@ -97,6 +97,8 @@ export const cs = {
     deliveryFilter: "Doručení",
     search: "Hledat ICAO, callsign nebo pravidlo",
     noMatches: "Žádná oznámení neodpovídají aktuálním filtrům.",
+    loadMore: "Načíst další",
+    loadingMore: "Načítám…",
     filterCategories: { ALL: "VŠE", WATCHLIST: "WATCHLIST", EMERGENCY: "EMERGENCY", INTELLIGENCE: "INTELLIGENCE", RECORDS: "RECORDS" },
     filterDelivery: { ALL: "VŠE", DELIVERED: "DORUČENO", FAILED: "SELHALO", CENTER_ONLY: "JEN CENTRUM" },
     why: "Proč",
