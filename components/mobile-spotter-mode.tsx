@@ -8,6 +8,8 @@ import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
 import type { MetarMapObservation } from "@/lib/weather/types";
+import type { Airport } from "@/lib/airports/types";
+import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
 import { findRecentObserverPasses } from "@/lib/spotter-history";
@@ -25,6 +27,7 @@ import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotte
 import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
 import { buildSpotterBriefing } from "@/lib/spotter-briefing";
+import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -65,6 +68,9 @@ export function MobileSpotterMode() {
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [metarObservations, setMetarObservations] = useState<MetarMapObservation[]>([]);
   const [metarState, setMetarState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [prgAirport, setPrgAirport] = useState<Airport | null>(null);
+  const [prgOperations, setPrgOperations] = useState<AirportOperationsResponse | null>(null);
+  const [prgSpottingState, setPrgSpottingState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -155,6 +161,62 @@ export function MobileSpotterMode() {
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [distanceOrigin]);
+
+  useEffect(() => {
+    if (distanceOrigin !== "observer" || observerState !== "ready") {
+      setPrgAirport(null);
+      setPrgOperations(null);
+      setPrgSpottingState("idle");
+      return;
+    }
+
+    let active = true;
+    const airportController = new AbortController();
+    void fetch("/api/airports/LKPR", { cache: "force-cache", signal: airportController.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("LKPR detail unavailable");
+        return await response.json() as { airport?: Airport };
+      })
+      .then((payload) => {
+        if (!active) return;
+        setPrgAirport(payload.airport ?? null);
+      })
+      .catch((error) => {
+        if (active && (error as Error).name !== "AbortError") setPrgSpottingState("failed");
+      });
+
+    let operationsController: AbortController | null = null;
+    const loadOperations = () => {
+      operationsController?.abort();
+      operationsController = new AbortController();
+      setPrgSpottingState("loading");
+      void fetch("/api/airports/LKPR/operations?period=24h", {
+        cache: "no-store",
+        signal: operationsController.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("LKPR operations unavailable");
+          return await response.json() as AirportOperationsResponse;
+        })
+        .then((operations) => {
+          if (!active) return;
+          setPrgOperations(operations);
+          setPrgSpottingState("ready");
+        })
+        .catch((error) => {
+          if (active && (error as Error).name !== "AbortError") setPrgSpottingState("failed");
+        });
+    };
+    loadOperations();
+    const timer = window.setInterval(loadOperations, 30_000);
+
+    return () => {
+      active = false;
+      airportController.abort();
+      operationsController?.abort();
+      window.clearInterval(timer);
+    };
+  }, [distanceOrigin, observerState]);
 
   useEffect(() => {
     let active = true;
@@ -628,6 +690,19 @@ export function MobileSpotterMode() {
     [briefingSkyWithPhoto],
   );
 
+  const prgSpottingMode = useMemo(
+    () => prgAirport && prgOperations
+      ? buildPrgSpottingMode(
+          snapshot?.aircraft ?? [],
+          prgAirport,
+          prgOperations,
+          observer,
+          snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(),
+        )
+      : null,
+    [observer, prgAirport, prgOperations, snapshot?.aircraft, snapshot?.fetchedAt],
+  );
+
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
     [historyTracks, observer],
@@ -780,6 +855,43 @@ export function MobileSpotterMode() {
           </article>;
         })}
       </div> : <EmptyState title={copy.briefingCondition.EMPTY} />}
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
+      <SectionHeader
+        kicker="PRG / SPOTTING"
+        title={copy.prgSpottingMode}
+        description={copy.prgSpottingDescription}
+        actions={prgSpottingMode ? <StatusBadge variant={
+          prgSpottingMode.queueState === "BUSY" ? "stale"
+            : prgSpottingMode.queueState === "EMPTY" ? "neutral"
+              : "live"
+        }>{copy.prgQueueState[prgSpottingMode.queueState]}</StatusBadge> : null}
+      />
+      {prgSpottingMode ? <>
+        <MetricStrip className={styles.metrics}>
+          <MetricCard value={copy.prgActivityState[prgSpottingMode.activity]} label={copy.prgActivity} />
+          <MetricCard value={prgSpottingMode.likelyRunway ? "RWY " + prgSpottingMode.likelyRunway : "—"} label={copy.prgLikelyRunway} />
+          <MetricCard value={formatNumber(prgSpottingMode.inboundCount)} label={copy.prgInboundQueue} />
+          <MetricCard value={prgSpottingMode.nextEtaAt ? formatDateTime(prgSpottingMode.nextEtaAt, t) : "—"} label={copy.prgNextArrival} />
+        </MetricStrip>
+        {prgSpottingMode.nextArrivals.length ? <div className={styles.passList}>
+          {prgSpottingMode.nextArrivals.map((item) => <article className={styles.passCard} key={item.icaoHex}>
+            <div>
+              <strong>{item.label}</strong>
+              <span>{item.aircraftType ?? item.icaoHex}</span>
+              <small>{item.origin ?? "—"} → PRG · {copy.prgViewAngle[item.viewAngle]}</small>
+            </div>
+            <div className={styles.passMetrics}>
+              <strong>{item.etaAt ? formatDateTime(item.etaAt, t) : "—"}</strong>
+              <span>{item.distanceToPrgKm === null ? "—" : formatDistance(item.distanceToPrgKm)} → PRG</span>
+              <small>{item.observerElevationDeg === null ? "—" : copy.elevation + " " + formatNumber(item.observerElevationDeg) + "°"}</small>
+            </div>
+          </article>)}
+        </div> : <EmptyState title={copy.prgNoInbound} />}
+      </> : prgSpottingState === "failed"
+        ? <EmptyState title={copy.unavailable} />
+        : <p className={styles.loading}>{copy.loading}</p>}
     </Panel> : null}
 
     {distanceOrigin === "observer" && observerState === "ready" && skyStory ? <Panel className={styles.skyStoryPanel}>
