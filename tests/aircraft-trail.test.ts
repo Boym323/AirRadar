@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrailPoint } from "@/lib/aircraft/types";
-import { appendBoundedLiveTrailPoint, BROWSER_LIVE_TRAIL_MAX_POINTS, boundTrailPoints, filterPlausibleTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
+import { appendBoundedLiveTrailPoint, appendBoundedServerTrailPoint, BROWSER_LIVE_TRAIL_MAX_POINTS, SERVER_LOCAL_TRAIL_MAX_POINTS, boundTrailPoints, filterPlausibleTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
 
 const now = Date.parse("2026-09-08T12:20:00.000Z");
 
@@ -141,6 +141,18 @@ describe("selected aircraft live trail", () => {
     expect(result).toHaveLength(BROWSER_LIVE_TRAIL_MAX_POINTS);
     expect(result.at(-1)?.recordedAt).toBe(points.at(-1)?.recordedAt);
     expect(result[0]?.recordedAt).toBe(points[points.length - BROWSER_LIVE_TRAIL_MAX_POINTS]?.recordedAt);
+  });
+
+  it("bounds the server local live trail while preserving the newest endpoint", () => {
+    const points = Array.from(
+      { length: SERVER_LOCAL_TRAIL_MAX_POINTS + 80 },
+      (_, index) => point(-10 + index * 0.01, 14 + index * 0.00001),
+    );
+    const result = points.reduce<TrailPoint[]>((trail, next) => appendBoundedServerTrailPoint(trail, next), []);
+
+    expect(result).toHaveLength(SERVER_LOCAL_TRAIL_MAX_POINTS);
+    expect(result.at(-1)?.recordedAt).toBe(points.at(-1)?.recordedAt);
+    expect(result[0]?.recordedAt).toBe(points[points.length - SERVER_LOCAL_TRAIL_MAX_POINTS]?.recordedAt);
   });
 
   it("uses current-session points when history contributes nothing and clears on aircraft switch", () => {
