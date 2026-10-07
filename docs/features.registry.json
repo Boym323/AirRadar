@@ -346,7 +346,7 @@
       "category": "alerts",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, filtering/search, rationale, reversible aircraft/rule delivery mutes, delivery health diagnostics, and authenticated dry-run alert rule simulation.",
+      "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, server-side paginated filtering/search, rationale, reversible aircraft/rule delivery mutes, delivery health diagnostics, and authenticated dry-run alert rule simulation.",
       "pages": [
         "/watchlist",
         "/alerts",

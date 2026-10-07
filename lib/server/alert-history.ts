@@ -144,6 +144,8 @@ export interface AlertHistoryListOptions {
   pageSize?: number;
   filter?: AlertHistoryFilter;
   ruleIds?: readonly string[];
+  deliveryStatuses?: readonly AlertNotificationStatus[];
+  query?: string;
 }
 
 const MAX_PAGE_SIZE = 100;
@@ -251,6 +253,27 @@ function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): bo
   return entry.type === "new_aircraft" || entry.type === "reception_record";
 }
 
+function matchesDeliveryStatus(entry: AlertHistoryEntry, statuses: readonly AlertNotificationStatus[] | undefined): boolean {
+  if (statuses === undefined) return true;
+  if (!statuses.length) return false;
+  return statuses.includes(entry.notificationStatus);
+}
+
+function matchesQuery(entry: AlertHistoryEntry, query: string | undefined): boolean {
+  const normalized = query?.trim().toUpperCase();
+  if (!normalized) return true;
+  const haystack = [
+    entry.aircraft.icaoHex,
+    entry.aircraft.callsign ?? "",
+    entry.aircraft.registration ?? "",
+    entry.aircraft.aircraftType ?? "",
+    ...entry.ruleIds,
+    ...entry.ruleNames,
+    entry.alertV1?.ruleName ?? "",
+  ].join(" ").toUpperCase();
+  return haystack.includes(normalized);
+}
+
 function v1DeliveryStatus(row: AlertV1HistoryRow, payload: Record<string, unknown>): AlertNotificationStatus {
   if (!row.deliveries.length) return payload.notificationDeliveryMode === "CENTER_ONLY" ? "center_only" : "disabled";
   if (row.deliveries.some((delivery) => delivery.status === "FAILED")) return "failed";
@@ -299,7 +322,10 @@ function pageFromLines(lines: Iterable<unknown>, options: AlertHistoryListOption
   }
   const filter = options.filter ?? "all";
   const all = [...entries.values()]
-    .filter((entry) => matchesFilter(entry, filter) && matchesRuleIds(entry, options.ruleIds))
+    .filter((entry) => matchesFilter(entry, filter)
+      && matchesRuleIds(entry, options.ruleIds)
+      && matchesDeliveryStatus(entry, options.deliveryStatuses)
+      && matchesQuery(entry, options.query))
     .sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
   const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
   const page = Math.max(Math.trunc(options.page ?? 0), 0);
@@ -433,7 +459,10 @@ export async function listAlertHistory(options: AlertHistoryListOptions = {}): P
   let v1: AlertHistoryEntry[] = [];
   try { v1 = (await getAlertsFleetsRepository().listOccurrenceHistory(200)).map(entryFromV1); } catch { /* PostgreSQL is optional for live radar and history */ }
   const all = [...legacy.items, ...v1]
-    .filter((entry) => matchesFilter(entry, options.filter ?? "all") && matchesRuleIds(entry, options.ruleIds))
+    .filter((entry) => matchesFilter(entry, options.filter ?? "all")
+      && matchesRuleIds(entry, options.ruleIds)
+      && matchesDeliveryStatus(entry, options.deliveryStatuses)
+      && matchesQuery(entry, options.query))
     .sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
   const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
   const page = Math.max(Math.trunc(options.page ?? 0), 0);
