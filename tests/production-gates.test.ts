@@ -105,6 +105,13 @@ describe("production release metadata gate", () => {
     expect(source).toContain("alerts|fleet|intelligence|operations|recap|system|watchlist");
   });
 
+  it("treats bounded diagnostic API rate limits as expected browser-smoke responses", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('pathname === "/api/logbook/summary"');
+    expect(source).toContain('/^\\/api\\/navigation-integrity\\/aircraft\\/[A-F0-9]{6}$/i.test(pathname)');
+    expect(source).toContain("expectedRateLimitedApiErrors += 1");
+  });
+
   it("keeps production-gate weather persistence inside its temporary state", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
