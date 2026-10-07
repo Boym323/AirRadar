@@ -6,8 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, SegmentedControl, StatusBadge } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
+import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
+import { findRecentObserverPasses } from "@/lib/spotter-history";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -29,6 +31,9 @@ export function MobileSpotterMode() {
   const [distanceOrigin, setDistanceOrigin] = useState<SpotterDistanceOrigin>("receiver");
   const [observer, setObserver] = useState<SpotterObserverPosition | null>(null);
   const [observerState, setObserverState] = useState<ObserverState>("idle");
+  const [historyTracks, setHistoryTracks] = useState<HistoricalAircraftTrack[]>([]);
+  const [historyState, setHistoryState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [historyTruncated, setHistoryTruncated] = useState(false);
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -97,6 +102,50 @@ export function MobileSpotterMode() {
     };
   }, []);
 
+  useEffect(() => {
+    if (distanceOrigin !== "observer" || observerState !== "ready") {
+      setHistoryTracks([]);
+      setHistoryState("idle");
+      setHistoryTruncated(false);
+      return;
+    }
+    let active = true;
+    let controller: AbortController | null = null;
+    const load = () => {
+      controller?.abort();
+      controller = new AbortController();
+      const to = new Date();
+      const from = new Date(to.getTime() - 20 * 60_000);
+      const query = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        mode: "event-replay",
+      });
+      setHistoryState("loading");
+      void fetch("/api/time-machine/window?" + query.toString(), { cache: "no-store", signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("spotter history unavailable");
+          return await response.json() as { aircraft: HistoricalAircraftTrack[]; truncated: boolean };
+        })
+        .then((next) => {
+          if (!active) return;
+          setHistoryTracks(next.aircraft);
+          setHistoryTruncated(next.truncated);
+          setHistoryState("ready");
+        })
+        .catch((error) => {
+          if (active && (error as Error).name !== "AbortError") setHistoryState("failed");
+        });
+    };
+    load();
+    const timer = window.setInterval(load, 5 * 60_000);
+    return () => {
+      active = false;
+      controller?.abort();
+      window.clearInterval(timer);
+    };
+  }, [distanceOrigin, observerState]);
+
   const labelsByHex = useMemo(() => new Map<string, readonly LogbookLabel[]>(
     (discovery?.interestingAircraft ?? []).map((item) => [item.icaoHex, item.labels]),
   ), [discovery?.interestingAircraft]);
@@ -147,6 +196,11 @@ export function MobileSpotterMode() {
         || a.closestApproach!.closestHorizontalDistanceKm - b.closestApproach!.closestHorizontalDistanceKm)
       .slice(0, 5);
   }, [distanceOrigin, observer, visibleAircraft]);
+
+  const recentPasses = useMemo(
+    () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
+    [historyTracks, observer],
+  );
 
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
@@ -265,6 +319,27 @@ export function MobileSpotterMode() {
           </article>;
         })}
       </div>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
+      <SectionHeader kicker="MY SKY / HISTORY" title={copy.justOverhead} description={copy.justOverheadDescription} />
+      {historyState === "failed" ? <EmptyState title={copy.historyUnavailable} />
+        : historyState === "loading" && !recentPasses.length ? <p className={styles.loading}>{copy.loading}</p>
+        : recentPasses.length ? <div className={styles.passList}>
+          {recentPasses.map((pass) => <article className={styles.passCard} key={pass.trackId}>
+            <div>
+              <strong>{pass.callsign ?? pass.registration ?? pass.icaoHex}</strong>
+              <span>{pass.aircraftType ?? pass.registration ?? pass.icaoHex}</span>
+              {pass.origin || pass.destination ? <small>{pass.origin ?? "—"} → {pass.destination ?? "—"}</small> : null}
+            </div>
+            <div className={styles.passMetrics}>
+              <strong>{formatDistance(pass.closestDistanceKm)}</strong>
+              <span>{copy.closestAt} {formatDateTime(pass.closestAt, t)}</span>
+              <small>{formatAltitude(pass.altitudeFt)}</small>
+            </div>
+          </article>)}
+        </div> : <EmptyState title={copy.noAircraft} />}
+      {historyTruncated ? <p className={styles.discoveryWarning}>{copy.historyTruncated}</p> : null}
     </Panel> : null}
 
     <Panel>
