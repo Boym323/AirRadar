@@ -2,6 +2,7 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { registerShutdownCoordinator } from "@/lib/server/shutdown";
 import { defaultMapContextArchiveService } from "@/lib/server/map-context";
 import { startRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
+import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 
 registerShutdownCoordinator();
 
@@ -12,5 +13,6 @@ registerShutdownCoordinator();
 // request/subscription readiness paths remain safe.
 getAircraftStateService().start();
 startRuntimeTelemetry();
+getAlertDeliveryWorker().start();
 
 void defaultMapContextArchiveService.start();
