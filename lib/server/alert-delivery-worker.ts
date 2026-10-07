@@ -65,11 +65,36 @@ export class AlertDeliveryWorker {
   private stopped = true;
   private running = false;
   private lastRunAt: string | null = null;
+  private lastSuccessAt: string | null = null;
+  private lastFailureAt: string | null = null;
   private lastError: string | null = null;
+  private processed = 0;
+  private sent = 0;
+  private failed = 0;
+  private retried = 0;
+  private recoveredStale = 0;
 
   start(): void { if (!configured() || !this.stopped) return; this.stopped = false; void this.run(); }
   async stop(): Promise<void> { this.stopped = true; if (this.timer) clearTimeout(this.timer); this.timer = null; }
-  diagnostics() { return { enabled: configured(), configured: credentials() !== null, lastRunAt: this.lastRunAt, lastError: this.lastError }; }
+  diagnostics() {
+    return {
+      enabled: configured(),
+      configured: credentials() !== null,
+      running: !this.stopped,
+      activePoll: this.running,
+      lastRunAt: this.lastRunAt,
+      lastSuccessAt: this.lastSuccessAt,
+      lastFailureAt: this.lastFailureAt,
+      lastError: this.lastError,
+      processed: this.processed,
+      sent: this.sent,
+      failed: this.failed,
+      retried: this.retried,
+      recoveredStale: this.recoveredStale,
+      pollIntervalMs: POLL_MS,
+      maxAttempts: MAX_ATTEMPTS,
+    };
+  }
   private schedule(): void { if (!this.stopped) this.timer = setTimeout(() => void this.run(), POLL_MS); }
   private async run(): Promise<void> {
     if (this.running || this.stopped) return;
@@ -77,10 +102,11 @@ export class AlertDeliveryWorker {
     this.lastRunAt = new Date().toISOString();
     const repo = getAlertsFleetsRepository();
     try {
-      await repo.recoverStaleDeliveries(STALE_CLAIM_MS);
+      this.recoveredStale += await repo.recoverStaleDeliveries(STALE_CLAIM_MS);
       for (let index = 0; index < 8; index += 1) {
         const delivery = await repo.claimDelivery();
         if (!delivery) break;
+        this.processed += 1;
         try {
           if (delivery.channel === "PUSHOVER") {
             const occurrence = await repo.getOccurrenceForDelivery(delivery.occurrenceId);
@@ -88,10 +114,16 @@ export class AlertDeliveryWorker {
             await sendPushoverDelivery(delivery, occurrence);
           }
           await repo.markDeliverySent(delivery.id);
+          this.sent += 1;
+          this.lastSuccessAt = new Date().toISOString();
+          this.lastError = null;
         } catch (error) {
           const retryable = (error as RetryableError).retryable !== false && delivery.attemptCount < MAX_ATTEMPTS;
           const retryAt = retryable ? Date.now() + Math.min(15 * 60_000, 1_000 * 2 ** delivery.attemptCount) : null;
           await repo.markDeliveryFailure(delivery.id, safeError(error), retryAt);
+          if (retryable) this.retried += 1;
+          else this.failed += 1;
+          this.lastFailureAt = new Date().toISOString();
           this.lastError = safeError(error);
         }
       }
