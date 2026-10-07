@@ -1277,8 +1277,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
     const mobileMoreLink = routeSmoke.locator(".mobile-bottom-more a").first();
+    const mobileMoreHref = await mobileMoreLink.getAttribute("href");
+    if (!mobileMoreHref) throw new Error("Mobile More navigation item is missing href");
+    const mobileMoreTarget = new URL(mobileMoreHref, baseUrl);
     await Promise.all([
-      routeSmoke.waitForURL(/\/(?:airspace|alerts|fleet|intelligence|operations|recap|system|watchlist)/),
+      routeSmoke.waitForURL(
+        (url) => url.pathname === mobileMoreTarget.pathname && url.search === mobileMoreTarget.search,
+        { timeout: 15_000 },
+      ),
       mobileMoreLink.click(),
     ]);
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
