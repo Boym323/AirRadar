@@ -1105,14 +1105,20 @@ export async function recordAircraftSnapshot(
   }
 
   const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [], newAircraft: [] };
+  const candidates = uniqueAircraftByHex(aircraft).filter((item) => (
+    typeof item.lat === "number"
+    && Number.isFinite(item.lat)
+    && typeof item.lon === "number"
+    && Number.isFinite(item.lon)
+  ));
 
-  await runWithConcurrency(uniqueAircraftByHex(aircraft), 8, async (item) => {
+  await runWithConcurrency(candidates, 8, async (item) => {
     // Provider adapters may omit numeric fields at runtime even though the
-    // normalized TypeScript type represents them as `null`. Never pass
-    // undefined/NaN through to the ORM: one malformed observation must not
-    // turn the whole history lane degraded.
-    if (typeof item.lat !== "number" || !Number.isFinite(item.lat) || typeof item.lon !== "number" || !Number.isFinite(item.lon)) return;
-    const latitude: number = item.lat;
+    // normalized TypeScript type represents them as `null`. Invalid
+    // coordinates are filtered before entering the persistence concurrency
+    // lane so they consume no transaction slot.
+    const latitude: number = item.lat!;
+
     const longitude: number = item.lon;
     const altitude: number | undefined = typeof item.altitude === "number" && Number.isFinite(item.altitude) ? item.altitude : undefined;
     const groundSpeed: number | undefined = typeof item.groundSpeed === "number" && Number.isFinite(item.groundSpeed) ? item.groundSpeed : undefined;
@@ -1122,7 +1128,17 @@ export async function recordAircraftSnapshot(
       const observedAt = positionObservedAt(item);
       const effectiveRecordedAt = observedAt === null ? recordedAt : new Date(observedAt);
       const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(effectiveRecordedAt.getTime());
-      const wasNewAircraft = await retryAircraftUniqueViolation(() => trackDbTransaction("history.snapshot", () => database.transaction(async (transaction) => {
+      const wasNewAircraft = await retryAircraftUniqueViolation(() => {
+        let statementCount = 0;
+        let committed = false;
+        const transactionStartedAt = Date.now();
+        const statement = async <T>(operation: () => Promise<T>): Promise<T> => {
+          statementCount += 1;
+          return operation();
+        };
+        return trackDbTransaction("history.snapshot", async () => {
+          try {
+            const transactionResult = await database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
       aircraftPersistenceDiagnostics.attempts += 1;
@@ -1273,13 +1289,30 @@ export async function recordAircraftSnapshot(
         });
       }
       return firstDurableFlight;
-      }), 1));
+            });
+            committed = true;
+            return transactionResult;
+          } finally {
+            historyPersistenceCanary.observeTransaction({
+              durationMs: Math.max(0, Date.now() - transactionStartedAt),
+              statements: statementCount,
+              success: committed,
+            });
+          }
+        }, () => statementCount);
+      });
       result.succeeded.push(item.icaoHex);
       if (wasNewAircraft) result.newAircraft?.push(item.icaoHex);
     } catch {
       // History is best-effort; one aircraft must not reject the other writes.
       result.failed.push(item.icaoHex);
     }
+  });
+
+  historyPersistenceCanary.observeSnapshot({
+    eligibleAircraft: candidates.length,
+    succeededAircraft: result.succeeded.length,
+    failedAircraft: result.failed.length,
   });
 
   if (result.succeeded.length) lastSuccessfulHistoryWriteAt = new Date().toISOString();
