@@ -9,6 +9,7 @@ import {
   spotterLogbookStats,
 } from "@/lib/spotter-logbook";
 import { buildSpotterSkyStory } from "@/lib/spotter-story";
+import type { SpotterLogbookState } from "@/lib/spotter-logbook";
 
 const aircraft = {
   icaoHex: "8964A1",
@@ -104,7 +105,7 @@ describe("Spotter Personal Logbook V1", () => {
   });
 
   it("summarizes personal sightings and caps storage", () => {
-    let state = { version: 1 as const, entries: [] };
+    let state: SpotterLogbookState = { version: 1, entries: [] };
     for (let i = 0; i < SPOTTER_LOGBOOK_MAX_ENTRIES + 5; i += 1) {
       state = addSpotterLogbookEntry(state, {
         ...createSpotterLogbookEntry(aircraft, story, new Date(Date.UTC(2026, 9, 7, 13, i)).toISOString()),
