@@ -435,7 +435,7 @@ export function MobileSpotterMode() {
     [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
   );
 
-  const skyStory = useMemo(() => {
+  const skyStory = (() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const aircraft = interestingAircraft[0]?.aircraft
       ?? upcomingPasses[0]?.aircraft
@@ -452,12 +452,11 @@ export function MobileSpotterMode() {
       aircraft,
       story: buildSpotterSkyStory(aircraft, interest, closestApproach),
     };
-  }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, interestingAircraft, labelsByHex, observer, upcomingPasses, visibleAircraft]);
+  })();
 
-  const prgArrival = useMemo(
-    () => skyStory ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story) : null,
-    [skyStory],
-  );
+  const prgArrival = skyStory
+    ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story)
+    : null;
 
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
