@@ -14,7 +14,7 @@ describe("continuous deploy release workflow", () => {
   it("syncs remote release tags in the privileged release path and delegates idempotency to the publisher", () => {
     const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
     const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
-    expect(release).toContain("git_cmd fetch --force --tags origin");
+    expect(release).toContain("git_cmd fetch --force --prune --prune-tags --tags origin");
     expect(workflow).toContain('RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs');
     expect(workflow).not.toContain('if git rev-parse --verify --quiet "refs/tags/${release_tag}"');
   });
