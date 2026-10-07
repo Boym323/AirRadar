@@ -28,6 +28,7 @@ import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
 import { buildSpotterBriefing } from "@/lib/spotter-briefing";
 import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
+import { browserConnectionHints, spotterRuntimeBudget, type SpotterRuntimeBudget } from "@/lib/spotter-runtime-budget";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -71,10 +72,13 @@ export function MobileSpotterMode() {
   const [prgAirport, setPrgAirport] = useState<Airport | null>(null);
   const [prgOperations, setPrgOperations] = useState<AirportOperationsResponse | null>(null);
   const [prgSpottingState, setPrgSpottingState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [pageVisible, setPageVisible] = useState(true);
+  const [runtimeBudget, setRuntimeBudget] = useState<SpotterRuntimeBudget>(() => spotterRuntimeBudget());
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
   const { connected } = useAircraftStream({
+    enabled: pageVisible,
     activeCoverage: "local",
     liveTrailsRef,
     selectedHexRef,
@@ -83,11 +87,26 @@ export function MobileSpotterMode() {
   });
 
   useEffect(() => {
-    if (!skyFinderEnabled) {
+    const updateActivity = () => {
+      setPageVisible(document.visibilityState === "visible");
+      setRuntimeBudget(spotterRuntimeBudget(browserConnectionHints()));
+    };
+    updateActivity();
+    document.addEventListener("visibilitychange", updateActivity);
+    const connection = (navigator as Navigator & { connection?: EventTarget }).connection;
+    connection?.addEventListener("change", updateActivity);
+    return () => {
+      document.removeEventListener("visibilitychange", updateActivity);
+      connection?.removeEventListener("change", updateActivity);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!skyFinderEnabled || !pageVisible) {
       setDeviceHeading(null);
-      if (orientationState === "ready" || orientationState === "waiting") setOrientationState("idle");
       return;
     }
+    setOrientationState("waiting");
     const onOrientation = (event: DeviceOrientationEvent) => {
       const heading = headingFromDeviceOrientation(event as DeviceOrientationEvent & { webkitCompassHeading?: number });
       if (heading === null) return;
@@ -100,7 +119,7 @@ export function MobileSpotterMode() {
       window.removeEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
       window.removeEventListener("deviceorientation", onOrientation, true);
     };
-  }, [orientationState, skyFinderEnabled]);
+  }, [pageVisible, skyFinderEnabled]);
 
   useEffect(() => {
     setAlertPreferences(readSpotterAlertPreferences());
@@ -115,6 +134,7 @@ export function MobileSpotterMode() {
   }, []);
 
   useEffect(() => {
+    if (!pageVisible) return;
     const controller = new AbortController();
     void fetch("/api/admin/spotter/saved-spots", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -134,10 +154,10 @@ export function MobileSpotterMode() {
         if ((error as Error).name !== "AbortError") setSavedSpotAccess("error");
       });
     return () => controller.abort();
-  }, []);
+  }, [pageVisible]);
 
   useEffect(() => {
-    if (distanceOrigin !== "observer") return;
+    if (!pageVisible || distanceOrigin !== "observer") return;
     if (!("geolocation" in navigator)) {
       setObserver(null);
       setObserverState("unavailable");
@@ -154,15 +174,16 @@ export function MobileSpotterMode() {
         setObserverState(error.code === error.PERMISSION_DENIED ? "denied" : "error");
       },
       {
-        enableHighAccuracy: true,
-        maximumAge: 15_000,
+        enableHighAccuracy: runtimeBudget.enableHighAccuracyGeolocation,
+        maximumAge: runtimeBudget.enableHighAccuracyGeolocation ? 15_000 : 60_000,
         timeout: 10_000,
       },
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [distanceOrigin]);
+  }, [distanceOrigin, pageVisible, runtimeBudget.enableHighAccuracyGeolocation]);
 
   useEffect(() => {
+    if (!pageVisible) return;
     if (distanceOrigin !== "observer" || observerState !== "ready") {
       setPrgAirport(null);
       setPrgOperations(null);
@@ -208,7 +229,7 @@ export function MobileSpotterMode() {
         });
     };
     loadOperations();
-    const timer = window.setInterval(loadOperations, 30_000);
+    const timer = window.setInterval(loadOperations, runtimeBudget.prgRefreshMs);
 
     return () => {
       active = false;
@@ -216,9 +237,10 @@ export function MobileSpotterMode() {
       operationsController?.abort();
       window.clearInterval(timer);
     };
-  }, [distanceOrigin, observerState]);
+  }, [distanceOrigin, observerState, pageVisible, runtimeBudget.prgRefreshMs]);
 
   useEffect(() => {
+    if (!pageVisible) return;
     let active = true;
     const load = () => {
       const controller = new AbortController();
@@ -241,15 +263,16 @@ export function MobileSpotterMode() {
     const timer = window.setInterval(() => {
       controller.abort();
       controller = load();
-    }, 30_000);
+    }, runtimeBudget.discoveryRefreshMs);
     return () => {
       active = false;
       window.clearInterval(timer);
       controller.abort();
     };
-  }, []);
+  }, [pageVisible, runtimeBudget.discoveryRefreshMs]);
 
   useEffect(() => {
+    if (!pageVisible) return;
     if (distanceOrigin !== "observer" || observerState !== "ready") {
       setMetarObservations([]);
       setMetarState("idle");
@@ -276,15 +299,16 @@ export function MobileSpotterMode() {
         });
     };
     load();
-    const timer = window.setInterval(load, 10 * 60_000);
+    const timer = window.setInterval(load, runtimeBudget.metarRefreshMs);
     return () => {
       active = false;
       controller?.abort();
       window.clearInterval(timer);
     };
-  }, [distanceOrigin, observerState]);
+  }, [distanceOrigin, observerState, pageVisible, runtimeBudget.metarRefreshMs]);
 
   useEffect(() => {
+    if (!pageVisible) return;
     if (distanceOrigin !== "observer" || observerState !== "ready") {
       setHistoryTracks([]);
       setHistoryState("idle");
@@ -320,13 +344,13 @@ export function MobileSpotterMode() {
         });
     };
     load();
-    const timer = window.setInterval(load, 5 * 60_000);
+    const timer = window.setInterval(load, runtimeBudget.historyRefreshMs);
     return () => {
       active = false;
       controller?.abort();
       window.clearInterval(timer);
     };
-  }, [distanceOrigin, observerState]);
+  }, [distanceOrigin, observerState, pageVisible, runtimeBudget.historyRefreshMs]);
 
   const labelsByHex = useMemo(() => new Map<string, readonly LogbookLabel[]>(
     (discovery?.interestingAircraft ?? []).map((item) => [item.icaoHex, item.labels]),
@@ -719,7 +743,8 @@ export function MobileSpotterMode() {
 
   useEffect(() => {
     if (
-      distanceOrigin !== "observer"
+      !pageVisible
+      || distanceOrigin !== "observer"
       || notificationPermission !== "granted"
       || !alertPreferences.enabled
       || !("serviceWorker" in navigator)
@@ -768,7 +793,7 @@ export function MobileSpotterMode() {
         }))
         .catch(() => undefined);
     }
-  }, [alertPreferences, copy.inPrefix, copy.lookUp, distanceOrigin, interestingAircraft, notificationPermission]);
+  }, [alertPreferences, copy.inPrefix, copy.lookUp, distanceOrigin, interestingAircraft, notificationPermission, pageVisible]);
 
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
