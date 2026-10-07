@@ -160,6 +160,21 @@ export function formatAircraftAlert(alert: AircraftAlert): string {
   return lines.join("\n");
 }
 
+const pushoverHealth = {
+  attempts: 0,
+  sent: 0,
+  failed: 0,
+  lastSuccessAt: null as string | null,
+  lastFailureAt: null as string | null,
+  lastError: null as string | null,
+};
+
+export function getLegacyPushoverDiagnostics() {
+  const enabled = process.env.PUSHOVER_ENABLED?.trim().toLowerCase() === "true";
+  const configured = Boolean(enabled && process.env.PUSHOVER_USER_KEY?.trim() && process.env.PUSHOVER_API_TOKEN?.trim());
+  return { enabled, configured, ...pushoverHealth };
+}
+
 class PushoverNotifier implements AlertNotifier {
   readonly name = "pushover";
   readonly enabled = true;
@@ -170,6 +185,7 @@ class PushoverNotifier implements AlertNotifier {
   async send(alert: AircraftAlert): Promise<void> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
+    pushoverHealth.attempts += 1;
     try {
       const response = await fetch(this.endpoint, {
         method: "POST",
@@ -186,7 +202,13 @@ class PushoverNotifier implements AlertNotifier {
         }),
       });
       if (!response.ok) throw new AlertDeliveryError(response.status);
+      pushoverHealth.sent += 1;
+      pushoverHealth.lastSuccessAt = new Date().toISOString();
+      pushoverHealth.lastError = null;
     } catch (error) {
+      pushoverHealth.failed += 1;
+      pushoverHealth.lastFailureAt = new Date().toISOString();
+      pushoverHealth.lastError = (error instanceof Error ? error.message : "network error").replace(/[\r\n]/g, " ").slice(0, 300);
       if (error instanceof AlertDeliveryError) throw error;
       throw new AlertDeliveryError(null, error instanceof Error ? error.message : "network error");
     } finally {
