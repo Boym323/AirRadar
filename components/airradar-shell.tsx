@@ -219,6 +219,7 @@ export function MobileBottomNav() {
           <Link href="/fleet">{t.fleet.title}</Link>
           <Link href="/intelligence">{t.intelligence.title}</Link>
           <Link href="/events">{t.locale.startsWith("cs") ? "Události" : "Events"}</Link>
+          <Link href="/journeys">{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</Link>
           <Link href="/alerts">{t.alerts.title}</Link>
           <Link href="/notifications">{t.locale.startsWith("cs") ? "Oznámení" : "Notifications"}</Link>
           <Link href="/recap/daily">{t.recap.daily}</Link>
