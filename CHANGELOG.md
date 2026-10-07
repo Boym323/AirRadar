@@ -17,6 +17,59 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.340] - 2026-10-07
+
+Changes since v1.0.339.
+
+**Features touched:** Watchlist, Alerts & Fleet.
+
+### Added
+
+- Expose durable delivery health (ebd3b433)
+- Summarize durable delivery queue (bcdb9e38)
+- Track web push delivery health (7378b666)
+- Track legacy pushover health (05af1414)
+- Aggregate delivery health (f548eaf1)
+- Add delivery health dashboard (420e7ebb)
+- Expose delivery health API (caedfd9e)
+- Add delivery health route (ff748083)
+- Start durable delivery worker (3a0eb90e)
+- Stop delivery worker gracefully (a08d63f9)
+
+### Documentation
+
+- Register delivery health (e46d044e)
+- Describe delivery health (76c2f407)
+- Localize delivery health (0548600d)
+
+### Maintenance
+
+- Sync generated repository metadata (#503) (6c517b21)
+- Cover delivery worker startup (eb571b6c)
+- Cover delivery health lifecycle (22a00347)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#503) (6c517b21)
+- feat(alerts): expose durable delivery health (ebd3b433)
+- feat(alerts): summarize durable delivery queue (bcdb9e38)
+- feat(alerts): track web push delivery health (7378b666)
+- feat(alerts): track legacy pushover health (05af1414)
+- feat(alerts): aggregate delivery health (f548eaf1)
+- feat(alerts): add delivery health dashboard (420e7ebb)
+- feat(alerts): expose delivery health API (caedfd9e)
+- feat(alerts): add delivery health route (ff748083)
+- feat(alerts): start durable delivery worker (3a0eb90e)
+- feat(alerts): stop delivery worker gracefully (a08d63f9)
+- test(alerts): cover delivery worker startup (eb571b6c)
+- docs(features): register delivery health (e46d044e)
+- docs(features): describe delivery health (76c2f407)
+- docs(features): localize delivery health (0548600d)
+- test(alerts): cover delivery health lifecycle (22a00347)
+- Merge pull request #504 from Boym323/feat/delivery-health-v1 (6e422ca4)
+
+</details>
 ## [1.0.339] - 2026-10-07
 
 Changes since v1.0.338.
