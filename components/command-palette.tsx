@@ -173,6 +173,11 @@ export function CommandPalette() {
 
   const commands = useMemo<StaticCommand[]>(() => [
     { key: "live", label: t.commandSearch.liveRadar, detail: t.commandSearch.liveRadarDetail, href: "/", icon: "radar", keywords: ["live", "radar", "map"] },
+    { key: "my-airradar", label: t.myAirRadar.title, detail: t.locale.startsWith("cs") ? "Osobní přehled právě relevantního provozu" : "Personal overview of what matters now", href: "/my-airradar", icon: "radar", keywords: ["my airradar", "home", "personal", "domů"] },
+    { key: "spotter", label: "Spotter", detail: t.locale.startsWith("cs") ? "Moje obloha, photo opportunity a Saved Spots" : "My Sky, photo opportunity and Saved Spots", href: "/spotter", icon: "aircraft", keywords: ["spotter", "my sky", "photo"] },
+    { key: "events-feed", label: t.locale.startsWith("cs") ? "Letecký event feed" : "Aviation Event Feed", detail: t.locale.startsWith("cs") ? "Chronologická osa událostí" : "Chronological event timeline", href: "/events", icon: "system", keywords: ["events", "timeline", "události"] },
+    { key: "journeys", label: t.locale.startsWith("cs") ? "Sledované cesty" : "Followed Journeys", detail: t.locale.startsWith("cs") ? "Konkrétní sledované lety" : "Specific followed flights", href: "/journeys", icon: "flight", keywords: ["journey", "follow flight", "sledovat let"] },
+    { key: "baselines", label: t.locale.startsWith("cs") ? "Historické baseline" : "Historical Baselines", detail: t.locale.startsWith("cs") ? "Dnešek proti 30dennímu mediánu" : "Today against the 30-day median", href: "/baselines", icon: "statistics", keywords: ["baseline", "30d", "history", "historie"] },
     { key: "today", label: t.commandSearch.today, detail: t.commandSearch.todayDetail, href: "/recap/daily", icon: "time", keywords: ["today", "daily", "recap", "dnes"] },
     { key: "operations-center", label: t.commandSearch.operationsCenter, detail: t.commandSearch.operationsCenterDetail, href: "/?operations=1", icon: "radar", keywords: ["operations center", "now", "events", "události"], action: "operations" },
     { key: "airports", label: t.commandSearch.airports, detail: t.commandSearch.airportsDetail, href: "/airports", icon: "airport", keywords: ["airports", "letiště"] },
