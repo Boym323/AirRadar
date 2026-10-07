@@ -1,3 +1,49 @@
+import type { Map as MapLibreMap } from "maplibre-gl";
+
 /** Canonical AirRadar/OpenFreeMap basemap shared by live and historical maps. */
 export const AIRRADAR_BASE_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 export const AIRRADAR_MAP_ATTRIBUTION = "© OpenStreetMap contributors · © OpenFreeMap";
+
+
+const PLACE_LABEL_LAYER = /(place|settlement|city|town|village|state|country|region)/i;
+const AIRPORT_LABEL_LAYER = /(airport|aerodrome|aeroway)/i;
+const BOUNDARY_LAYER = /(boundary|admin)/i;
+
+/**
+ * Keep the dark OpenFreeMap character while making orientation cues readable.
+ * This deliberately avoids road/POI labels so aircraft remain the strongest
+ * visual objects on the radar.
+ */
+export function applyAirRadarBasemapReadability(map: MapLibreMap): void {
+  const layers = map.getStyle().layers ?? [];
+
+  for (const layer of layers) {
+    const id = layer.id;
+
+    try {
+      if (layer.type === "symbol" && (PLACE_LABEL_LAYER.test(id) || AIRPORT_LABEL_LAYER.test(id))) {
+        const airport = AIRPORT_LABEL_LAYER.test(id);
+        map.setPaintProperty(id, "text-color", airport ? "#d7e3e7" : "#a9bfcb");
+        map.setPaintProperty(id, "text-halo-color", "#07131f");
+        map.setPaintProperty(id, "text-halo-width", airport ? 1.3 : 1.1);
+        map.setPaintProperty(id, "text-opacity", [
+          "interpolate", ["linear"], ["zoom"],
+          3, airport ? 0.46 : 0.38,
+          6, airport ? 0.72 : 0.62,
+          9, airport ? 0.9 : 0.78,
+        ]);
+      } else if (layer.type === "line" && BOUNDARY_LAYER.test(id)) {
+        map.setPaintProperty(id, "line-color", "#6f8798");
+        map.setPaintProperty(id, "line-opacity", [
+          "interpolate", ["linear"], ["zoom"],
+          3, 0.34,
+          6, 0.5,
+          9, 0.62,
+        ]);
+      }
+    } catch {
+      // Third-party basemap styles can expose layer-specific paint schemas.
+      // Unsupported properties should never prevent the radar from loading.
+    }
+  }
+}
