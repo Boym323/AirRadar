@@ -717,6 +717,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       history: {
         status: historyStatus,
         lastSuccessfulWrite: safeTimestamp(input.history.lastSuccessfulWriteAt),
+        ...(input.history.batchCanary ? { batchCanary: input.history.batchCanary } : {}),
         ...(historyRetention ? {
           retention: {
             lastRunAt: safeTimestamp(historyRetention.lastRunAt),
