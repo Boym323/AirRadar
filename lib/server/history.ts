@@ -11,6 +11,7 @@ import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
+import { historyPersistenceCanary, type HistoryPersistenceCanaryDiagnostics } from "@/lib/server/history-persistence-canary";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -68,6 +69,7 @@ export interface HistoryPersistenceStatus {
   failureCount: number;
   writes?: ReturnType<typeof getAircraftPersistenceDiagnostics>;
   retention?: HistoryRetentionDiagnostics;
+  batchCanary?: HistoryPersistenceCanaryDiagnostics;
 }
 
 export const HISTORY_POSITION_LIMIT = 2_000;
@@ -272,6 +274,7 @@ export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
     failureCount: historyPersistenceFailureCount,
     writes: getAircraftPersistenceDiagnostics(),
     retention: { ...historyRetentionDiagnostics },
+    batchCanary: historyPersistenceCanary.diagnostics(),
   };
 }
 
@@ -1102,15 +1105,21 @@ export async function recordAircraftSnapshot(
   }
 
   const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [], newAircraft: [] };
+  const candidates = uniqueAircraftByHex(aircraft).filter((item) => (
+    typeof item.lat === "number"
+    && Number.isFinite(item.lat)
+    && typeof item.lon === "number"
+    && Number.isFinite(item.lon)
+  ));
 
-  await runWithConcurrency(uniqueAircraftByHex(aircraft), 8, async (item) => {
+  await runWithConcurrency(candidates, 8, async (item) => {
     // Provider adapters may omit numeric fields at runtime even though the
-    // normalized TypeScript type represents them as `null`. Never pass
-    // undefined/NaN through to the ORM: one malformed observation must not
-    // turn the whole history lane degraded.
-    if (typeof item.lat !== "number" || !Number.isFinite(item.lat) || typeof item.lon !== "number" || !Number.isFinite(item.lon)) return;
-    const latitude: number = item.lat;
-    const longitude: number = item.lon;
+    // normalized TypeScript type represents them as `null`. Invalid
+    // coordinates are filtered before entering the persistence concurrency
+    // lane so they consume no transaction slot.
+    const latitude: number = item.lat!;
+
+    const longitude: number = item.lon!;
     const altitude: number | undefined = typeof item.altitude === "number" && Number.isFinite(item.altitude) ? item.altitude : undefined;
     const groundSpeed: number | undefined = typeof item.groundSpeed === "number" && Number.isFinite(item.groundSpeed) ? item.groundSpeed : undefined;
     const track: number | undefined = typeof item.track === "number" && Number.isFinite(item.track) ? item.track : undefined;
@@ -1119,7 +1128,17 @@ export async function recordAircraftSnapshot(
       const observedAt = positionObservedAt(item);
       const effectiveRecordedAt = observedAt === null ? recordedAt : new Date(observedAt);
       const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(effectiveRecordedAt.getTime());
-      const wasNewAircraft = await retryAircraftUniqueViolation(() => trackDbTransaction("history.snapshot", () => database.transaction(async (transaction) => {
+      const wasNewAircraft = await retryAircraftUniqueViolation(() => {
+        let statementCount = 0;
+        let committed = false;
+        const transactionStartedAt = Date.now();
+        const statement = async <T>(operation: () => Promise<T>): Promise<T> => {
+          statementCount += 1;
+          return operation();
+        };
+        return trackDbTransaction("history.snapshot", async () => {
+          try {
+            const transactionResult = await database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
       aircraftPersistenceDiagnostics.attempts += 1;
@@ -1132,24 +1151,24 @@ export async function recordAircraftSnapshot(
         upsert?: (input: Record<string, unknown>) => Promise<AircraftPersistenceRow>;
       };
       if (typeof aircraftTable.where === "function") {
-        dbAircraft = await aircraftTable.where({ icaoHex: item.icaoHex }).first();
+        dbAircraft = await statement(() => aircraftTable.where!({ icaoHex: item.icaoHex }).first());
       } else if (typeof aircraftTable.upsert === "function") {
         // Narrow test adapters and older persistence shims may only expose upsert.
-        dbAircraft = await aircraftTable.upsert({
+        dbAircraft = await statement(() => aircraftTable.upsert!({
           conflictOn: { icaoHex: item.icaoHex },
           update: { ...nextAircraft, updatedAt: recordedAtInstant },
           create: { icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant },
-        });
+        }));
         usedAircraftUpsert = true;
         aircraftPersistenceDiagnostics.executed += 1;
       }
       if (!dbAircraft) {
-        dbAircraft = await schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant });
+        dbAircraft = await statement(() => schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant }));
         aircraftPersistenceDiagnostics.executed += 1;
       } else if (!usedAircraftUpsert) {
         const aircraftChanges = changedAircraftValues(dbAircraft, nextAircraft);
         if (Object.keys(aircraftChanges).length > 0) {
-          dbAircraft = await schema.Aircraft.where({ id: dbAircraft.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant });
+          dbAircraft = await statement(() => schema.Aircraft.where({ id: dbAircraft!.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant }));
           aircraftPersistenceDiagnostics.executed += 1;
         } else {
           aircraftPersistenceDiagnostics.skippedUnchanged += 1;
@@ -1164,13 +1183,13 @@ export async function recordAircraftSnapshot(
         limit?: (value: number) => { all(): Promise<unknown[]> };
       };
       const priorFlights = typeof priorFlightsQuery.limit === "function"
-        ? await priorFlightsQuery.limit(1).all()
+        ? await statement(() => priorFlightsQuery.limit!(1).all())
         : null;
-      let flight = await schema.Flight
-        .where({ aircraftId: dbAircraft.id })
+      let flight = await statement(() => schema.Flight
+        .where({ aircraftId: dbAircraft!.id })
         .where({ endTime: null })
         .orderBy((row) => row.startTime.desc())
-        .first();
+        .first());
 
       const callsignChanged = Boolean(flight?.callsign && item.callsign && flight.callsign !== item.callsign);
       const continuityBroken = Boolean(
@@ -1181,10 +1200,11 @@ export async function recordAircraftSnapshot(
       // Flight or inserting the bad FlightPosition. Coordinate range checks
       // alone cannot catch a valid-looking CPR position hundreds of km away.
       if (flight && !callsignChanged && !continuityBroken) {
-        const previousPosition = await schema.FlightPosition
-          .where({ flightId: flight.id })
+        const currentFlight = flight;
+        const previousPosition = await statement(() => schema.FlightPosition
+          .where({ flightId: currentFlight.id })
           .orderBy((position) => position.recordedAt.desc())
-          .first();
+          .first());
         if (previousPosition && effectiveRecordedAt.getTime() > timestampAsDate(previousPosition.recordedAt).getTime()
           && !isPlausibleTransition(
             { recordedAt: timestampAsIso(previousPosition.recordedAt), lat: previousPosition.lat, lon: previousPosition.lon },
@@ -1197,16 +1217,17 @@ export async function recordAircraftSnapshot(
       const firstDurableFlight = priorFlights !== null && priorFlights.length === 0 && !flight;
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
-          await schema.Flight.where({ id: flight.id }).update(
+          const previousFlight = flight;
+          await statement(() => schema.Flight.where({ id: previousFlight.id }).update(
             continuityBroken
-              ? { endTime: timestampAsInstant(flight.lastSeenAt) }
+              ? { endTime: timestampAsInstant(previousFlight.lastSeenAt) }
               : { endTime: recordedAtInstant, lastSeenAt: recordedAtInstant },
-          );
+          ));
         }
         const route = item.enrichment?.route;
         const destinationObservation = observeDestination(null, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
-        flight = await schema.Flight.create({
-          aircraftId: dbAircraft.id,
+        flight = await statement(() => schema.Flight.create({
+          aircraftId: dbAircraft!.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
           callsign: item.callsign,
           registration: item.registration ?? metadata?.registration,
@@ -1219,28 +1240,31 @@ export async function recordAircraftSnapshot(
           minDistanceKm: item.distanceKm,
           startTime: recordedAtInstant,
           lastSeenAt: recordedAtInstant,
-        });
+        }));
       } else {
+        const currentFlight = flight;
         const route = item.enrichment?.route;
-        const destinationObservation = observeDestination((flight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
-        await schema.Flight.where({ id: flight.id }).update({
-          callsign: flight.callsign ?? item.callsign,
-          registration: flight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
-          aircraftType: flight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
-          airline: flight.airline ?? item.enrichment?.route?.airline,
-          origin: flight.origin ?? item.enrichment?.route?.origin,
-          destination: flight.destination ?? route?.destination,
+        const destinationObservation = observeDestination((currentFlight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
+        await statement(() => schema.Flight.where({ id: currentFlight.id }).update({
+          callsign: currentFlight.callsign ?? item.callsign,
+          registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
+          aircraftType: currentFlight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
+          airline: currentFlight.airline ?? item.enrichment?.route?.airline,
+          origin: currentFlight.origin ?? item.enrichment?.route?.origin,
+          destination: currentFlight.destination ?? route?.destination,
           ...(destinationObservation.changed ? { destinationProvenanceJson: destinationObservation.value } : {}),
-          maxAltitude: Math.max(flight.maxAltitude ?? 0, altitude ?? 0) || null,
-          minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
+          maxAltitude: Math.max(currentFlight.maxAltitude ?? 0, altitude ?? 0) || null,
+          minDistanceKm: Math.min(currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
             ? null
-            : Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
+            : Math.min(currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
           lastSeenAt: recordedAtInstant,
-        });
+        }));
       }
 
-      await schema.FlightPosition.create({
-        flightId: flight.id,
+      if (!flight) throw new Error("Flight persistence returned no row");
+      const persistedFlight = flight;
+      await statement(() => schema.FlightPosition.create({
+        flightId: persistedFlight.id,
         recordedAt: recordedAtInstant,
         lat: latitude,
         lon: longitude,
@@ -1256,27 +1280,46 @@ export async function recordAircraftSnapshot(
         ...(groundSpeed === undefined ? {} : { groundSpeed }),
         ...(track === undefined ? {} : { track }),
         ...(verticalRate === undefined ? {} : { verticalRate }),
-      });
-      if (item.altitudeDecision?.anomaly && shouldPersistAltitudeAnomaly(item.icaoHex, item.altitudeDecision.anomaly, recordedAt.getTime())) {
-        await schema.AltitudeAnomaly.create({
+      }));
+      const altitudeDecision = item.altitudeDecision;
+      const anomalyType = altitudeDecision?.anomaly ?? null;
+      if (anomalyType && altitudeDecision && shouldPersistAltitudeAnomaly(item.icaoHex, anomalyType, recordedAt.getTime())) {
+        await statement(() => schema.AltitudeAnomaly.create({
           icaoHex: item.icaoHex,
-          flightId: flight.id,
+          flightId: persistedFlight.id,
           observedAt: timestampAsInstant(new Date(item.altitudeObservation?.observedAt ?? recordedAt)),
           selectedAltitude: item.altitudeObservation?.valueFt ?? null,
           selectedSource: item.altitudeObservation?.source ?? null,
-          decisionReason: item.altitudeDecision.reason,
-          anomalyType: item.altitudeDecision.anomaly,
-          candidatesJson: JSON.stringify(item.altitudeDecision.candidates.slice(0, 8)),
-        });
+          decisionReason: altitudeDecision.reason,
+          anomalyType,
+          candidatesJson: JSON.stringify(altitudeDecision.candidates.slice(0, 8)),
+        }));
       }
       return firstDurableFlight;
-      }), 1));
+            });
+            committed = true;
+            return transactionResult;
+          } finally {
+            historyPersistenceCanary.observeTransaction({
+              durationMs: Math.max(0, Date.now() - transactionStartedAt),
+              statements: statementCount,
+              success: committed,
+            });
+          }
+        }, () => statementCount);
+      });
       result.succeeded.push(item.icaoHex);
       if (wasNewAircraft) result.newAircraft?.push(item.icaoHex);
     } catch {
       // History is best-effort; one aircraft must not reject the other writes.
       result.failed.push(item.icaoHex);
     }
+  });
+
+  historyPersistenceCanary.observeSnapshot({
+    eligibleAircraft: candidates.length,
+    succeededAircraft: result.succeeded.length,
+    failedAircraft: result.failed.length,
   });
 
   if (result.succeeded.length) lastSuccessfulHistoryWriteAt = new Date().toISOString();

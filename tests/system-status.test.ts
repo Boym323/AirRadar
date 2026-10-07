@@ -295,6 +295,51 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(toPublicSystemStatus(value).database.history.retention).toBeUndefined();
   });
 
+  it("keeps history batching canary diagnostics admin-only", () => {
+    const batchCanary = {
+      scope: "process-local-shadow" as const,
+      startedAt: checkedAt.toISOString(),
+      sampleReady: true,
+      minimumTransactionSample: 60,
+      semantics: {
+        productionWritesChanged: false as const,
+        statementCountModeledAsUnchanged: true as const,
+        batchLatencyMeasured: false as const,
+        walMeasured: false as const,
+        failureIsolationPreservedInProduction: true as const,
+      },
+      lifetime: {
+        snapshots: 10,
+        eligibleAircraft: 100,
+        succeededAircraft: 100,
+        failedAircraft: 0,
+        transactionAttempts: 100,
+        transactionCommits: 100,
+        transactionFailures: 0,
+        statements: 600,
+        totalTransactionDurationMs: 1200,
+        maxTransactionDurationMs: 30,
+        modeledBatch4Transactions: 30,
+        modeledBatch8Transactions: 20,
+        meanStatementsPerTransaction: 6,
+        meanTransactionDurationMs: 12,
+        transactionFailureRate: 0,
+        modeledBatch4TransactionReductionPct: 70,
+        modeledBatch8TransactionReductionPct: 80,
+      },
+      windows: [],
+    };
+    const value = build({
+      history: {
+        lastSuccessfulWriteAt: checkedAt.toISOString(),
+        failureCount: 0,
+        batchCanary,
+      },
+    });
+    expect(value.database.history.batchCanary).toEqual(batchCanary);
+    expect(toPublicSystemStatus(value).database.history.batchCanary).toBeUndefined();
+  });
+
   it("reports database unavailable while keeping the live status shape", () => {
     const value = build({ database: { status: "offline", connected: false }, airportData: { rowCount: null, fallbackRowCount: 6 } });
     expect(value.database).toMatchObject({ status: "offline", connected: false });

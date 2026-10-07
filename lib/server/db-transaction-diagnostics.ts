@@ -91,7 +91,11 @@ function window(value: LaneState, now: number, durationMs: number) {
   }), { attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 });
 }
 
-export async function trackDbTransaction<T>(lane: DbTransactionLane, operation: () => Promise<T>, workUnits = 0): Promise<T> {
+export async function trackDbTransaction<T>(
+  lane: DbTransactionLane,
+  operation: () => Promise<T>,
+  workUnits: number | (() => number) = 0,
+): Promise<T> {
   assertLane(lane);
   const value = state(lane);
   const started = Date.now();
@@ -110,16 +114,19 @@ export async function trackDbTransaction<T>(lane: DbTransactionLane, operation: 
   } finally {
     try {
       const duration = Math.max(0, Date.now() - started);
+      const resolvedWorkUnits = typeof workUnits === "function" ? workUnits() : workUnits;
+      const boundedWorkUnits = Number.isFinite(resolvedWorkUnits) ? Math.max(0, resolvedWorkUnits) : 0;
       value.active = Math.max(0, value.active - 1);
       value.totalDurationMs += duration;
       value.maxDurationMs = Math.max(value.maxDurationMs, duration);
+      value.workUnits += boundedWorkUnits;
       const bucket = bucketFor(value, Date.now());
       bucket.attempts += 1;
       if (committed) bucket.commits += 1;
       else bucket.failures += 1;
       bucket.totalDurationMs += duration;
       bucket.maxDurationMs = Math.max(bucket.maxDurationMs, duration);
-      bucket.workUnits += Math.max(0, workUnits);
+      bucket.workUnits += boundedWorkUnits;
     } catch {
       // Diagnostics are best effort and must never change DB behavior.
     }
