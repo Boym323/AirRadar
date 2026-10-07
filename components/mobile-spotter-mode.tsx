@@ -14,6 +14,7 @@ import { isSpotterInteresting, scoreSpotterInterest, type SpotterInterestReasonC
 import { DEFAULT_SPOTTER_ALERT_PREFERENCES, readSpotterAlertPreferences, shouldTriggerSpotterAlert, spotterAlertTag, writeSpotterAlertPreferences, type SpotterAlertPreferences } from "@/lib/spotter-alerts";
 import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } from "@/lib/spotter-sky-finder";
 import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
+import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -333,6 +334,11 @@ export function MobileSpotterMode() {
     };
   }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, interestingAircraft, labelsByHex, observer, upcomingPasses, visibleAircraft]);
 
+  const prgArrival = useMemo(
+    () => skyStory ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story) : null,
+    [skyStory],
+  );
+
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = interestingAircraft[0]
@@ -506,6 +512,19 @@ export function MobileSpotterMode() {
           <Link href={("/?aircraft=" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.radar}</Link>
         </div>
       </article>
+    </Panel> : null}
+
+    {prgArrival ? <Panel>
+      <SectionHeader kicker="PRG / ARRIVAL" title={copy.prgArrivalTitle} description={copy.prgArrivalDescription} />
+      <dl className={styles.arrivalContext}>
+        {prgArrival.estimatedArrival ? <div><dt>{copy.eta}</dt><dd>{formatDateTime(prgArrival.estimatedArrival, t)}</dd></div> : null}
+        <div><dt>{copy.verticalTrend}</dt><dd>{copy.verticalTrends[prgArrival.verticalTrend]}</dd></div>
+        {prgArrival.runway ? <div><dt>{copy.runway}</dt><dd>{prgArrival.runway}</dd></div> : null}
+        {prgArrival.terminal ? <div><dt>{copy.terminal}</dt><dd>{prgArrival.terminal}</dd></div> : null}
+        {prgArrival.gate ? <div><dt>{copy.gate}</dt><dd>{prgArrival.gate}</dd></div> : null}
+        {prgArrival.progressPercent !== null ? <div><dt>{copy.progress}</dt><dd>{formatNumber(prgArrival.progressPercent)}%</dd></div> : null}
+        {prgArrival.approachMode !== null ? <div><dt>{copy.approachMode}</dt><dd>{prgArrival.approachMode ? copy.yes : copy.no}</dd></div> : null}
+      </dl>
     </Panel> : null}
 
     {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
