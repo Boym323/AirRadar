@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
 import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
+import { AirportMovementAnalytics } from "@/components/airport-movement-analytics";
 import { AirportWeatherPanel } from "@/components/airport-weather";
 import { AirportOperationsBoard } from "@/components/airport-operations-board";
 import { useAirportOperationsController } from "@/components/airport-operations-controller";
@@ -110,6 +111,8 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
 
       <div className="airport-content">
         <AirportTrafficSummary airport={airport} />
+
+        <AirportMovementAnalytics airport={airport} />
 
         <AirportNearbyAircraft liveTraffic={liveTrafficController} />
 
