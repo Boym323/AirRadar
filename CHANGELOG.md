@@ -17,6 +17,66 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.337] - 2026-10-07
+
+Changes since v1.0.336.
+
+### Added
+
+- Define preference policy (54e1659f)
+- Persist notification preferences (4d3f6c2e)
+- Enforce category delivery preferences (3381eaf1)
+- Expose authenticated preference controls (03970546)
+- Localize preference controls (2a3496af)
+- Localize preference controls (4c840a0c)
+- Add preference controls to center (8b546f03)
+- Style preference controls (c0486bbe)
+- Expose preference-aligned categories (9d886008)
+
+### Fixed
+
+- Keep preference parsing type-safe (260907f4)
+- Apply preferences to fallback alert types (8e12606f)
+
+### Documentation
+
+- Register notification preferences (8a826734)
+- Describe notification preferences (78f6c38c)
+- Localize notification preferences (4438476f)
+
+### Maintenance
+
+- Cover preference policy (f0bdae8d)
+- Cover push opt-in and off policy (0561879c)
+- Cover preference UI boundaries (a1424087)
+- Cover durable preference persistence (ab408882)
+- Sync generated repository metadata (#497) (39f76689)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(notifications): define preference policy (54e1659f)
+- feat(notifications): persist notification preferences (4d3f6c2e)
+- feat(notifications): enforce category delivery preferences (3381eaf1)
+- feat(notifications): expose authenticated preference controls (03970546)
+- feat(notifications): localize preference controls (2a3496af)
+- feat(notifications): localize preference controls (4c840a0c)
+- feat(notifications): add preference controls to center (8b546f03)
+- feat(notifications): style preference controls (c0486bbe)
+- feat(notifications): expose preference-aligned categories (9d886008)
+- test(notifications): cover preference policy (f0bdae8d)
+- test(notifications): cover push opt-in and off policy (0561879c)
+- test(notifications): cover preference UI boundaries (a1424087)
+- fix(notifications): keep preference parsing type-safe (260907f4)
+- fix(notifications): apply preferences to fallback alert types (8e12606f)
+- test(notifications): cover durable preference persistence (ab408882)
+- docs(features): register notification preferences (8a826734)
+- docs(features): describe notification preferences (78f6c38c)
+- docs(features): localize notification preferences (4438476f)
+- chore(metadata): sync generated repository metadata (#497) (39f76689)
+- Merge pull request #498 from Boym323/feat/notification-preferences-v1 (5a92a3a4)
+
+</details>
 ## [1.0.336] - 2026-10-07
 
 Changes since v1.0.335.
