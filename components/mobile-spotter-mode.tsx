@@ -22,6 +22,7 @@ import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
 import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-share-card";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotter-visual-acquisition";
+import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -543,6 +544,13 @@ export function MobileSpotterMode() {
     ? evaluateVisualAcquisition(skyStory.aircraft, observer, nearestMetar)
     : null;
 
+  const lightContext = skyTarget && observer
+    ? lightGeometry(
+        solarPosition(snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(), observer),
+        skyTarget.geometry.bearingDeg,
+      )
+    : null;
+
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = interestingAircraft[0]
@@ -755,6 +763,23 @@ export function MobileSpotterMode() {
       <div className={styles.interestReasons}>
         {visualAcquisition.reasons.map((reason) => <span key={reason}>{copy.visualReasons[reason]}</span>)}
       </div>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" && lightContext ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / LIGHT"
+        title={copy.lightGeometry}
+        description={copy.lightGeometryDescription}
+        actions={<StatusBadge variant={lightContext.lighting === "BACK" ? "stale" : lightContext.lighting === "UNAVAILABLE" ? "neutral" : "live"}>
+          {copy.lighting[lightContext.lighting]} · {copy.lightPeriods[lightContext.period]}
+        </StatusBadge>}
+      />
+      <dl className={styles.arrivalContext}>
+        <div><dt>{copy.sunAzimuth}</dt><dd>{formatTrack(lightContext.azimuthDeg)}</dd></div>
+        <div><dt>{copy.sunElevation}</dt><dd>{formatNumber(lightContext.elevationDeg)}°</dd></div>
+        <div><dt>{copy.bearingFromYou}</dt><dd>{formatTrack(lightContext.aircraftBearingDeg)}</dd></div>
+        <div><dt>{copy.lightAngle}</dt><dd>{formatNumber(lightContext.azimuthDifferenceDeg)}°</dd></div>
+      </dl>
     </Panel> : null}
 
     {prgArrival ? <Panel>
