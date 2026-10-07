@@ -246,6 +246,7 @@ export class AircraftStateService {
   private historyWriteActive = false;
   private pendingHistorySnapshot: ProviderSnapshot | null = null;
   private historyDrainPromise: Promise<void> | null = null;
+  private lastHistoryQueueAt = 0;
   private shuttingDown = false;
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
@@ -262,6 +263,10 @@ export class AircraftStateService {
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
+  // Shadow-only fusion does not need to run for every one-second network
+  // publication. Keep its evaluation cadence bounded independently of live
+  // ingest so the public radar path remains responsive.
+  private lastTrackFusionEvaluationAt = 0;
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
@@ -931,9 +936,10 @@ export class AircraftStateService {
     this.operationalTwinTrajectoryQualityOutcomeV2.observeTruth(this.localAircraft, now);
     this.operationalTwinEventOutcome.observeLocal(this.localAircraft, now);
     this.regionalAttentionOutcome.observeTruth(this.localAircraft, now);
-    const activeHexes = new Set(this.localAircraft.keys());
+    const activeAircraft = [...this.localAircraft.values()];
+    const activeHexes = new Set(activeAircraft.map((item) => item.icaoHex));
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
-    if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
+    if (!this.shuttingDown) this.statistics.observe(activeAircraft, this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
     this.alerts.observe(previousAircraft, this.localAircraft);
     this.intelligence.cleanup(activeHexes);
@@ -952,8 +958,8 @@ export class AircraftStateService {
     }
     for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.operationalTwinCalibrationPersistence.scheduleFlush();
-    this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
-    this.operationalFocusOutcome.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
+    this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt));
+    this.operationalFocusOutcome.observe(activeAircraft, new Date(snapshot.fetchedAt));
     this.scheduleOperationalTwinCalibrationSample(now);
     this.invalidateSnapshotCache();
   }
@@ -1086,6 +1092,8 @@ export class AircraftStateService {
   }
 
   private observeTrackFusionShadow(now = Date.now()): void {
+    if (now - this.lastTrackFusionEvaluationAt < 5_000) return;
+    this.lastTrackFusionEvaluationAt = now;
     const evaluatedTracks = this.trackFusionShadow.observe({
       local: this.localAircraft,
       network: this.networkAircraft,
@@ -1331,6 +1339,12 @@ export class AircraftStateService {
 
   private queueHistory(snapshot: ProviderSnapshot): void {
     if (!this.running) return;
+    // The live provider refreshes every 3s, while history sampling is
+    // configured at 20s. Avoid replaying the complete snapshot and its shadow
+    // persistence checks on every live tick when no position can be due yet.
+    const sampledAt = Date.parse(snapshot.fetchedAt);
+    if (Number.isFinite(sampledAt) && sampledAt - this.lastHistoryQueueAt < getHistorySampleIntervalMs()) return;
+    if (Number.isFinite(sampledAt)) this.lastHistoryQueueAt = sampledAt;
     this.pendingHistorySnapshot = snapshot;
     if (this.historyWriteActive) return;
     this.historyWriteActive = true;
@@ -1407,10 +1421,15 @@ export class AircraftStateService {
 
   private async resolveAtc(snapshot: ProviderSnapshot): Promise<void> {
     const failures: string[] = [];
-    const results = await Promise.all(snapshot.aircraft.map(async (incoming) => {
+    // In the steady state most aircraft retain the same coarse ATC key. Do
+    // not allocate a promise or enter the resolver for those observations.
+    const candidates = snapshot.aircraft.filter((incoming) => {
+      const key = atcResolutionKey(incoming);
+      return Boolean(key) && this.atcResolutionKeys.get(incoming.icaoHex) !== key;
+    });
+    const results = await Promise.all(candidates.map(async (incoming) => {
       const key = atcResolutionKey(incoming);
       if (!key || !this.aircraft.has(incoming.icaoHex)) return { incoming, key, assignment: null, resolved: false };
-      if (this.atcResolutionKeys.get(incoming.icaoHex) === key) return { incoming, key, assignment: this.aircraft.get(incoming.icaoHex)?.atc ?? null, resolved: true };
       this.atcResolutionKeys.set(incoming.icaoHex, key);
       try {
         const match = await this.atc.lookup({ latitude: incoming.lat!, longitude: incoming.lon!, altitudeFt: incoming.altitude, observedAt: new Date(snapshot.fetchedAt) });

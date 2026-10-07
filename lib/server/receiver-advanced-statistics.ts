@@ -99,10 +99,11 @@ export class ReceiverAdvancedStatistics {
     this.currentDate = dayKey(new Date(), timezone);
   }
 
-  observe(aircraft: Aircraft[], receiverMessagesTotal: number | null | undefined, observedAt = new Date()): void {
-    const copied = aircraft.map((item) => ({ ...item }));
+  observe(aircraft: readonly Aircraft[], receiverMessagesTotal: number | null | undefined, observedAt = new Date()): void {
     this.queue = this.queue
-      .then(() => this.observeInternal(copied, receiverMessagesTotal, observedAt))
+      // AircraftStateService replaces records instead of mutating them in
+      // place, so cloning every aircraft here only adds allocation pressure.
+      .then(() => this.observeInternal(aircraft, receiverMessagesTotal, observedAt))
       .catch((error) => {
         console.error("AirRadar advanced receiver statistics failed", error);
       });
@@ -127,7 +128,7 @@ export class ReceiverAdvancedStatistics {
     };
   }
 
-  private async observeInternal(aircraft: Aircraft[], receiverMessagesTotal: number | null | undefined, observedAt: Date): Promise<void> {
+  private async observeInternal(aircraft: readonly Aircraft[], receiverMessagesTotal: number | null | undefined, observedAt: Date): Promise<void> {
     const nextDate = dayKey(observedAt, this.timezone);
     if (nextDate !== this.currentDate) await this.rollover(nextDate);
     if (!await this.ensureLoaded()) return;
