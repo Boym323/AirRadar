@@ -10,6 +10,7 @@ import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
 import { findRecentObserverPasses } from "@/lib/spotter-history";
+import { isSpotterInteresting, scoreSpotterInterest, type SpotterInterestReasonCode } from "@/lib/spotter-interest";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -197,6 +198,27 @@ export function MobileSpotterMode() {
       .slice(0, 5);
   }, [distanceOrigin, observer, visibleAircraft]);
 
+  const interestingAircraft = useMemo(() => {
+    if (distanceOrigin !== "observer" || !observer) return [];
+    const recordHex = discovery?.todayReceptionRecord?.icaoHex ?? null;
+    return visibleAircraft
+      .map((item) => {
+        const closestApproach = predictClosestApproach(item.aircraft, observer);
+        const interest = scoreSpotterInterest(
+          item.aircraft,
+          labelsByHex.get(item.aircraft.icaoHex) ?? [],
+          closestApproach?.closestHorizontalDistanceKm ?? null,
+          recordHex,
+        );
+        return { ...item, closestApproach, interest };
+      })
+      .filter((item) => isSpotterInteresting(item.interest))
+      .sort((a, b) => b.interest.score - a.interest.score
+        || (a.closestApproach?.secondsUntilClosest ?? Number.POSITIVE_INFINITY)
+          - (b.closestApproach?.secondsUntilClosest ?? Number.POSITIVE_INFINITY))
+      .slice(0, 5);
+  }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft]);
+
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
     [historyTracks, observer],
@@ -291,6 +313,34 @@ export function MobileSpotterMode() {
         <input value={aircraftType} maxLength={32} onChange={(event) => setAircraftType(event.target.value)} placeholder="A320 / B738" />
       </label>
     </Panel>
+
+    {distanceOrigin === "observer" && observerState === "ready" && interestingAircraft.length ? <Panel>
+      <SectionHeader kicker="MY SKY / DISCOVERY" title={copy.lookUp} description={copy.lookUpDescription} />
+      <div className={styles.passList}>
+        {interestingAircraft.map(({ aircraft, interest, closestApproach }) => {
+          const route = aircraft.enrichment?.route;
+          return <article className={styles.interestCard} key={aircraft.icaoHex}>
+            <div className={styles.interestHead}>
+              <div>
+                <strong>{aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex}</strong>
+                <span>{aircraft.aircraftType ?? aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.icaoHex}</span>
+                {route?.origin || route?.destination ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small> : null}
+              </div>
+              <div className={styles.interestScore}>
+                <strong>{interest.score}</strong>
+                <span>{copy.interestScore}</span>
+              </div>
+            </div>
+            <div className={styles.interestReasons}>
+              {interest.reasons.map((reason) => <span key={reason.code}>
+                {copy.interestReasons[reason.code as SpotterInterestReasonCode]} +{reason.points}
+              </span>)}
+            </div>
+            {closestApproach ? <small>{copy.closestPass}: {formatDistance(closestApproach.closestHorizontalDistanceKm)}</small> : null}
+          </article>;
+        })}
+      </div>
+    </Panel> : null}
 
     {distanceOrigin === "observer" && observerState === "ready" && upcomingPasses.length ? <Panel>
       <SectionHeader kicker="MY SKY / CPA" title={copy.comingOverhead} description={copy.comingOverheadDescription} />
