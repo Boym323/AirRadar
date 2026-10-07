@@ -102,7 +102,9 @@ describe("Mobile Spotter Mode V1 runtime boundaries", () => {
     expect(source).toContain("navigator.geolocation.watchPosition");
     expect(source).toContain("navigator.geolocation.clearWatch");
     expect(source).not.toContain("/api/spotter");
-    expect(source).not.toContain("localStorage");
+    expect(source).toContain("SPOTTER_LOGBOOK_STORAGE_KEY");
+    expect(source).toContain("window.localStorage.getItem");
+    expect(source).toContain("window.localStorage.setItem");
     expect(source).not.toContain("new EventSource");
   });
 
