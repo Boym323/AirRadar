@@ -41,6 +41,17 @@ describe("visual system v2", () => {
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.boundary");
     expect(css).not.toMatch(/font-size:\s*9px;/);
     expect(css).not.toContain("font-size:9px;");
+
+    for (const relativePath of [
+      "../app/radar-aircraft-panel.css",
+      "../components/radar/radar-flight-follow-hud.module.css",
+      "../components/radar/radar-operational-focus-card.module.css",
+      "../components/radar/radar-operational-focus-summary.module.css",
+      "../components/radar/radar-operations-center.module.css",
+    ]) {
+      const radarCss = readFileSync(new URL(relativePath, import.meta.url), "utf8");
+      expect(radarCss).not.toMatch(/font-size:\s*9px;/);
+    }
   });
 
   it("exposes the shared visual primitives used by feature pages", () => {
