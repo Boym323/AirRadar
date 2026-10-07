@@ -19,7 +19,7 @@ import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } 
 import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { rankUpcomingSky } from "@/lib/spotter-upcoming";
-import { SPOTTER_LOGBOOK_STORAGE_KEY, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
+import { SPOTTER_LOGBOOK_STORAGE_KEY, SPOTTER_LOGBOOK_VERSION, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookReplayHref, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
 import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
 import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-share-card";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
@@ -57,7 +57,7 @@ export function MobileSpotterMode() {
   const [skyFinderEnabled, setSkyFinderEnabled] = useState(false);
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
   const [orientationState, setOrientationState] = useState<"idle" | "waiting" | "ready" | "denied" | "unavailable">("idle");
-  const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: 1, entries: [] });
+  const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
   const [logbookMessage, setLogbookMessage] = useState<string | null>(null);
   const [savedSpots, setSavedSpots] = useState<SpotterSavedSpot[]>([]);
   const [savedSpotAccess, setSavedSpotAccess] = useState<"loading" | "ready" | "locked" | "error">("loading");
@@ -107,7 +107,7 @@ export function MobileSpotterMode() {
     try {
       setLogbook(parseSpotterLogbook(window.localStorage.getItem(SPOTTER_LOGBOOK_STORAGE_KEY)));
     } catch {
-      setLogbook({ version: 1, entries: [] });
+      setLogbook({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
     }
     setNotificationPermission("Notification" in window && "serviceWorker" in navigator
       ? Notification.permission
@@ -404,7 +404,16 @@ export function MobileSpotterMode() {
 
   const markSkyStorySeen = () => {
     if (!skyStory) return;
-    const entry = createSpotterLogbookEntry(skyStory.aircraft, skyStory.story);
+    const entry = createSpotterLogbookEntry(
+      skyStory.aircraft,
+      skyStory.story,
+      new Date().toISOString(),
+      {
+        visual: visualAcquisition,
+        light: lightContext,
+        photoOpportunity,
+      },
+    );
     const next = addSpotterLogbookEntry(logbook, entry);
     setLogbook(next);
     setLogbookMessage(copy.seenSaved);
@@ -1298,9 +1307,12 @@ export function MobileSpotterMode() {
             {entry.origin || entry.destination ? <small>{entry.origin ?? "—"} → {entry.destination ?? "—"}</small> : null}
           </div>
           <div className={styles.passMetrics}>
-            <strong>{formatDistance(entry.closestDistanceKm)}</strong>
+            <strong>{entry.photoScore === null ? formatDistance(entry.closestDistanceKm) : entry.photoScore + "/100"}</strong>
             <span>{formatDateTime(entry.observedAt, t)}</span>
             <small>{formatAltitude(entry.altitudeFt)}</small>
+            {entry.weatherStationId ? <small>{entry.weatherStationId}{entry.visibilityMeters === null ? "" : " · " + formatNumber(entry.visibilityMeters / 1000) + " km"}</small> : null}
+            {entry.lighting ? <small>{copy.lighting[entry.lighting]}{entry.lightPeriod ? " · " + copy.lightPeriods[entry.lightPeriod] : ""}</small> : null}
+            <Link href={spotterLogbookReplayHref(entry) as Route}>{copy.replaySighting}</Link>
           </div>
         </article>)}
       </div> : <EmptyState title={copy.emptyLogbook} />}
