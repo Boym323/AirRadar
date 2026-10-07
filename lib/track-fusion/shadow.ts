@@ -25,6 +25,7 @@ import {
 const MAX_ESTIMATION_GAP_MS = 6_000;
 const MAX_FIELD_HOLD_MS = 10_000;
 const TRACK_RETENTION_MS = 120_000;
+const TRACK_CLEANUP_INTERVAL_MS = 30_000;
 const MAX_TRACKS = 25_000;
 const MAX_RECENT_DISAGREEMENTS = 20;
 const POSITION_DISAGREEMENT_NM = 2;
@@ -158,6 +159,8 @@ export interface TrackFusionShadowInput {
   localStaleAfterMs: number;
   networkStaleAfterMs: number;
   sourcePreferences?: ReadonlyMap<string, "local" | "network">;
+  /** Optional dirty identity set. Omit for a full local+network evaluation. */
+  keys?: Iterable<string>;
   now?: number;
 }
 
@@ -177,7 +180,9 @@ export class TrackFusionShadow {
   private readonly positionResidual = emptyResidual();
   private readonly canonicalResidual = emptyResidual();
   private recentDisagreements: TrackFusionRecentDisagreement[] = [];
+  private readonly overlapHexes = new Set<string>();
   private lastEvaluatedAt: number | null = null;
+  private lastCleanupAt = 0;
   private currentOverlapTracks = 0;
 
   constructor(private readonly enabled = true) {}
@@ -185,16 +190,18 @@ export class TrackFusionShadow {
   observe(input: TrackFusionShadowInput): TrackFusionTrack[] {
     if (!this.enabled) return [];
     const now = input.now ?? Date.now();
-    const keys = new Set([...input.local.keys(), ...input.network.keys()]);
+    const keys = input.keys
+      ? new Set(input.keys)
+      : new Set([...input.local.keys(), ...input.network.keys()]);
     const evaluatedTracks: TrackFusionTrack[] = [];
-    let overlapTracks = 0;
 
     for (const hex of keys) {
       const localAircraft = input.local.get(hex);
       const networkAircraft = input.network.get(hex);
       const local = localAircraft ? buildTrackFusionObservation(localAircraft, now) : null;
       const network = networkAircraft ? buildTrackFusionObservation(networkAircraft, now) : null;
-      if (local && network) overlapTracks += 1;
+      if (local && network) this.overlapHexes.add(hex);
+      else this.overlapHexes.delete(hex);
       const fingerprint = `${local?.fingerprint ?? "-"}|${network?.fingerprint ?? "-"}`;
       const memory = this.tracks.get(hex);
 
@@ -227,18 +234,28 @@ export class TrackFusionShadow {
       this.evaluations += 1;
     }
 
-    for (const [hex, memory] of this.tracks) {
-      if (!keys.has(hex) && now - memory.lastEvaluatedAt > TRACK_RETENTION_MS) this.tracks.delete(hex);
+    const cleanupDue = now - this.lastCleanupAt >= TRACK_CLEANUP_INTERVAL_MS;
+    if (cleanupDue) {
+      for (const [hex, memory] of this.tracks) {
+        if (!input.local.has(hex) && !input.network.has(hex) && now - memory.lastEvaluatedAt > TRACK_RETENTION_MS) {
+          this.tracks.delete(hex);
+          this.overlapHexes.delete(hex);
+        }
+      }
+      this.lastCleanupAt = now;
     }
     if (this.tracks.size > MAX_TRACKS) {
       const excess = this.tracks.size - MAX_TRACKS;
       const oldest = [...this.tracks.entries()]
         .sort((left, right) => left[1].lastEvaluatedAt - right[1].lastEvaluatedAt)
         .slice(0, excess);
-      for (const [hex] of oldest) this.tracks.delete(hex);
+      for (const [hex] of oldest) {
+        this.tracks.delete(hex);
+        this.overlapHexes.delete(hex);
+      }
       this.capacityEvictions += oldest.length;
     }
-    this.currentOverlapTracks = overlapTracks;
+    this.currentOverlapTracks = this.overlapHexes.size;
     this.lastEvaluatedAt = now;
     return evaluatedTracks;
   }
