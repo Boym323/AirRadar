@@ -4,7 +4,7 @@ export const NOTIFICATION_CENTER_STORAGE_KEY = "airradar.notifications.v1";
 export const NOTIFICATION_CENTER_STORAGE_VERSION = 1 as const;
 export const NOTIFICATION_CENTER_PAGE_SIZE = 50;
 
-export type NotificationCenterCategory = "WATCHLIST" | "INTELLIGENCE" | "EMERGENCY" | "RECEPTION RECORD";
+export type NotificationCenterCategory = "WATCHLIST" | "INTELLIGENCE" | "EMERGENCY" | "FIRST SEEN" | "RECEPTION RECORD" | "PREDICTIVE";
 
 export interface NotificationCenterLocalState {
   version: typeof NOTIFICATION_CENTER_STORAGE_VERSION;
@@ -37,8 +37,11 @@ export function notificationCategory(entry: AlertHistoryEntry): NotificationCent
   if (entry.type === "emergency"
     || entry.type === "emergency_7500"
     || entry.type === "emergency_7600"
-    || entry.type === "emergency_7700") return "EMERGENCY";
-  if (entry.type === "new_aircraft" || entry.type === "reception_record") return "RECEPTION RECORD";
+    || entry.type === "emergency_7700"
+    || (entry.type === "alert_v1" && entry.alertV1?.trigger === "SQUAWK")) return "EMERGENCY";
+  if (entry.type === "new_aircraft") return "FIRST SEEN";
+  if (entry.type === "reception_record") return "RECEPTION RECORD";
+  if (entry.type === "predictive_eta" || entry.type === "predictive_runway_change") return "PREDICTIVE";
   if (entry.type.startsWith("intelligence_")) return "INTELLIGENCE";
   if (entry.type === "alert_v1" && entry.alertV1?.sourceType === "FLIGHT_EVENT") return "INTELLIGENCE";
   return "WATCHLIST";

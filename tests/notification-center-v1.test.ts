@@ -33,7 +33,9 @@ describe("Notification Center V1 aggregation", () => {
     expect(notificationCategory(entry("w", "watchlist", "pending", "2026-10-06T10:00:00Z"))).toBe("WATCHLIST");
     expect(notificationCategory(entry("i", "intelligence_approach", "delivered", "2026-10-06T10:01:00Z"))).toBe("INTELLIGENCE");
     expect(notificationCategory(entry("e", "emergency_7700", "failed", "2026-10-06T10:02:00Z"))).toBe("EMERGENCY");
-    expect(notificationCategory(entry("r", "reception_record", "disabled", "2026-10-06T10:03:00Z"))).toBe("RECEPTION RECORD");
+    expect(notificationCategory(entry("n", "new_aircraft", "disabled", "2026-10-06T10:03:00Z"))).toBe("FIRST SEEN");
+    expect(notificationCategory(entry("r", "reception_record", "disabled", "2026-10-06T10:04:00Z"))).toBe("RECEPTION RECORD");
+    expect(notificationCategory(entry("p", "predictive_eta", "delivered", "2026-10-06T10:05:00Z"))).toBe("PREDICTIVE");
   });
 
   it("deduplicates by canonical event id before counting status and unread", () => {
@@ -64,19 +66,26 @@ describe("Notification Center V1 aggregation", () => {
 
 describe("Notification Center V1 boundaries", () => {
   const source = readFileSync(new URL("../components/notification-center.tsx", import.meta.url), "utf8");
-  const route = readFileSync(new URL("../app/api/alerts/route.ts", import.meta.url), "utf8");
+  const historyRoute = readFileSync(new URL("../app/api/alerts/route.ts", import.meta.url), "utf8");
+  const deliveryRoute = readFileSync(new URL("../app/api/admin/alerts/delivery/route.ts", import.meta.url), "utf8");
+  const engine = readFileSync(new URL("../lib/server/alert-engine.ts", import.meta.url), "utf8");
 
-  it("reuses one bounded canonical alert-history request", () => {
+  it("keeps history bounded and adds authenticated delivery preferences", () => {
     expect(NOTIFICATION_CENTER_PAGE_SIZE).toBe(50);
     expect(source).toContain("/api/alerts?page=0&pageSize=");
-    expect(source.match(/fetch\(/g)).toHaveLength(1);
-    expect(route).toContain("listAlertHistory");
+    expect(source).toContain("/api/admin/alerts/delivery?view=preferences");
+    expect(source).toContain('method: "PATCH"');
+    expect(historyRoute).toContain("listAlertHistory");
+    expect(deliveryRoute).toContain("isWatchlistSessionValid");
+    expect(deliveryRoute).toContain("requireWatchlistMutation");
+    expect(deliveryRoute).toContain("getNotificationPreferencesStore");
   });
 
-  it("adds no alert detector, delivery worker, scheduler or backend persistence", () => {
+  it("adds no detector, scheduler or parallel notification API", () => {
     expect(source).not.toContain("/api/notifications");
     expect(source).not.toContain("setInterval");
     expect(source).not.toContain("EventSource");
-    expect(source).not.toContain("POST");
+    expect(engine).toContain("notificationModeForDurableSignal");
+    expect(engine).toContain("channelsForNotificationMode");
   });
 });

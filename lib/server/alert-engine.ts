@@ -1,5 +1,6 @@
 import type { Aircraft } from "@/lib/aircraft/types";
 import { matchesAircraftRule } from "@/lib/aircraft/watchlist";
+import { notificationPreferenceKeyForEvent, type NotificationPreferenceMode } from "@/lib/notification-preferences";
 import { loadAlertConfig, type AlertRule } from "@/lib/server/alert-config";
 import { getAlertCooldownMs, isEmergencyAlertEnabled } from "@/lib/server/config";
 import { createAlertNotifier, type AlertNotifier, type AircraftAlert } from "@/lib/server/alert-notifier";
@@ -10,6 +11,7 @@ import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligenc
 import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 import { getPrisma } from "@/lib/server/db";
+import { channelsForNotificationMode, notificationModeForDurableSignal, notificationPreferenceMode } from "@/lib/server/notification-preferences";
 import { evaluateWatchlistPredictiveRule } from "@/lib/watchlist-predictive-alerts-v2";
 import type { PublicEtaAdvisory } from "@/lib/predictive-intelligence/eta-advisory";
 import type { PublicRunwayChangeAdvisory } from "@/lib/predictive-intelligence/runway-change-advisory";
@@ -36,6 +38,7 @@ export interface AlertEngineOptions {
   now?: () => number;
   history?: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   state?: AlertStateStore;
+  notificationMode?: (alert: AircraftAlert) => NotificationPreferenceMode | null;
 }
 
 function aircraftMap(value: ReadonlyMap<string, Aircraft> | ReadonlyArray<Aircraft>): ReadonlyMap<string, Aircraft> {
@@ -117,6 +120,7 @@ export class AlertEngine {
   private readonly now: () => number;
   private readonly history: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   private readonly stateStore: AlertStateStore;
+  private readonly notificationMode: (alert: AircraftAlert) => NotificationPreferenceMode | null;
   private readonly dedupCache = new Map<string, number>();
   private readonly pending: AircraftAlert[] = [];
   private activeDeliveries = 0;
@@ -138,6 +142,11 @@ export class AlertEngine {
     this.now = options.now ?? Date.now;
     this.history = options.history ?? createAlertHistoryStore();
     this.stateStore = options.state ?? createAlertStateStore();
+    this.notificationMode = options.notificationMode ?? ((alert) => {
+      const type = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
+      const key = notificationPreferenceKeyForEvent(type, alert.emergency);
+      return key ? notificationPreferenceMode(key) : null;
+    });
     const persisted = this.stateStore.load();
     for (const [key, timestamp] of persisted.dedup) this.dedupCache.set(key, timestamp);
     for (const [key, timestamp] of persisted.permanent) this.permanentEvents.set(key, timestamp);
@@ -430,14 +439,18 @@ export class AlertEngine {
 
   private async persistDurableSignal(signal: AlertV1Signal): Promise<void> {
     try {
+      const deliveryMode = notificationModeForDurableSignal(signal);
+      if (deliveryMode === "OFF") return;
       const config = await getAlertsFleetsRepository().loadConfig();
       for (const occurrence of evaluateAlertV1(signal, config)) {
         const rule = config.rules.find((candidate) => candidate.id === occurrence.ruleId);
         if (!rule) continue;
+        const channels = channelsForNotificationMode(deliveryMode, rule.channels);
+        if (channels === null) continue;
         await getAlertsFleetsRepository().recordOccurrence({
           id: occurrence.id, ruleId: occurrence.ruleId, sourceType: occurrence.sourceType, sourceKey: occurrence.sourceKey, trigger: occurrence.trigger,
           aircraftIcao: occurrence.aircraft.icaoHex, registration: occurrence.aircraft.registration, callsign: occurrence.aircraft.callsign,
-          flightEventId: signal.sourceType === "FLIGHT_EVENT" ? signal.flightEventId ?? null : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels: rule.channels,
+          flightEventId: signal.sourceType === "FLIGHT_EVENT" ? signal.flightEventId ?? null : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels,
         });
       }
     } catch {
@@ -485,7 +498,6 @@ export class AlertEngine {
       matchedRules: [],
       emergency: false,
       priority: "normal",
-      deliveryMode: "history_only",
       type: "new_aircraft",
       reason: "new",
       eventId: id,
@@ -516,7 +528,6 @@ export class AlertEngine {
       matchedRules: [],
       emergency: false,
       priority: "normal",
-      deliveryMode: "history_only",
       type: "reception_record",
       reason: "record",
       eventId: id,
@@ -588,6 +599,9 @@ export class AlertEngine {
   }
 
   private enqueue(alert: AircraftAlert): boolean {
+    const preferenceMode = this.notificationMode(alert);
+    if (preferenceMode === "OFF") return true;
+
     const type: AlertHistoryEventType = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
     const reason: AlertHistoryReason = alert.reason ?? (alert.emergency ? "emergency" : "watchlisted");
     const eventId = alert.eventId ?? `${type}:${alert.aircraft.icaoHex}:${this.now()}:${this.sequence++}`;
@@ -606,7 +620,7 @@ export class AlertEngine {
       metadata: alert.metadata,
     }).catch(() => undefined);
 
-    if (alert.deliveryMode === "history_only") {
+    if (alert.deliveryMode === "history_only" || preferenceMode === "CENTER_ONLY") {
       void this.history.recordNotification(eventId, "disabled").catch(() => undefined);
       return true;
     }

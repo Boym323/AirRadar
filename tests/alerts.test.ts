@@ -181,6 +181,37 @@ describe("server alerts", () => {
     expect(history.recordDetected).toHaveBeenCalledTimes(1);
   });
 
+  it("allows first-seen push only after explicit preference opt-in", async () => {
+    const history = testHistory();
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({
+      notifier,
+      history,
+      notificationMode: (alert) => alert.type === "new_aircraft" ? "PUSH" : null,
+    });
+    engine.observeNewAircraft(aircraft());
+    await flushAlerts();
+    expect(history.recordDetected).toHaveBeenCalledTimes(1);
+    expect(notifier.calls).toHaveLength(1);
+    expect(notifier.calls[0]?.type).toBe("new_aircraft");
+  });
+
+  it("suppresses watchlist history and push when its preference is OFF", async () => {
+    const history = testHistory();
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({
+      rules: [rule("uae", "callsignPattern", "UAE*")],
+      notifier,
+      history,
+      notificationMode: (alert) => alert.type === "aircraft_appeared" ? "OFF" : null,
+    });
+    engine.observe([], [aircraft()]);
+    await flushAlerts();
+    expect(history.recordDetected).not.toHaveBeenCalled();
+    expect(history.recordNotification).not.toHaveBeenCalled();
+    expect(notifier.calls).toHaveLength(0);
+  });
+
   it("persists the last trigger time for a watchlist rule", () => {
     let now = Date.parse("2026-09-10T18:00:00Z");
     const state = new MemoryAlertStateStore();
