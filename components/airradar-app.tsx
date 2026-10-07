@@ -1893,7 +1893,7 @@ export function AirRadarApp() {
         layout: {
           "text-field": ["get", "label"],
           "text-font": ["Noto Sans Regular"],
-          "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9, 10.5, 10, 14, 11],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 10, 10.5, 11, 14, 12],
           "text-line-height": 1.1,
           "text-offset": [0, 1.4],
           "text-padding": 4,
@@ -1920,7 +1920,7 @@ export function AirRadarApp() {
         layout: {
           "text-field": ["get", "label"],
           "text-font": ["Noto Sans Regular"],
-          "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9, 10.5, 10, 14, 11],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 10, 10.5, 11, 14, 12],
           "text-line-height": 1.1,
           "text-offset": [0, 1.4],
           "text-padding": 4,
