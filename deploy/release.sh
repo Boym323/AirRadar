@@ -536,7 +536,26 @@ prepare_release_version() {
   local resolved_version
 
   if (( AUTOMATED == 1 )); then
-    resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version --channel stable)" || die "Could not resolve the automated release version."
+    if [[ -n "${PREPARED_BUILD_ROOT}" ]]; then
+      resolved_version="$(node - "${PREPARED_BUILD_ROOT}/manifest.json" "${NEW_SHA}" <<'NODE'
+const fs = require("node:fs");
+const [path, expectedCommit] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+if (String(manifest.commit || "").toLowerCase() !== expectedCommit.toLowerCase()) {
+  throw new Error(`Prepared build commit mismatch: ${manifest.commit} != ${expectedCommit}`);
+}
+if (typeof manifest.version !== "string" || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(manifest.version)) {
+  throw new Error(`Prepared build has invalid stable version: ${manifest.version}`);
+}
+if (manifest.channel !== "production") {
+  throw new Error(`Prepared build channel mismatch: ${manifest.channel}`);
+}
+process.stdout.write(manifest.version);
+NODE
+)" || die "Could not resolve the automated release version from the validated build artifact."
+    else
+      resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version --channel stable)" || die "Could not resolve the automated release version."
+    fi
     [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || die "Version helper returned an invalid automated stable version: ${resolved_version}"
     RELEASE_VERSION="${resolved_version}"
     RELEASE_TAG="v${RELEASE_VERSION}"
