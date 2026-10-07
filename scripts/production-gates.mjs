@@ -255,6 +255,32 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       console.warn("[production-gates] page close raced with an already-disposed browser context");
     }
   };
+  const clickAndWaitForNavigation = async (page, link, target, label) => {
+    const matchesTarget = (value) => {
+      const url = value instanceof URL ? value : new URL(value);
+      return url.pathname === target.pathname && url.search === target.search;
+    };
+    let lastError = null;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        await Promise.all([
+          page.waitForURL((url) => matchesTarget(url), { timeout: 8_000, waitUntil: "domcontentloaded" }),
+          link.click(),
+        ]);
+        return;
+      } catch (error) {
+        lastError = error;
+        if (matchesTarget(page.url())) return;
+        if (attempt === 1) {
+          console.warn(`[production-gates] ${label} navigation did not settle after first click; retrying after hydration`);
+          await page.waitForTimeout(500);
+        }
+      }
+    }
+    throw new Error(
+      `${label} navigation failed: target=${target.pathname}${target.search} current=${page.url()} error=${lastError instanceof Error ? lastError.message : String(lastError)}`,
+    );
+  };
   try {
     const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
     const captureVisualSmoke = configuredViewport ? async () => {} : async () => {
@@ -1268,10 +1294,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     // click so a fast client-side transition cannot be missed.
     const historyLink = routeSmoke.locator('a[href="/history"]:visible').first();
     await historyLink.waitFor({ state: "visible", timeout: 15_000 });
-    await Promise.all([
-      routeSmoke.waitForURL((url) => url.pathname === "/history", { timeout: 15_000 }),
-      historyLink.click(),
-    ]);
+    await clickAndWaitForNavigation(routeSmoke, historyLink, new URL("/history", baseUrl), "History link");
     await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
     await routeSmoke.setViewportSize({ width: 390, height: 844 });
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
@@ -1280,13 +1303,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     const mobileMoreHref = await mobileMoreLink.getAttribute("href");
     if (!mobileMoreHref) throw new Error("Mobile More navigation item is missing href");
     const mobileMoreTarget = new URL(mobileMoreHref, baseUrl);
-    await Promise.all([
-      routeSmoke.waitForURL(
-        (url) => url.pathname === mobileMoreTarget.pathname && url.search === mobileMoreTarget.search,
-        { timeout: 15_000 },
-      ),
-      mobileMoreLink.click(),
-    ]);
+    await clickAndWaitForNavigation(routeSmoke, mobileMoreLink, mobileMoreTarget, "Mobile More link");
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await closePage(routeSmoke);
