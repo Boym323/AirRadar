@@ -3,66 +3,19 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
+import { Button, EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, SegmentedControl, StatusBadge } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
+import { observerFromGeolocation, observerGeometry, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
+type SpotterDistanceOrigin = "receiver" | "observer";
+type ObserverState = "idle" | "requesting" | "ready" | "denied" | "unavailable" | "error";
+
 export function MobileSpotterMode() {
-  const cs = t.locale.startsWith("cs");
-  const copy = cs ? {
-    title: "Spotter mód",
-    subtitle: "Mobilní živý přehled letadel skutečně pozorovaných LOCAL přijímačem.",
-    liveNearby: "Živě v dosahu",
-    newToday: "Nová dnes",
-    rareToday: "Vzácná dnes",
-    receptionRecord: "Dnešní rekord",
-    aircraft: "Letadla v dosahu",
-    aircraftDescription: "Pouze LOCAL receiver evidence, řazeno od nejbližšího letadla.",
-    distance: "Max. vzdálenost",
-    altitude: "Max. výška",
-    type: "Typ letadla",
-    discovery: "Discovery",
-    all: "Vše",
-    live: "LIVE · LOCAL",
-    stale: "STALE · LOCAL",
-    unavailable: "LOCAL feed nedostupný",
-    loading: "Připojování k LOCAL feedu…",
-    noAircraft: "Pro zvolené filtry není v LOCAL dosahu žádné letadlo.",
-    detail: "Detail",
-    radar: "Radar",
-    watch: "Watchlist",
-    bearing: "Směr",
-    track: "Trať",
-    updated: "Aktualizováno",
-  } : {
-    title: "Spotter Mode",
-    subtitle: "Mobile live view of aircraft actually observed by the LOCAL receiver.",
-    liveNearby: "Live nearby",
-    newToday: "New today",
-    rareToday: "Rare today",
-    receptionRecord: "Today's record",
-    aircraft: "Aircraft in range",
-    aircraftDescription: "LOCAL receiver evidence only, sorted by nearest aircraft first.",
-    distance: "Max distance",
-    altitude: "Max altitude",
-    type: "Aircraft type",
-    discovery: "Discovery",
-    all: "All",
-    live: "LIVE · LOCAL",
-    stale: "STALE · LOCAL",
-    unavailable: "LOCAL feed unavailable",
-    loading: "Connecting to LOCAL feed…",
-    noAircraft: "No aircraft in LOCAL range match the selected filters.",
-    detail: "Detail",
-    radar: "Radar",
-    watch: "Watchlist",
-    bearing: "Bearing",
-    track: "Track",
-    updated: "Updated",
-  };
+  const copy = t.spotter;
 
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const selectedHexRef = useRef<string | null>(null);
@@ -73,6 +26,9 @@ export function MobileSpotterMode() {
   const [maxAltitudeFt, setMaxAltitudeFt] = useState<number | null>(null);
   const [discoveryFilter, setDiscoveryFilter] = useState<SpotterDiscoveryFilter>("all");
   const [aircraftType, setAircraftType] = useState("");
+  const [distanceOrigin, setDistanceOrigin] = useState<SpotterDistanceOrigin>("receiver");
+  const [observer, setObserver] = useState<SpotterObserverPosition | null>(null);
+  const [observerState, setObserverState] = useState<ObserverState>("idle");
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -83,6 +39,32 @@ export function MobileSpotterMode() {
     onSelectedAircraftRemoved,
     onSnapshot,
   });
+
+  useEffect(() => {
+    if (distanceOrigin !== "observer") return;
+    if (!("geolocation" in navigator)) {
+      setObserver(null);
+      setObserverState("unavailable");
+      return;
+    }
+    setObserverState("requesting");
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setObserver(observerFromGeolocation(position));
+        setObserverState("ready");
+      },
+      (error) => {
+        setObserver(null);
+        setObserverState(error.code === error.PERMISSION_DENIED ? "denied" : "error");
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 15_000,
+        timeout: 10_000,
+      },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [distanceOrigin]);
 
   useEffect(() => {
     let active = true;
@@ -129,21 +111,41 @@ export function MobileSpotterMode() {
     [snapshot?.aircraft],
   );
 
-  const visibleAircraft = useMemo(
+  const filteredAircraft = useMemo(
     () => filterSpotterAircraft(snapshot?.aircraft ?? [], {
-      maxDistanceKm,
+      maxDistanceKm: distanceOrigin === "receiver" ? maxDistanceKm : null,
       maxAltitudeFt,
       discovery: discoveryFilter,
       aircraftType,
     }, labelsByHex),
-    [aircraftType, discoveryFilter, labelsByHex, maxAltitudeFt, maxDistanceKm, snapshot?.aircraft],
+    [aircraftType, discoveryFilter, distanceOrigin, labelsByHex, maxAltitudeFt, maxDistanceKm, snapshot?.aircraft],
   );
+
+  const visibleAircraft = useMemo(() => {
+    if (distanceOrigin === "receiver") {
+      return filteredAircraft.map((aircraft) => ({ aircraft, geometry: null }));
+    }
+    if (!observer) return [];
+    return filteredAircraft
+      .map((aircraft) => ({ aircraft, geometry: observerGeometry(aircraft, observer) }))
+      .filter((item) => item.geometry !== null)
+      .filter((item) => maxDistanceKm === null || item.geometry!.horizontalDistanceKm <= maxDistanceKm)
+      .sort((a, b) => a.geometry!.horizontalDistanceKm - b.geometry!.horizontalDistanceKm
+        || a.aircraft.icaoHex.localeCompare(b.aircraft.icaoHex));
+  }, [distanceOrigin, filteredAircraft, maxDistanceKm, observer]);
 
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
     : connected ? "loading" : "unavailable";
 
-  return <main className={styles.page} data-testid="mobile-spotter-mode-v1">
+  const observerMessage = observerState === "requesting" ? copy.locationRequesting
+    : observerState === "ready" ? copy.locationReady
+    : observerState === "denied" ? copy.locationDenied
+    : observerState === "unavailable" ? copy.locationUnavailable
+    : observerState === "error" ? copy.locationError
+    : copy.locationPrivate;
+
+  return <main className={styles.page} data-testid="mobile-spotter-mode-v2">
     <PageHeader
       kicker="AIRRADAR / SPOTTER"
       title={copy.title}
@@ -162,6 +164,31 @@ export function MobileSpotterMode() {
       <MetricCard value={discovery ? formatNumber(discovery.rareAircraftToday) : "—"} label={copy.rareToday} />
       <MetricCard value={discovery?.todayReceptionRecord ? formatDistance(discovery.todayReceptionRecord.distanceKm) : "—"} label={copy.receptionRecord} />
     </MetricStrip>
+
+    <Panel className={styles.locationMode}>
+      <SectionHeader
+        kicker="MY SKY"
+        title={copy.distanceOrigin}
+        description={distanceOrigin === "observer" ? observerMessage : copy.locationPrivate}
+        actions={<SegmentedControl>
+          <Button
+            size="compact"
+            variant={distanceOrigin === "receiver" ? "primary" : "ghost"}
+            aria-pressed={distanceOrigin === "receiver"}
+            onClick={() => setDistanceOrigin("receiver")}
+          >{copy.receiver}</Button>
+          <Button
+            size="compact"
+            variant={distanceOrigin === "observer" ? "primary" : "ghost"}
+            aria-pressed={distanceOrigin === "observer"}
+            onClick={() => setDistanceOrigin("observer")}
+          >{copy.myLocation}</Button>
+        </SegmentedControl>}
+      />
+      {distanceOrigin === "observer" && observer?.accuracyMeters !== null && observer?.accuracyMeters !== undefined
+        ? <small className={styles.locationAccuracy}>{copy.accuracy}: ±{formatNumber(observer.accuracyMeters)} m</small>
+        : null}
+    </Panel>
 
     <Panel className={styles.filters}>
       <label>
@@ -201,15 +228,19 @@ export function MobileSpotterMode() {
       <SectionHeader kicker="LOCAL RECEIVER" title={copy.aircraft} description={copy.aircraftDescription} />
       {feedState === "unavailable" && !snapshot ? <EmptyState title={copy.unavailable} />
         : !snapshot ? <p className={styles.loading}>{copy.loading}</p>
-        : visibleAircraft.length ? <div className={styles.list}>
-          {visibleAircraft.map((aircraft) => {
+        : distanceOrigin === "observer" && observerState !== "ready"
+          ? <EmptyState title={observerMessage} description={copy.locationPrivate} />
+          : visibleAircraft.length ? <div className={styles.list}>
+          {visibleAircraft.map(({ aircraft, geometry }) => {
             const labels = labelsByHex.get(aircraft.icaoHex) ?? [];
             const identity = aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex;
+            const displayedDistance = geometry?.horizontalDistanceKm ?? aircraft.distanceKm;
+            const displayedBearing = geometry?.bearingDeg ?? aircraft.bearing;
             return <article className={styles.card} key={aircraft.icaoHex}>
               <div className={styles.cardHead}>
                 <div>
                   <strong>{identity}</strong>
-                  <span>{aircraft.registration ?? aircraft.icaoHex}{aircraft.aircraftType ? ` · ${aircraft.aircraftType}` : ""}</span>
+                  <span>{aircraft.registration ?? aircraft.icaoHex}{aircraft.aircraftType ? " · " + aircraft.aircraftType : ""}</span>
                 </div>
                 <div className={styles.badges}>
                   <StatusBadge variant={feedState === "live" ? "live" : "stale"}>LOCAL</StatusBadge>
@@ -219,14 +250,20 @@ export function MobileSpotterMode() {
                 </div>
               </div>
               <dl>
-                <div><dt>{copy.distance}</dt><dd>{formatDistance(aircraft.distanceKm)}</dd></div>
+                <div>
+                  <dt>{distanceOrigin === "observer" ? copy.distanceFromYou : copy.distanceFromReceiver}</dt>
+                  <dd>{formatDistance(displayedDistance)}</dd>
+                </div>
                 <div><dt>{copy.altitude}</dt><dd>{formatAltitude(aircraft.altitude)}</dd></div>
-                <div><dt>{copy.bearing}</dt><dd>{formatTrack(aircraft.bearing)}</dd></div>
+                <div>
+                  <dt>{distanceOrigin === "observer" ? copy.bearingFromYou : copy.bearing}</dt>
+                  <dd>{formatTrack(displayedBearing)}</dd>
+                </div>
                 <div><dt>{copy.track}</dt><dd>{formatTrack(aircraft.track)}</dd></div>
               </dl>
               <div className={styles.actions}>
-                <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}` as Route}>{copy.detail}</Link>
-                <Link href={`/?aircraft=${encodeURIComponent(aircraft.icaoHex)}` as Route}>{copy.radar}</Link>
+                <Link href={("/aircraft/" + encodeURIComponent(aircraft.icaoHex)) as Route}>{copy.detail}</Link>
+                <Link href={("/?aircraft=" + encodeURIComponent(aircraft.icaoHex)) as Route}>{copy.radar}</Link>
                 <Link href={{
                   pathname: "/watchlist",
                   query: {
@@ -238,7 +275,7 @@ export function MobileSpotterMode() {
             </article>;
           })}
         </div> : <EmptyState title={copy.noAircraft} />}
-      {discoveryFailed ? <p className={styles.discoveryWarning}>{cs ? "Discovery badge mohou být dočasně neúplné." : "Discovery badges may be temporarily incomplete."}</p> : null}
+      {discoveryFailed ? <p className={styles.discoveryWarning}>{copy.discoveryWarning}</p> : null}
     </Panel>
   </main>;
 }
