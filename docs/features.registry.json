@@ -313,7 +313,8 @@
         "/records",
         "/aircraft-types",
         "/operators",
-        "/traffic/rhythm"
+        "/traffic/rhythm",
+        "/traffic/geography"
       ],
       "apis": [
         "/api/logbook/summary",
