@@ -21,7 +21,7 @@ describe("Procedure Explorer V1 boundary", () => {
   it("preserves published procedure semantics without flight-history scans", () => {
     expect(explorer).toContain("runwayApplicability");
     expect(explorer).toContain("procedure.source");
-    expect(explorer).toContain("navPoint=");
+    expect(explorer).toContain("query: { navPoint: focus }");
     expect(explorer).not.toContain("FlightPosition");
   });
 });
