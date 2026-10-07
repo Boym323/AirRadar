@@ -207,6 +207,7 @@ export const en = {
     prgInboundQueue: "Inbound queue",
     prgNextArrival: "Next arrival",
     prgQueueState: { EMPTY: "empty", LIGHT: "light", ACTIVE: "active", BUSY: "busy" },
+    prgActivityState: { QUIET: "quiet", LIGHT: "light", MODERATE: "moderate", BUSY: "busy" },
     prgViewAngle: { GOOD: "good angle", LOW: "low angle", UNKNOWN: "angle unknown" },
     prgNoInbound: "No confirmed PRG inbound is present in the current LOCAL snapshot.",
     photoReasons: {
