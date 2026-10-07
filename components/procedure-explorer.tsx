@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Procedure, ProcedurePoint, ProcedureType } from "@/lib/route-intelligence/contracts";
 import { formatNumber, t } from "@/lib/i18n";
+import { buildProcedureInvestigation, investigationHref, parseProcedureInvestigation } from "@/lib/investigation-links";
 import {
   EmptyState,
   MetricCard,
@@ -146,7 +147,7 @@ export function ProcedureExplorer() {
   const starCount = procedures.filter((procedure) => procedure.type === "STAR").length;
   const discontinuityCount = procedures.reduce((sum, procedure) => sum + procedure.discontinuities.length, 0);
 
-  async function loadProcedures(targetAirport: string): Promise<void> {
+  const loadProcedures = useCallback(async (targetAirport: string, targetType: ProcedureFilter, targetDesignator: string): Promise<void> => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -156,8 +157,8 @@ export function ProcedureExplorer() {
     setTruncated(false);
 
     const params = new URLSearchParams({ airport: targetAirport });
-    if (type !== "ALL") params.set("type", type);
-    const normalizedDesignator = normalizeDesignator(designator);
+    if (targetType !== "ALL") params.set("type", targetType);
+    const normalizedDesignator = normalizeDesignator(targetDesignator);
     if (normalizedDesignator) params.set("designator", normalizedDesignator);
 
     try {
@@ -177,7 +178,38 @@ export function ProcedureExplorer() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const restore = () => {
+      const state = parseProcedureInvestigation(window.location.search);
+      requestRef.current?.abort();
+      setValidation(null);
+      setAirport(state.airport ?? "");
+      setType(state.type);
+      setDesignator(state.designator);
+      if (state.airport) {
+        setSubmittedAirport(state.airport);
+        void loadProcedures(state.airport, state.type, state.designator);
+      } else {
+        setSubmittedAirport(null);
+        setProcedures([]);
+        setTruncated(false);
+        setFailed(false);
+        setLoading(false);
+      }
+      const canonical = investigationHref("/procedures", buildProcedureInvestigation(state));
+      if (window.location.pathname + window.location.search !== canonical) {
+        window.history.replaceState(null, "", canonical);
+      }
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => {
+      window.removeEventListener("popstate", restore);
+      requestRef.current?.abort();
+    };
+  }, [loadProcedures]);
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -189,12 +221,11 @@ export function ProcedureExplorer() {
     setValidation(null);
     setAirport(targetAirport);
     setSubmittedAirport(targetAirport);
-    const params = new URLSearchParams({ airport: targetAirport });
-    if (type !== "ALL") params.set("type", type);
     const normalizedDesignator = normalizeDesignator(designator);
-    if (normalizedDesignator) params.set("designator", normalizedDesignator);
-    window.history.replaceState(null, "", `/procedures?${params.toString()}`);
-    void loadProcedures(targetAirport);
+    const state = { airport: targetAirport, type, designator: normalizedDesignator };
+    const query = buildProcedureInvestigation(state);
+    window.history.pushState(null, "", investigationHref("/procedures", query));
+    void loadProcedures(targetAirport, type, normalizedDesignator);
   }
 
   return (

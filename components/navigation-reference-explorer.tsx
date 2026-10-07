@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import { formatNumber, t } from "@/lib/i18n";
+import { buildNavigationReferenceInvestigation, investigationHref, parseNavigationReferenceInvestigation } from "@/lib/investigation-links";
 import {
   EmptyState,
   MetricCard,
@@ -155,7 +156,7 @@ export function NavigationReferenceExplorer() {
     })).slice(0, MAX_ROUTES);
   })();
 
-  async function search(identifier: string): Promise<void> {
+  const search = useCallback(async (identifier: string): Promise<void> => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -214,7 +215,39 @@ export function NavigationReferenceExplorer() {
     }
 
     if (!controller.signal.aborted) setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    const restore = () => {
+      const state = parseNavigationReferenceInvestigation(window.location.search);
+      setValidation(null);
+      requestRef.current?.abort();
+      if (state.id) {
+        setInput(state.id);
+        setSearchedId(state.id);
+        void search(state.id);
+      } else {
+        setInput("");
+        setSearchedId(null);
+        setPoints([]);
+        setNearby([]);
+        setAts(null);
+        setNavFailed(false);
+        setAtsFailed(false);
+        setLoading(false);
+      }
+      const canonical = investigationHref("/navigation", buildNavigationReferenceInvestigation(state));
+      if (window.location.pathname + window.location.search !== canonical) {
+        window.history.replaceState(null, "", canonical);
+      }
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => {
+      window.removeEventListener("popstate", restore);
+      requestRef.current?.abort();
+    };
+  }, [search]);
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -226,7 +259,8 @@ export function NavigationReferenceExplorer() {
     setValidation(null);
     setInput(identifier);
     setSearchedId(identifier);
-    window.history.replaceState(null, "", `/navigation?id=${encodeURIComponent(identifier)}`);
+    const query = buildNavigationReferenceInvestigation({ id: identifier });
+    window.history.pushState(null, "", investigationHref("/navigation", query));
     void search(identifier);
   }
 

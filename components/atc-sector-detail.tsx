@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatNumber, t } from "@/lib/i18n";
+import { buildSectorDetailInvestigation, investigationHref, parseSectorDetailInvestigation } from "@/lib/investigation-links";
 import {
   EmptyState,
   MetricCard,
@@ -196,6 +197,28 @@ export function AtcSectorDetail({ sectorId }: { sectorId: string }) {
   };
 
   const [historyHours, setHistoryHours] = useState<HistoryHours>(6);
+
+  useEffect(() => {
+    const restore = () => {
+      const state = parseSectorDetailInvestigation(window.location.search);
+      setHistoryHours(state.historyHours);
+      const pathname = `/airspace/sectors/${encodeURIComponent(sectorId)}`;
+      const canonical = investigationHref(pathname, buildSectorDetailInvestigation(state));
+      if (window.location.pathname + window.location.search !== canonical) {
+        window.history.replaceState(null, "", canonical);
+      }
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [sectorId]);
+
+  function selectHistoryHours(hours: HistoryHours): void {
+    setHistoryHours(hours);
+    const pathname = `/airspace/sectors/${encodeURIComponent(sectorId)}`;
+    const query = buildSectorDetailInvestigation({ historyHours: hours });
+    window.history.pushState(null, "", investigationHref(pathname, query));
+  }
   const [traffic, setTraffic] = useState<SectorTrafficContext | null>(null);
   const [history, setHistory] = useState<SectorHistory | null>(null);
   const [transitions, setTransitions] = useState<SectorTransitionsResponse | null>(null);
@@ -307,7 +330,7 @@ export function AtcSectorDetail({ sectorId }: { sectorId: string }) {
               description={copy.historyDescription}
               actions={<SegmentedControl role="tablist" aria-label={copy.history}>
                 {HISTORY_RANGES.map((hours) => (
-                  <button key={hours} type="button" role="tab" aria-selected={historyHours === hours} className={historyHours === hours ? "active" : ""} onClick={() => setHistoryHours(hours)}>
+                  <button key={hours} type="button" role="tab" aria-selected={historyHours === hours} className={historyHours === hours ? "active" : ""} onClick={() => selectHistoryHours(hours)}>
                     {hours}h
                   </button>
                 ))}
