@@ -544,13 +544,6 @@ export function MobileSpotterMode() {
     ? evaluateVisualAcquisition(skyStory.aircraft, observer, nearestMetar)
     : null;
 
-  const lightContext = skyTarget && observer
-    ? lightGeometry(
-        solarPosition(snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(), observer),
-        skyTarget.geometry.bearingDeg,
-      )
-    : null;
-
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = interestingAircraft[0]
@@ -567,6 +560,13 @@ export function MobileSpotterMode() {
       direction,
     };
   }, [deviceHeading, distanceOrigin, interestingAircraft, observer, upcomingPasses, visibleAircraft]);
+
+  const lightContext = skyTarget && observer
+    ? lightGeometry(
+        solarPosition(snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(), observer),
+        skyTarget.geometry.bearingDeg,
+      )
+    : null;
 
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
