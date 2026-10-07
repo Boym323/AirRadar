@@ -40,6 +40,7 @@ export interface AlertEngineOptions {
   history?: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   state?: AlertStateStore;
   notificationMode?: (alert: AircraftAlert) => NotificationPreferenceMode | null;
+  notificationMuted?: (aircraftIcao: string, ruleIds: readonly string[]) => boolean;
 }
 
 function aircraftMap(value: ReadonlyMap<string, Aircraft> | ReadonlyArray<Aircraft>): ReadonlyMap<string, Aircraft> {
@@ -122,6 +123,7 @@ export class AlertEngine {
   private readonly history: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   private readonly stateStore: AlertStateStore;
   private readonly notificationMode: (alert: AircraftAlert) => NotificationPreferenceMode | null;
+  private readonly notificationMuted: (aircraftIcao: string, ruleIds: readonly string[]) => boolean;
   private readonly dedupCache = new Map<string, number>();
   private readonly pending: AircraftAlert[] = [];
   private activeDeliveries = 0;
@@ -148,6 +150,8 @@ export class AlertEngine {
       const key = notificationPreferenceKeyForEvent(type, alert.emergency);
       return key ? notificationPreferenceMode(key) : null;
     });
+    this.notificationMuted = options.notificationMuted
+      ?? ((aircraftIcao, ruleIds) => getNotificationCenterStateStore().isMuted(aircraftIcao, ruleIds));
     const persisted = this.stateStore.load();
     for (const [key, timestamp] of persisted.dedup) this.dedupCache.set(key, timestamp);
     for (const [key, timestamp] of persisted.permanent) this.permanentEvents.set(key, timestamp);
@@ -446,7 +450,7 @@ export class AlertEngine {
       for (const occurrence of evaluateAlertV1(signal, config)) {
         const rule = config.rules.find((candidate) => candidate.id === occurrence.ruleId);
         if (!rule) continue;
-        const muted = getNotificationCenterStateStore().isMuted(occurrence.aircraft.icaoHex, [occurrence.ruleId]);
+        const muted = this.notificationMuted(occurrence.aircraft.icaoHex, [occurrence.ruleId]);
         const effectiveMode = muted ? "CENTER_ONLY" : deliveryMode;
         const channels = channelsForNotificationMode(effectiveMode, rule.channels);
         if (channels === null) continue;
@@ -606,7 +610,7 @@ export class AlertEngine {
     const preferenceMode = this.notificationMode(alert);
     if (preferenceMode === "OFF") return true;
     const ruleIds = alert.matchedRules.map((rule) => rule.id);
-    const muted = getNotificationCenterStateStore().isMuted(alert.aircraft.icaoHex, ruleIds);
+    const muted = this.notificationMuted(alert.aircraft.icaoHex, ruleIds);
 
     const type: AlertHistoryEventType = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
     const reason: AlertHistoryReason = alert.reason ?? (alert.emergency ? "emergency" : "watchlisted");
