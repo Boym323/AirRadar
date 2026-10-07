@@ -173,6 +173,13 @@
   font-size: .72rem;
 }
 
+.detailLink {
+  color: var(--text);
+  font-size: .72rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .historyMetrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
