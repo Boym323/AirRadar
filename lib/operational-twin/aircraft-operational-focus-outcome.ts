@@ -302,8 +302,8 @@ export class AircraftOperationalFocusOutcomeValidator {
     const nowMs = now.getTime();
     if (!Number.isFinite(nowMs)) return;
     const byHex: ReadonlyMap<string, Aircraft> = Array.isArray(aircraft)
-      ? new Map(aircraft.map((item) => [item.icaoHex, item] as const))
-      : aircraft;
+      ? new Map((aircraft as readonly Aircraft[]).map((item) => [item.icaoHex, item] as const))
+      : aircraft as ReadonlyMap<string, Aircraft>;
 
     for (const pending of [...this.pending.values()]) {
       if (nowMs < pending.earlyAt) continue;
