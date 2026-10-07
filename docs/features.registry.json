@@ -962,6 +962,26 @@
         "personal home",
         "personal dashboard"
       ]
+    },
+    {
+      "id": "aviation-event-feed",
+      "name": "Aviation Event Feed",
+      "category": "intelligence / productivity",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded chronological composition of existing Flight Intelligence, alert history, Navigation Integrity anomalies, and notable favorite-airport operations without a new detector or persistence layer.",
+      "pages": [
+        "/events"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "aviation-event-feed"
+      ],
+      "changelogKeywords": [
+        "aviation event feed",
+        "event timeline",
+        "unified events"
+      ]
     }
   ]
 }
