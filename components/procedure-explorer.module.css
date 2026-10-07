@@ -1,0 +1,152 @@
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 44px;
+}
+.controlsPanel {
+  margin: 18px 0 16px;
+}
+.form {
+  display: grid;
+  grid-template-columns: 160px minmax(230px, auto) minmax(170px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.form label {
+  display: grid;
+  gap: 7px;
+}
+.form label > span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.form input {
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid rgba(153, 181, 207, .18);
+  border-radius: 8px;
+  background: rgba(5, 12, 20, .65);
+  color: var(--text);
+  font: inherit;
+  text-transform: uppercase;
+}
+.submit {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(153, 181, 207, .2);
+  border-radius: 8px;
+  background: rgba(153, 181, 207, .08);
+  color: var(--text);
+  cursor: pointer;
+}
+.metrics {
+  margin-bottom: 16px;
+}
+.validation,
+.status,
+.note,
+.warning,
+.disclosure {
+  color: var(--muted);
+  font-size: 11px;
+}
+.validation,
+.warning {
+  color: var(--amber);
+}
+.validation {
+  margin: 10px 0 0;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.actions a,
+.leg a {
+  color: var(--text);
+}
+.procedureList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.procedure {
+  border-top: 1px solid rgba(153, 181, 207, .11);
+}
+.procedure summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 4px;
+  cursor: pointer;
+}
+.procedure summary > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.procedure summary strong {
+  font-size: 14px;
+}
+.procedure summary small,
+.procedure summary b {
+  color: var(--muted);
+  font-size: 11px;
+}
+.procedureMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 0 4px 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.legs {
+  overflow-x: auto;
+  border: 1px solid rgba(153, 181, 207, .1);
+  border-radius: 8px;
+}
+.legHeader,
+.leg {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) minmax(120px, 1fr) minmax(120px, 1fr) 80px;
+  gap: 10px;
+  min-width: 620px;
+  padding: 8px 10px;
+}
+.legHeader {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.leg {
+  border-top: 1px solid rgba(153, 181, 207, .08);
+  font-size: 11px;
+}
+.note,
+.warning {
+  margin: 10px 4px 0;
+  line-height: 1.5;
+}
+.disclosure {
+  margin: 14px 0 0;
+  line-height: 1.55;
+}
+@media (max-width: 900px) {
+  .form { grid-template-columns: 1fr 1fr; }
+  .submit { min-height: 42px; }
+}
+@media (max-width: 620px) {
+  .page { padding: 20px 14px 34px; }
+  .form { grid-template-columns: 1fr; }
+  .procedure summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
