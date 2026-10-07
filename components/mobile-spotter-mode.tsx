@@ -17,6 +17,7 @@ import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { rankUpcomingSky } from "@/lib/spotter-upcoming";
 import { SPOTTER_LOGBOOK_STORAGE_KEY, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
+import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -49,6 +50,12 @@ export function MobileSpotterMode() {
   const [orientationState, setOrientationState] = useState<"idle" | "waiting" | "ready" | "denied" | "unavailable">("idle");
   const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: 1, entries: [] });
   const [logbookMessage, setLogbookMessage] = useState<string | null>(null);
+  const [savedSpots, setSavedSpots] = useState<SpotterSavedSpot[]>([]);
+  const [savedSpotAccess, setSavedSpotAccess] = useState<"loading" | "ready" | "locked" | "error">("loading");
+  const [spotName, setSpotName] = useState("Domov");
+  const [spotRadiusKm, setSpotRadiusKm] = useState(5);
+  const [spotSaving, setSpotSaving] = useState(false);
+  const [spotMessage, setSpotMessage] = useState<string | null>(null);
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -90,6 +97,28 @@ export function MobileSpotterMode() {
     setNotificationPermission("Notification" in window && "serviceWorker" in navigator
       ? Notification.permission
       : "unsupported");
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/admin/spotter/saved-spots", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (response.status === 401 || response.status === 403) {
+          if (!controller.signal.aborted) setSavedSpotAccess("locked");
+          return null;
+        }
+        if (!response.ok) throw new Error("saved spots unavailable");
+        return await response.json() as { spots?: SpotterSavedSpot[] };
+      })
+      .then((payload) => {
+        if (!payload || controller.signal.aborted) return;
+        setSavedSpots(Array.isArray(payload.spots) ? payload.spots : []);
+        setSavedSpotAccess("ready");
+      })
+      .catch((error) => {
+        if ((error as Error).name !== "AbortError") setSavedSpotAccess("error");
+      });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -277,6 +306,61 @@ export function MobileSpotterMode() {
       window.localStorage.setItem(SPOTTER_LOGBOOK_STORAGE_KEY, serializeSpotterLogbook(next));
     } catch {
       // Browser storage is optional; keep the current-session copy in memory.
+    }
+  };
+
+  const saveCurrentSpot = async () => {
+    if (!observer || spotSaving || savedSpotAccess !== "ready") return;
+    setSpotSaving(true);
+    setSpotMessage(null);
+    try {
+      const response = await fetch("/api/admin/spotter/saved-spots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: spotName,
+          centerLat: observer.lat,
+          centerLon: observer.lon,
+          radiusMeters: spotRadiusKm * 1000,
+        }),
+      });
+      if (response.status === 401 || response.status === 403) {
+        setSavedSpotAccess("locked");
+        return;
+      }
+      const payload = await response.json() as { spot?: SpotterSavedSpot; error?: string };
+      if (!response.ok || !payload.spot) throw new Error(payload.error ?? "saved spot failed");
+      setSavedSpots((current) => [
+        payload.spot!,
+        ...current.filter((item) => item.id !== payload.spot!.id && item.name !== payload.spot!.name),
+      ].sort((a, b) => a.name.localeCompare(b.name)));
+      setSpotMessage(copy.savedSpotSaved);
+    } catch {
+      setSpotMessage(copy.savedSpotFailed);
+    } finally {
+      setSpotSaving(false);
+    }
+  };
+
+  const removeSavedSpot = async (id: string) => {
+    if (spotSaving || savedSpotAccess !== "ready") return;
+    setSpotSaving(true);
+    setSpotMessage(null);
+    try {
+      const response = await fetch("/api/admin/spotter/saved-spots?id=" + encodeURIComponent(id), {
+        method: "DELETE",
+      });
+      if (response.status === 401 || response.status === 403) {
+        setSavedSpotAccess("locked");
+        return;
+      }
+      if (!response.ok) throw new Error("saved spot delete failed");
+      setSavedSpots((current) => current.filter((item) => item.id !== id));
+      setSpotMessage(copy.savedSpotRemoved);
+    } catch {
+      setSpotMessage(copy.savedSpotFailed);
+    } finally {
+      setSpotSaving(false);
     }
   };
 
@@ -660,6 +744,54 @@ export function MobileSpotterMode() {
           </label>)}
         </div>
       </div>
+    </Panel>
+
+    <Panel>
+      <SectionHeader
+        kicker="MY SKY / BACKGROUND"
+        title={copy.savedSpots}
+        description={copy.savedSpotsDescription}
+      />
+      <p className={styles.savedSpotPrivacy}>{copy.savedSpotPrivacy}</p>
+      {savedSpotAccess === "locked" ? <div className={styles.preferenceLocked}>
+        <p>{copy.savedSpotLocked}</p>
+        <Link className={styles.openLink} href={"/watchlist" as Route}>{copy.watch} →</Link>
+      </div> : null}
+      {savedSpotAccess === "error" ? <EmptyState title={copy.savedSpotFailed} /> : null}
+      {savedSpotAccess === "ready" ? <>
+        <div className={styles.savedSpotForm}>
+          <label>
+            <span>{copy.spotName}</span>
+            <input value={spotName} maxLength={48} onChange={(event) => setSpotName(event.target.value)} />
+          </label>
+          <label>
+            <span>{copy.spotRadius}</span>
+            <select value={spotRadiusKm} onChange={(event) => setSpotRadiusKm(Number(event.target.value))}>
+              {[1, 3, 5, 10, 25].map((value) => <option key={value} value={value}>{value} km</option>)}
+            </select>
+          </label>
+          <Button
+            size="compact"
+            variant="primary"
+            disabled={spotSaving || observerState !== "ready" || !observer}
+            onClick={() => void saveCurrentSpot()}
+          >{copy.saveCurrentSpot}</Button>
+        </div>
+        <small className={styles.locationAccuracy}>{copy.savedSpotTypes} · {copy.savedSpotDelivery}</small>
+        {spotMessage ? <p role="status" className={styles.locationAccuracy}>{spotMessage}</p> : null}
+        {savedSpots.length ? <div className={styles.savedSpotList}>
+          {savedSpots.map((spot) => <article className={styles.passCard} key={spot.id}>
+            <div>
+              <strong>{spot.name}</strong>
+              <span>{formatDistance(spot.radiusMeters / 1000)} · {spot.ruleEnabled ? "ACTIVE" : "INACTIVE"}</span>
+              <small>{copy.savedSpotTypes}</small>
+            </div>
+            <Button size="compact" variant="ghost" disabled={spotSaving} onClick={() => void removeSavedSpot(spot.id)}>
+              {copy.removeSpot}
+            </Button>
+          </article>)}
+        </div> : null}
+      </> : null}
     </Panel>
 
     <Panel className={styles.filters}>
