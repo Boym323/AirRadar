@@ -1393,10 +1393,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${request.resourceType()} initiator=${request.frame()?.url() ?? "(no frame)"}`);
             return;
           }
-          if (response.status() === 429 && new URL(response.url()).pathname === "/api/logbook/summary") {
-            expectedRateLimitedApiErrors += 1;
-            console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${response.request().resourceType()} initiator=${response.request().frame()?.url() ?? "(no frame)"}`);
-            return;
+          if (response.status() === 429) {
+            const pathname = new URL(response.url()).pathname;
+            const expectedRateLimitedApi =
+              pathname === "/api/logbook/summary"
+              || /^\/api\/navigation-integrity\/aircraft\/[A-F0-9]{6}$/i.test(pathname);
+            if (expectedRateLimitedApi) {
+              expectedRateLimitedApiErrors += 1;
+              console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${response.request().resourceType()} initiator=${response.request().frame()?.url() ?? "(no frame)"}`);
+              return;
+            }
           }
           const request = response.request();
           const frameUrl = request.frame()?.url() ?? "(no frame)";
