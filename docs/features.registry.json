@@ -346,10 +346,11 @@
       "category": "alerts",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views.",
+      "summary": "Server watchlists, integrated rule-scoped activity, alert history, a read-only Notification Center, rule mutations and fleet views.",
       "pages": [
         "/watchlist",
         "/alerts",
+        "/notifications",
         "/fleet",
         "/admin/alerts"
       ],
@@ -378,7 +379,8 @@
       "changelogKeywords": [
         "watchlist",
         "alert history",
-        "fleet"
+        "fleet",
+        "notification center"
       ]
     },
     {
