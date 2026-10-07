@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.335] - 2026-10-07
+
+Changes since v1.0.334.
+
+**Features touched:** Navigation Integrity.
+
+### Fixed
+
+- Tolerate bounded navigation integrity rate limits (07cc2f06)
+
+### Maintenance
+
+- Sync generated repository metadata (#493) (ef450339)
+- Trigger production deploy (1446a096)
+- Cover navigation integrity 429 handling (c18b7a3a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#493) (ef450339)
+- chore: trigger production deploy (1446a096)
+- fix(gates): tolerate bounded navigation integrity rate limits (07cc2f06)
+- test(gates): cover navigation integrity 429 handling (c18b7a3a)
+- Merge pull request #494 from Boym323/fix/production-gate-navigation-rate-limit (40a913c8)
+
+</details>
 ## [1.0.334] - 2026-10-07
 
 Changes since v1.0.333.
