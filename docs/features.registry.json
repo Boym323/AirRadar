@@ -909,7 +909,7 @@
       "category": "mobile / radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Mobile-first LOCAL spotter with My Location geometry, featured Sky Card flight stories, PRG arrival context, ranked upcoming passes, recent Time Machine pass history, explainable interest scoring, browser-local personal logbook and foreground alerts, explicit opt-in server Saved Spots for iconic-aircraft background alerts, sensor-assisted Sky Finder, and local SVG share cards.",
+      "summary": "Mobile-first LOCAL spotter with My Location geometry, Sky Card stories, Visual Acquisition from observer geometry and regional METAR, client-only Sun & Light geometry, explainable Photo Opportunity scoring, bounded My Sky Briefing, PRG Spotting context, Time Machine pass/replay stories, browser-local personal logbook and foreground alerts, explicit opt-in server Saved Spots for iconic-aircraft background alerts, sensor-assisted Sky Finder, local SVG share cards, and visibility/data-saver mobile runtime hardening.",
       "pages": [
         "/spotter"
       ],
@@ -932,7 +932,14 @@
         "personal spotter logbook",
         "saved spot",
         "share card",
-        "local receiver"
+        "local receiver",
+        "visual acquisition",
+        "sun and light geometry",
+        "photo opportunity",
+        "my sky briefing",
+        "prg spotting",
+        "sighting story",
+        "mobile hardening"
       ]
     }
   ]
