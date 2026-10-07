@@ -7,7 +7,7 @@ describe("production release branch resolution", () => {
 
     const branchFetch = release.indexOf('git_cmd fetch origin "${DEPLOY_BRANCH}"');
     const capture = release.indexOf('remote_sha="$(git_cmd rev-parse FETCH_HEAD)"');
-    const tagFetch = release.indexOf("git_cmd fetch --force --tags origin");
+    const tagFetch = release.indexOf("git_cmd fetch --force --prune --prune-tags --tags origin");
 
     expect(branchFetch).toBeGreaterThanOrEqual(0);
     expect(capture).toBeGreaterThan(branchFetch);
@@ -29,7 +29,7 @@ describe("production release branch resolution", () => {
     expect(updateRepository).not.toContain("reset --hard FETCH_HEAD");
 
     const afterTagFetch = updateRepository.slice(
-      updateRepository.indexOf("git_cmd fetch --force --tags origin"),
+      updateRepository.indexOf("git_cmd fetch --force --prune --prune-tags --tags origin"),
     );
     expect(afterTagFetch).not.toContain("FETCH_HEAD");
   });
