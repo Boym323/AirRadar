@@ -17,6 +17,99 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.345] - 2026-10-07
+
+Changes since v1.0.344.
+
+**Features touched:** ATC & ATS Intelligence, Investigation Links, Live Radar, My AirRadar, Navigation Integrity.
+
+### Added
+
+- Add My AirRadar route (6798583b)
+- Aggregate personal AirRadar context (0f03fc68)
+- Add My AirRadar copy (7c45d388)
+- Add My AirRadar copy (e77e530d)
+- Surface My AirRadar home (e5171d29)
+- Add ATS route and sector result types (7c395631)
+- Index ATS routes and ATC sectors (8deb8730)
+- Persist route and sector recents (e71e24a8)
+- Render ATS routes and ATC sectors (63051ee3)
+- Add route and sector search labels (0ed0daf2)
+- Add route and sector search labels (bdfaaffc)
+- Add ATS route investigation links (604bfb6f)
+- Deep-link published ATS routes (945da3a0)
+- Integrate product experience BQ–BV (10c38567)
+
+### Fixed
+
+- Follow actual mobile More navigation target (163173ae)
+- Stabilize production gate client navigation (#548) (7939122c)
+- Avoid standalone server TOCTOU write (924ea8b7)
+- Ensure mobile bottom nav is hydrated before interaction (ba914104)
+
+### Documentation
+
+- Register My AirRadar home (792133a5)
+- Generate My AirRadar registry row (ec27187f)
+- Add My AirRadar home (9c82b3ff)
+
+### Maintenance
+
+- Sync generated repository metadata (#537) (c6c35210)
+- Add My AirRadar layout (9357e2f2)
+- Cover My AirRadar integration boundaries (612d3492)
+- Cover ATS route investigation links (dfa234ea)
+- Cover route and sector command search (c8941fa6)
+- Include route and sector collections (59a5c44e)
+- Align My AirRadar regression with V2 nav (a4f25296)
+- Align radar reachability with V2 overflow (af5316f4)
+- Cover dynamic mobile More target (002f159a)
+- Guard standalone descriptor rewrite (9d3b8c1c)
+- Execute standalone descriptor rewrite (e1c7473b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#537) (c6c35210)
+- feat(home): add My AirRadar route (6798583b)
+- feat(home): aggregate personal AirRadar context (0f03fc68)
+- style(home): add My AirRadar layout (9357e2f2)
+- feat(i18n): add My AirRadar copy (7c45d388)
+- feat(i18n): add My AirRadar copy (e77e530d)
+- feat(nav): surface My AirRadar home (e5171d29)
+- test(home): cover My AirRadar integration boundaries (612d3492)
+- docs(features): register My AirRadar home (792133a5)
+- docs(features): generate My AirRadar registry row (ec27187f)
+- docs(cs): add My AirRadar home (9c82b3ff)
+- feat(search): add ATS route and sector result types (7c395631)
+- feat(search): index ATS routes and ATC sectors (8deb8730)
+- feat(search): persist route and sector recents (e71e24a8)
+- feat(search): render ATS routes and ATC sectors (63051ee3)
+- feat(i18n): add route and sector search labels (0ed0daf2)
+- feat(i18n): add route and sector search labels (bdfaaffc)
+- feat(search): add ATS route investigation links (604bfb6f)
+- feat(search): deep-link published ATS routes (945da3a0)
+- test(search): cover ATS route investigation links (dfa234ea)
+- test(search): cover route and sector command search (c8941fa6)
+- test(search): include route and sector collections (59a5c44e)
+- Merge pull request #538 from Boym323/feat/my-airradar-home-v1 (dc78c8c9)
+- Merge pull request #539 from Boym323/feat/universal-command-search-v2 (9710e0fe)
+- feat: integrate product experience BQ–BV (10c38567)
+- Merge pull request #545 from Boym323/feat/product-experience-bp-bv-integration (7971c70b)
+- test(navigation): align My AirRadar regression with V2 nav (a4f25296)
+- test(navigation): align radar reachability with V2 overflow (af5316f4)
+- Merge pull request #546 from Boym323/fix/release-navigation-regression-tests (ab73cd36)
+- fix(gates): follow actual mobile More navigation target (163173ae)
+- test(gates): cover dynamic mobile More target (002f159a)
+- Merge pull request #547 from Boym323/fix/production-gate-mobile-more-navigation (4ade788d)
+- fix: stabilize production gate client navigation (#548) (7939122c)
+- fix(security): avoid standalone server TOCTOU write (924ea8b7)
+- test(security): guard standalone descriptor rewrite (9d3b8c1c)
+- test(security): execute standalone descriptor rewrite (e1c7473b)
+- Merge pull request #549 from Boym323/fix/codeql-file-system-race-41 (34e97df4)
+- fix(navigation): ensure mobile bottom nav is hydrated before interaction (ba914104)
+
+</details>
 ## [1.0.344] - 2026-10-07
 
 Changes since v1.0.343.
