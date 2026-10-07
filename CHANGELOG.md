@@ -17,6 +17,86 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.339] - 2026-10-07
+
+Changes since v1.0.338.
+
+**Features touched:** Watchlist, Alerts & Fleet.
+
+### Added
+
+- Define persistent center state (5551081d)
+- Persist unread and delivery mutes (a4942120)
+- Expose persistent center state (5847695d)
+- Distinguish center-only delivery state (15234457)
+- Apply aircraft and rule delivery mutes (a53951df)
+- Add V2 filters search and rationale (10b461b3)
+- Localize center V2 controls (f96a12e0)
+- Localize center V2 controls (37f46d20)
+- Build Notification Center V2 (540402e8)
+- Style Center V2 controls (470fd0ef)
+
+### Changed
+
+- Inject delivery mute policy (f78efd35)
+
+### Fixed
+
+- Preserve center-only group status (fa04998b)
+- Localize center-only history status (ffcb2788)
+- Localize center-only history status (90b7b8c9)
+
+### Documentation
+
+- Register Notification Center V2 (1a20c525)
+- Describe Notification Center V2 (a361bf77)
+- Localize Notification Center V2 (683d9dc4)
+
+### Maintenance
+
+- Sync generated repository metadata (#500) (54462367)
+- Expect explicit center-only status (dd3ca26b)
+- Expect explicit center-only status (cef0d963)
+- Expect explicit center-only status (92095f19)
+- Expect explicit center-only status (f8594144)
+- Keep muted alerts center-only (09731d68)
+- Cover Center V2 state filters and mutes (9839fe1c)
+- Cover Center V2 boundaries (0d8aadcf)
+- Sync generated repository metadata (#502) (2fe6b722)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#500) (54462367)
+- feat(notifications): define persistent center state (5551081d)
+- feat(notifications): persist unread and delivery mutes (a4942120)
+- feat(notifications): expose persistent center state (5847695d)
+- feat(notifications): distinguish center-only delivery state (15234457)
+- feat(notifications): apply aircraft and rule delivery mutes (a53951df)
+- feat(notifications): add V2 filters search and rationale (10b461b3)
+- feat(notifications): localize center V2 controls (f96a12e0)
+- feat(notifications): localize center V2 controls (37f46d20)
+- feat(notifications): build Notification Center V2 (540402e8)
+- feat(notifications): style Center V2 controls (470fd0ef)
+- test(notifications): expect explicit center-only status (dd3ca26b)
+- test(notifications): expect explicit center-only status (cef0d963)
+- test(notifications): expect explicit center-only status (92095f19)
+- test(notifications): expect explicit center-only status (f8594144)
+- testability(notifications): inject delivery mute policy (f78efd35)
+- test(notifications): keep muted alerts center-only (09731d68)
+- test(notifications): cover Center V2 state filters and mutes (9839fe1c)
+- fix(notifications): preserve center-only group status (fa04998b)
+- docs(features): register Notification Center V2 (1a20c525)
+- docs(features): describe Notification Center V2 (a361bf77)
+- docs(features): localize Notification Center V2 (683d9dc4)
+- test(notifications): cover Center V2 boundaries (0d8aadcf)
+- fix(notifications): localize center-only history status (ffcb2788)
+- fix(notifications): localize center-only history status (90b7b8c9)
+- chore(metadata): sync generated repository metadata (#502) (2fe6b722)
+- Merge main into feat/notification-center-v2 (f99bea0b)
+- Merge pull request #501 from Boym323/feat/notification-center-v2 (ba1558a4)
+
+</details>
 ## [1.0.338] - 2026-10-07
 
 Changes since v1.0.337.
