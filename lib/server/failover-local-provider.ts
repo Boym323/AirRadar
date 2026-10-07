@@ -87,6 +87,8 @@ function preferredAltitude(beastValue: number | null | undefined, jsonValue: num
 function selectedPosition(beast: Aircraft, json: Aircraft): Aircraft {
   if (!hasUsablePosition(beast)) return json;
   if (!hasUsablePosition(json)) return beast;
+  if (beast.lat === null || beast.lon === null) return json;
+  if (json.lat === null || json.lon === null) return beast;
 
   const jsonPositionFresh = json.seenPosSeconds !== null && json.seenPosSeconds <= TELEMETRY_FRESHNESS_MS / 1_000;
   const disagreementKm = haversineDistanceKm(beast.lat, beast.lon, json.lat, json.lon);
