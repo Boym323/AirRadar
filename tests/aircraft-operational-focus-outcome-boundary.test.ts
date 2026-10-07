@@ -21,6 +21,13 @@ describe("Aircraft Operational Focus Outcome Validation V1 boundary", () => {
     expect(validatorSource).not.toContain("fetch(");
   });
 
+  it("keeps refresh-path outcome cleanup allocation-bounded", () => {
+    expect(validatorSource).toContain("CLEANUP_INTERVAL_MS");
+    expect(validatorSource).toContain("for (const pending of this.pending.values())");
+    expect(validatorSource).not.toContain("[...this.pending.values()]");
+    expect(validatorSource).not.toContain(".sort((a, b) => a.capturedAt - b.capturedAt)");
+  });
+
   it("keeps non-independent focus domains explicitly unscored", () => {
     expect(validatorSource).toContain('"PIREP_WEATHER_UNSCORED"');
     expect(validatorSource).toContain('"NAVIGATION_INTEGRITY_UNSCORED"');

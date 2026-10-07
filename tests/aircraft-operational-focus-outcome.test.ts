@@ -209,4 +209,14 @@ describe("Aircraft Operational Focus Outcome Validation V1", () => {
     expect(result.reasons).toContain("process_window_insufficient");
     expect(result.reasons).toContain("scoreable_samples_insufficient");
   });
+
+  it("keeps report windows exact even when refresh-path cleanup is throttled", () => {
+    const validator = new AircraftOperationalFocusOutcomeValidator();
+    validator.capture(situation("PIREP_AIREP"), sigmets(), Date.parse("2026-10-06T10:00:00.000Z"));
+    validator.observe([], new Date("2026-10-06T10:00:30.000Z"));
+    const report = validator.report(new Date("2026-10-07T10:01:00.000Z"));
+
+    expect(report.byType.WEATHER.captures).toBe(0);
+    expect(report.pending).toBe(0);
+  });
 });

@@ -161,12 +161,15 @@ export function getPublicAircraftChangeSet(
 
   const previousFingerprints = publicAircraftFingerprints(previous);
   const currentFingerprints = publicAircraftFingerprints(current);
-  const currentByHex = new Map(current.aircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
   const changed: AircraftView[] = [];
   for (const aircraft of current.aircraft) {
     if (previousFingerprints.get(aircraft.icaoHex) !== currentFingerprints.get(aircraft.icaoHex)) changed.push(aircraft);
   }
-  const removed = [...previousFingerprints.keys()].filter((hex) => !currentByHex.has(hex)).sort();
+  const removed: string[] = [];
+  for (const hex of previousFingerprints.keys()) {
+    if (!currentFingerprints.has(hex)) removed.push(hex);
+  }
+  removed.sort();
   const result = { changed, removed };
   byPrevious.set(previous, result);
   return result;
