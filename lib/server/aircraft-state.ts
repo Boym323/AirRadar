@@ -988,6 +988,7 @@ export class AircraftStateService {
     this.scheduleReceptionRecordEvaluation();
     measureRuntime("snapshot.alerts", activeAircraft.length, () => this.alerts.observe(previousAircraft, this.localAircraft));
     this.intelligence.cleanup(activeHexes);
+    const predictiveCandidates: Aircraft[] = [];
     const predictiveAlertCandidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }> = [];
     const snapshotAt = Date.parse(snapshot.fetchedAt);
     measureRuntime("snapshot.intelligence", activeAircraft.length, () => {
@@ -996,11 +997,12 @@ export class AircraftStateService {
         this.operationalTwinEventOutcome.observeIntelligence(events, snapshotAt);
         this.operationalTwinTruthFirst.observeIntelligence(events, snapshotAt);
         for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
+        if (this.isPredictiveEvaluationDue(current, snapshotAt)) predictiveCandidates.push(current);
       }
     });
-    measureRuntime("snapshot.predictive", activeAircraft.length, () => {
-      for (const current of activeAircraft) {
-        const prediction = this.evaluatePredictiveShadow(current, snapshotAt);
+    measureRuntime("snapshot.predictive", predictiveCandidates.length, () => {
+      for (const current of predictiveCandidates) {
+        const prediction = this.evaluatePredictiveShadow(current, snapshotAt, true);
         if (prediction) predictiveAlertCandidates.push({ aircraft: current, prediction });
       }
     });
@@ -1051,10 +1053,15 @@ export class AircraftStateService {
     });
   }
 
-  private evaluatePredictiveShadow(aircraft: Aircraft, now: number): PredictiveFlightState | null {
-    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return null;
+  private isPredictiveEvaluationDue(aircraft: Aircraft, now: number): boolean {
+    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return false;
     const previousAt = this.predictiveEvaluatedAt.get(aircraft.icaoHex) ?? 0;
-    if (now - previousAt < 10_000) return null;
+    return now - previousAt >= 10_000;
+  }
+
+  private evaluatePredictiveShadow(aircraft: Aircraft, now: number, knownDue = false): PredictiveFlightState | null {
+    if (!knownDue && !this.isPredictiveEvaluationDue(aircraft, now)) return null;
+    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return null;
     this.predictiveEvaluatedAt.set(aircraft.icaoHex, now);
     const destination = aircraft.enrichment?.route?.destinationAirport;
     const input = buildPredictiveShadowInput(aircraft, now, destination ? this.intelligence.getRunways(destination.icaoCode) : []);
