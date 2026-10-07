@@ -22,7 +22,7 @@ describe("Navigation Reference Explorer V1 boundary", () => {
   });
 
   it("deep-links to the canonical radar navPoint focus without new persistence", () => {
-    expect(explorer).toContain("navPoint=");
+    expect(explorer).toContain("query: { navPoint: focus }");
     expect(explorer).toContain('point.source');
     expect(explorer).not.toContain("FlightPosition");
     expect(atsApi).toContain("Cache-Control");
