@@ -95,12 +95,14 @@ describe("Mobile Spotter Mode V1 runtime boundaries", () => {
     expect(stream).toContain("/api/stream?coverage=");
   });
 
-  it("uses canonical product actions and adds no backend/geolocation path", () => {
+  it("uses canonical product actions, browser geolocation and no backend spotter path", () => {
     expect(source).toContain("/aircraft/");
     expect(source).toContain("/?aircraft=");
     expect(source).toContain('pathname: "/watchlist"');
-    expect(source).not.toContain("navigator.geolocation");
+    expect(source).toContain("navigator.geolocation.watchPosition");
+    expect(source).toContain("navigator.geolocation.clearWatch");
     expect(source).not.toContain("/api/spotter");
+    expect(source).not.toContain("localStorage");
     expect(source).not.toContain("new EventSource");
   });
 
