@@ -228,9 +228,7 @@
       "pages": [
         "/"
       ],
-      "apis": [
-        "/api/admin/spotter/saved-spots"
-      ],
+      "apis": [],
       "changelogScopes": [
         "trajectory-conformance",
         "route-conformance"
@@ -915,7 +913,9 @@
       "pages": [
         "/spotter"
       ],
-      "apis": [],
+      "apis": [
+        "/api/admin/spotter/saved-spots"
+      ],
       "changelogScopes": [
         "spotter"
       ],
