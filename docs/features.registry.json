@@ -1004,6 +1004,26 @@
         "followed journey",
         "journey timeline"
       ]
+    },
+    {
+      "id": "historical-baselines",
+      "name": "Historical Baselines",
+      "category": "analytics / intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Descriptive today-so-far comparison against the median of at least seven completed days from the existing 30-day receiver statistics aggregate, explicitly avoiding raw FlightPosition scans and statistical-significance claims.",
+      "pages": [
+        "/baselines"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "historical-baselines"
+      ],
+      "changelogKeywords": [
+        "historical baseline",
+        "today vs baseline",
+        "30 day median"
+      ]
     }
   ]
 }
