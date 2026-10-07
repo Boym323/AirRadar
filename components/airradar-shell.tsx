@@ -35,9 +35,11 @@ const moreNavigation = [
   { href: "/operations", label: t.operations.title },
   { href: "/intelligence", label: t.intelligence.title },
   { href: "/alerts", label: t.alerts.title },
+  { href: "/notifications", label: t.locale.startsWith("cs") ? "Oznámení" : "Notifications" },
   { href: "/recap/daily", label: t.recap.daily },
   { href: "/recap/weekly", label: t.recap.weekly },
   { href: "/watchlist", label: t.watchlist.title },
+  { href: "/workspaces", label: t.locale.startsWith("cs") ? "Workspace" : "Workspaces" },
   { href: "/system", label: t.system.title },
 ] as const;
 
@@ -210,9 +212,11 @@ export function MobileBottomNav() {
           <Link href="/fleet">{t.fleet.title}</Link>
           <Link href="/intelligence">{t.intelligence.title}</Link>
           <Link href="/alerts">{t.alerts.title}</Link>
+          <Link href="/notifications">{t.locale.startsWith("cs") ? "Oznámení" : "Notifications"}</Link>
           <Link href="/recap/daily">{t.recap.daily}</Link>
           <Link href="/recap/weekly">{t.recap.weekly}</Link>
           <Link href="/watchlist">{t.watchlist.title}</Link>
+          <Link href="/workspaces">{t.locale.startsWith("cs") ? "Workspace" : "Workspaces"}</Link>
           <Link href="/system">{t.system.title}</Link>
         </div>
       </details>

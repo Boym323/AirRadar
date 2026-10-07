@@ -1,10 +1,11 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AirspaceActivityResponse, PlannedAirspaceWindow } from "@/lib/airspace-activity/types";
 import { formatNumber, t } from "@/lib/i18n";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
+import { buildAirspaceInvestigation, investigationHref, parseAirspaceInvestigation } from "@/lib/investigation-links";
 import styles from "./atc-airspace-explorer.module.css";
 
 type TrafficLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
@@ -158,6 +159,41 @@ export function AtcAirspaceExplorer() {
   const [history, setHistory] = useState<SectorHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [failedSources, setFailedSources] = useState(0);
+  const [investigationUrlReady, setInvestigationUrlReady] = useState(false);
+  const restoringInvestigationUrl = useRef(true);
+
+  useEffect(() => {
+    const restore = () => {
+      const parsed = parseAirspaceInvestigation(window.location.search);
+      setSelectedSectorId(parsed.sector);
+      setWindowMinutes(parsed.windowMinutes);
+    };
+    restore();
+    setInvestigationUrlReady(true);
+    const onPopState = () => {
+      restoringInvestigationUrl.current = true;
+      restore();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (!investigationUrlReady) return;
+    const query = buildAirspaceInvestigation({ sector: selectedSectorId, windowMinutes });
+    const href = investigationHref("/airspace", query);
+    const currentHref = window.location.pathname + window.location.search;
+    if (currentHref === href) {
+      restoringInvestigationUrl.current = false;
+      return;
+    }
+    if (restoringInvestigationUrl.current) {
+      window.history.replaceState(null, "", href);
+      restoringInvestigationUrl.current = false;
+    } else {
+      window.history.pushState(null, "", href);
+    }
+  }, [investigationUrlReady, selectedSectorId, windowMinutes]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -176,7 +212,7 @@ export function AtcAirspaceExplorer() {
       let failures = 0;
       if (trafficResult.status === "fulfilled") {
         setTraffic(trafficResult.value);
-        setSelectedSectorId((current) => current ?? trafficResult.value.sectors[0]?.sectorId ?? null);
+        setSelectedSectorId((current) => current && trafficResult.value.sectors.some((sector) => sector.sectorId === current) ? current : trafficResult.value.sectors[0]?.sectorId ?? null);
       } else failures += 1;
       if (activityResult.status === "fulfilled") setActivity(activityResult.value);
       else failures += 1;

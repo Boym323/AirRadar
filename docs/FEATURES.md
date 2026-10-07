@@ -18,6 +18,7 @@ not yet been historically attributed.
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Why/Proč evidence panels for readiness-gated ETA, runway, runway-change and trajectory advisories using a small capability-specific whitelist from the existing canonical prediction evidence. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
+| Investigation Links | production | productivity | Pre-registry | `/airspace`<br>`/compare/airports`<br>`/compare/flights`<br>`/navigation-integrity`<br>`/time-machine` | — | Bookmarkable URL state for existing analytical surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence. |
 | Live Airport Network | production | airports | Pre-registry | `/airports` | — | Bounded /airports operational network showing favorite and live-route-active airports with canonical Airport Operations, receiver-only approach-queue state, likely runway, next inbound estimate, and direct Live Board navigation. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | `/weather` | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
@@ -29,12 +30,13 @@ not yet been historically attributed.
 | Operations Dashboard | production | operations | Pre-registry | `/operations` | — | Live operational dashboard combining canonical local traffic, airport flow, bounded next-30-minute arrival context, Regional Attention, and Flight Intelligence without creating a parallel intelligence engine. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes`<br>`/routes/:origin/:destination` | — | Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans. |
-| Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap` | Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights. |
+| Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Browser-local named collections of canonical AirRadar links and safe URL/query context, bounded to 12 workspaces with 12 entries each. |
+| Statistics & Recaps | production | analytics | Pre-registry | `/heatmap`<br>`/recap/daily`<br>`/recap/weekly`<br>`/statistics`<br>`/records`<br>`/aircraft-types`<br>`/operators`<br>`/traffic/rhythm`<br>`/traffic/geography` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap`<br>`/api/statistics/traffic-profile` | Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence. |
 | Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex`<br>`/api/admin/track-fusion/readiness`<br>`/api/admin/track-fusion/outcome` | Shadow-only per-field multi-source state estimator with readiness graduation plus bounded prospective canonical-vs-fused outcome validation against future LOCAL truth; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
-| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
+| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/notifications`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, a read-only Notification Center, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -709,6 +711,45 @@ Event Outcome V2 now compares canonical and wind-adjusted timing for the same wa
 ### Explainable Prediction V1
 
 Aircraft predictive advisory cards expose a `Why?` disclosure for ETA, runway, runway-change and trajectory outputs. Evidence comes from the same canonical prediction evaluation and is passed only through the existing readiness-gated advisory builders. A capability-specific whitelist limits public evidence to product-safe inputs such as remaining distance, effective speed, phase, recent runway usage, surface wind, candidate margin and trajectory geometry. No second prediction request or parallel model is introduced.
+
+
+## Investigation Links V1
+
+Analytical state on Airspace, Navigation Integrity, Flight Compare and Airport
+Compare is encoded in bounded, human-readable query parameters. Invalid values
+fail closed to safe defaults, while browser back/forward restores the matching
+UI state. The existing Time Machine `at`, `replay`, `hex` and `flightId`
+deep-link contract is preserved without modifying its parallel V3 work.
+
+V1 adds no server-side session identifier, API, database persistence or hidden
+share token. A copied URL is the complete bookmarkable investigation state for
+the supported controls.
+
+
+## Saved Workspaces V1
+
+`/workspaces` stores named working contexts entirely in browser local storage.
+Each workspace contains only canonical AirRadar links plus the safe query state
+already present in those links. The V1 contract is versioned, rejects malformed
+storage fail-closed, and is bounded to 12 workspaces with 12 entries each.
+
+Saved Workspaces adds no API, database table, account, sharing mechanism or
+cloud synchronization. Opening an entry navigates to the existing canonical
+surface and lets that surface restore its own URL state.
+
+
+## Notification Center V1
+
+`/notifications` is a bounded read-only product view over the existing
+`/api/alerts` history projection. The canonical alert history already folds
+watchlist, Flight Intelligence, emergency, reception-record and Alert V1
+delivery state into stable event IDs, so the UI does not create a second alert
+aggregator or detector. The feed is limited to 50 recent entries and performs
+no polling.
+
+Unread state is optional browser-local metadata stored under
+`airradar.notifications.v1`. V1 adds no alert engine, push provider, delivery
+worker, scheduler, database table or server-side notification persistence.
 
 
 ## Mobile Spotter Mode V1

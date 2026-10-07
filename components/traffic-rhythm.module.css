@@ -1,0 +1,83 @@
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 24px 44px;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 18px 0 12px;
+}
+.controls > span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.metrics { margin-bottom: 16px; }
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.hourChart,
+.weekChart {
+  display: grid;
+  align-items: end;
+  gap: 5px;
+  height: 260px;
+  margin-top: 18px;
+  overflow-x: auto;
+}
+.hourChart {
+  grid-template-columns: repeat(24, minmax(24px, 1fr));
+}
+.weekChart {
+  grid-template-columns: repeat(7, minmax(58px, 1fr));
+  height: 210px;
+}
+.barItem {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 5px;
+  min-width: 0;
+  height: 100%;
+  text-align: center;
+}
+.barTrack {
+  position: relative;
+  min-height: 80px;
+  border-bottom: 1px solid rgba(153, 181, 207, .18);
+  background: linear-gradient(to top, rgba(153, 181, 207, .025), transparent);
+}
+.barTrack span {
+  position: absolute;
+  inset: auto 18% 0;
+  display: block;
+  min-height: 0;
+  border-radius: 4px 4px 0 0;
+  background: currentColor;
+  opacity: .58;
+}
+.barItem small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.barItem b {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.status,
+.disclosure {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.disclosure { margin: 14px 0 0; }
+@media (max-width: 680px) {
+  .page { padding: 20px 14px 34px; }
+  .controls { align-items: stretch; flex-direction: column; }
+  .hourChart { grid-template-columns: repeat(24, 28px); }
+  .weekChart { grid-template-columns: repeat(7, minmax(44px, 1fr)); }
+}

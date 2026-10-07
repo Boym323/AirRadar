@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import type { Airport } from "@/lib/airports/types";
 import type { FlightCategory, MetarObservation } from "@/lib/weather/types";
 import { t } from "@/lib/i18n";
+import { buildAirportCompareInvestigation, investigationHref, parseAirportCompareInvestigation } from "@/lib/investigation-links";
 import {
   Button,
   EmptyState,
@@ -253,16 +254,42 @@ export function AirportCompare() {
   const [left, setLeft] = useState<SideData | null>(null);
   const [right, setRight] = useState<SideData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [investigationUrlReady, setInvestigationUrlReady] = useState(false);
+  const restoringInvestigationUrl = useRef(true);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const a = normalizeCode(params.get("a") ?? "");
-    const b = normalizeCode(params.get("b") ?? "");
-    const p = params.get("period");
-    if (validIcao(a)) setLeftCode(a);
-    if (validIcao(b)) setRightCode(b);
-    if (p === "7d" || p === "24h") setPeriod(p);
+    const restore = () => {
+      const parsed = parseAirportCompareInvestigation(window.location.search);
+      setLeftCode(parsed.a ?? "LKPR");
+      setRightCode(parsed.b ?? "LOWW");
+      setPeriod(parsed.period);
+    };
+    restore();
+    setInvestigationUrlReady(true);
+    const onPopState = () => {
+      restoringInvestigationUrl.current = true;
+      restore();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!investigationUrlReady || !validIcao(leftCode) || !validIcao(rightCode) || leftCode === rightCode) return;
+    const query = buildAirportCompareInvestigation({ a: leftCode, b: rightCode, period });
+    const href = investigationHref("/compare/airports", query);
+    const currentHref = window.location.pathname + window.location.search;
+    if (currentHref === href) {
+      restoringInvestigationUrl.current = false;
+      return;
+    }
+    if (restoringInvestigationUrl.current) {
+      window.history.replaceState(null, "", href);
+      restoringInvestigationUrl.current = false;
+    } else {
+      window.history.pushState(null, "", href);
+    }
+  }, [investigationUrlReady, leftCode, period, rightCode]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -312,8 +339,6 @@ export function AirportCompare() {
       setLeft(a);
       setRight(b);
       setLoading(false);
-      const params = new URLSearchParams({ a: leftCode, b: rightCode, period });
-      window.history.replaceState(null, "", "/compare/airports?" + params.toString());
     });
 
     return () => controller.abort();

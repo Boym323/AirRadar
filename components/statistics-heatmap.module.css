@@ -12,3 +12,13 @@
 .disclaimer { margin: 12px 20px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .status { margin: 16px 20px 0; color: var(--muted); font-size: 12px; }
 @media (max-width: 640px) { .wrapper { padding: 0 12px 28px; } .controls { width: 100%; justify-content: flex-start; } .controls > div { width: 100%; } .controls button { flex: 1; min-height: 44px; } .map { margin-left: 15px; margin-right: 15px; } .meta, .disclaimer, .status { margin-left: 15px; margin-right: 15px; } }
+
+.ranking { margin: 18px 20px 0; }
+.ranking h3 { margin: 0 0 10px; font-size: 13px; }
+.ranking ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
+.ranking li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; border: 1px solid rgba(153,181,207,.12); border-radius: 8px; background: rgba(6,19,31,.35); }
+.ranking li > div { display: grid; gap: 2px; min-width: 0; }
+.ranking li > div:last-child { text-align: right; }
+.ranking strong { font-size: 11px; }
+.ranking span { color: var(--muted); font-size: 9px; }
+@media (max-width: 640px) { .ranking { margin-left: 15px; margin-right: 15px; } .ranking ol { grid-template-columns: 1fr; } }
