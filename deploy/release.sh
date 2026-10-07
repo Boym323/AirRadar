@@ -500,7 +500,7 @@ update_repository() {
   # Automated GitHub Releases create remote release tags after deployment.
   # Keep the production checkout's tag namespace synchronized so the
   # post-deploy release resolver can continue the stable patch sequence.
-  git_cmd fetch --force --tags origin
+  git_cmd fetch --force --prune --prune-tags --tags origin
 
   merge_base="$(git_cmd merge-base HEAD "${target_sha}")"
 
