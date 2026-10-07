@@ -15,11 +15,12 @@ import {
 import {
   NOTIFICATION_CENTER_PAGE_SIZE,
   NOTIFICATION_CENTER_STORAGE_KEY,
-  dedupeNotificationEntries,
+  groupNotificationEntries,
   notificationCategory,
   notificationCenterMetrics,
   parseNotificationCenterLocalState,
   serializeNotificationCenterLocalState,
+  type NotificationGroup,
 } from "@/lib/notification-center";
 import type { AlertHistoryEntry, AlertHistoryPage, AlertNotificationStatus } from "@/lib/server/alert-history";
 import styles from "./notification-center.module.css";
@@ -36,7 +37,13 @@ function eventTitle(entry: AlertHistoryEntry, cs: boolean): string {
   }
   if (entry.type === "predictive_eta") return cs ? "Watchlist · ETA limit" : "Watchlist · ETA threshold";
   if (entry.type === "predictive_runway_change") return cs ? "Watchlist · predikovaná změna RWY" : "Watchlist · predicted runway change";
-  if (entry.type === "alert_v1") return entry.alertV1?.ruleName ?? (cs ? "Alert pravidlo" : "Alert rule");
+  if (entry.type === "alert_v1") {
+    if (entry.alertV1?.trigger === "SQUAWK") return entry.squawk ? `Emergency · Squawk ${entry.squawk}` : "Emergency";
+    if (entry.alertV1?.sourceType === "FLIGHT_EVENT" && entry.alertV1.flightEventType) {
+      return `Flight Intelligence · ${entry.alertV1.flightEventType.replaceAll("_", " ")}`;
+    }
+    return entry.alertV1?.ruleName ?? (cs ? "Alert pravidlo" : "Alert rule");
+  }
   return cs ? "Watchlist událost" : "Watchlist event";
 }
 
@@ -59,6 +66,14 @@ type PreferenceAccess = "loading" | "ready" | "locked" | "error";
 
 function preferenceLabel(key: NotificationPreferenceKey) {
   return t.notificationCenter.categories[key];
+}
+
+function groupIdentity(group: NotificationGroup): AlertHistoryEntry {
+  return group.entries.find((entry) => entry.aircraft.callsign || entry.aircraft.registration || entry.aircraft.aircraftType) ?? group.primary;
+}
+
+function groupRuleNames(group: NotificationGroup): string[] {
+  return [...new Set(group.entries.flatMap((entry) => entry.ruleNames))];
 }
 
 export function NotificationCenter() {
@@ -131,8 +146,8 @@ export function NotificationCenter() {
     return () => controller.abort();
   }, []);
 
-  const entries = useMemo(() => dedupeNotificationEntries(data?.items ?? []), [data?.items]);
-  const metrics = useMemo(() => notificationCenterMetrics(entries, lastSeen), [entries, lastSeen]);
+  const groups = useMemo(() => groupNotificationEntries(data?.items ?? []), [data?.items]);
+  const metrics = useMemo(() => notificationCenterMetrics(data?.items ?? [], lastSeen), [data?.items, lastSeen]);
 
   function updatePreference(key: NotificationPreferenceKey, mode: NotificationPreferenceMode) {
     setPreferenceDraft((current) => current ? { ...current, [key]: mode } : current);
@@ -219,30 +234,50 @@ export function NotificationCenter() {
       <SectionHeader kicker="FEED" title={copy.feed} description={copy.feedDescription} />
       {failed && !data ? <EmptyState title={copy.unavailable} />
         : !data ? <p className={styles.loading}>{t.common.loading}</p>
-        : entries.length ? <ol className={styles.feed}>
-          {entries.map((entry) => {
-            const name = entry.aircraft.callsign ?? entry.aircraft.registration ?? entry.aircraft.icaoHex;
-            const category = notificationCategory(entry);
-            return <li key={entry.id} className={styles.item}>
+        : groups.length ? <ol className={styles.feed}>
+          {groups.map((group) => {
+            const primary = group.primary;
+            const identity = groupIdentity(group);
+            const name = identity.aircraft.callsign ?? identity.aircraft.registration ?? group.aircraftIcao;
+            const category = notificationCategory(primary);
+            const rules = groupRuleNames(group);
+            return <li key={group.id} className={styles.item}>
               <div className={styles.itemMain}>
                 <div className={styles.itemHeading}>
                   <span className={styles.category}>{category}</span>
-                  <strong>{eventTitle(entry, cs)}</strong>
+                  <strong>{eventTitle(primary, cs)}</strong>
+                  {group.entries.length > 1 ? <span className={styles.threadCount}>{copy.groupedEvents(group.entries.length)}</span> : null}
                 </div>
                 <div className={styles.identity}>
-                  <Link href={`/aircraft/${encodeURIComponent(entry.aircraft.icaoHex)}` as Route}>{name}</Link>
-                  <span>{entry.aircraft.registration ?? entry.aircraft.icaoHex}</span>
-                  {entry.aircraft.aircraftType ? <span>{entry.aircraft.aircraftType}</span> : null}
-                  {entry.intelligence?.airportIcao ? <span>{entry.intelligence.airportIcao}</span> : null}
-                  {entry.intelligence?.sectorId ? <span>{entry.intelligence.sectorId}</span> : null}
+                  <Link href={`/aircraft/${encodeURIComponent(group.aircraftIcao)}` as Route}>{name}</Link>
+                  <span>{identity.aircraft.registration ?? group.aircraftIcao}</span>
+                  {identity.aircraft.aircraftType ? <span>{identity.aircraft.aircraftType}</span> : null}
+                  {primary.intelligence?.airportIcao ? <span>{primary.intelligence.airportIcao}</span> : null}
+                  {primary.intelligence?.sectorId ? <span>{primary.intelligence.sectorId}</span> : null}
                 </div>
-                {entry.ruleNames.length ? <small>{entry.ruleNames.join(", ")}</small> : null}
-                <Link className={styles.openLink} href={`/aircraft/${encodeURIComponent(entry.aircraft.icaoHex)}` as Route}>{copy.open} →</Link>
+                {rules.length ? <small>{rules.join(", ")}</small> : null}
+
+                {group.entries.length > 1 ? <div className={styles.timeline}>
+                  <span className={styles.timelineLabel}>{copy.timeline}</span>
+                  <ol>
+                    {[...group.entries].reverse().map((entry) => <li key={entry.id} className={styles.timelineItem}>
+                      <span className={styles.timelineDot} aria-hidden="true" />
+                      <time dateTime={entry.detectedAt}>{formatDateTime(entry.detectedAt, t)}</time>
+                      <span className={styles.timelineEvent}>
+                        <strong>{eventTitle(entry, cs)}</strong>
+                        <small>{notificationCategory(entry)}</small>
+                      </span>
+                      <StatusBadge variant={statusVariant(entry.notificationStatus)}>{statusLabel(entry.notificationStatus, cs)}</StatusBadge>
+                    </li>)}
+                  </ol>
+                </div> : null}
+
+                <Link className={styles.openLink} href={`/aircraft/${encodeURIComponent(group.aircraftIcao)}` as Route}>{copy.open} →</Link>
               </div>
               <div className={styles.itemSide}>
-                <span>{copy.detected}</span>
-                <time dateTime={entry.detectedAt}>{formatDateTime(entry.detectedAt, t)}</time>
-                <StatusBadge variant={statusVariant(entry.notificationStatus)}>{statusLabel(entry.notificationStatus, cs)}</StatusBadge>
+                <span>{group.entries.length > 1 ? copy.latest : copy.detected}</span>
+                <time dateTime={group.latestAt}>{formatDateTime(group.latestAt, t)}</time>
+                <StatusBadge variant={statusVariant(group.notificationStatus)}>{statusLabel(group.notificationStatus, cs)}</StatusBadge>
               </div>
             </li>;
           })}
