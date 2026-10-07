@@ -309,7 +309,8 @@
         "/heatmap",
         "/recap/daily",
         "/recap/weekly",
-        "/statistics"
+        "/statistics",
+        "/records"
       ],
       "apis": [
         "/api/logbook/summary",
