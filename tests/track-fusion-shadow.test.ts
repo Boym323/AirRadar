@@ -285,6 +285,35 @@ describe("Track Fusion Shadow V1", () => {
     expect(shadow.diagnostics().dedupedEvaluations).toBe(1);
   });
 
+  it("evaluates only dirty identities while retaining global overlap diagnostics", () => {
+    const localA = aircraft({ hex: "ABC123", origin: "local", source: "ADS-B", lat: 49.2, lon: 17.7 });
+    const networkA = aircraft({ hex: "ABC123", origin: "adsblol", source: "ADS-B", lat: 49.201, lon: 17.701 });
+    const networkB = aircraft({ hex: "DEF456", origin: "adsblol", source: "ADS-B", lat: 49.4, lon: 17.9 });
+    const shadow = new TrackFusionShadow();
+    const local = new Map([[localA.icaoHex, localA]]);
+    const network = new Map([[networkA.icaoHex, networkA], [networkB.icaoHex, networkB]]);
+
+    shadow.observe({ local, network, receiver, localStaleAfterMs: 15_000, networkStaleAfterMs: 15_000, now: baseNow });
+    const before = shadow.diagnostics();
+    const movedA = aircraft({ hex: "ABC123", origin: "local", source: "ADS-B", lat: 49.202, lon: 17.702, lastSeenMs: baseNow + 1_000 });
+    local.set(movedA.icaoHex, movedA);
+
+    const evaluated = shadow.observe({
+      local,
+      network,
+      receiver,
+      localStaleAfterMs: 15_000,
+      networkStaleAfterMs: 15_000,
+      keys: new Set(["ABC123"]),
+      now: baseNow + 1_000,
+    });
+
+    expect(evaluated.map((track) => track.icaoHex)).toEqual(["ABC123"]);
+    expect(shadow.getTrack("DEF456")).not.toBeNull();
+    expect(shadow.diagnostics().evaluations).toBe(before.evaluations + 1);
+    expect(shadow.diagnostics().overlapTracks).toBe(1);
+  });
+
   it("scores local ADS-B above local MLAT and network MLAT", () => {
     const localAdsb = buildTrackFusionObservation(aircraft({ origin: "local", source: "ADS-B", lat: 49.2, lon: 17.7 }), baseNow);
     const localMlat = buildTrackFusionObservation(aircraft({ origin: "local", source: "MLAT", lat: 49.2, lon: 17.7 }), baseNow);
