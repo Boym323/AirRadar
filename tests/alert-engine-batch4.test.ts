@@ -55,7 +55,7 @@ function intelligenceEvent(type: FlightIntelligenceEvent["type"], lifecycleKey: 
 }
 
 describe("batch 4 alert transitions", () => {
-  it("deduplicates durable new-aircraft and reception-record events", async () => {
+  it("keeps durable new-aircraft and reception-record events center-only and deduplicated", async () => {
     const history = historyRecorder();
     const send = vi.fn(async () => undefined);
     const engine = new AlertEngine({ history, notifier: { name: "test", enabled: true, send } });
@@ -67,7 +67,10 @@ describe("batch 4 alert transitions", () => {
     engine.observeReceptionRecord("daily", { date: "2026-09-08", distanceKm: 410, icaoHex: "ABC123", registration: "OK-ABC", recordedAt: item.lastSeen, bearing: 90 }, null);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(history.detected.map((entry) => entry.type)).toEqual(["new_aircraft", "reception_record"]);
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(history.recordNotification).toHaveBeenCalledTimes(2);
+    expect(history.recordNotification).toHaveBeenNthCalledWith(1, "new:ABC123", "disabled");
+    expect(history.recordNotification).toHaveBeenNthCalledWith(2, expect.stringContaining("record:daily:2026-09-08:ABC123:"), "disabled");
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("applies the shared cooldown to successive reception-record maxima", async () => {
