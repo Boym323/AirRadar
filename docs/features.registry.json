@@ -1024,6 +1024,29 @@
         "today vs baseline",
         "30 day median"
       ]
+    },
+    {
+      "id": "trust-provenance-ui",
+      "name": "Trust & Provenance UI",
+      "category": "platform / trust",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Shared evidence presentation for observed, inferred, predicted, system, and browser-local context with explicit source, freshness and optional confidence; it never changes underlying evidence or creates a data source.",
+      "pages": [
+        "/my-airradar",
+        "/events",
+        "/journeys",
+        "/baselines"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "trust-provenance"
+      ],
+      "changelogKeywords": [
+        "trust provenance",
+        "evidence stamp",
+        "source freshness"
+      ]
     }
   ]
 }
