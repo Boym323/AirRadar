@@ -19,6 +19,8 @@ import {
   type AircraftSearchResult,
   type AirportSearchResult,
   type AtsPointSearchResult,
+  type AtsRouteSearchResult,
+  type AtcSectorSearchResult,
   type FlightSearchResult,
   type GlobalSearchResponse,
   type NavPointSearchResult,
@@ -27,7 +29,7 @@ import {
 
 const SEARCH_DEBOUNCE_MS = 220;
 
-type SearchResult = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult | NavPointSearchResult | FlightSearchResult | SmartSearchActionResult;
+type SearchResult = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult | AtsRouteSearchResult | AtcSectorSearchResult | NavPointSearchResult | FlightSearchResult | SmartSearchActionResult;
 
 interface StaticCommand {
   key: string;
@@ -48,6 +50,8 @@ function resultKey(item: SearchResult): string {
   if (item.kind === "aircraft") return `aircraft:${item.icaoHex}`;
   if (item.kind === "airport") return `airport:${item.icaoCode}`;
   if (item.kind === "ats-point") return `ats-point:${item.id}`;
+  if (item.kind === "ats-route") return `ats-route:${item.designator}`;
+  if (item.kind === "sector") return `sector:${item.id}`;
   if (item.kind === "nav-point") return `nav-point:${item.id}`;
   if (item.kind === "flight") return `flight:${item.id}`;
   return `action:${item.intent}:${item.airportIcao ?? ""}`;
@@ -94,6 +98,18 @@ function resultLabels(item: SearchResult): { label: string; detail: string } {
         .filter(Boolean).join(" · "),
     };
   }
+  if (item.kind === "ats-route") {
+    return {
+      label: item.designator,
+      detail: [item.countryCodes.join(" / "), t.search.atsRoutePoints(item.pointCount)].filter(Boolean).join(" · "),
+    };
+  }
+  if (item.kind === "sector") {
+    return {
+      label: item.name,
+      detail: [item.id, item.callsign, item.service, item.country].filter(Boolean).join(" · "),
+    };
+  }
   if (item.kind === "nav-point") {
     return {
       label: item.name === item.id.split(":")[1] ? item.name : `${item.id.split(":")[1]} · ${item.name}`,
@@ -115,10 +131,12 @@ function resultLabels(item: SearchResult): { label: string; detail: string } {
   return smartActionLabels(item);
 }
 
-function resultIcon(item: SearchResult): "aircraft" | "airport" | "waypoint" | "flight" | "time" | "radar" {
+function resultIcon(item: SearchResult): "aircraft" | "airport" | "waypoint" | "flight" | "time" | "radar" | "atc" {
   if (item.kind === "aircraft") return "aircraft";
   if (item.kind === "airport") return "airport";
   if (item.kind === "ats-point") return "waypoint";
+  if (item.kind === "ats-route") return "flight";
+  if (item.kind === "sector") return "atc";
   if (item.kind === "nav-point") return "waypoint";
   if (item.kind === "flight") return "flight";
   if (item.intent === "go_arounds_today" || item.intent === "rare_aircraft_today") return "time";
@@ -129,6 +147,8 @@ function resultKindLabel(item: SearchResult): string {
   if (item.kind === "aircraft") return t.search.aircraftResults;
   if (item.kind === "airport") return t.search.airportResults;
   if (item.kind === "ats-point") return t.search.atsPointResults;
+  if (item.kind === "ats-route") return t.search.atsRouteResults;
+  if (item.kind === "sector") return t.search.sectorResults;
   if (item.kind === "nav-point") return t.search.navPointResults;
   if (item.kind === "flight") return t.search.flightResults;
   return t.commandSearch.smartActions;
@@ -276,6 +296,8 @@ export function CommandPalette() {
     ...(results?.actions ?? []),
     ...(results?.aircraft ?? []),
     ...(results?.airports ?? []),
+    ...(results?.atsRoutes ?? []),
+    ...(results?.sectors ?? []),
     ...(results?.atsPoints ?? []),
     ...(results?.navPoints ?? []),
     ...(results?.flights ?? []),
@@ -504,6 +526,14 @@ export function CommandPalette() {
           {!loading && !requestFailed && results?.airports.length ? <section className="command-palette-group" aria-label={t.search.airportResults}>
             <div className="command-palette-group-title">{t.search.airportResults}</div>
             {results.airports.map(renderResult)}
+          </section> : null}
+          {!loading && !requestFailed && (results?.atsRoutes ?? []).length ? <section className="command-palette-group" aria-label={t.search.atsRouteResults}>
+            <div className="command-palette-group-title">{t.search.atsRouteResults}</div>
+            {(results?.atsRoutes ?? []).map(renderResult)}
+          </section> : null}
+          {!loading && !requestFailed && (results?.sectors ?? []).length ? <section className="command-palette-group" aria-label={t.search.sectorResults}>
+            <div className="command-palette-group-title">{t.search.sectorResults}</div>
+            {(results?.sectors ?? []).map(renderResult)}
           </section> : null}
           {!loading && !requestFailed && results?.atsPoints.length ? <section className="command-palette-group" aria-label={t.search.atsPointResults}>
             <div className="command-palette-group-title">{t.search.atsPointResults}</div>
