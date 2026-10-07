@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
+import { TrustStamp } from "@/components/trust-stamp";
 import { formatDistance, formatNumber, t } from "@/lib/i18n";
 import { buildHistoricalBaseline, type BaselineMetric, type BaselineState, type HistoricalBaselineSummary } from "@/lib/historical-baselines";
 import styles from "./historical-baselines.module.css";
@@ -95,7 +96,7 @@ export function HistoricalBaselines() {
         <MetricCard value={summary.maxDistanceKm.deltaPercent === null ? "—" : (summary.maxDistanceKm.deltaPercent > 0 ? "+" : "") + formatNumber(summary.maxDistanceKm.deltaPercent, 0) + "%"} label={copy.distance} />
       </MetricStrip>
       <Panel>
-        <SectionHeader kicker="30D MEDIAN" title={copy.comparison} description={copy.description} />
+        <SectionHeader kicker="30D MEDIAN" title={copy.comparison} description={copy.description} actions={<TrustStamp provenance={{ kind: "INFERRED", source: "ReceiverDailyStats · 30d" }} />} />
         <div className={styles.grid}>
           {card(copy.unique, summary.uniqueAircraft, (n) => formatNumber(n, 0))}
           {card(copy.concurrent, summary.maxConcurrentAircraft, (n) => formatNumber(n, 0))}
