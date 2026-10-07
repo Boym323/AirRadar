@@ -88,7 +88,7 @@ export const cs = {
     detected: "Detekováno",
     latest: "Poslední událost",
     timeline: "Timeline",
-    groupedEvents: (count: number) => `${count} události`,
+    groupedEvents: (count: number) => `${count} ${count >= 2 && count <= 4 ? "události" : "událostí"}`,
     localUnread: "Unread stav je pouze v tomto prohlížeči.",
     bounded: "BOUNDED · GROUPING V1",
     preferences: "Preference oznámení",
