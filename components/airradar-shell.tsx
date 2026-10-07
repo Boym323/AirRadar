@@ -20,15 +20,18 @@ function LogoMark() {
 }
 
 const primaryNavigation = [
-  { href: "/", label: t.radar.liveAirPicture },
   { href: "/my-airradar", label: t.myAirRadar.title },
-  { href: "/time-machine", label: t.timeMachine.title },
-  { href: "/history", label: t.history.title },
-  { href: "/statistics", label: t.statistics.title },
-  { href: "/fleet", label: t.fleet.title },
+  { href: "/", label: t.radar.liveAirPicture },
+  { href: "/airports", label: t.locale.startsWith("cs") ? "Letiště" : "Airports" },
+  { href: "/journeys", label: t.locale.startsWith("cs") ? "Cesty" : "Journeys" },
 ] as const;
 
 const moreNavigation = [
+  { href: "/history", label: t.history.title },
+  { href: "/time-machine", label: t.timeMachine.title },
+  { href: "/statistics", label: t.statistics.title },
+  { href: "/baselines", label: t.locale.startsWith("cs") ? "Baseline" : "Baselines" },
+  { href: "/fleet", label: t.fleet.title },
   { href: "/airspace", label: t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace" },
   { href: "/weather", label: t.locale.startsWith("cs") ? "Počasí" : "Weather" },
   { href: "/routes", label: t.locale.startsWith("cs") ? "Trasy" : "Routes" },
@@ -53,7 +56,7 @@ function pathMatches(pathname: string, href: string): boolean {
 
 function isMorePath(pathname: string): boolean {
   return moreNavigation.some(({ href }) => pathMatches(pathname, href))
-    || ["/aircraft", "/airports", "/flights"].some((prefix) => pathname.startsWith(prefix));
+    || ["/aircraft", "/flights"].some((prefix) => pathname.startsWith(prefix));
 }
 
 export function UtcClock() {
@@ -161,7 +164,10 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
           <details className="topbar-nav-more">
             <summary className={isMorePath(pathname) ? "active" : undefined}>{t.common.more}</summary>
             <div>
-              {moreNavigation.map(({ href, label }) => <Link key={href} href={href}>{label}</Link>)}
+              {moreNavigation.map(({ href, label }) => {
+                const active = pathMatches(pathname, href);
+                return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : undefined}>{label}</Link>;
+              })}
             </div>
           </details>
         </nav>
@@ -183,50 +189,32 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const moreActive = isMorePath(pathname);
+  const moreActive = isMorePath(pathname) || pathMatches(pathname, "/airports") || pathMatches(pathname, "/journeys");
+  const item = (href: string, label: string, icon: string) => {
+    const active = pathMatches(pathname, href);
+    return <Link className={active ? "active" : ""} href={href} aria-current={active ? "page" : undefined}>
+      <span className="mobile-bottom-nav-icon" aria-hidden="true">{icon}</span>
+      <span>{label}</span>
+    </Link>;
+  };
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
-      <Link className={pathMatches(pathname, "/") ? "active" : ""} href="/" aria-current={pathMatches(pathname, "/") ? "page" : undefined}>
-        <span className="mobile-bottom-nav-icon" aria-hidden="true">⌁</span>
-        <span>{t.radar.liveAirPicture}</span>
-      </Link>
-      <Link className={pathMatches(pathname, "/history") ? "active" : ""} href="/history" aria-current={pathMatches(pathname, "/history") ? "page" : undefined}>
-        <span className="mobile-bottom-nav-icon" aria-hidden="true">◷</span>
-        <span>{t.history.title}</span>
-      </Link>
-      <Link className={pathMatches(pathname, "/time-machine") ? "active" : ""} href="/time-machine" aria-current={pathMatches(pathname, "/time-machine") ? "page" : undefined}>
-        <span className="mobile-bottom-nav-icon" aria-hidden="true">↻</span>
-        <span>{t.timeMachine.title}</span>
-      </Link>
-      <Link className={pathMatches(pathname, "/statistics") ? "active" : ""} href="/statistics" aria-current={pathMatches(pathname, "/statistics") ? "page" : undefined}>
-        <span className="mobile-bottom-nav-icon" aria-hidden="true">▥</span>
-        <span>{t.statistics.title}</span>
-      </Link>
+      {item("/my-airradar", t.myAirRadar.title, "⌂")}
+      {item("/", t.radar.liveAirPicture, "⌁")}
+      {item("/spotter", "Spotter", "✦")}
+      {item("/events", t.locale.startsWith("cs") ? "Události" : "Events", "≋")}
       <details className="mobile-bottom-more">
         <summary className={moreActive ? "active" : undefined}>
           <span className="mobile-bottom-nav-icon" aria-hidden="true">⋯</span>
           <span>{t.common.more}</span>
         </summary>
         <div>
-          <Link href="/my-airradar">{t.myAirRadar.title}</Link>
-          <Link href="/airspace">{t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace"}</Link>
-          <Link href="/weather">{t.locale.startsWith("cs") ? "Počasí" : "Weather"}</Link>
-          <Link href="/operations">{t.operations.title}</Link>
-          <Link href="/routes">{t.locale.startsWith("cs") ? "Trasy" : "Routes"}</Link>
-          <Link href="/navigation">{t.locale.startsWith("cs") ? "Navigace" : "Navigation"}</Link>
-          <Link href="/procedures">{t.locale.startsWith("cs") ? "Procedury" : "Procedures"}</Link>
-          <Link href="/spotter">Spotter</Link>
-          <Link href="/fleet">{t.fleet.title}</Link>
-          <Link href="/intelligence">{t.intelligence.title}</Link>
-          <Link href="/events">{t.locale.startsWith("cs") ? "Události" : "Events"}</Link>
-          <Link href="/journeys">{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</Link>
-          <Link href="/alerts">{t.alerts.title}</Link>
-          <Link href="/notifications">{t.locale.startsWith("cs") ? "Oznámení" : "Notifications"}</Link>
-          <Link href="/recap/daily">{t.recap.daily}</Link>
-          <Link href="/recap/weekly">{t.recap.weekly}</Link>
-          <Link href="/watchlist">{t.watchlist.title}</Link>
-          <Link href="/workspaces">{t.locale.startsWith("cs") ? "Workspace" : "Workspaces"}</Link>
-          <Link href="/system">{t.system.title}</Link>
+          <Link href="/airports" aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
+          <Link href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</Link>
+          {moreNavigation.map(({ href, label }) => {
+            const active = pathMatches(pathname, href);
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : undefined}>{label}</Link>;
+          })}
         </div>
       </details>
     </nav>
