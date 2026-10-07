@@ -146,7 +146,7 @@ describe("selected aircraft live trail", () => {
   it("bounds the server local live trail while preserving the newest endpoint", () => {
     const points = Array.from(
       { length: SERVER_LOCAL_TRAIL_MAX_POINTS + 80 },
-      (_, index) => point(-10 + index * 0.01, 14 + index * 0.00001),
+      (_, index) => point(-20 + index * 0.02, 14 + index * 0.0001),
     );
     const result = points.reduce<TrailPoint[]>((trail, next) => appendBoundedServerTrailPoint(trail, next), []);
 
