@@ -22,8 +22,10 @@ describe("My AirRadar Home V1", () => {
     expect(component).toContain("SPOTTER_LOGBOOK_STORAGE_KEY");
   });
 
-  it("surfaces the personal home in canonical navigation", () => {
-    expect(shell).toContain('href: "/my-airradar"');
-    expect(shell).toContain('<Link href="/my-airradar">');
+  it("surfaces the personal home in canonical desktop and mobile navigation", () => {
+    const primary = shell.slice(shell.indexOf("const primaryNavigation"), shell.indexOf("const moreNavigation"));
+    const mobile = shell.slice(shell.indexOf("export function MobileBottomNav"), shell.indexOf("export function AirRadarPageShell"));
+    expect(primary).toContain('href: "/my-airradar"');
+    expect(mobile).toContain('item("/my-airradar"');
   });
 });
