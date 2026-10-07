@@ -90,10 +90,11 @@ function semanticEventKey(entry: AlertHistoryEntry): string | null {
 }
 
 function statusPriority(status: AlertNotificationStatus): number {
-  if (status === "failed") return 5;
-  if (status === "delivered") return 4;
-  if (status === "attempted") return 3;
-  if (status === "pending") return 2;
+  if (status === "failed") return 6;
+  if (status === "delivered") return 5;
+  if (status === "attempted") return 4;
+  if (status === "pending") return 3;
+  if (status === "center_only") return 2;
   return 1;
 }
 
