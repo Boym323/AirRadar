@@ -17,28 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.342] - 2026-10-07
-
-Changes since v1.0.341.
-
-**Features touched:** Live Radar.
-
-### Fixed
-
-- Handle callsign changes to prevent incorrect position retention (551ee381)
-
-### Maintenance
-
-- Sync generated repository metadata (#516) (332db50d)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#516) (332db50d)
-- fix(aircraft-state): handle callsign changes to prevent incorrect position retention (551ee381)
-
-</details>
-
 ## [1.0.341] - 2026-10-07
 
 Changes since v1.0.340.
@@ -255,6 +233,7 @@ Changes since v1.0.340.
 - Merge pull request #515 from Boym323/fix/notification-center-query-regression (ebd5726d)
 
 </details>
+
 ## [1.0.340] - 2026-10-07
 
 Changes since v1.0.339.
@@ -308,6 +287,7 @@ Changes since v1.0.339.
 - Merge pull request #504 from Boym323/feat/delivery-health-v1 (6e422ca4)
 
 </details>
+
 ## [1.0.339] - 2026-10-07
 
 Changes since v1.0.338.
@@ -388,6 +368,7 @@ Changes since v1.0.338.
 - Merge pull request #501 from Boym323/feat/notification-center-v2 (ba1558a4)
 
 </details>
+
 ## [1.0.338] - 2026-10-07
 
 Changes since v1.0.337.
@@ -434,6 +415,7 @@ Changes since v1.0.337.
 - Merge pull request #499 from Boym323/feat/notification-dedup-grouping-v1 (965303d4)
 
 </details>
+
 ## [1.0.337] - 2026-10-07
 
 Changes since v1.0.336.
@@ -494,6 +476,7 @@ Changes since v1.0.336.
 - Merge pull request #498 from Boym323/feat/notification-preferences-v1 (5a92a3a4)
 
 </details>
+
 ## [1.0.336] - 2026-10-07
 
 Changes since v1.0.335.
@@ -522,6 +505,7 @@ Changes since v1.0.335.
 - Merge pull request #496 from Boym323/feat/notification-noise-control-v1 (15411d9f)
 
 </details>
+
 ## [1.0.335] - 2026-10-07
 
 Changes since v1.0.334.
@@ -548,6 +532,7 @@ Changes since v1.0.334.
 - Merge pull request #494 from Boym323/fix/production-gate-navigation-rate-limit (40a913c8)
 
 </details>
+
 ## [1.0.334] - 2026-10-07
 
 Changes since v1.0.333.
@@ -1253,6 +1238,7 @@ Changes since v1.0.333.
 - Merge pull request #492 from Boym323/fix/deploy-artifact-version-authority (59655674)
 
 </details>
+
 ## [1.0.333] - 2026-10-06
 
 Changes since v1.0.332.
