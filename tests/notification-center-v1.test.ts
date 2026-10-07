@@ -33,8 +33,8 @@ describe("Notification Center V1 aggregation", () => {
     expect(notificationCategory(entry("w", "watchlist", "pending", "2026-10-06T10:00:00Z"))).toBe("WATCHLIST");
     expect(notificationCategory(entry("i", "intelligence_approach", "delivered", "2026-10-06T10:01:00Z"))).toBe("INTELLIGENCE");
     expect(notificationCategory(entry("e", "emergency_7700", "failed", "2026-10-06T10:02:00Z"))).toBe("EMERGENCY");
-    expect(notificationCategory(entry("n", "new_aircraft", "disabled", "2026-10-06T10:03:00Z"))).toBe("FIRST SEEN");
-    expect(notificationCategory(entry("r", "reception_record", "disabled", "2026-10-06T10:04:00Z"))).toBe("RECEPTION RECORD");
+    expect(notificationCategory(entry("n", "new_aircraft", "center_only", "2026-10-06T10:03:00Z"))).toBe("FIRST SEEN");
+    expect(notificationCategory(entry("r", "reception_record", "center_only", "2026-10-06T10:04:00Z"))).toBe("RECEPTION RECORD");
     expect(notificationCategory(entry("p", "predictive_eta", "delivered", "2026-10-06T10:05:00Z"))).toBe("PREDICTIVE");
   });
 
