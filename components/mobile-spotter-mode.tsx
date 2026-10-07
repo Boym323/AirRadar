@@ -1291,7 +1291,7 @@ export function MobileSpotterMode() {
     </Panel> : null}
 
     <Panel>
-      <SectionHeader kicker="MY SKY / LOGBOOK" title={copy.personalLogbook} description={copy.personalLogbookDescription} />
+      <SectionHeader kicker="MY SKY / LOGBOOK" title={copy.personalLogbook} description={copy.personalLogbookDescription + " " + copy.sightingStoryDescription} />
       <MetricStrip className={styles.metrics}>
         <MetricCard value={formatNumber(logbookStats.sightings)} label={copy.sightings} />
         <MetricCard value={formatNumber(logbookStats.uniqueAircraft)} label={copy.uniqueAircraft} />
