@@ -33,6 +33,20 @@ export interface AirportCompareInvestigationState {
   period: "24h" | "7d";
 }
 
+export interface NavigationReferenceInvestigationState {
+  id: string | null;
+}
+
+export interface ProcedureInvestigationState {
+  airport: string | null;
+  type: "ALL" | "SID" | "STAR";
+  designator: string;
+}
+
+export interface SectorDetailInvestigationState {
+  historyHours: 1 | 6 | 24;
+}
+
 const NAV_WINDOWS = new Set<InvestigationWindow>(["5m", "15m", "30m", "60m"]);
 const NAV_SOURCES = new Set<InvestigationSource>(["ALL", "LOCAL", "NETWORK"]);
 const NAV_SEVERITIES = new Set<InvestigationSeverity>(["ALL", "REDUCED", "DEGRADED", "SEVERE"]);
@@ -69,6 +83,21 @@ function safePositiveInt(value: string | null): number | null {
 function safeIcao(value: string | null): string | null {
   const normalized = value?.trim().toUpperCase() ?? "";
   return /^[A-Z0-9]{4}$/.test(normalized) ? normalized : null;
+}
+
+function safeAirportIcao(value: string | null): string | null {
+  const normalized = value?.trim().toUpperCase() ?? "";
+  return /^[A-Z]{4}$/.test(normalized) ? normalized : null;
+}
+
+function safeNavIdentifier(value: string | null): string | null {
+  const normalized = value?.trim().toUpperCase() ?? "";
+  return /^[A-Z0-9]{2,8}$/.test(normalized) ? normalized : null;
+}
+
+function safeProcedureDesignator(value: string | null): string {
+  const normalized = value?.trim().toUpperCase() ?? "";
+  return normalized && /^[A-Z0-9]{1,16}$/.test(normalized) ? normalized : "";
 }
 
 export function parseNavigationIntegrityInvestigation(search: string): NavigationIntegrityInvestigationState {
@@ -153,6 +182,49 @@ export function buildAirportCompareInvestigation(state: AirportCompareInvestigat
   if (state.a) params.set("a", state.a);
   if (state.b && state.b !== state.a) params.set("b", state.b);
   if (state.period !== "24h") params.set("period", state.period);
+  return params.toString();
+}
+
+
+export function parseNavigationReferenceInvestigation(search: string): NavigationReferenceInvestigationState {
+  return { id: safeNavIdentifier(paramsFrom(search).get("id")) };
+}
+
+export function buildNavigationReferenceInvestigation(state: NavigationReferenceInvestigationState): string {
+  const params = new URLSearchParams();
+  const id = safeNavIdentifier(state.id);
+  if (id) params.set("id", id);
+  return params.toString();
+}
+
+export function parseProcedureInvestigation(search: string): ProcedureInvestigationState {
+  const params = paramsFrom(search);
+  const rawType = params.get("type")?.trim().toUpperCase();
+  return {
+    airport: safeAirportIcao(params.get("airport")),
+    type: rawType === "SID" || rawType === "STAR" ? rawType : "ALL",
+    designator: safeProcedureDesignator(params.get("designator")),
+  };
+}
+
+export function buildProcedureInvestigation(state: ProcedureInvestigationState): string {
+  const params = new URLSearchParams();
+  const airport = safeAirportIcao(state.airport);
+  const designator = safeProcedureDesignator(state.designator);
+  if (airport) params.set("airport", airport);
+  if (state.type === "SID" || state.type === "STAR") params.set("type", state.type);
+  if (designator) params.set("designator", designator);
+  return params.toString();
+}
+
+export function parseSectorDetailInvestigation(search: string): SectorDetailInvestigationState {
+  const value = paramsFrom(search).get("history");
+  return { historyHours: value === "1h" ? 1 : value === "24h" ? 24 : 6 };
+}
+
+export function buildSectorDetailInvestigation(state: SectorDetailInvestigationState): string {
+  const params = new URLSearchParams();
+  if (state.historyHours !== 6) params.set("history", `${state.historyHours}h`);
   return params.toString();
 }
 
