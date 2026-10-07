@@ -139,6 +139,7 @@ export function NavigationReferenceExplorer() {
 
   const [input, setInput] = useState("");
   const [searchedId, setSearchedId] = useState<string | null>(null);
+  const [searchedRoute, setSearchedRoute] = useState<string | null>(null);
   const [points, setPoints] = useState<AviationNavPoint[]>([]);
   const [nearby, setNearby] = useState<AviationNavPoint[]>([]);
   const [ats, setAts] = useState<AtsRoutesResponse | null>(null);
@@ -149,7 +150,13 @@ export function NavigationReferenceExplorer() {
   const requestRef = useRef<AbortController | null>(null);
 
   const routeMatches = (() => {
-    if (!ats?.routes?.length || !points.length) return [];
+    if (!ats?.routes?.length) return [];
+    if (searchedRoute) {
+      return ats.routes
+        .filter((route) => normalizeIdentifier(route.designator) === searchedRoute)
+        .slice(0, MAX_ROUTES);
+    }
+    if (!points.length) return [];
     const ids = new Set(points.map((point) => normalizeIdentifier(point.id)));
     return ats.routes.filter((route) => route.points.some((point) => {
       return ids.has(normalizeIdentifier(point.id)) || ids.has(normalizeIdentifier(point.name));
@@ -222,13 +229,20 @@ export function NavigationReferenceExplorer() {
       const state = parseNavigationReferenceInvestigation(window.location.search);
       setValidation(null);
       requestRef.current?.abort();
-      if (state.id) {
+      if (state.route) {
+        setInput(state.route);
+        setSearchedId(null);
+        setSearchedRoute(state.route);
+        void search(state.route);
+      } else if (state.id) {
         setInput(state.id);
         setSearchedId(state.id);
+        setSearchedRoute(null);
         void search(state.id);
       } else {
         setInput("");
         setSearchedId(null);
+        setSearchedRoute(null);
         setPoints([]);
         setNearby([]);
         setAts(null);
@@ -259,7 +273,8 @@ export function NavigationReferenceExplorer() {
     setValidation(null);
     setInput(identifier);
     setSearchedId(identifier);
-    const query = buildNavigationReferenceInvestigation({ id: identifier });
+    setSearchedRoute(null);
+    const query = buildNavigationReferenceInvestigation({ id: identifier, route: null });
     window.history.pushState(null, "", investigationHref("/navigation", query));
     void search(identifier);
   }
@@ -293,10 +308,10 @@ export function NavigationReferenceExplorer() {
       </Panel>
 
       <MetricStrip className={styles.metrics}>
-        <MetricCard value={searchedId ?? "—"} label="ID" />
-        <MetricCard value={searchedId ? formatNumber(points.length) : "—"} label={copy.matches} />
-        <MetricCard value={searchedId ? formatNumber(nearby.length) : "—"} label={copy.nearby} detail="≤ 12" />
-        <MetricCard value={searchedId ? formatNumber(routeMatches.length) : "—"} label={copy.routes} detail="≤ 24" />
+        <MetricCard value={searchedId ?? searchedRoute ?? "—"} label={searchedRoute ? "ATS ROUTE" : "ID"} />
+        <MetricCard value={searchedId || searchedRoute ? formatNumber(points.length) : "—"} label={copy.matches} />
+        <MetricCard value={searchedId || searchedRoute ? formatNumber(nearby.length) : "—"} label={copy.nearby} detail="≤ 12" />
+        <MetricCard value={searchedId || searchedRoute ? formatNumber(routeMatches.length) : "—"} label={copy.routes} detail="≤ 24" />
       </MetricStrip>
 
       <div className={styles.grid}>
@@ -326,7 +341,7 @@ export function NavigationReferenceExplorer() {
                 </article>
               ))}
             </div>
-          ) : searchedId ? <EmptyState title={copy.empty} /> : <EmptyState title={copy.search} description={copy.placeholder} />}
+          ) : searchedId || searchedRoute ? <EmptyState title={searchedRoute ? copy.noRoutes : copy.empty} /> : <EmptyState title={copy.search} description={copy.placeholder} />}
         </Panel>
 
         <Panel>
@@ -363,7 +378,7 @@ export function NavigationReferenceExplorer() {
               </div>
               {ats?.source ? <p className={styles.source}>{copy.source}: {ats.source.name ?? "eAIP"}{ats.source.effectiveDate ? ` · ${ats.source.effectiveDate}` : ""}{ats.source.reference ? ` · ${ats.source.reference}` : ""}</p> : null}
             </>
-          ) : <EmptyState title={searchedId ? copy.noRoutes : copy.search} />}
+          ) : <EmptyState title={searchedId || searchedRoute ? copy.noRoutes : copy.search} />}
         </Panel>
       </div>
 
