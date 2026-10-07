@@ -157,7 +157,7 @@ export function MobileSpotterMode() {
   }, [pageVisible]);
 
   useEffect(() => {
-    if (distanceOrigin !== "observer") return;
+    if (!pageVisible || distanceOrigin !== "observer") return;
     if (!("geolocation" in navigator)) {
       setObserver(null);
       setObserverState("unavailable");
