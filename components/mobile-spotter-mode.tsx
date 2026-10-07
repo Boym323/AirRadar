@@ -15,83 +15,7 @@ type ObserverState = "idle" | "requesting" | "ready" | "denied" | "unavailable" 
 
 export function MobileSpotterMode() {
   const cs = t.locale.startsWith("cs");
-  const copy = cs ? {
-    title: "Spotter mód",
-    subtitle: "Mobilní živý přehled letadel skutečně pozorovaných LOCAL přijímačem.",
-    liveNearby: "Živě v dosahu",
-    newToday: "Nová dnes",
-    rareToday: "Vzácná dnes",
-    receptionRecord: "Dnešní rekord",
-    aircraft: "Letadla v dosahu",
-    aircraftDescription: "Pouze LOCAL receiver evidence. V režimu Moje poloha se vzdálenost a směr počítají pouze v tomto prohlížeči.",
-    distance: "Max. vzdálenost",
-    altitude: "Max. výška",
-    type: "Typ letadla",
-    discovery: "Discovery",
-    all: "Vše",
-    live: "LIVE · LOCAL",
-    stale: "STALE · LOCAL",
-    unavailable: "LOCAL feed nedostupný",
-    loading: "Připojování k LOCAL feedu…",
-    noAircraft: "Pro zvolené filtry není v LOCAL dosahu žádné letadlo.",
-    detail: "Detail",
-    radar: "Radar",
-    watch: "Watchlist",
-    bearing: "Směr",
-    track: "Trať",
-    updated: "Aktualizováno",
-    distanceOrigin: "Výchozí bod",
-    receiver: "Přijímač",
-    myLocation: "Moje poloha",
-    locationPrivate: "Poloha zůstává pouze v tomto prohlížeči a neposílá se AirRadaru.",
-    locationRequesting: "Zjišťuji polohu…",
-    locationReady: "Poloha aktivní",
-    locationDenied: "Přístup k poloze byl zamítnut.",
-    locationUnavailable: "Geolokace není v tomto prohlížeči dostupná.",
-    locationError: "Polohu se nepodařilo získat.",
-    accuracy: "přesnost",
-    distanceFromReceiver: "od přijímače",
-    distanceFromYou: "od tebe",
-    bearingFromYou: "směr od tebe",
-  } : {
-    title: "Spotter Mode",
-    subtitle: "Mobile live view of aircraft actually observed by the LOCAL receiver.",
-    liveNearby: "Live nearby",
-    newToday: "New today",
-    rareToday: "Rare today",
-    receptionRecord: "Today's record",
-    aircraft: "Aircraft in range",
-    aircraftDescription: "LOCAL receiver evidence only. In My location mode, distance and bearing are calculated only in this browser.",
-    distance: "Max distance",
-    altitude: "Max altitude",
-    type: "Aircraft type",
-    discovery: "Discovery",
-    all: "All",
-    live: "LIVE · LOCAL",
-    stale: "STALE · LOCAL",
-    unavailable: "LOCAL feed unavailable",
-    loading: "Connecting to LOCAL feed…",
-    noAircraft: "No aircraft in LOCAL range match the selected filters.",
-    detail: "Detail",
-    radar: "Radar",
-    watch: "Watchlist",
-    bearing: "Bearing",
-    track: "Track",
-    updated: "Updated",
-    distanceOrigin: "Reference point",
-    receiver: "Receiver",
-    myLocation: "My location",
-    locationPrivate: "Your location stays in this browser and is not sent to AirRadar.",
-    locationRequesting: "Getting your location…",
-    locationReady: "Location active",
-    locationDenied: "Location permission was denied.",
-    locationUnavailable: "Geolocation is unavailable in this browser.",
-    locationError: "Your location could not be determined.",
-    accuracy: "accuracy",
-    distanceFromReceiver: "from receiver",
-    distanceFromYou: "from you",
-    bearingFromYou: "bearing from you",
-  };
+  const copy = t.spotter;
 
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const selectedHexRef = useRef<string | null>(null);
@@ -351,7 +275,7 @@ export function MobileSpotterMode() {
             </article>;
           })}
         </div> : <EmptyState title={copy.noAircraft} />}
-      {discoveryFailed ? <p className={styles.discoveryWarning}>{cs ? "Discovery badge mohou být dočasně neúplné." : "Discovery badges may be temporarily incomplete."}</p> : null}
+      {discoveryFailed ? <p className={styles.discoveryWarning}>{copy.discoveryWarning}</p> : null}
     </Panel>
   </main>;
 }
