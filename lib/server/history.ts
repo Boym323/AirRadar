@@ -1119,7 +1119,7 @@ export async function recordAircraftSnapshot(
     // lane so they consume no transaction slot.
     const latitude: number = item.lat!;
 
-    const longitude: number = item.lon;
+    const longitude: number = item.lon!;
     const altitude: number | undefined = typeof item.altitude === "number" && Number.isFinite(item.altitude) ? item.altitude : undefined;
     const groundSpeed: number | undefined = typeof item.groundSpeed === "number" && Number.isFinite(item.groundSpeed) ? item.groundSpeed : undefined;
     const track: number | undefined = typeof item.track === "number" && Number.isFinite(item.track) ? item.track : undefined;
@@ -1225,7 +1225,7 @@ export async function recordAircraftSnapshot(
         const route = item.enrichment?.route;
         const destinationObservation = observeDestination(null, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
         flight = await statement(() => schema.Flight.create({
-          aircraftId: dbAircraft.id,
+          aircraftId: dbAircraft!.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
           callsign: item.callsign,
           registration: item.registration ?? metadata?.registration,
