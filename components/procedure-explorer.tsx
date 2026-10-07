@@ -245,7 +245,7 @@ export function ProcedureExplorer() {
           title={copy.results}
           description={copy.resultsDescription}
           actions={<div className={styles.actions}>
-            {submittedAirport ? <Link href={`/airports/${encodeURIComponent(submittedAirport)}`}>{copy.airportDetail}</Link> : null}
+            {submittedAirport ? <Link href={{ pathname: `/airports/${submittedAirport}` }}>{copy.airportDetail}</Link> : null}
             <StatusBadge variant={failed ? "warning" : procedures.length ? "success" : "neutral"}>{failed ? "UNAVAILABLE" : loading ? "LOADING" : submittedAirport ? "PUBLISHED" : "READY"}</StatusBadge>
           </div>}
         />
