@@ -10,6 +10,7 @@ import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTra
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
 import { findRecentObserverPasses } from "@/lib/spotter-history";
 import { isSpotterInteresting, scoreSpotterInterest, type SpotterInterestReasonCode } from "@/lib/spotter-interest";
+import { DEFAULT_SPOTTER_ALERT_PREFERENCES, readSpotterAlertPreferences, shouldTriggerSpotterAlert, spotterAlertTag, writeSpotterAlertPreferences, type SpotterAlertPreferences } from "@/lib/spotter-alerts";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -35,6 +36,9 @@ export function MobileSpotterMode() {
   const [historyTracks, setHistoryTracks] = useState<HistoricalAircraftTrack[]>([]);
   const [historyState, setHistoryState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [historyTruncated, setHistoryTruncated] = useState(false);
+  const [alertPreferences, setAlertPreferences] = useState<SpotterAlertPreferences>(DEFAULT_SPOTTER_ALERT_PREFERENCES);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
+  const alertedTagsRef = useRef<Map<string, number>>(new Map());
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -45,6 +49,13 @@ export function MobileSpotterMode() {
     onSelectedAircraftRemoved,
     onSnapshot,
   });
+
+  useEffect(() => {
+    setAlertPreferences(readSpotterAlertPreferences());
+    setNotificationPermission("Notification" in window && "serviceWorker" in navigator
+      ? Notification.permission
+      : "unsupported");
+  }, []);
 
   useEffect(() => {
     if (distanceOrigin !== "observer") return;
@@ -219,10 +230,93 @@ export function MobileSpotterMode() {
       .slice(0, 5);
   }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft]);
 
+  const updateAlertPreferences = (next: SpotterAlertPreferences) => {
+    setAlertPreferences(next);
+    writeSpotterAlertPreferences(next);
+  };
+
+  const toggleSpotterAlerts = async () => {
+    if (alertPreferences.enabled) {
+      updateAlertPreferences({ ...alertPreferences, enabled: false });
+      return;
+    }
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setNotificationPermission("unsupported");
+      return;
+    }
+    const permission = Notification.permission === "granted"
+      ? "granted"
+      : await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === "granted") {
+      updateAlertPreferences({ ...alertPreferences, enabled: true });
+    }
+  };
+
+  const toggleAlertReason = (reason: SpotterInterestReasonCode) => {
+    const reasons = alertPreferences.reasons.includes(reason)
+      ? alertPreferences.reasons.filter((item) => item !== reason)
+      : [...alertPreferences.reasons, reason];
+    updateAlertPreferences({ ...alertPreferences, reasons });
+  };
+
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
     [historyTracks, observer],
   );
+
+  useEffect(() => {
+    if (
+      distanceOrigin !== "observer"
+      || notificationPermission !== "granted"
+      || !alertPreferences.enabled
+      || !("serviceWorker" in navigator)
+    ) return;
+
+    const now = Date.now();
+    for (const [tag, at] of alertedTagsRef.current) {
+      if (now - at > 60 * 60_000) alertedTagsRef.current.delete(tag);
+    }
+
+    for (const item of interestingAircraft) {
+      const route = item.aircraft.enrichment?.route;
+      const candidate = {
+        icaoHex: item.aircraft.icaoHex,
+        identity: item.aircraft.callsign ?? item.aircraft.registration ?? item.aircraft.icaoHex,
+        aircraftType: item.aircraft.aircraftType ?? item.aircraft.enrichment?.metadata?.icaoTypeCode ?? null,
+        routeLabel: route?.origin || route?.destination
+          ? (route?.origin ?? "—") + " → " + (route?.destination ?? "—")
+          : null,
+        interest: item.interest,
+        closestApproach: item.closestApproach,
+      };
+      if (!shouldTriggerSpotterAlert(candidate, alertPreferences)) continue;
+      const tag = spotterAlertTag(candidate);
+      if (alertedTagsRef.current.has(tag)) continue;
+      alertedTagsRef.current.set(tag, now);
+      if (alertedTagsRef.current.size > 100) {
+        const oldest = [...alertedTagsRef.current.entries()].sort((a, b) => a[1] - b[1])[0];
+        if (oldest) alertedTagsRef.current.delete(oldest[0]);
+      }
+
+      const leadMinutes = Math.max(1, Math.round((candidate.closestApproach?.secondsUntilClosest ?? 0) / 60));
+      const bodyParts = [
+        candidate.aircraftType,
+        candidate.routeLabel,
+        candidate.closestApproach ? formatDistance(candidate.closestApproach.closestHorizontalDistanceKm) : null,
+        copy.inPrefix + " " + leadMinutes + " min",
+      ].filter(Boolean);
+      void navigator.serviceWorker.ready
+        .then((registration) => registration.showNotification(candidate.identity + " · " + copy.lookUp, {
+          body: bodyParts.join(" · "),
+          icon: "/icon.svg",
+          badge: "/icon.svg",
+          tag,
+          data: { url: "/?aircraft=" + encodeURIComponent(candidate.icaoHex) },
+        }))
+        .catch(() => undefined);
+    }
+  }, [alertPreferences, copy.inPrefix, copy.lookUp, distanceOrigin, interestingAircraft, notificationPermission]);
 
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
@@ -278,6 +372,63 @@ export function MobileSpotterMode() {
       {distanceOrigin === "observer" && observer?.accuracyMeters !== null && observer?.accuracyMeters !== undefined
         ? <small className={styles.locationAccuracy}>{copy.accuracy}: ±{formatNumber(observer.accuracyMeters)} m</small>
         : null}
+    </Panel>
+
+    <Panel>
+      <SectionHeader
+        kicker="MY SKY / ALERTS"
+        title={copy.spotterAlerts}
+        description={copy.spotterAlertsDescription}
+        actions={<Button
+          size="compact"
+          variant={alertPreferences.enabled ? "primary" : "secondary"}
+          onClick={() => void toggleSpotterAlerts()}
+        >{alertPreferences.enabled ? copy.disableSpotterAlerts : copy.enableSpotterAlerts}</Button>}
+      />
+      {notificationPermission === "denied" ? <p className={styles.discoveryWarning}>{copy.notificationDenied}</p> : null}
+      {notificationPermission === "unsupported" ? <p className={styles.discoveryWarning}>{copy.notificationUnsupported}</p> : null}
+      <div className={styles.alertGrid}>
+        <label>
+          <span>{copy.alertDistance}</span>
+          <select
+            value={alertPreferences.maxClosestDistanceKm}
+            onChange={(event) => updateAlertPreferences({ ...alertPreferences, maxClosestDistanceKm: Number(event.target.value) })}
+          >
+            {[1, 3, 5, 10].map((value) => <option value={value} key={value}>{value} km</option>)}
+          </select>
+        </label>
+        <label>
+          <span>{copy.alertLead}</span>
+          <select
+            value={alertPreferences.leadMinutes}
+            onChange={(event) => updateAlertPreferences({ ...alertPreferences, leadMinutes: Number(event.target.value) })}
+          >
+            {[1, 3, 5, 10].map((value) => <option value={value} key={value}>{value} min</option>)}
+          </select>
+        </label>
+        <label>
+          <span>{copy.alertScore}</span>
+          <select
+            value={alertPreferences.minimumInterestScore}
+            onChange={(event) => updateAlertPreferences({ ...alertPreferences, minimumInterestScore: Number(event.target.value) })}
+          >
+            {[30, 40, 60, 80].map((value) => <option value={value} key={value}>{value}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className={styles.alertReasons}>
+        <strong>{copy.alertReasons}</strong>
+        <div>
+          {(["iconic_type", "rare", "new", "widebody", "emergency", "reception_record"] as SpotterInterestReasonCode[]).map((reason) => <label key={reason}>
+            <input
+              type="checkbox"
+              checked={alertPreferences.reasons.includes(reason)}
+              onChange={() => toggleAlertReason(reason)}
+            />
+            <span>{copy.interestReasons[reason]}</span>
+          </label>)}
+        </div>
+      </div>
     </Panel>
 
     <Panel className={styles.filters}>
