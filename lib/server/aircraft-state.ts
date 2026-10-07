@@ -543,15 +543,18 @@ export class AircraftStateService {
     operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
   } {
+    let localTrailPointCount = 0;
+    for (const aircraft of this.localAircraft.values()) localTrailPointCount += aircraft.trail.length;
+    let networkTrailPointCount = 0;
+    for (const aircraft of this.networkAircraft.values()) networkTrailPointCount += aircraft.trail.length;
     return {
       aircraftCount: this.aircraft.size,
       localTrailAircraftCount: this.localAircraft.size,
       networkTrailAircraftCount: this.networkAircraft.size,
-      localTrailPointCount: [...this.localAircraft.values()].reduce((total, aircraft) => total + aircraft.trail.length, 0),
-      networkTrailPointCount: [...this.networkAircraft.values()].reduce((total, aircraft) => total + aircraft.trail.length, 0),
+      localTrailPointCount,
+      networkTrailPointCount,
       // Practical estimate for one retained TrailPoint including V8 object/array overhead.
-      trailEstimatedBytes: ([...this.localAircraft.values(), ...this.networkAircraft.values()]
-        .reduce((total, aircraft) => total + aircraft.trail.length, 0)) * 96,
+      trailEstimatedBytes: (localTrailPointCount + networkTrailPointCount) * 96,
       listenerCount: this.listeners.size,
       running: this.running,
       enrichment: this.enrichment.getDiagnostics(),
