@@ -20,7 +20,18 @@ describe("database transaction attribution", () => {
     expect(lane.failures).toBe(0);
     expect(lane.active).toBe(0);
     expect(lane.totalDurationMs).toBeGreaterThanOrEqual(0);
+    expect(lane.workUnits).toBe(1);
     expect(lane.windows["5m"].workUnits).toBe(1);
+  });
+
+  it("reads deferred work units after the transaction finishes", async () => {
+    let statements = 1;
+    await trackDbTransaction("history.snapshot", async () => {
+      statements = 6;
+    }, () => statements);
+    const lane = getDbTransactionDiagnostics().lanes["history.snapshot"];
+    expect(lane.workUnits).toBe(6);
+    expect(lane.windows["5m"].workUnits).toBe(6);
   });
 
   it("records failures without changing the original error", async () => {
