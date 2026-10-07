@@ -125,25 +125,45 @@ export function appendTrailPoint(
   return [...trail, next];
 }
 
-// Keep the live cache bounded even when a large synthetic or real feed sends
-// frequent position updates. At the normal history sampling cadence this
-// retains roughly the latest 40 minutes while avoiding a 1.5M-point cache at
-// 5,000 aircraft.
+// Keep live caches bounded even when a large synthetic or real feed sends
+// frequent position updates. PostgreSQL remains the durable/history source;
+// RAM trails only bridge the latest live interval for rendering and prediction.
+export const SERVER_LOCAL_TRAIL_MAX_POINTS = 600;
+export const SERVER_LOCAL_TRAIL_MAX_AGE_MS = 30 * 60_000;
 export const BROWSER_LIVE_TRAIL_MAX_POINTS = 120;
 export const BROWSER_LIVE_TRAIL_MAX_AGE_MS = 30 * 60_000;
+
+function appendBoundedTrailPoint(
+  trail: readonly TrailPoint[],
+  point: TrailPosition,
+  maxPoints: number,
+  maxAgeMs: number,
+): TrailPoint[] {
+  const next = appendTrailPoint(trail, point);
+  if (next.length === 0) return next;
+  const anchorAt = recordedAtMs(next[next.length - 1]!);
+  const cutoff = Number.isFinite(anchorAt) ? anchorAt - maxAgeMs : Number.NEGATIVE_INFINITY;
+  let start = Math.max(0, next.length - maxPoints);
+  while (start < next.length) {
+    const at = recordedAtMs(next[start]!);
+    if (Number.isFinite(at) && at >= cutoff) break;
+    start += 1;
+  }
+  return start === 0 ? next : next.slice(start);
+}
+
+export function appendBoundedServerTrailPoint(
+  trail: readonly TrailPoint[],
+  point: TrailPosition,
+): TrailPoint[] {
+  return appendBoundedTrailPoint(trail, point, SERVER_LOCAL_TRAIL_MAX_POINTS, SERVER_LOCAL_TRAIL_MAX_AGE_MS);
+}
 
 export function appendBoundedLiveTrailPoint(
   trail: readonly TrailPoint[],
   point: TrailPosition,
 ): TrailPoint[] {
-  const next = appendTrailPoint(trail, point);
-  const anchorAt = next.length ? recordedAtMs(next[next.length - 1]!) : recordedAtMs(point);
-  const cutoff = Number.isFinite(anchorAt) ? anchorAt - BROWSER_LIVE_TRAIL_MAX_AGE_MS : Number.NEGATIVE_INFINITY;
-  const bounded = next.filter((item) => {
-    const at = recordedAtMs(item);
-    return Number.isFinite(at) && at >= cutoff;
-  });
-  return bounded.slice(-BROWSER_LIVE_TRAIL_MAX_POINTS);
+  return appendBoundedTrailPoint(trail, point, BROWSER_LIVE_TRAIL_MAX_POINTS, BROWSER_LIVE_TRAIL_MAX_AGE_MS);
 }
 
 export function trailPointFromAircraft(aircraft: Pick<AircraftView, "lat" | "lon" | "lastSeen" | "seenSeconds" | "seenPosSeconds" | "altitude" | "groundSpeed" | "track">): TrailPoint | null {
