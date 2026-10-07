@@ -34,7 +34,7 @@ interface StaticCommand {
   label: string;
   detail: string;
   href: string;
-  icon: "radar" | "time" | "flight" | "airport" | "statistics" | "system";
+  icon: "radar" | "time" | "flight" | "airport" | "aircraft" | "atc" | "statistics" | "system";
   keywords: string[];
   action?: "operations";
 }
@@ -142,6 +142,7 @@ export function CommandPalette() {
   const router = useRouter();
   const pathname = usePathname();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GlobalSearchResponse | null>(null);
@@ -153,9 +154,17 @@ export function CommandPalette() {
   const commands = useMemo<StaticCommand[]>(() => [
     { key: "live", label: t.commandSearch.liveRadar, detail: t.commandSearch.liveRadarDetail, href: "/", icon: "radar", keywords: ["live", "radar", "map"] },
     { key: "today", label: t.commandSearch.today, detail: t.commandSearch.todayDetail, href: "/recap/daily", icon: "time", keywords: ["today", "daily", "recap", "dnes"] },
-    { key: "operations", label: t.commandSearch.operationsCenter, detail: t.commandSearch.operationsCenterDetail, href: "/?operations=1", icon: "radar", keywords: ["operations", "now", "events", "události"], action: "operations" },
-    { key: "flights", label: t.commandSearch.flights, detail: t.commandSearch.flightsDetail, href: "/flights", icon: "flight", keywords: ["flights", "history", "lety"] },
+    { key: "operations-center", label: t.commandSearch.operationsCenter, detail: t.commandSearch.operationsCenterDetail, href: "/?operations=1", icon: "radar", keywords: ["operations center", "now", "events", "události"], action: "operations" },
     { key: "airports", label: t.commandSearch.airports, detail: t.commandSearch.airportsDetail, href: "/airports", icon: "airport", keywords: ["airports", "letiště"] },
+    { key: "routes", label: t.locale.startsWith("cs") ? "Otevřít trasy" : "Open Routes", detail: t.locale.startsWith("cs") ? "Síť tras a detail koridoru" : "Route network and corridor detail", href: "/routes", icon: "flight", keywords: ["routes", "network", "trasy"] },
+    { key: "discover", label: t.locale.startsWith("cs") ? "Otevřít Discover" : "Open Discover", detail: t.locale.startsWith("cs") ? "Nová, vzácná a vracející se letadla" : "New, rare and returning aircraft", href: "/discover", icon: "aircraft", keywords: ["discover", "rare", "new", "objevovat"] },
+    { key: "weather", label: t.locale.startsWith("cs") ? "Otevřít počasí" : "Open Weather", detail: t.locale.startsWith("cs") ? "Provozní meteorologický přehled" : "Operational weather overview", href: "/weather", icon: "radar", keywords: ["weather", "metar", "sigmet", "počasí"] },
+    { key: "airspace", label: t.locale.startsWith("cs") ? "Otevřít vzdušný prostor" : "Open Airspace", detail: t.locale.startsWith("cs") ? "ATC sektory a aktivita" : "ATC sectors and activity", href: "/airspace", icon: "atc", keywords: ["airspace", "atc", "sector", "vzdušný prostor"] },
+    { key: "operations", label: t.locale.startsWith("cs") ? "Otevřít Operations" : "Open Operations", detail: t.locale.startsWith("cs") ? "Provozní dashboard" : "Operations dashboard", href: "/operations", icon: "radar", keywords: ["operations", "dashboard", "provoz"] },
+    { key: "flights", label: t.commandSearch.flights, detail: t.commandSearch.flightsDetail, href: "/flights", icon: "flight", keywords: ["flights", "history", "lety"] },
+    { key: "compare-flights", label: t.locale.startsWith("cs") ? "Porovnat lety" : "Compare Flights", detail: t.locale.startsWith("cs") ? "Porovnání dvou historických letů" : "Compare two historical flights", href: "/compare/flights", icon: "flight", keywords: ["compare flights", "flight compare", "porovnat lety"] },
+    { key: "compare-airports", label: t.locale.startsWith("cs") ? "Porovnat letiště" : "Compare Airports", detail: t.locale.startsWith("cs") ? "Porovnání provozu dvou letišť" : "Compare two airports", href: "/compare/airports", icon: "airport", keywords: ["compare airports", "airport compare", "porovnat letiště"] },
+    { key: "navigation-integrity", label: t.locale.startsWith("cs") ? "Otevřít Navigation Integrity" : "Open Navigation Integrity", detail: t.locale.startsWith("cs") ? "Integrita navigačních dat" : "Navigation data integrity", href: "/navigation-integrity", icon: "system", keywords: ["navigation integrity", "integrity", "gnss"] },
     { key: "statistics", label: t.statistics.title, detail: t.commandSearch.statisticsDetail, href: "/statistics", icon: "statistics", keywords: ["statistics", "stats", "statistiky"] },
     { key: "alerts", label: t.alerts.title, detail: t.commandSearch.alertsDetail, href: "/alerts", icon: "system", keywords: ["alerts", "warnings", "alerty"] },
     { key: "time-machine", label: t.timeMachine.title, detail: t.commandSearch.timeMachineDetail, href: "/time-machine", icon: "time", keywords: ["time machine", "history", "replay"] },
@@ -323,7 +332,7 @@ export function CommandPalette() {
     }
 
     if (item.type === "recent") {
-      if (item.recent.key === "command:operations" && pathname === "/") {
+      if (item.recent.key === "command:operations-center" && pathname === "/") {
         setOpen(false);
         requestOperationsCenterOpen();
         return;
@@ -341,6 +350,27 @@ export function CommandPalette() {
       href: item.result.href,
     });
     navigate(item.result.href);
+  }
+
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
+    if (event.key !== "Tab") return;
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'input, button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable?.length) {
+      event.preventDefault();
+      inputRef.current?.focus();
+      return;
+    }
+    const first = focusable.item(0);
+    const last = focusable.item(focusable.length - 1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
@@ -427,7 +457,7 @@ export function CommandPalette() {
     data-testid="command-palette"
     onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}
   >
-    <section className="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-palette-title">
+    <section ref={dialogRef} className="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-palette-title" onKeyDown={handleDialogKeyDown}>
       <header className="command-palette-header">
         <span className="command-palette-search-icon" aria-hidden="true"><UiIcon name="search" /></span>
         <label className="sr-only" htmlFor="command-palette-input" id="command-palette-title">{t.commandSearch.title}</label>

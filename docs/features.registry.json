@@ -310,6 +310,10 @@
         "/recap/daily",
         "/recap/weekly",
         "/statistics",
+        "/records",
+        "/aircraft-types",
+        "/operators",
+        "/traffic/rhythm",
         "/traffic/geography"
       ],
       "apis": [
@@ -319,7 +323,8 @@
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic",
-        "/api/statistics/heatmap"
+        "/api/statistics/heatmap",
+        "/api/statistics/traffic-profile"
       ],
       "changelogScopes": [
         "statistics",
