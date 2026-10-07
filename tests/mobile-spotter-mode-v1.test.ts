@@ -91,7 +91,7 @@ describe("Mobile Spotter Mode V1 runtime boundaries", () => {
   it("reuses the existing LOCAL live stream and discovery summary", () => {
     expect(source).toContain('activeCoverage: "local"');
     expect(source).toContain('fetch("/api/logbook/summary"');
-    expect(source).toContain("30_000");
+    expect(source).toContain("runtimeBudget.discoveryRefreshMs");
     expect(stream).toContain("/api/stream?coverage=");
   });
 
