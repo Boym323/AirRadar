@@ -3173,11 +3173,13 @@ button, input, select, textarea { color-scheme: dark; }
   }
   .mobile-bottom-nav-icon { color: currentColor; font-size: 18px; line-height: 1; }
   .mobile-bottom-more { position: relative; }
-  .mobile-bottom-more > div {
+.mobile-bottom-more > div {
     position: absolute;
     right: 0;
     bottom: calc(100% + 7px);
     display: grid;
+    max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px);
+    overflow-y: auto;
     min-width: 176px;
     padding: 5px;
     border: 1px solid var(--border-strong);

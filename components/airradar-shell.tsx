@@ -191,12 +191,13 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
 export function MobileBottomNav() {
   const pathname = usePathname();
   const moreActive = isMorePath(pathname) || pathMatches(pathname, "/airports") || pathMatches(pathname, "/journeys");
+
   const item = (href: Route, label: string, icon: string) => {
     const active = pathMatches(pathname, href);
-    return <Link className={active ? "active" : ""} href={href} aria-current={active ? "page" : undefined}>
+    return <a className={active ? "active" : ""} href={href} aria-current={active ? "page" : undefined}>
       <span className="mobile-bottom-nav-icon" aria-hidden="true">{icon}</span>
       <span>{label}</span>
-    </Link>;
+    </a>;
   };
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
@@ -210,11 +211,11 @@ export function MobileBottomNav() {
           <span>{t.common.more}</span>
         </summary>
         <div>
-          <Link href="/airports" aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
-          <Link href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</Link>
+          <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
+          <a href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</a>
           {moreNavigation.map(({ href, label }) => {
             const active = pathMatches(pathname, href);
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : undefined}>{label}</Link>;
+            return <a key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : undefined}>{label}</a>;
           })}
         </div>
       </details>

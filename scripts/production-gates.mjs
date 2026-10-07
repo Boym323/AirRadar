@@ -1299,7 +1299,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.setViewportSize({ width: 390, height: 844 });
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
-    const mobileMoreLink = routeSmoke.locator(".mobile-bottom-more a").first();
+    const mobileMoreLink = routeSmoke.locator('.mobile-bottom-more a[href="/airports"]').first();
+    await mobileMoreLink.waitFor({ state: "visible", timeout: 15_000 });
     const mobileMoreHref = await mobileMoreLink.getAttribute("href");
     if (!mobileMoreHref) throw new Error("Mobile More navigation item is missing href");
     const mobileMoreTarget = new URL(mobileMoreHref, baseUrl);

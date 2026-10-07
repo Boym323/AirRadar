@@ -121,6 +121,7 @@ describe("radar UI polish helpers", () => {
     expect(moreNavigation).toContain('href: "/recap/daily"');
     expect(mobile).toContain("moreNavigation.map");
     expect(globalCss).toContain(".mobile-bottom-more > div");
+    expect(globalCss).toContain("max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px)");
   });
 
   it("keeps the five-item mobile navigation and compact source counters", () => {
