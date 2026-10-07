@@ -3003,10 +3003,13 @@ export function AirRadarApp() {
             <span className="topbar-metric topbar-metric-network"><strong>{formatNumber(snapshot.sourceStats?.network ?? 0)}</strong><span>NETWORK</span></span>
             <UtcClock />
           </div>
-          <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>
-          <details className="topbar-secondary-status">
-            <summary>{t.status.secondaryStatus}</summary>
-            <div>
+          <details className="topbar-receiver topbar-receiver-menu">
+            <summary title={snapshot.receiver.name}>
+              <span className="topbar-receiver-label">{t.status.receiverLabel}</span>
+              <span className="topbar-receiver-name">{snapshot.receiver.name}</span>
+            </summary>
+            <div className="topbar-receiver-popover">
+              <strong>{snapshot.receiver.name}</strong>
               <span>{snapshot.receiver.lat === null || snapshot.receiver.lon === null ? t.common.unavailable : `${snapshot.receiver.lat.toFixed(4)}, ${snapshot.receiver.lon.toFixed(4)}`}</span>
               {serverAlertsEnabled !== null && <span>{serverAlertsEnabled ? t.status.serverAlertsActive : t.status.serverAlertsDisabled}</span>}
             </div>
