@@ -198,3 +198,41 @@
   font-size: var(--font-size-xs);
 }
 
+.passList {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.passCard {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.passCard > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.passCard span,
+.passCard small {
+  color: var(--muted);
+}
+
+.passMetrics {
+  justify-items: end;
+  text-align: right;
+}
+
+@media (max-width: 480px) {
+  .passCard {
+    align-items: flex-start;
+  }
+}
+
