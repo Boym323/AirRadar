@@ -170,7 +170,7 @@ describe("server alerts", () => {
     await flushAlerts();
     expect(firstNotifier.calls).toHaveLength(0);
     expect(history.recordDetected).toHaveBeenCalledTimes(1);
-    expect(history.recordNotification).toHaveBeenCalledWith("new:ABC123", "disabled");
+    expect(history.recordNotification).toHaveBeenCalledWith("new:ABC123", "center_only");
     expect(state.load().permanent).toContainEqual(["new:ABC123", expect.any(Number)]);
 
     const secondNotifier = recordingNotifier();
@@ -353,7 +353,7 @@ describe("server alerts", () => {
       squawk: "7700",
       ruleIds: ["watched"],
     }));
-    expect(recordNotification).toHaveBeenCalledWith(expect.any(String), "disabled");
+    expect(recordNotification).toHaveBeenCalledWith(expect.any(String), "center_only");
     expect(engine.getRuleLastTriggeredAt("watched")).not.toBeNull();
   });
 
