@@ -72,7 +72,8 @@ describe("Notification Center V2 boundaries", () => {
 
   it("keeps history bounded and reuses authenticated admin delivery state", () => {
     expect(NOTIFICATION_CENTER_PAGE_SIZE).toBe(50);
-    expect(source).toContain("/api/alerts?page=0&pageSize=");
+    expect(source).toContain("new URLSearchParams({ page: String(page), pageSize: String(NOTIFICATION_CENTER_PAGE_SIZE)");
+    expect(source).toContain('return `/api/alerts?${params.toString()}`;');
     expect(source).toContain("/api/admin/alerts/delivery?view=preferences");
     expect(source).toContain("/api/admin/alerts/delivery?view=notification-state");
     expect(source).toContain('method: "PATCH"');
