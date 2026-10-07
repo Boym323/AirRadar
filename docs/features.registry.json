@@ -311,7 +311,8 @@
         "/recap/weekly",
         "/statistics",
         "/records",
-        "/aircraft-types"
+        "/aircraft-types",
+        "/operators"
       ],
       "apis": [
         "/api/logbook/summary",
