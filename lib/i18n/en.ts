@@ -99,6 +99,8 @@ export const en = {
     deliveryFilter: "Delivery",
     search: "Search ICAO, callsign or rule",
     noMatches: "No notifications match the current filters.",
+    loadMore: "Load more",
+    loadingMore: "Loading…",
     filterCategories: { ALL: "ALL", WATCHLIST: "WATCHLIST", EMERGENCY: "EMERGENCY", INTELLIGENCE: "INTELLIGENCE", RECORDS: "RECORDS" },
     filterDelivery: { ALL: "ALL", DELIVERED: "DELIVERED", FAILED: "FAILED", CENTER_ONLY: "CENTER ONLY" },
     why: "Why",
