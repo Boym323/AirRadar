@@ -31,6 +31,10 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("[operationalFocusItemId, operationalFocusRevealVersion]");
     expect(componentSource).not.toContain("fetch(");
     expect(componentSource).toContain('useState<DetailTab>("flight")');
+    expect((renderSource.match(/<RouteSection/g) ?? []).length).toBe(1);
+    expect(renderSource).toContain('className="aircraft-quick-route-state"');
+    expect(renderSource).toContain('className="aircraft-quick-header-hero"');
+    expect(renderSource).toContain("formatDistance(aircraft.distanceKm)");
     expect(componentSource).toContain('{ id: "situation", label: t.aircraft.detailSections.situation }');
     expect(componentSource).not.toContain('{ id: "overview"');
     expect(componentSource).not.toContain('{ id: "track"');
