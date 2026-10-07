@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge, Button } from "@/components/ui-primitives";
+import { TrustStamp } from "@/components/trust-stamp";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import {
   FOLLOWED_JOURNEYS_STORAGE_KEY,
@@ -112,7 +113,7 @@ export function FollowedJourneys() {
         <SectionHeader kicker={journey.identity === "DURABLE" ? copy.durable : copy.provisional}
           title={identity}
           description={[journey.origin, journey.destination].some(Boolean) ? (journey.origin ?? "—") + " → " + (journey.destination ?? "—") : journey.icaoHex}
-          actions={<StatusBadge variant={journey.status === "COMPLETED" ? "success" : "live"}>{journey.status === "COMPLETED" ? copy.completed : copy.active}</StatusBadge>} />
+          actions={<div className={styles.trustActions}><StatusBadge variant={journey.status === "COMPLETED" ? "success" : "live"}>{journey.status === "COMPLETED" ? copy.completed : copy.active}</StatusBadge><TrustStamp compact provenance={{ kind: "BROWSER", source: journey.identity === "DURABLE" ? "localStorage + Flight Intelligence" : "localStorage" }} /></div>} />
         <div className={styles.actions}>
           <Link href={("/aircraft/" + encodeURIComponent(journey.icaoHex)) as Route}>{identity}</Link>
           {journey.flightId ? <Link href={("/flights/" + journey.flightId) as Route}>{copy.flightRecord}</Link> : null}
