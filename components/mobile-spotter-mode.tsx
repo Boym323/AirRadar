@@ -4,6 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, SegmentedControl, StatusBadge } from "@/components/ui-primitives";
+import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
@@ -14,7 +15,6 @@ type SpotterDistanceOrigin = "receiver" | "observer";
 type ObserverState = "idle" | "requesting" | "ready" | "denied" | "unavailable" | "error";
 
 export function MobileSpotterMode() {
-  const cs = t.locale.startsWith("cs");
   const copy = t.spotter;
 
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
