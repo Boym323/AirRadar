@@ -328,6 +328,12 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
+      - name: Synchronize production release tags
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo -n git -c safe.directory=/var/www/airradar -C /var/www/airradar fetch --force --prune --prune-tags --tags origin
+
       - name: Detect legacy release bootstrap
         id: release-bootstrap
         shell: bash
@@ -340,7 +346,7 @@ jobs:
           }
 
           branch_sha_line="$(grep -nF 'remote_sha="$(git_cmd rev-parse FETCH_HEAD)"' "${release_script}" | head -n 1 | cut -d: -f1 || true)"
-          tag_fetch_line="$(grep -nF 'git_cmd fetch --force --tags origin' "${release_script}" | head -n 1 | cut -d: -f1 || true)"
+          tag_fetch_line="$(grep -nE 'git_cmd fetch --force( --prune --prune-tags)? --tags origin' "${release_script}" | head -n 1 | cut -d: -f1 || true)"
 
           if [[ -n "${branch_sha_line}" && -n "${tag_fetch_line}" ]] && (( branch_sha_line < tag_fetch_line )); then
             echo "legacy=false" >> "${GITHUB_OUTPUT}"
