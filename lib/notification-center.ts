@@ -163,7 +163,11 @@ function eventPriority(entry: AlertHistoryEntry): number {
   if (entry.type === "entered_radius") return 80;
   if (entry.type === "intelligence_holding") return 78;
   if (entry.type === "intelligence_landing" || entry.type === "intelligence_approach" || entry.type === "intelligence_takeoff") return 75;
-  if (entry.type === "alert_v1" && entry.alertV1?.sourceType === "FLIGHT_EVENT") return 75;
+  if (entry.type === "alert_v1" && entry.alertV1?.sourceType === "FLIGHT_EVENT") {
+    if (entry.alertV1.flightEventType === "GO_AROUND" || entry.alertV1.flightEventType === "DIVERSION") return 95;
+    if (entry.alertV1.flightEventType === "HOLDING") return 78;
+    return 75;
+  }
   if (entry.type === "aircraft_appeared" || entry.type === "watchlist") return 60;
   if (entry.type === "new_aircraft") return 30;
   if (entry.type === "reception_record") return 20;
