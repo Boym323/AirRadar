@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import { formatNumber, t } from "@/lib/i18n";
 import {
