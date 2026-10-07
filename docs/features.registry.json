@@ -228,7 +228,9 @@
       "pages": [
         "/"
       ],
-      "apis": [],
+      "apis": [
+        "/api/admin/spotter/saved-spots"
+      ],
       "changelogScopes": [
         "trajectory-conformance",
         "route-conformance"
@@ -909,7 +911,7 @@
       "category": "mobile / radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Mobile-first LOCAL spotter with receiver/My Location geometry, bounded closest-approach projection, recent Time Machine pass history, explainable interest scoring, browser-local foreground PWA alerts, and sensor-assisted Sky Finder; observer coordinates never leave the browser.",
+      "summary": "Mobile-first LOCAL spotter with My Location geometry, featured Sky Card flight stories, PRG arrival context, ranked upcoming passes, recent Time Machine pass history, explainable interest scoring, browser-local personal logbook and foreground alerts, explicit opt-in server Saved Spots for iconic-aircraft background alerts, sensor-assisted Sky Finder, and local SVG share cards.",
       "pages": [
         "/spotter"
       ],
@@ -925,6 +927,11 @@
         "overhead history",
         "spotter alerts",
         "sky finder",
+        "sky card",
+        "upcoming sky",
+        "personal spotter logbook",
+        "saved spot",
+        "share card",
         "local receiver"
       ]
     }
