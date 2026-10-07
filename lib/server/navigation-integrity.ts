@@ -190,7 +190,7 @@ function evaluate(now: Date): void {
 }
 
 export class NavigationIntegrityService {
-  observe(aircraft: Aircraft[], now = new Date()): void {
+  observe(aircraft: Iterable<Aircraft>, now = new Date()): void {
     if (now.getTime() - store.lastCollectionAt < 15_000) return;
     store.lastCollectionAt = now.getTime();
     prune(now.getTime());
