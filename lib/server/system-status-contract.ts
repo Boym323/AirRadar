@@ -208,6 +208,7 @@ export interface SystemStatusResponse {
     history: {
       status: SystemStatus;
       lastSuccessfulWrite: string | null;
+      batchCanary?: NonNullable<HistoryPersistenceStatus["batchCanary"]>;
       retention?: {
         lastRunAt: string | null;
         cutoff: string | null;
