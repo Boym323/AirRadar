@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.336] - 2026-10-07
+
+Changes since v1.0.335.
+
+**Features touched:** Watchlist, Alerts & Fleet.
+
+### Added
+
+- Keep noisy informational events center-only (6735095d)
+
+### Maintenance
+
+- Sync generated repository metadata (#495) (66c843bd)
+- Guard center-only noise policy (573aa20d)
+- Update reception record delivery expectation (5b5bca28)
+- Preserve durable first-seen dedup coverage (e0290833)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#495) (66c843bd)
+- feat(alerts): keep noisy informational events center-only (6735095d)
+- test(alerts): guard center-only noise policy (573aa20d)
+- test(alerts): update reception record delivery expectation (5b5bca28)
+- test(alerts): preserve durable first-seen dedup coverage (e0290833)
+- Merge pull request #496 from Boym323/feat/notification-noise-control-v1 (15411d9f)
+
+</details>
 ## [1.0.335] - 2026-10-07
 
 Changes since v1.0.334.
