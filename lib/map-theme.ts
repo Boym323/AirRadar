@@ -4,6 +4,11 @@ export const AIRRADAR_MAP_THEME = {
   mapTint: "#071725",
   label: "#c7d8e1",
   labelMuted: "#91a8b6",
+  basemap: {
+    placeLabel: "#a9bfcb",
+    airportLabel: "#d7e3e7",
+    boundary: "#6f8798",
+  },
   accent: "#43d8c2",
   selected: "#f5bd62",
   selectedStrong: "#ffe19a",

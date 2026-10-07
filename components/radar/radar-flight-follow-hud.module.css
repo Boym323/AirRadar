@@ -48,7 +48,7 @@
 .metric em,
 .kicker {
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--font-size-2xs);
   font-style: normal;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -74,7 +74,7 @@
 .telemetry span {
   color: var(--text-secondary);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
 
