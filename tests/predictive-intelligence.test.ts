@@ -28,6 +28,23 @@ describe("Predictive Intelligence V1", () => {
     expect(second).toEqual(first);
   });
 
+  it("preserves prediction parity for out-of-order recent samples", () => {
+    const now = Date.parse("2026-01-01T12:00:00Z");
+    const ordered = [
+      sample(now - 180_000, 50.10, 13.50),
+      sample(now - 120_000, 50.10, 13.65),
+      sample(now - 60_000, 50.10, 13.80),
+    ];
+    const input = {
+      flightState: { aircraftIcao: "ABC123", timestamp: now, phase: "CRUISE" as const, sample: ordered.at(-1)!, destination: "LKPR", destinationStatus: "KNOWN" as const },
+      destinationAirport: airport,
+      now,
+    };
+    const expected = evaluatePredictiveIntelligence({ ...input, recentSamples: ordered }).prediction;
+    const actual = evaluatePredictiveIntelligence({ ...input, recentSamples: [ordered[2]!, ordered[0]!, ordered[1]!] }).prediction;
+    expect(actual).toEqual(expected);
+  });
+
   it("degrades safely for unknown destinations and stale samples", () => {
     const now = Date.parse("2026-01-01T12:00:00Z");
     const stale = [sample(now - 600_000, 50, 13), sample(now - 540_000, 50, 13.1)];
