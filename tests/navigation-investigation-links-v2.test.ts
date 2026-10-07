@@ -12,8 +12,12 @@ import {
 describe("Navigation Investigation Links V2 query contract", () => {
   it("round-trips navigation reference state", () => {
     const state = parseNavigationReferenceInvestigation("?id=vlm");
-    expect(state).toEqual({ id: "VLM" });
+    expect(state).toEqual({ id: "VLM", route: null });
     expect(parseNavigationReferenceInvestigation("?" + buildNavigationReferenceInvestigation(state))).toEqual(state);
+
+    const route = parseNavigationReferenceInvestigation("?route=l984");
+    expect(route).toEqual({ id: null, route: "L984" });
+    expect(parseNavigationReferenceInvestigation("?" + buildNavigationReferenceInvestigation(route))).toEqual(route);
   });
 
   it("round-trips procedure state", () => {
@@ -29,7 +33,7 @@ describe("Navigation Investigation Links V2 query contract", () => {
   });
 
   it("fails closed for malformed navigation/procedure/sector values", () => {
-    expect(parseNavigationReferenceInvestigation("?id=%2Fetc%2Fpasswd")).toEqual({ id: null });
+    expect(parseNavigationReferenceInvestigation("?id=%2Fetc%2Fpasswd&route=%2Fetc")).toEqual({ id: null, route: null });
     expect(parseProcedureInvestigation("?airport=PRAGUE&type=ARRIVAL&designator=%%%")).toEqual({
       airport: null,
       type: "ALL",
