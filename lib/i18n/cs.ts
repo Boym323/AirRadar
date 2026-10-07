@@ -205,6 +205,7 @@ export const cs = {
     prgInboundQueue: "Inbound queue",
     prgNextArrival: "Další přílet",
     prgQueueState: { EMPTY: "prázdná", LIGHT: "lehká", ACTIVE: "aktivní", BUSY: "vytížená" },
+    prgActivityState: { QUIET: "klid", LIGHT: "lehká", MODERATE: "střední", BUSY: "vytížená" },
     prgViewAngle: { GOOD: "dobrý úhel", LOW: "nízko", UNKNOWN: "úhel neznámý" },
     prgNoInbound: "V aktuálním LOCAL snapshotu není žádný potvrzený inbound do PRG.",
     photoReasons: {
