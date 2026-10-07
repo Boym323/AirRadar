@@ -196,6 +196,22 @@ describe("server alerts", () => {
     expect(notifier.calls[0]?.type).toBe("new_aircraft");
   });
 
+  it("keeps muted watchlist alerts in history but suppresses external delivery", async () => {
+    const history = testHistory();
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({
+      rules: [rule("uae", "callsignPattern", "UAE*")],
+      notifier,
+      history,
+      notificationMuted: (_aircraftIcao, ruleIds) => ruleIds.includes("uae"),
+    });
+    engine.observe([], [aircraft()]);
+    await flushAlerts();
+    expect(history.recordDetected).toHaveBeenCalledTimes(1);
+    expect(history.recordNotification).toHaveBeenCalledWith(expect.any(String), "center_only");
+    expect(notifier.calls).toHaveLength(0);
+  });
+
   it("suppresses watchlist history and push when its preference is OFF", async () => {
     const history = testHistory();
     const notifier = recordingNotifier();
