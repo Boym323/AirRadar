@@ -168,6 +168,10 @@ export const cs = {
     savedSpotRemoved: "Spot odstraněn.",
     savedSpotFailed: "Spot se nepodařilo uložit.",
     savedSpotPrivacy: "Toto je jediná Spotter funkce, která po potvrzení ukládá souřadnice na server.",
+    shareCard: "Sdílet průlet",
+    shareCardDescription: "Vytvoří lokální vizuální kartu z aktuální Sky Card. Nic se kvůli tomu neodesílá na server.",
+    shareFailed: "Sdílení se nepodařilo.",
+    shareFallback: "Karta byla připravena jako SVG.",
     verticalTrends: {
       climbing: "stoupá",
       descending: "klesá",
