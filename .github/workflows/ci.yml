@@ -328,12 +328,6 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
-      - name: Synchronize production release tags
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          sudo -n git -c safe.directory=/var/www/airradar -C /var/www/airradar fetch --force --prune --prune-tags --tags origin
-
       - name: Detect legacy release bootstrap
         id: release-bootstrap
         shell: bash
