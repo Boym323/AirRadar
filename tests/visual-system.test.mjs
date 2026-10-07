@@ -29,6 +29,20 @@ describe("visual system v2", () => {
     expect(timeMachine.match(/#[0-9a-fA-F]{6}\b/g) ?? []).toEqual([]);
   });
 
+  it("keeps radar labels above the dark tint and enforces the typography floor", () => {
+    const app = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+    const mapStyle = readFileSync(new URL("../lib/map-style.ts", import.meta.url), "utf8");
+    const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+
+    expect(app).toContain("firstBasemapSymbolLayerId");
+    expect(app).toContain("applyAirRadarBasemapReadability(map)");
+    expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.placeLabel");
+    expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.airportLabel");
+    expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.boundary");
+    expect(css).not.toMatch(/font-size:\\s*9px;/);
+    expect(css).not.toContain("font-size:9px;");
+  });
+
   it("exposes the shared visual primitives used by feature pages", () => {
     const primitives = readFileSync(
       new URL("../components/ui-primitives.tsx", import.meta.url),
