@@ -352,7 +352,8 @@
         "/alerts",
         "/notifications",
         "/fleet",
-        "/admin/alerts"
+        "/admin/alerts",
+        "/admin/alerts/simulator"
       ],
       "apis": [
         "/api/alerts",
@@ -368,7 +369,8 @@
         "/api/admin/alerts/geofences",
         "/api/admin/alerts/geofences/:id",
         "/api/admin/alerts/history",
-        "/api/admin/alerts/rules",\n        "/api/admin/alerts/simulator",
+        "/api/admin/alerts/rules",
+        "/api/admin/alerts/simulator",
         "/api/admin/alerts/rules/:id"
       ],
       "changelogScopes": [
