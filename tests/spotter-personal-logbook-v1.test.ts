@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AircraftView } from "@/lib/aircraft/types";
 import {
   SPOTTER_LOGBOOK_MAX_ENTRIES,
+  SPOTTER_LOGBOOK_VERSION,
   addSpotterLogbookEntry,
   createSpotterLogbookEntry,
   parseSpotterLogbook,
@@ -79,10 +80,10 @@ const story = buildSpotterSkyStory(
   },
 );
 
-describe("Spotter Personal Logbook V1", () => {
+describe("Spotter Personal Logbook V1 compatibility", () => {
   it("creates and round-trips a bounded browser-local sighting", () => {
     const entry = createSpotterLogbookEntry(aircraft, story, "2026-10-07T13:05:20Z");
-    const state = addSpotterLogbookEntry({ version: 1, entries: [] }, entry);
+    const state = addSpotterLogbookEntry({ version: SPOTTER_LOGBOOK_VERSION, entries: [] }, entry);
     expect(parseSpotterLogbook(serializeSpotterLogbook(state))).toEqual(state);
     expect(entry).toMatchObject({
       icaoHex: "8964A1",
@@ -99,13 +100,13 @@ describe("Spotter Personal Logbook V1", () => {
 
   it("deduplicates repeat clicks in the same minute", () => {
     const entry = createSpotterLogbookEntry(aircraft, story, "2026-10-07T13:05:20Z");
-    const once = addSpotterLogbookEntry({ version: 1, entries: [] }, entry);
+    const once = addSpotterLogbookEntry({ version: SPOTTER_LOGBOOK_VERSION, entries: [] }, entry);
     const twice = addSpotterLogbookEntry(once, entry);
     expect(twice.entries).toHaveLength(1);
   });
 
   it("summarizes personal sightings and caps storage", () => {
-    let state: SpotterLogbookState = { version: 1, entries: [] };
+    let state: SpotterLogbookState = { version: SPOTTER_LOGBOOK_VERSION, entries: [] };
     for (let i = 0; i < SPOTTER_LOGBOOK_MAX_ENTRIES + 5; i += 1) {
       state = addSpotterLogbookEntry(state, {
         ...createSpotterLogbookEntry(aircraft, story, new Date(Date.UTC(2026, 9, 7, 13, i)).toISOString()),
@@ -118,6 +119,6 @@ describe("Spotter Personal Logbook V1", () => {
   });
 
   it("fails closed for corrupt storage", () => {
-    expect(parseSpotterLogbook("not-json")).toEqual({ version: 1, entries: [] });
+    expect(parseSpotterLogbook("not-json")).toEqual({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
   });
 });

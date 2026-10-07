@@ -7,6 +7,9 @@ import { Button, EmptyState, MetricCard, MetricStrip, PageHeader, Panel, Section
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import type { LogbookLabel, LogbookSummaryResponse, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
+import type { MetarMapObservation } from "@/lib/weather/types";
+import type { Airport } from "@/lib/airports/types";
+import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotter";
 import { findRecentObserverPasses } from "@/lib/spotter-history";
@@ -16,9 +19,16 @@ import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } 
 import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { rankUpcomingSky } from "@/lib/spotter-upcoming";
-import { SPOTTER_LOGBOOK_STORAGE_KEY, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
+import { SPOTTER_LOGBOOK_STORAGE_KEY, SPOTTER_LOGBOOK_VERSION, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookReplayHref, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
 import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
+import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-share-card";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
+import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotter-visual-acquisition";
+import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
+import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
+import { buildSpotterBriefing } from "@/lib/spotter-briefing";
+import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
+import { browserConnectionHints, spotterRuntimeBudget, type SpotterRuntimeBudget } from "@/lib/spotter-runtime-budget";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -48,7 +58,7 @@ export function MobileSpotterMode() {
   const [skyFinderEnabled, setSkyFinderEnabled] = useState(false);
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
   const [orientationState, setOrientationState] = useState<"idle" | "waiting" | "ready" | "denied" | "unavailable">("idle");
-  const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: 1, entries: [] });
+  const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
   const [logbookMessage, setLogbookMessage] = useState<string | null>(null);
   const [savedSpots, setSavedSpots] = useState<SpotterSavedSpot[]>([]);
   const [savedSpotAccess, setSavedSpotAccess] = useState<"loading" | "ready" | "locked" | "error">("loading");
@@ -56,10 +66,19 @@ export function MobileSpotterMode() {
   const [spotRadiusKm, setSpotRadiusKm] = useState(5);
   const [spotSaving, setSpotSaving] = useState(false);
   const [spotMessage, setSpotMessage] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [metarObservations, setMetarObservations] = useState<MetarMapObservation[]>([]);
+  const [metarState, setMetarState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [prgAirport, setPrgAirport] = useState<Airport | null>(null);
+  const [prgOperations, setPrgOperations] = useState<AirportOperationsResponse | null>(null);
+  const [prgSpottingState, setPrgSpottingState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [pageVisible, setPageVisible] = useState(true);
+  const [runtimeBudget, setRuntimeBudget] = useState<SpotterRuntimeBudget>(() => spotterRuntimeBudget());
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
   const { connected } = useAircraftStream({
+    enabled: pageVisible,
     activeCoverage: "local",
     liveTrailsRef,
     selectedHexRef,
@@ -68,11 +87,26 @@ export function MobileSpotterMode() {
   });
 
   useEffect(() => {
-    if (!skyFinderEnabled) {
+    const updateActivity = () => {
+      setPageVisible(document.visibilityState === "visible");
+      setRuntimeBudget(spotterRuntimeBudget(browserConnectionHints()));
+    };
+    updateActivity();
+    document.addEventListener("visibilitychange", updateActivity);
+    const connection = (navigator as Navigator & { connection?: EventTarget }).connection;
+    connection?.addEventListener("change", updateActivity);
+    return () => {
+      document.removeEventListener("visibilitychange", updateActivity);
+      connection?.removeEventListener("change", updateActivity);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!skyFinderEnabled || !pageVisible) {
       setDeviceHeading(null);
-      if (orientationState === "ready" || orientationState === "waiting") setOrientationState("idle");
       return;
     }
+    setOrientationState("waiting");
     const onOrientation = (event: DeviceOrientationEvent) => {
       const heading = headingFromDeviceOrientation(event as DeviceOrientationEvent & { webkitCompassHeading?: number });
       if (heading === null) return;
@@ -85,14 +119,14 @@ export function MobileSpotterMode() {
       window.removeEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
       window.removeEventListener("deviceorientation", onOrientation, true);
     };
-  }, [orientationState, skyFinderEnabled]);
+  }, [pageVisible, skyFinderEnabled]);
 
   useEffect(() => {
     setAlertPreferences(readSpotterAlertPreferences());
     try {
       setLogbook(parseSpotterLogbook(window.localStorage.getItem(SPOTTER_LOGBOOK_STORAGE_KEY)));
     } catch {
-      setLogbook({ version: 1, entries: [] });
+      setLogbook({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
     }
     setNotificationPermission("Notification" in window && "serviceWorker" in navigator
       ? Notification.permission
@@ -100,6 +134,7 @@ export function MobileSpotterMode() {
   }, []);
 
   useEffect(() => {
+    if (!pageVisible) return;
     const controller = new AbortController();
     void fetch("/api/admin/spotter/saved-spots", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -119,10 +154,10 @@ export function MobileSpotterMode() {
         if ((error as Error).name !== "AbortError") setSavedSpotAccess("error");
       });
     return () => controller.abort();
-  }, []);
+  }, [pageVisible]);
 
   useEffect(() => {
-    if (distanceOrigin !== "observer") return;
+    if (!pageVisible || distanceOrigin !== "observer") return;
     if (!("geolocation" in navigator)) {
       setObserver(null);
       setObserverState("unavailable");
@@ -139,15 +174,73 @@ export function MobileSpotterMode() {
         setObserverState(error.code === error.PERMISSION_DENIED ? "denied" : "error");
       },
       {
-        enableHighAccuracy: true,
-        maximumAge: 15_000,
+        enableHighAccuracy: runtimeBudget.enableHighAccuracyGeolocation,
+        maximumAge: runtimeBudget.enableHighAccuracyGeolocation ? 15_000 : 60_000,
         timeout: 10_000,
       },
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [distanceOrigin]);
+  }, [distanceOrigin, pageVisible, runtimeBudget.enableHighAccuracyGeolocation]);
 
   useEffect(() => {
+    if (!pageVisible) return;
+    if (distanceOrigin !== "observer" || observerState !== "ready") {
+      setPrgAirport(null);
+      setPrgOperations(null);
+      setPrgSpottingState("idle");
+      return;
+    }
+
+    let active = true;
+    const airportController = new AbortController();
+    void fetch("/api/airports/LKPR", { cache: "force-cache", signal: airportController.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("LKPR detail unavailable");
+        return await response.json() as { airport?: Airport };
+      })
+      .then((payload) => {
+        if (!active) return;
+        setPrgAirport(payload.airport ?? null);
+      })
+      .catch((error) => {
+        if (active && (error as Error).name !== "AbortError") setPrgSpottingState("failed");
+      });
+
+    let operationsController: AbortController | null = null;
+    const loadOperations = () => {
+      operationsController?.abort();
+      operationsController = new AbortController();
+      setPrgSpottingState("loading");
+      void fetch("/api/airports/LKPR/operations?period=24h", {
+        cache: "no-store",
+        signal: operationsController.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("LKPR operations unavailable");
+          return await response.json() as AirportOperationsResponse;
+        })
+        .then((operations) => {
+          if (!active) return;
+          setPrgOperations(operations);
+          setPrgSpottingState("ready");
+        })
+        .catch((error) => {
+          if (active && (error as Error).name !== "AbortError") setPrgSpottingState("failed");
+        });
+    };
+    loadOperations();
+    const timer = window.setInterval(loadOperations, runtimeBudget.prgRefreshMs);
+
+    return () => {
+      active = false;
+      airportController.abort();
+      operationsController?.abort();
+      window.clearInterval(timer);
+    };
+  }, [distanceOrigin, observerState, pageVisible, runtimeBudget.prgRefreshMs]);
+
+  useEffect(() => {
+    if (!pageVisible) return;
     let active = true;
     const load = () => {
       const controller = new AbortController();
@@ -170,15 +263,52 @@ export function MobileSpotterMode() {
     const timer = window.setInterval(() => {
       controller.abort();
       controller = load();
-    }, 30_000);
+    }, runtimeBudget.discoveryRefreshMs);
     return () => {
       active = false;
       window.clearInterval(timer);
       controller.abort();
     };
-  }, []);
+  }, [pageVisible, runtimeBudget.discoveryRefreshMs]);
 
   useEffect(() => {
+    if (!pageVisible) return;
+    if (distanceOrigin !== "observer" || observerState !== "ready") {
+      setMetarObservations([]);
+      setMetarState("idle");
+      return;
+    }
+    let active = true;
+    let controller: AbortController | null = null;
+    const load = () => {
+      controller?.abort();
+      controller = new AbortController();
+      setMetarState("loading");
+      void fetch("/api/weather/metar-map", { cache: "no-store", signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("regional METAR unavailable");
+          return await response.json() as { observations?: MetarMapObservation[] };
+        })
+        .then((payload) => {
+          if (!active) return;
+          setMetarObservations(Array.isArray(payload.observations) ? payload.observations : []);
+          setMetarState("ready");
+        })
+        .catch((error) => {
+          if (active && (error as Error).name !== "AbortError") setMetarState("failed");
+        });
+    };
+    load();
+    const timer = window.setInterval(load, runtimeBudget.metarRefreshMs);
+    return () => {
+      active = false;
+      controller?.abort();
+      window.clearInterval(timer);
+    };
+  }, [distanceOrigin, observerState, pageVisible, runtimeBudget.metarRefreshMs]);
+
+  useEffect(() => {
+    if (!pageVisible) return;
     if (distanceOrigin !== "observer" || observerState !== "ready") {
       setHistoryTracks([]);
       setHistoryState("idle");
@@ -214,13 +344,13 @@ export function MobileSpotterMode() {
         });
     };
     load();
-    const timer = window.setInterval(load, 5 * 60_000);
+    const timer = window.setInterval(load, runtimeBudget.historyRefreshMs);
     return () => {
       active = false;
       controller?.abort();
       window.clearInterval(timer);
     };
-  }, [distanceOrigin, observerState]);
+  }, [distanceOrigin, observerState, pageVisible, runtimeBudget.historyRefreshMs]);
 
   const labelsByHex = useMemo(() => new Map<string, readonly LogbookLabel[]>(
     (discovery?.interestingAircraft ?? []).map((item) => [item.icaoHex, item.labels]),
@@ -298,7 +428,16 @@ export function MobileSpotterMode() {
 
   const markSkyStorySeen = () => {
     if (!skyStory) return;
-    const entry = createSpotterLogbookEntry(skyStory.aircraft, skyStory.story);
+    const entry = createSpotterLogbookEntry(
+      skyStory.aircraft,
+      skyStory.story,
+      new Date().toISOString(),
+      {
+        visual: visualAcquisition,
+        light: lightContext,
+        photoOpportunity,
+      },
+    );
     const next = addSpotterLogbookEntry(logbook, entry);
     setLogbook(next);
     setLogbookMessage(copy.seenSaved);
@@ -306,6 +445,41 @@ export function MobileSpotterMode() {
       window.localStorage.setItem(SPOTTER_LOGBOOK_STORAGE_KEY, serializeSpotterLogbook(next));
     } catch {
       // Browser storage is optional; keep the current-session copy in memory.
+    }
+  };
+
+  const shareSkyStory = async () => {
+    if (!skyStory) return;
+    setShareMessage(null);
+    const svg = buildSpotterShareCardSvg({
+      story: skyStory.story,
+      generatedAt: new Date().toISOString(),
+      locale: t.locale,
+    });
+    const filename = spotterShareFilename(skyStory.story);
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const file = new File([blob], filename, { type: "image/svg+xml" });
+    try {
+      if (typeof navigator.share === "function" && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({
+          title: "AirRadar · " + skyStory.story.identity,
+          text: [skyStory.story.operator, skyStory.story.origin && skyStory.story.destination
+            ? skyStory.story.origin + " → " + skyStory.story.destination
+            : null].filter(Boolean).join(" · "),
+          files: [file],
+        });
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.rel = "noopener";
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setShareMessage(copy.shareFallback);
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") setShareMessage(copy.shareFailed);
     }
   };
 
@@ -435,6 +609,19 @@ export function MobileSpotterMode() {
     [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
   );
 
+  const briefingSky = useMemo(
+    () => distanceOrigin === "observer" && observer
+      ? rankUpcomingSky(
+          visibleAircraft.map((item) => item.aircraft),
+          observer,
+          labelsByHex,
+          discovery?.todayReceptionRecord?.icaoHex ?? null,
+          { horizonSeconds: 60 * 60, maxClosestDistanceKm: 30, limit: 20 },
+        )
+      : [],
+    [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
+  );
+
   const skyStory = (() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const aircraft = interestingAircraft[0]?.aircraft
@@ -458,6 +645,15 @@ export function MobileSpotterMode() {
     ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story)
     : null;
 
+  const nearestMetar = useMemo(
+    () => observer ? nearestMetarObservation(metarObservations, observer) : null,
+    [metarObservations, observer],
+  );
+
+  const visualAcquisition = skyStory && observer
+    ? evaluateVisualAcquisition(skyStory.aircraft, observer, nearestMetar)
+    : null;
+
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = interestingAircraft[0]
@@ -475,6 +671,71 @@ export function MobileSpotterMode() {
     };
   }, [deviceHeading, distanceOrigin, interestingAircraft, observer, upcomingPasses, visibleAircraft]);
 
+  const lightContext = skyTarget && observer
+    ? lightGeometry(
+        solarPosition(snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(), observer),
+        skyTarget.geometry.bearingDeg,
+      )
+    : null;
+
+  const photoOpportunity = skyStory && visualAcquisition && lightContext
+    ? scorePhotoOpportunity(skyStory.story.interest, visualAcquisition, lightContext)
+    : null;
+
+  const upcomingSkyWithPhoto = useMemo(() => {
+    if (!observer) return [];
+    const at = snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date();
+    const sun = solarPosition(at, observer);
+    return upcomingSky
+      .map((item) => {
+        const geometry = observerGeometry(item.aircraft, observer);
+        if (!geometry) return { ...item, photoOpportunity: null };
+        const visual = evaluateVisualAcquisition(item.aircraft, observer, nearestMetar);
+        const light = lightGeometry(sun, geometry.bearingDeg);
+        return {
+          ...item,
+          photoOpportunity: scorePhotoOpportunity(item.interest, visual, light),
+        };
+      })
+      .sort((a, b) => (b.photoOpportunity?.score ?? -1) - (a.photoOpportunity?.score ?? -1)
+        || a.closestApproach.secondsUntilClosest - b.closestApproach.secondsUntilClosest
+        || a.aircraft.icaoHex.localeCompare(b.aircraft.icaoHex));
+  }, [nearestMetar, observer, snapshot, upcomingSky]);
+
+  const briefingSkyWithPhoto = useMemo(() => {
+    if (!observer) return [];
+    const at = snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date();
+    const sun = solarPosition(at, observer);
+    return briefingSky.map((item) => {
+      const geometry = observerGeometry(item.aircraft, observer);
+      if (!geometry) return { ...item, photoOpportunity: null };
+      const visual = evaluateVisualAcquisition(item.aircraft, observer, nearestMetar);
+      const light = lightGeometry(sun, geometry.bearingDeg);
+      return {
+        ...item,
+        photoOpportunity: scorePhotoOpportunity(item.interest, visual, light),
+      };
+    });
+  }, [briefingSky, nearestMetar, observer, snapshot]);
+
+  const mySkyBriefing = useMemo(
+    () => buildSpotterBriefing(briefingSkyWithPhoto, 60, 4),
+    [briefingSkyWithPhoto],
+  );
+
+  const prgSpottingMode = useMemo(
+    () => prgAirport && prgOperations
+      ? buildPrgSpottingMode(
+          snapshot?.aircraft ?? [],
+          prgAirport,
+          prgOperations,
+          observer,
+          snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date(),
+        )
+      : null,
+    [observer, prgAirport, prgOperations, snapshot],
+  );
+
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
     [historyTracks, observer],
@@ -482,7 +743,8 @@ export function MobileSpotterMode() {
 
   useEffect(() => {
     if (
-      distanceOrigin !== "observer"
+      !pageVisible
+      || distanceOrigin !== "observer"
       || notificationPermission !== "granted"
       || !alertPreferences.enabled
       || !("serviceWorker" in navigator)
@@ -531,7 +793,7 @@ export function MobileSpotterMode() {
         }))
         .catch(() => undefined);
     }
-  }, [alertPreferences, copy.inPrefix, copy.lookUp, distanceOrigin, interestingAircraft, notificationPermission]);
+  }, [alertPreferences, copy.inPrefix, copy.lookUp, distanceOrigin, interestingAircraft, notificationPermission, pageVisible]);
 
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
@@ -589,6 +851,83 @@ export function MobileSpotterMode() {
         : null}
     </Panel>
 
+    {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / BRIEFING"
+        title={copy.mySkyBriefing}
+        description={copy.mySkyBriefingDescription}
+        actions={<StatusBadge variant={
+          mySkyBriefing.condition === "EXCELLENT" || mySkyBriefing.condition === "GOOD" ? "live"
+            : mySkyBriefing.condition === "POOR" ? "danger"
+              : mySkyBriefing.condition === "MIXED" ? "stale"
+                : "neutral"
+        }>{copy.briefingCondition[mySkyBriefing.condition]}</StatusBadge>}
+      />
+      <MetricStrip className={styles.metrics}>
+        <MetricCard value={mySkyBriefing.horizonMinutes + " min"} label={copy.briefingWindow} />
+        <MetricCard value={formatNumber(mySkyBriefing.totalPasses)} label={copy.briefingPasses} />
+        <MetricCard value={formatNumber(mySkyBriefing.interestingPasses)} label={copy.briefingInteresting} />
+        <MetricCard value={formatNumber(mySkyBriefing.iconicPasses)} label={copy.briefingIconic} />
+        <MetricCard value={formatNumber(mySkyBriefing.highOpportunityPasses)} label={copy.briefingHighPhoto} />
+        <MetricCard value={mySkyBriefing.bestPhotoScore === null ? "—" : mySkyBriefing.bestPhotoScore + "/100"} label={copy.briefingBestPhoto} />
+      </MetricStrip>
+      {mySkyBriefing.top.length ? <div className={styles.passList}>
+        {mySkyBriefing.top.map((item) => {
+          const route = item.aircraft.enrichment?.route;
+          const leadMinutes = Math.max(1, Math.round(item.closestApproach.secondsUntilClosest / 60));
+          return <article className={styles.passCard} key={item.aircraft.icaoHex}>
+            <div>
+              <strong>{item.aircraft.callsign ?? item.aircraft.registration ?? item.aircraft.icaoHex}</strong>
+              <span>{item.aircraft.aircraftType ?? item.aircraft.enrichment?.metadata?.icaoTypeCode ?? item.aircraft.icaoHex}</span>
+              {route?.origin || route?.destination ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small> : null}
+            </div>
+            <div className={styles.passMetrics}>
+              <strong>{item.photoOpportunity ? item.photoOpportunity.score + "/100" : "—"}</strong>
+              <span>{copy.inPrefix} {leadMinutes} min</span>
+              <small>{copy.closestPass}: {formatDistance(item.closestApproach.closestHorizontalDistanceKm)}</small>
+            </div>
+          </article>;
+        })}
+      </div> : <EmptyState title={copy.briefingCondition.EMPTY} />}
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
+      <SectionHeader
+        kicker="PRG / SPOTTING"
+        title={copy.prgSpottingMode}
+        description={copy.prgSpottingDescription}
+        actions={prgSpottingMode ? <StatusBadge variant={
+          prgSpottingMode.queueState === "BUSY" ? "stale"
+            : prgSpottingMode.queueState === "EMPTY" ? "neutral"
+              : "live"
+        }>{copy.prgQueueState[prgSpottingMode.queueState]}</StatusBadge> : null}
+      />
+      {prgSpottingMode ? <>
+        <MetricStrip className={styles.metrics}>
+          <MetricCard value={copy.prgActivityState[prgSpottingMode.activity]} label={copy.prgActivity} />
+          <MetricCard value={prgSpottingMode.likelyRunway ? "RWY " + prgSpottingMode.likelyRunway : "—"} label={copy.prgLikelyRunway} />
+          <MetricCard value={formatNumber(prgSpottingMode.inboundCount)} label={copy.prgInboundQueue} />
+          <MetricCard value={prgSpottingMode.nextEtaAt ? formatDateTime(prgSpottingMode.nextEtaAt, t) : "—"} label={copy.prgNextArrival} />
+        </MetricStrip>
+        {prgSpottingMode.nextArrivals.length ? <div className={styles.passList}>
+          {prgSpottingMode.nextArrivals.map((item) => <article className={styles.passCard} key={item.icaoHex}>
+            <div>
+              <strong>{item.label}</strong>
+              <span>{item.aircraftType ?? item.icaoHex}</span>
+              <small>{item.origin ?? "—"} → PRG · {copy.prgViewAngle[item.viewAngle]}</small>
+            </div>
+            <div className={styles.passMetrics}>
+              <strong>{item.etaAt ? formatDateTime(item.etaAt, t) : "—"}</strong>
+              <span>{item.distanceToPrgKm === null ? "—" : formatDistance(item.distanceToPrgKm)} → PRG</span>
+              <small>{item.observerElevationDeg === null ? "—" : copy.elevation + " " + formatNumber(item.observerElevationDeg) + "°"}</small>
+            </div>
+          </article>)}
+        </div> : <EmptyState title={copy.prgNoInbound} />}
+      </> : prgSpottingState === "failed"
+        ? <EmptyState title={copy.unavailable} />
+        : <p className={styles.loading}>{copy.loading}</p>}
+    </Panel> : null}
+
     {distanceOrigin === "observer" && observerState === "ready" && skyStory ? <Panel className={styles.skyStoryPanel}>
       <SectionHeader kicker="MY SKY / STORY" title={copy.skyCardTitle} description={copy.skyCardDescription} />
       <article className={styles.skyStory}>
@@ -630,9 +969,79 @@ export function MobileSpotterMode() {
           <Link href={("/aircraft/" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.detail}</Link>
           <Link href={("/?aircraft=" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.radar}</Link>
           <Button size="compact" variant="secondary" onClick={markSkyStorySeen}>{copy.markSeen}</Button>
+          <Button size="compact" variant="secondary" onClick={() => void shareSkyStory()}>{copy.shareCard}</Button>
         </div>
         {logbookMessage ? <small className={styles.locationAccuracy}>{logbookMessage}</small> : null}
+        {shareMessage ? <small className={styles.locationAccuracy}>{shareMessage}</small> : null}
+        <small className={styles.locationAccuracy}>{copy.shareCardDescription}</small>
       </article>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" && visualAcquisition ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / VISUAL"
+        title={copy.visualAcquisition}
+        description={copy.visualAcquisitionDescription}
+        actions={<StatusBadge variant={
+          visualAcquisition.status === "GOOD" ? "live"
+            : visualAcquisition.status === "POOR" ? "danger"
+              : visualAcquisition.status === "POSSIBLE" ? "stale"
+                : "neutral"
+        }>{copy.visualStatus[visualAcquisition.status]} · {visualAcquisition.score}/100</StatusBadge>}
+      />
+      <dl className={styles.arrivalContext}>
+        <div><dt>{copy.elevation}</dt><dd>{visualAcquisition.elevationDeg === null ? "—" : formatNumber(visualAcquisition.elevationDeg) + "°"}</dd></div>
+        <div><dt>{copy.slantDistance}</dt><dd>{formatDistance(visualAcquisition.slantDistanceKm)}</dd></div>
+        <div><dt>{copy.visibility}</dt><dd>{
+          visualAcquisition.visibilityMeters === null
+            ? "—"
+            : visualAcquisition.visibilityMeters >= 1000
+              ? formatNumber(visualAcquisition.visibilityMeters / 1000) + " km"
+              : formatNumber(visualAcquisition.visibilityMeters) + " m"
+        }</dd></div>
+        <div><dt>{copy.ceiling}</dt><dd>{visualAcquisition.ceilingFtAgl === null ? "—" : formatNumber(visualAcquisition.ceilingFtAgl) + " ft AGL"}</dd></div>
+        <div><dt>{copy.weatherStation}</dt><dd>{
+          visualAcquisition.weatherStationId
+            ? visualAcquisition.weatherStationId + (visualAcquisition.weatherStationDistanceKm === null ? "" : " · " + formatDistance(visualAcquisition.weatherStationDistanceKm))
+            : metarState === "failed" ? "—" : "…"
+        }</dd></div>
+      </dl>
+      <div className={styles.interestReasons}>
+        {visualAcquisition.reasons.map((reason) => <span key={reason}>{copy.visualReasons[reason]}</span>)}
+      </div>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" && lightContext ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / LIGHT"
+        title={copy.lightGeometry}
+        description={copy.lightGeometryDescription}
+        actions={<StatusBadge variant={lightContext.lighting === "BACK" ? "stale" : lightContext.lighting === "UNAVAILABLE" ? "neutral" : "live"}>
+          {copy.lighting[lightContext.lighting]} · {copy.lightPeriods[lightContext.period]}
+        </StatusBadge>}
+      />
+      <dl className={styles.arrivalContext}>
+        <div><dt>{copy.sunAzimuth}</dt><dd>{formatTrack(lightContext.azimuthDeg)}</dd></div>
+        <div><dt>{copy.sunElevation}</dt><dd>{formatNumber(lightContext.elevationDeg)}°</dd></div>
+        <div><dt>{copy.bearingFromYou}</dt><dd>{formatTrack(lightContext.aircraftBearingDeg)}</dd></div>
+        <div><dt>{copy.lightAngle}</dt><dd>{formatNumber(lightContext.azimuthDifferenceDeg)}°</dd></div>
+      </dl>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" && photoOpportunity ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / PHOTO"
+        title={copy.photoOpportunity}
+        description={copy.photoOpportunityDescription}
+        actions={<StatusBadge variant={photoOpportunity.score >= 75 ? "live" : photoOpportunity.score >= 45 ? "stale" : "neutral"}>
+          {photoOpportunity.score}/100
+        </StatusBadge>}
+      />
+      <div className={styles.interestReasons}>
+        {photoOpportunity.reasons.map((reason) => <span key={reason.code}>
+          {copy.photoReasons[reason.code]} {reason.points >= 0 ? "+" : ""}{reason.points}
+        </span>)}
+      </div>
     </Panel> : null}
 
     {prgArrival ? <Panel>
@@ -855,10 +1264,10 @@ export function MobileSpotterMode() {
       </div>
     </Panel> : null}
 
-    {distanceOrigin === "observer" && observerState === "ready" && upcomingSky.length ? <Panel>
+    {distanceOrigin === "observer" && observerState === "ready" && upcomingSkyWithPhoto.length ? <Panel>
       <SectionHeader kicker="MY SKY / NEXT" title={copy.whatsNext} description={copy.whatsNextDescription} />
       <div className={styles.passList}>
-        {upcomingSky.map(({ aircraft, closestApproach, interest, rankScore }) => {
+        {upcomingSkyWithPhoto.map(({ aircraft, closestApproach, interest, rankScore, photoOpportunity: passPhoto }) => {
           const route = aircraft.enrichment?.route;
           const identity = aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex;
           const lead = closestApproach.secondsUntilClosest < 30
@@ -871,7 +1280,7 @@ export function MobileSpotterMode() {
               {route?.origin || route?.destination
                 ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small>
                 : null}
-              <small>{copy.interestScore}: {interest.score} · {copy.rank}: {formatNumber(rankScore)}</small>
+              <small>{copy.interestScore}: {interest.score} · {copy.rank}: {formatNumber(rankScore)}{passPhoto ? " · " + copy.photoOpportunity + ": " + passPhoto.score : ""}</small>
             </div>
             <div className={styles.passMetrics}>
               <strong>{formatDistance(closestApproach.closestHorizontalDistanceKm)}</strong>
@@ -907,7 +1316,7 @@ export function MobileSpotterMode() {
     </Panel> : null}
 
     <Panel>
-      <SectionHeader kicker="MY SKY / LOGBOOK" title={copy.personalLogbook} description={copy.personalLogbookDescription} />
+      <SectionHeader kicker="MY SKY / LOGBOOK" title={copy.personalLogbook} description={copy.personalLogbookDescription + " " + copy.sightingStoryDescription} />
       <MetricStrip className={styles.metrics}>
         <MetricCard value={formatNumber(logbookStats.sightings)} label={copy.sightings} />
         <MetricCard value={formatNumber(logbookStats.uniqueAircraft)} label={copy.uniqueAircraft} />
@@ -923,9 +1332,12 @@ export function MobileSpotterMode() {
             {entry.origin || entry.destination ? <small>{entry.origin ?? "—"} → {entry.destination ?? "—"}</small> : null}
           </div>
           <div className={styles.passMetrics}>
-            <strong>{formatDistance(entry.closestDistanceKm)}</strong>
+            <strong>{entry.photoScore === null ? formatDistance(entry.closestDistanceKm) : entry.photoScore + "/100"}</strong>
             <span>{formatDateTime(entry.observedAt, t)}</span>
             <small>{formatAltitude(entry.altitudeFt)}</small>
+            {entry.weatherStationId ? <small>{entry.weatherStationId}{entry.visibilityMeters === null ? "" : " · " + formatNumber(entry.visibilityMeters / 1000) + " km"}</small> : null}
+            {entry.lighting ? <small>{copy.lighting[entry.lighting]}{entry.lightPeriod ? " · " + copy.lightPeriods[entry.lightPeriod] : ""}</small> : null}
+            <Link href={spotterLogbookReplayHref(entry) as Route}>{copy.replaySighting}</Link>
           </div>
         </article>)}
       </div> : <EmptyState title={copy.emptyLogbook} />}

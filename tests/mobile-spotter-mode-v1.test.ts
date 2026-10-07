@@ -91,7 +91,7 @@ describe("Mobile Spotter Mode V1 runtime boundaries", () => {
   it("reuses the existing LOCAL live stream and discovery summary", () => {
     expect(source).toContain('activeCoverage: "local"');
     expect(source).toContain('fetch("/api/logbook/summary"');
-    expect(source).toContain("30_000");
+    expect(source).toContain("runtimeBudget.discoveryRefreshMs");
     expect(stream).toContain("/api/stream?coverage=");
   });
 
@@ -102,7 +102,9 @@ describe("Mobile Spotter Mode V1 runtime boundaries", () => {
     expect(source).toContain("navigator.geolocation.watchPosition");
     expect(source).toContain("navigator.geolocation.clearWatch");
     expect(source).not.toContain("/api/spotter");
-    expect(source).not.toContain("localStorage");
+    expect(source).toContain("SPOTTER_LOGBOOK_STORAGE_KEY");
+    expect(source).toContain("window.localStorage.getItem");
+    expect(source).toContain("window.localStorage.setItem");
     expect(source).not.toContain("new EventSource");
   });
 
