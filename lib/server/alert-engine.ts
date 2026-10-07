@@ -143,7 +143,8 @@ export class AlertEngine {
     this.history = options.history ?? createAlertHistoryStore();
     this.stateStore = options.state ?? createAlertStateStore();
     this.notificationMode = options.notificationMode ?? ((alert) => {
-      const key = notificationPreferenceKeyForEvent(alert.type, alert.emergency);
+      const type = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
+      const key = notificationPreferenceKeyForEvent(type, alert.emergency);
       return key ? notificationPreferenceMode(key) : null;
     });
     const persisted = this.stateStore.load();
