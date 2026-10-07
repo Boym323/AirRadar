@@ -404,7 +404,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          expected_version="$(node /var/www/airradar/scripts/version.mjs resolve-release-version --channel stable)"
+          expected_version="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("/tmp/airradar-ci-production-build/manifest.json","utf8")); process.stdout.write(m.version)')"
           expected_commit="${GITHUB_SHA:0:8}"
           version_tmp="$(mktemp)"
           trap 'rm -f "${version_tmp}"' EXIT
@@ -433,7 +433,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -Eeuo pipefail
-          release_version="$(node /var/www/airradar/scripts/version.mjs resolve-release-version --channel stable)"
+          release_version="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("/tmp/airradar-ci-production-build/manifest.json","utf8")); process.stdout.write(m.version)')"
           release_tag="v${release_version}"
           RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs
 
