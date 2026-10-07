@@ -378,6 +378,10 @@ export class AircraftOperationalFocusOutcomeValidator {
       else coverage.unscoredCaptures += 1;
     }
     const decision = evaluateAircraftOperationalFocusOutcome(spanMinutes, overall);
+    let pending = 0;
+    for (const item of this.pending.values()) {
+      if (item.capturedAt >= cutoff) pending += 1;
+    }
 
     return {
       version: AIRCRAFT_OPERATIONAL_FOCUS_OUTCOME_VERSION,
@@ -405,7 +409,7 @@ export class AircraftOperationalFocusOutcomeValidator {
         spanMinutes: Number(spanMinutes.toFixed(1)),
         processLocal: true,
       },
-      pending: [...this.pending.values()].filter((item) => item.capturedAt >= cutoff).length,
+      pending,
       duplicateCaptureSkips: this.duplicateCaptureSkips,
       overall,
       byLevel,
