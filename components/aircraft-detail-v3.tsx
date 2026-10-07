@@ -13,6 +13,7 @@ import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { PredictiveAircraftAdvisories } from "@/components/predictive-aircraft-advisories";
 import { AircraftWeatherFusion } from "@/components/aircraft-weather-fusion";
 import { AircraftOperationalTwin } from "@/components/aircraft-operational-twin";
+import { FollowJourneyButton } from "@/components/follow-journey-button";
 import {
   AircraftAltitudeChart,
   AircraftHistorySummaryCard,
@@ -401,6 +402,16 @@ export function AircraftDetailV3({
       <div className={styles.primaryColumn}>
         {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations) && <section id="aircraft-flight" className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
           <h2 id="aircraft-current-flight-title">{t.aircraft.currentFlightTitle}</h2>
+          <div className={styles.journeyFollow}>
+            <FollowJourneyButton
+              icaoHex={icaoHex}
+              callsign={liveAircraft?.callsign ?? null}
+              registration={registration ?? null}
+              origin={route?.origin ?? null}
+              destination={route?.destination ?? null}
+            />
+            <Link href={"/journeys"}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Followed journeys"} →</Link>
+          </div>
           {hasRouteData && route && <div className="aircraft-route-endpoints">
             <RouteEndpoint code={route.origin} airport={route.originAirport} />
             <span className="aircraft-route-arrow" aria-hidden="true">↓</span>
