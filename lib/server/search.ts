@@ -1,6 +1,7 @@
 import "temporal-polyfill/full/global";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
+import type { AtcSector } from "@/lib/atc/types";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getPrisma } from "@/lib/server/db";
@@ -10,6 +11,7 @@ import { loadCzAtsRoutes, type CzAtsRouteDocument } from "@/lib/ats/cz-routes";
 import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
 import { defaultAviationNavDataProvider } from "@/lib/server/aviation-nav-data-provider";
 import { isAviationNavDataEnabled } from "@/lib/server/config";
+import { getAtcData } from "@/lib/server/providers";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import {
   GLOBAL_SEARCH_RESULT_LIMIT,
@@ -18,6 +20,8 @@ import {
   type AircraftSearchResult,
   type AirportSearchResult,
   type AtsPointSearchResult,
+  type AtsRouteSearchResult,
+  type AtcSectorSearchResult,
   type FlightSearchResult,
   type GlobalSearchResponse,
   type NavPointSearchResult,
@@ -38,6 +42,7 @@ export interface SearchOptions {
   database?: SearchDatabase | null;
   atsDocuments?: readonly (CzAtsRouteDocument | null)[];
   navPoints?: readonly AviationNavPoint[];
+  sectors?: readonly AtcSector[];
   flights?: readonly FlightSearchResult[];
   now?: Date;
 }
@@ -100,7 +105,7 @@ function compareScored<T>(left: Scored<T>, right: Scored<T>): number {
     || left.identity.localeCompare(right.identity);
 }
 
-type RankedSearchResult = Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult> | Scored<NavPointSearchResult> | Scored<FlightSearchResult>;
+type RankedSearchResult = Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult> | Scored<AtsRouteSearchResult> | Scored<AtcSectorSearchResult> | Scored<NavPointSearchResult> | Scored<FlightSearchResult>;
 
 function compareAnyScored(left: RankedSearchResult, right: RankedSearchResult): number {
   const tierDifference = left.score.tier - right.score.tier;
@@ -214,6 +219,66 @@ function rankAtsPoints(documents: readonly (CzAtsRouteDocument | null)[], query:
     const score = matchScore(query, [point.name, ...routeDesignators]);
     return score ? [{ item: toAtsPointResult(point, countryCode, [...routeDesignators].sort()), score, identity: `${countryCode}:${point.name}` }] : [];
   }).sort(compareScored);
+}
+
+function rankAtsRoutes(documents: readonly (CzAtsRouteDocument | null)[], query: string): Scored<AtsRouteSearchResult>[] {
+  const routes = new Map<string, { countryCodes: Set<string>; pointCount: number }>();
+  for (const document of documents) {
+    if (!document) continue;
+    const country = document.source.countryCode ?? "CZ";
+    for (const route of document.routes) {
+      const designator = route.designator.trim().toUpperCase();
+      if (!designator) continue;
+      const current = routes.get(designator) ?? { countryCodes: new Set<string>(), pointCount: 0 };
+      current.countryCodes.add(country);
+      current.pointCount += route.points.length;
+      routes.set(designator, current);
+    }
+  }
+  return [...routes.entries()].flatMap(([designator, value]) => {
+    const score = matchScore(query, [designator]);
+    if (!score) return [];
+    return [{
+      item: {
+        kind: "ats-route" as const,
+        designator,
+        countryCodes: [...value.countryCodes].sort(),
+        pointCount: value.pointCount,
+        href: `/navigation?route=${encodeURIComponent(designator)}` as const,
+      },
+      score,
+      identity: designator,
+    }];
+  }).sort(compareScored);
+}
+
+function rankSectors(sectors: readonly AtcSector[], query: string): Scored<AtcSectorSearchResult>[] {
+  return sectors.flatMap((sector) => {
+    const score = matchScore(query, [sector.id, sector.name, sector.atcCallsign, sector.service, sector.country]);
+    if (!score) return [];
+    return [{
+      item: {
+        kind: "sector" as const,
+        id: sector.id,
+        name: sector.name,
+        service: sector.service ?? null,
+        callsign: sector.atcCallsign,
+        country: sector.country,
+        href: `/airspace/sectors/${encodeURIComponent(sector.id)}` as const,
+      },
+      score,
+      identity: sector.id,
+    }];
+  }).sort(compareScored);
+}
+
+async function loadSectors(supplied: readonly AtcSector[] | undefined): Promise<AtcSector[]> {
+  if (supplied) return [...supplied];
+  try {
+    return (await getAtcData()).sectors;
+  } catch {
+    return [];
+  }
 }
 
 function toNavPointResult(point: AviationNavPoint): NavPointSearchResult {
@@ -413,7 +478,7 @@ async function loadAirports(query: string, database: SearchDatabase | null): Pro
 }
 
 function emptySearchResponse(query = ""): GlobalSearchResponse {
-  return { query, aircraft: [], airports: [], atsPoints: [], navPoints: [], flights: [], actions: [] };
+  return { query, aircraft: [], airports: [], atsPoints: [], atsRoutes: [], sectors: [], navPoints: [], flights: [], actions: [] };
 }
 
 export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {}): Promise<GlobalSearchResponse> {
@@ -427,6 +492,8 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
       aircraft: [],
       airports: [],
       atsPoints: [],
+      atsRoutes: [],
+      sectors: [],
       navPoints: [],
       flights: [],
       actions,
@@ -447,17 +514,19 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
       database = null;
     }
   }
-  const [rankedAircraft, rankedAirports, rankedNavPoints, rankedFlights] = await Promise.all([
+  const [rankedAircraft, rankedAirports, rankedNavPoints, rankedFlights, rankedSectors] = await Promise.all([
     Promise.resolve(rankAircraft(aircraft, validation.query)),
     loadAirports(validation.query, database).then((items) => rankAirports(items, validation.query!)),
     loadNavPoints(validation.query, options.navPoints).then((items) => rankNavPoints(items, validation.query!)),
     options.flights
       ? Promise.resolve(rankFlights(options.flights, validation.query))
       : loadRecentFlights(validation.query, database, options.now ?? new Date()).then((items) => rankFlights(items, validation.query!)),
+    loadSectors(options.sectors).then((items) => rankSectors(items, validation.query!)),
   ]);
   const atsDocuments = options.atsDocuments ?? [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()];
   const rankedAtsPoints = rankAtsPoints(atsDocuments, validation.query);
-  const selected: RankedSearchResult[] = [...rankedAircraft, ...rankedAirports, ...rankedAtsPoints, ...rankedNavPoints, ...rankedFlights]
+  const rankedAtsRoutes = rankAtsRoutes(atsDocuments, validation.query);
+  const selected: RankedSearchResult[] = [...rankedAircraft, ...rankedAirports, ...rankedAtsRoutes, ...rankedSectors, ...rankedAtsPoints, ...rankedNavPoints, ...rankedFlights]
     .sort(compareAnyScored)
     .slice(0, GLOBAL_SEARCH_RESULT_LIMIT);
   return {
@@ -465,6 +534,8 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
     aircraft: selected.filter((result): result is Scored<AircraftSearchResult> => result.item.kind === "aircraft").map((result) => result.item),
     airports: selected.filter((result): result is Scored<AirportSearchResult> => result.item.kind === "airport").map((result) => result.item),
     atsPoints: selected.filter((result): result is Scored<AtsPointSearchResult> => result.item.kind === "ats-point").map((result) => result.item),
+    atsRoutes: selected.filter((result): result is Scored<AtsRouteSearchResult> => result.item.kind === "ats-route").map((result) => result.item),
+    sectors: selected.filter((result): result is Scored<AtcSectorSearchResult> => result.item.kind === "sector").map((result) => result.item),
     navPoints: selected.filter((result): result is Scored<NavPointSearchResult> => result.item.kind === "nav-point").map((result) => result.item),
     flights: selected.filter((result): result is Scored<FlightSearchResult> => result.item.kind === "flight").map((result) => result.item),
     actions: [],
