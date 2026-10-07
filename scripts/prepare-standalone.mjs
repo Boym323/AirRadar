@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, cpSync, existsSync, ftruncateSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { resolve } from "node:path";
 
 const distDir = resolve(process.argv[2] || ".next");
@@ -16,32 +16,58 @@ const readyMarker = resolve(standaloneDir, ".airradar-runtime-ready");
 
 rmSync(readyMarker, { force: true });
 
-if (!existsSync(standaloneServer)) {
-  throw new Error(`Standalone server is missing under ${standaloneDir}`);
+let standaloneServerFd;
+try {
+  standaloneServerFd = openSync(standaloneServer, "r+");
+} catch (error) {
+  if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+    throw new Error(`Standalone server is missing under ${standaloneDir}`, { cause: error });
+  }
+  throw error;
 }
 
-// The production release builds into a versioned temporary distDir and then
-// moves that directory to `.next`. Next embeds the temporary distDir in the
-// generated standalone server; without normalizing it here, the server starts
-// successfully but looks for static assets under a directory that no longer
-// exists after activation.
-const serverSource = readFileSync(standaloneServer, "utf8");
-const distDirConfig = serverSource.match(/"distDir":"([^"]+)"/);
-if (!distDirConfig) {
-  throw new Error(`Standalone server has no embedded distDir: ${standaloneServer}`);
+try {
+  // The production release builds into a versioned temporary distDir and then
+  // moves that directory to `.next`. Next embeds the temporary distDir in the
+  // generated standalone server; without normalizing it here, the server starts
+  // successfully but looks for static assets under a directory that no longer
+  // exists after activation.
+  const serverSource = readFileSync(standaloneServerFd, "utf8");
+  const distDirConfig = serverSource.match(/"distDir":"([^"]+)"/);
+  if (!distDirConfig) {
+    throw new Error(`Standalone server has no embedded distDir: ${standaloneServer}`);
+  }
+  let normalizedServerSource = serverSource.replace(
+    distDirConfig[0],
+    '"distDir":"./.next"',
+  );
+  // Next also embeds the temporary build root separately. Normalize that value
+  // as well, otherwise the standalone server still looks for the build under
+  // the pre-activation `.next-release-*` directory.
+  normalizedServerSource = normalizedServerSource.replace(/"distDirRoot":"\.next-release-[^"]+"/, '"distDirRoot":".next"');
+  if (!normalizedServerSource.includes('"distDir":"./.next"') || !normalizedServerSource.includes('"distDirRoot":".next"')) {
+    throw new Error(`Could not normalize standalone distDir: ${standaloneServer}`);
+  }
+
+  const normalizedBuffer = Buffer.from(normalizedServerSource, "utf8");
+  let written = 0;
+  while (written < normalizedBuffer.length) {
+    const bytesWritten = writeSync(
+      standaloneServerFd,
+      normalizedBuffer,
+      written,
+      normalizedBuffer.length - written,
+      written,
+    );
+    if (bytesWritten <= 0) {
+      throw new Error(`Could not rewrite standalone server: ${standaloneServer}`);
+    }
+    written += bytesWritten;
+  }
+  ftruncateSync(standaloneServerFd, normalizedBuffer.length);
+} finally {
+  closeSync(standaloneServerFd);
 }
-let normalizedServerSource = serverSource.replace(
-  distDirConfig[0],
-  '"distDir":"./.next"',
-);
-// Next also embeds the temporary build root separately. Normalize that value
-// as well, otherwise the standalone server still looks for the build under
-// the pre-activation `.next-release-*` directory.
-normalizedServerSource = normalizedServerSource.replace(/"distDirRoot":"\.next-release-[^"]+"/, '"distDirRoot":".next"');
-if (!normalizedServerSource.includes('"distDir":"./.next"') || !normalizedServerSource.includes('"distDirRoot":".next"')) {
-  throw new Error(`Could not normalize standalone distDir: ${standaloneServer}`);
-}
-writeFileSync(standaloneServer, normalizedServerSource, "utf8");
 
 rmSync(standaloneStaticDir, { recursive: true, force: true });
 mkdirSync(resolve(standaloneDir, ".next"), { recursive: true });
