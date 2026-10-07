@@ -5977,7 +5977,20 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 
-/* Visual System V3 mobile hotfix: keep 320px controls inside the viewport. */
+/* Visual System V3 mobile hotfix: keep narrow controls inside the viewport. */
+@media (max-width: 480px) {
+  .map-layers-menu {
+    position: fixed;
+    top: calc(var(--radar-topbar-height-mobile) + 64px);
+    right: 8px;
+    left: 8px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: min(62svh, 360px);
+  }
+}
+
 @media (max-width: 360px) {
   .topbar.topbar-radar {
     gap: var(--space-1);
@@ -5997,16 +6010,5 @@ button, input, select, textarea { color-scheme: dark; }
 
   .topbar-menu {
     width: var(--control-height-touch);
-  }
-
-  .map-layers-menu {
-    position: fixed;
-    top: calc(var(--radar-topbar-height-mobile) + 64px);
-    right: 8px;
-    left: 8px;
-    width: auto;
-    min-width: 0;
-    max-width: none;
-    max-height: min(62svh, 360px);
   }
 }
