@@ -33,8 +33,14 @@ export class PredictiveStateStore {
     } catch { this.errors += 1; return null; }
   }
   get(icao: string): PredictiveFlightState | null {
-    const prefix = `${icao.toUpperCase()}:`;
-    return [...this.states.entries()].filter(([key]) => key === icao.toUpperCase() || key.startsWith(prefix)).sort((a, b) => b[1].evaluatedAt - a[1].evaluatedAt).at(0)?.[1] ?? null;
+    const normalized = icao.toUpperCase();
+    const prefix = `${normalized}:`;
+    let latest: PredictiveFlightState | null = null;
+    for (const [key, value] of this.states) {
+      if (key !== normalized && !key.startsWith(prefix)) continue;
+      if (!latest || value.evaluatedAt > latest.evaluatedAt) latest = value;
+    }
+    return latest;
   }
   forget(icao: string): void { const prefix = `${icao.toUpperCase()}:`; for (const key of this.states.keys()) if (key === icao.toUpperCase() || key.startsWith(prefix)) this.states.delete(key); }
   cleanup(now: number): void { for (const [key, value] of this.states) if (now - value.evaluatedAt > STALE_MS) this.states.delete(key); }
