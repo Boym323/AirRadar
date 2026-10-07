@@ -42,8 +42,8 @@ describe("Spotter Interest V1", () => {
     const result = scoreSpotterInterest(aircraft(), ["rare"], 1.5);
     expect(result.score).toBe(80);
     expect(result.reasons.map((reason) => reason.code)).toEqual([
-      "rare",
       "iconic_type",
+      "rare",
       "close_pass",
     ]);
     expect(isSpotterInteresting(result)).toBe(true);
