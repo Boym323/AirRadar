@@ -16,6 +16,7 @@ import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } 
 import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { rankUpcomingSky } from "@/lib/spotter-upcoming";
+import { SPOTTER_LOGBOOK_STORAGE_KEY, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -46,6 +47,8 @@ export function MobileSpotterMode() {
   const [skyFinderEnabled, setSkyFinderEnabled] = useState(false);
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
   const [orientationState, setOrientationState] = useState<"idle" | "waiting" | "ready" | "denied" | "unavailable">("idle");
+  const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: 1, entries: [] });
+  const [logbookMessage, setLogbookMessage] = useState<string | null>(null);
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -79,6 +82,11 @@ export function MobileSpotterMode() {
 
   useEffect(() => {
     setAlertPreferences(readSpotterAlertPreferences());
+    try {
+      setLogbook(parseSpotterLogbook(window.localStorage.getItem(SPOTTER_LOGBOOK_STORAGE_KEY)));
+    } catch {
+      setLogbook({ version: 1, entries: [] });
+    }
     setNotificationPermission("Notification" in window && "serviceWorker" in navigator
       ? Notification.permission
       : "unsupported");
@@ -257,6 +265,21 @@ export function MobileSpotterMode() {
       .slice(0, 5);
   }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft]);
 
+  const logbookStats = useMemo(() => spotterLogbookStats(logbook), [logbook]);
+
+  const markSkyStorySeen = () => {
+    if (!skyStory) return;
+    const entry = createSpotterLogbookEntry(skyStory.aircraft, skyStory.story);
+    const next = addSpotterLogbookEntry(logbook, entry);
+    setLogbook(next);
+    setLogbookMessage(copy.seenSaved);
+    try {
+      window.localStorage.setItem(SPOTTER_LOGBOOK_STORAGE_KEY, serializeSpotterLogbook(next));
+    } catch {
+      // Browser storage is optional; keep the current-session copy in memory.
+    }
+  };
+
   const toggleSkyFinder = async () => {
     if (skyFinderEnabled) {
       setSkyFinderEnabled(false);
@@ -328,7 +351,7 @@ export function MobileSpotterMode() {
     [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft],
   );
 
-  const skyStory = useMemo(() => {
+  const skyStory = (() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const aircraft = interestingAircraft[0]?.aircraft
       ?? upcomingPasses[0]?.aircraft
@@ -345,12 +368,11 @@ export function MobileSpotterMode() {
       aircraft,
       story: buildSpotterSkyStory(aircraft, interest, closestApproach),
     };
-  }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, interestingAircraft, labelsByHex, observer, upcomingPasses, visibleAircraft]);
+  })();
 
-  const prgArrival = useMemo(
-    () => skyStory ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story) : null,
-    [skyStory],
-  );
+  const prgArrival = skyStory
+    ? buildPrgArrivalContext(skyStory.aircraft, skyStory.story)
+    : null;
 
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
@@ -523,7 +545,9 @@ export function MobileSpotterMode() {
         <div className={styles.actions}>
           <Link href={("/aircraft/" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.detail}</Link>
           <Link href={("/?aircraft=" + encodeURIComponent(skyStory.aircraft.icaoHex)) as Route}>{copy.radar}</Link>
+          <Button size="compact" variant="secondary" onClick={markSkyStorySeen}>{copy.markSeen}</Button>
         </div>
+        {logbookMessage ? <small className={styles.locationAccuracy}>{logbookMessage}</small> : null}
       </article>
     </Panel> : null}
 
@@ -749,6 +773,31 @@ export function MobileSpotterMode() {
         </div> : <EmptyState title={copy.noAircraft} />}
       {historyTruncated ? <p className={styles.discoveryWarning}>{copy.historyTruncated}</p> : null}
     </Panel> : null}
+
+    <Panel>
+      <SectionHeader kicker="MY SKY / LOGBOOK" title={copy.personalLogbook} description={copy.personalLogbookDescription} />
+      <MetricStrip className={styles.metrics}>
+        <MetricCard value={formatNumber(logbookStats.sightings)} label={copy.sightings} />
+        <MetricCard value={formatNumber(logbookStats.uniqueAircraft)} label={copy.uniqueAircraft} />
+        <MetricCard value={formatNumber(logbookStats.uniqueTypes)} label={copy.uniqueTypes} />
+        <MetricCard value={formatNumber(logbookStats.uniqueOperators)} label={copy.uniqueOperators} />
+      </MetricStrip>
+      {logbook.entries.length ? <div className={styles.logbookList}>
+        <strong>{copy.recentSightings}</strong>
+        {logbook.entries.slice(0, 5).map((entry) => <article className={styles.passCard} key={entry.id}>
+          <div>
+            <strong>{entry.callsign ?? entry.registration ?? entry.icaoHex}</strong>
+            <span>{entry.aircraftType ?? entry.icaoHex}{entry.operator ? " · " + entry.operator : ""}</span>
+            {entry.origin || entry.destination ? <small>{entry.origin ?? "—"} → {entry.destination ?? "—"}</small> : null}
+          </div>
+          <div className={styles.passMetrics}>
+            <strong>{formatDistance(entry.closestDistanceKm)}</strong>
+            <span>{formatDateTime(entry.observedAt, t)}</span>
+            <small>{formatAltitude(entry.altitudeFt)}</small>
+          </div>
+        </article>)}
+      </div> : <EmptyState title={copy.emptyLogbook} />}
+    </Panel>
 
     <Panel>
       <SectionHeader kicker="LOCAL RECEIVER" title={copy.aircraft} description={copy.aircraftDescription} />
