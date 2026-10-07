@@ -2,8 +2,11 @@ import type { AircraftProvider } from "@/lib/server/provider";
 import type { Aircraft, AircraftAdsbTelemetry, ProviderSnapshot } from "@/lib/aircraft/types";
 import type { BeastLocalProvider, BeastDiagnostics } from "@/lib/server/beast-local-provider";
 import { altitudeObservationFor, selectAltitudeObservation } from "@/lib/aircraft/altitude-provenance";
+import { hasUsablePosition } from "@/lib/aircraft/source-merge";
+import { haversineDistanceKm } from "@/lib/geo";
 
 const TELEMETRY_FRESHNESS_MS = 30_000;
+const LOCAL_POSITION_DISAGREEMENT_KM = 10;
 
 function fieldObservedAt(beast: Aircraft, field: string, fallbackAt: number | null | undefined): number | null {
   const timestamp = beast.provenance?.fields?.[field]?.observedAt;
@@ -81,10 +84,27 @@ function preferredAltitude(beastValue: number | null | undefined, jsonValue: num
   return preferredValue(beastValue, jsonValue, beastAt, jsonAt);
 }
 
+function selectedPosition(beast: Aircraft, json: Aircraft): Aircraft {
+  if (!hasUsablePosition(beast)) return json;
+  if (!hasUsablePosition(json)) return beast;
+  if (beast.lat === null || beast.lon === null) return json;
+  if (json.lat === null || json.lon === null) return beast;
+
+  const jsonPositionFresh = json.seenPosSeconds !== null && json.seenPosSeconds <= TELEMETRY_FRESHNESS_MS / 1_000;
+  const disagreementKm = haversineDistanceKm(beast.lat, beast.lon, json.lat, json.lon);
+  // Both observations are produced by the same receiver. A large divergence
+  // is therefore not ordinary multilateration uncertainty: it is most often
+  // an incomplete/incorrect Beast CPR decode. readsb's aggregate is the
+  // canonical local position when it is fresh; Beast remains the source when
+  // JSON has no fresh coordinate.
+  if (jsonPositionFresh && disagreementKm > LOCAL_POSITION_DISAGREEMENT_KM) return json;
+  return beast;
+}
+
 /** Merge two observations from the same local receiver without letting null
  * fields in a fresh Beast frame erase readsb's aggregated values. */
 export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
-  const position = beast.lat !== null && beast.lon !== null ? beast : json;
+  const position = selectedPosition(beast, json);
   const beastTimes = beast.observationTimes;
   const jsonTime = Date.parse(json.lastSeen);
   const beastExtendedAt = beastTimes?.extendedTelemetry;

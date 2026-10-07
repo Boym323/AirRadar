@@ -208,7 +208,9 @@ jobs:
           artifact_root="artifacts/production-build"
           rm -rf -- "${artifact_root}"
           mkdir -p -- "${artifact_root}"
-          cp -a -- .next "${artifact_root}/.next"
+          mkdir -p -- "${artifact_root}/.next"
+          cp -a -- .next/BUILD_ID "${artifact_root}/.next/BUILD_ID"
+          cp -a -- .next/standalone "${artifact_root}/.next/standalone"
           node - "${artifact_root}/manifest.json" "${GITHUB_SHA}" "${RELEASE_VERSION}" "${RELEASE_BUILD_TIME}" <<'NODE'
           const fs = require("node:fs");
           const [manifestPath, commit, version, buildTime] = process.argv.slice(2);

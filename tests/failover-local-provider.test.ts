@@ -141,4 +141,22 @@ describe("local Beast/readsb JSON merge", () => {
     const beast = { ...json, altitude: 82600, baroAltitude: 82600, geomAltitude: null, sourceType: "df4", observationTimes: { ...json.observationTimes, altitude: Date.parse("2026-09-27T12:00:30Z") } } as Aircraft;
     expect(mergeLocalAircraft(beast, json).altitude).toBe(41000);
   });
+
+  it("uses fresh readsb coordinates when Beast disagrees by an implausible distance", () => {
+    const json = normalizeAircraft({
+      hex: "71c227", flight: "TWB401", lat: 48.017349, lon: 15.842285,
+      alt_baro: 38000, gs: 423.6, track: 291.17, seen: 0, seen_pos: 0.3,
+    }, receiver, new Date("2026-10-07T13:46:00Z"))!;
+    const beast = {
+      ...json,
+      lat: 47.427234,
+      lon: 27.238699,
+      seenPosSeconds: 0,
+      distanceKm: 1000,
+      bearing: 90,
+    } satisfies Aircraft;
+
+    const merged = mergeLocalAircraft(beast, json);
+    expect(merged).toMatchObject({ lat: 48.017349, lon: 15.842285, seenPosSeconds: 0.3 });
+  });
 });

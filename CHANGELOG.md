@@ -17,6 +17,82 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.343] - 2026-10-07
+
+Changes since v1.0.342.
+
+**Features touched:** Mobile Spotter Mode.
+
+### Added
+
+- Add PRG arrival context (52a3b8c9)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(spotter): add PRG arrival context (52a3b8c9)
+- Merge pull request #519 from Boym323/feat/spotter-prg-arrival-context-v1 (885318f3)
+
+</details>
+## [1.0.342] - 2026-10-07
+
+Changes since v1.0.341.
+
+**Features touched:** Live Radar, Mobile Spotter Mode, Receiver Coverage.
+
+### Added
+
+- Add Sky Card story model (db158fab)
+- Add Sky Card copy (faf6fc27)
+- Add Sky Card copy (414f1b09)
+- Add featured Sky Card (5d69534c)
+
+### Fixed
+
+- Keep story airport helper generic (6b4efb2b)
+- Handle callsign changes to prevent incorrect position retention (551ee381)
+- Narrow validated local coordinates (9630e34d)
+
+### Performance
+
+- Exclude build cache from standalone runtime (1aea5ce0)
+- Package runtime-only production artifact (1e6b440f)
+
+### Documentation
+
+- Update changelog for v1.0.342 (3f8c97da)
+
+### Maintenance
+
+- Sync generated repository metadata (#516) (332db50d)
+- Guard slim production artifact contract (15b86dc4)
+- Add featured Sky Card (9b300ed6)
+- Cover Sky Card story model (2b6f8d9c)
+- Sync generated repository metadata (#524) (484386e6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#516) (332db50d)
+- perf(release): exclude build cache from standalone runtime (1aea5ce0)
+- perf(release): package runtime-only production artifact (1e6b440f)
+- test(release): guard slim production artifact contract (15b86dc4)
+- feat(spotter): add Sky Card story model (db158fab)
+- fix(spotter): keep story airport helper generic (6b4efb2b)
+- feat(i18n): add Sky Card copy (faf6fc27)
+- feat(i18n): add Sky Card copy (414f1b09)
+- feat(spotter): add featured Sky Card (5d69534c)
+- style(spotter): add featured Sky Card (9b300ed6)
+- test(spotter): cover Sky Card story model (2b6f8d9c)
+- fix(aircraft-state): handle callsign changes to prevent incorrect position retention (551ee381)
+- docs: update changelog for v1.0.342 (3f8c97da)
+- Merge pull request #517 from Boym323/perf/release-artifact-diet-v1 (11167ae4)
+- Merge pull request #518 from Boym323/feat/spotter-sky-card-v1 (234a685f)
+- chore(metadata): sync generated repository metadata (#524) (484386e6)
+- fix(receiver): narrow validated local coordinates (9630e34d)
+- Merge pull request #525 from Boym323/fix/failover-position-type-narrowing (3c637e5c)
+
+</details>
 ## [1.0.341] - 2026-10-07
 
 Changes since v1.0.340.
@@ -233,6 +309,7 @@ Changes since v1.0.340.
 - Merge pull request #515 from Boym323/fix/notification-center-query-regression (ebd5726d)
 
 </details>
+
 ## [1.0.340] - 2026-10-07
 
 Changes since v1.0.339.
@@ -286,6 +363,7 @@ Changes since v1.0.339.
 - Merge pull request #504 from Boym323/feat/delivery-health-v1 (6e422ca4)
 
 </details>
+
 ## [1.0.339] - 2026-10-07
 
 Changes since v1.0.338.
@@ -366,6 +444,7 @@ Changes since v1.0.338.
 - Merge pull request #501 from Boym323/feat/notification-center-v2 (ba1558a4)
 
 </details>
+
 ## [1.0.338] - 2026-10-07
 
 Changes since v1.0.337.
@@ -412,6 +491,7 @@ Changes since v1.0.337.
 - Merge pull request #499 from Boym323/feat/notification-dedup-grouping-v1 (965303d4)
 
 </details>
+
 ## [1.0.337] - 2026-10-07
 
 Changes since v1.0.336.
@@ -472,6 +552,7 @@ Changes since v1.0.336.
 - Merge pull request #498 from Boym323/feat/notification-preferences-v1 (5a92a3a4)
 
 </details>
+
 ## [1.0.336] - 2026-10-07
 
 Changes since v1.0.335.
@@ -500,6 +581,7 @@ Changes since v1.0.335.
 - Merge pull request #496 from Boym323/feat/notification-noise-control-v1 (15411d9f)
 
 </details>
+
 ## [1.0.335] - 2026-10-07
 
 Changes since v1.0.334.
@@ -526,6 +608,7 @@ Changes since v1.0.334.
 - Merge pull request #494 from Boym323/fix/production-gate-navigation-rate-limit (40a913c8)
 
 </details>
+
 ## [1.0.334] - 2026-10-07
 
 Changes since v1.0.333.
@@ -1231,6 +1314,7 @@ Changes since v1.0.333.
 - Merge pull request #492 from Boym323/fix/deploy-artifact-version-authority (59655674)
 
 </details>
+
 ## [1.0.333] - 2026-10-06
 
 Changes since v1.0.332.

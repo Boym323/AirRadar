@@ -49,7 +49,7 @@ mkdirSync(resolve(standaloneDir, ".next"), { recursive: true });
 // relative distDir there. Publish the build metadata alongside the copied
 // static assets so it can find BUILD_ID and the server manifests.
 for (const entry of readdirSync(distDir)) {
-  if (entry === "standalone") continue;
+  if (entry === "standalone" || entry === "cache") continue;
   const source = resolve(distDir, entry);
   const target = resolve(standaloneDir, ".next", entry);
   rmSync(target, { recursive: true, force: true });
