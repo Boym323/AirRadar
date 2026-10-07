@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import { formatNumber, t } from "@/lib/i18n";
 import {
@@ -62,9 +62,9 @@ function pointKey(point: AviationNavPoint): string {
   return `${point.kind}:${point.id}:${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`;
 }
 
-function radarHref(point: AviationNavPoint): string {
+function radarHref(point: AviationNavPoint) {
   const focus = `${point.kind}:${point.id}:${point.latitude}:${point.longitude}`;
-  return `/?navPoint=${encodeURIComponent(focus)}`;
+  return { pathname: "/", query: { navPoint: focus } } as const;
 }
 
 function coordinate(value: number): string {
@@ -147,13 +147,13 @@ export function NavigationReferenceExplorer() {
   const [validation, setValidation] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
 
-  const routeMatches = useMemo(() => {
+  const routeMatches = (() => {
     if (!ats?.routes?.length || !points.length) return [];
     const ids = new Set(points.map((point) => normalizeIdentifier(point.id)));
     return ats.routes.filter((route) => route.points.some((point) => {
       return ids.has(normalizeIdentifier(point.id)) || ids.has(normalizeIdentifier(point.name));
     })).slice(0, MAX_ROUTES);
-  }, [ats?.routes, points]);
+  })();
 
   async function search(identifier: string): Promise<void> {
     requestRef.current?.abort();
