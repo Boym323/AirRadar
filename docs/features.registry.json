@@ -352,7 +352,8 @@
         "/alerts",
         "/notifications",
         "/fleet",
-        "/admin/alerts"
+        "/admin/alerts",
+        "/admin/alerts/analytics"
       ],
       "apis": [
         "/api/alerts",
@@ -360,7 +361,8 @@
         "/api/watchlist/:id",
         "/api/watchlist/activity",
         "/api/watchlist/session",
-        "/api/admin/alerts/analytics",\n        "/api/admin/alerts/delivery",
+        "/api/admin/alerts/analytics",
+        "/api/admin/alerts/delivery",
         "/api/admin/alerts/fleets",
         "/api/admin/alerts/fleets/:id",
         "/api/admin/alerts/fleets/:id/matchers",
