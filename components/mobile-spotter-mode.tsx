@@ -11,6 +11,7 @@ import { filterSpotterAircraft, type SpotterDiscoveryFilter } from "@/lib/spotte
 import { findRecentObserverPasses } from "@/lib/spotter-history";
 import { isSpotterInteresting, scoreSpotterInterest, type SpotterInterestReasonCode } from "@/lib/spotter-interest";
 import { DEFAULT_SPOTTER_ALERT_PREFERENCES, readSpotterAlertPreferences, shouldTriggerSpotterAlert, spotterAlertTag, writeSpotterAlertPreferences, type SpotterAlertPreferences } from "@/lib/spotter-alerts";
+import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } from "@/lib/spotter-sky-finder";
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import styles from "./mobile-spotter-mode.module.css";
 
@@ -39,6 +40,9 @@ export function MobileSpotterMode() {
   const [alertPreferences, setAlertPreferences] = useState<SpotterAlertPreferences>(DEFAULT_SPOTTER_ALERT_PREFERENCES);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
   const alertedTagsRef = useRef<Map<string, number>>(new Map());
+  const [skyFinderEnabled, setSkyFinderEnabled] = useState(false);
+  const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
+  const [orientationState, setOrientationState] = useState<"idle" | "waiting" | "ready" | "denied" | "unavailable">("idle");
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -49,6 +53,26 @@ export function MobileSpotterMode() {
     onSelectedAircraftRemoved,
     onSnapshot,
   });
+
+  useEffect(() => {
+    if (!skyFinderEnabled) {
+      setDeviceHeading(null);
+      if (orientationState === "ready" || orientationState === "waiting") setOrientationState("idle");
+      return;
+    }
+    const onOrientation = (event: DeviceOrientationEvent) => {
+      const heading = headingFromDeviceOrientation(event as DeviceOrientationEvent & { webkitCompassHeading?: number });
+      if (heading === null) return;
+      setDeviceHeading(heading);
+      setOrientationState("ready");
+    };
+    window.addEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
+    window.addEventListener("deviceorientation", onOrientation, true);
+    return () => {
+      window.removeEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
+      window.removeEventListener("deviceorientation", onOrientation, true);
+    };
+  }, [orientationState, skyFinderEnabled]);
 
   useEffect(() => {
     setAlertPreferences(readSpotterAlertPreferences());
@@ -230,6 +254,35 @@ export function MobileSpotterMode() {
       .slice(0, 5);
   }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft]);
 
+  const toggleSkyFinder = async () => {
+    if (skyFinderEnabled) {
+      setSkyFinderEnabled(false);
+      setOrientationState("idle");
+      return;
+    }
+    if (!("DeviceOrientationEvent" in window)) {
+      setOrientationState("unavailable");
+      return;
+    }
+    const OrientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+    if (typeof OrientationEvent.requestPermission === "function") {
+      try {
+        const permission = await OrientationEvent.requestPermission();
+        if (permission !== "granted") {
+          setOrientationState("denied");
+          return;
+        }
+      } catch {
+        setOrientationState("denied");
+        return;
+      }
+    }
+    setOrientationState("waiting");
+    setSkyFinderEnabled(true);
+  };
+
   const updateAlertPreferences = (next: SpotterAlertPreferences) => {
     setAlertPreferences(next);
     writeSpotterAlertPreferences(next);
@@ -259,6 +312,23 @@ export function MobileSpotterMode() {
       : [...alertPreferences.reasons, reason];
     updateAlertPreferences({ ...alertPreferences, reasons });
   };
+
+  const skyTarget = useMemo(() => {
+    if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
+    const preferred = interestingAircraft[0]
+      ?? upcomingPasses[0]
+      ?? visibleAircraft[0];
+    const geometry = preferred.geometry ?? observerGeometry(preferred.aircraft, observer);
+    if (!geometry) return null;
+    const direction = deviceHeading === null
+      ? null
+      : skyFinderDirection(geometry.bearingDeg, deviceHeading);
+    return {
+      aircraft: preferred.aircraft,
+      geometry,
+      direction,
+    };
+  }, [deviceHeading, distanceOrigin, interestingAircraft, observer, upcomingPasses, visibleAircraft]);
 
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
@@ -373,6 +443,46 @@ export function MobileSpotterMode() {
         ? <small className={styles.locationAccuracy}>{copy.accuracy}: ±{formatNumber(observer.accuracyMeters)} m</small>
         : null}
     </Panel>
+
+    {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / FINDER"
+        title={copy.skyFinder}
+        description={copy.skyFinderDescription}
+        actions={<Button
+          size="compact"
+          variant={skyFinderEnabled ? "primary" : "secondary"}
+          onClick={() => void toggleSkyFinder()}
+        >{skyFinderEnabled ? copy.disableSkyFinder : copy.enableSkyFinder}</Button>}
+      />
+      {orientationState === "denied" ? <p className={styles.discoveryWarning}>{copy.orientationDenied}</p> : null}
+      {orientationState === "unavailable" ? <p className={styles.discoveryWarning}>{copy.orientationUnavailable}</p> : null}
+      {skyFinderEnabled && orientationState === "waiting" ? <p className={styles.loading}>{copy.orientationWaiting}</p> : null}
+      {skyTarget ? <div className={styles.skyFinder}>
+        <div className={styles.skyCompass} aria-hidden="true">
+          <span
+            className={styles.skyArrow}
+            style={{ transform: "rotate(" + (skyTarget.direction?.relativeTurnDeg ?? 0) + "deg)" }}
+          >↑</span>
+        </div>
+        <div className={styles.skyTarget}>
+          <strong>{skyTarget.aircraft.callsign ?? skyTarget.aircraft.registration ?? skyTarget.aircraft.icaoHex}</strong>
+          <span>{skyTarget.aircraft.aircraftType ?? skyTarget.aircraft.enrichment?.metadata?.icaoTypeCode ?? skyTarget.aircraft.icaoHex}</span>
+          <dl>
+            <div><dt>{copy.azimuth}</dt><dd>{formatTrack(skyTarget.geometry.bearingDeg)}</dd></div>
+            <div><dt>{copy.elevation}</dt><dd>{skyTarget.geometry.elevationDeg === null ? "—" : formatNumber(skyTarget.geometry.elevationDeg) + "°"}</dd></div>
+            <div><dt>{copy.distanceFromYou}</dt><dd>{formatDistance(skyTarget.geometry.horizontalDistanceKm)}</dd></div>
+            <div><dt>{copy.deviceHeading}</dt><dd>{deviceHeading === null ? "—" : formatTrack(deviceHeading)}</dd></div>
+          </dl>
+          {skyTarget.direction ? <strong className={styles.skyInstruction}>
+            {copy.skyDirections[skyTarget.direction.turn as SkyFinderTurn]}
+            {Math.abs(skyTarget.direction.relativeTurnDeg) > 15 && Math.abs(skyTarget.direction.relativeTurnDeg) < 150
+              ? " · " + formatNumber(Math.abs(skyTarget.direction.relativeTurnDeg)) + "°"
+              : ""}
+          </strong> : null}
+        </div>
+      </div> : <EmptyState title={copy.noAircraft} />}
+    </Panel> : null}
 
     <Panel>
       <SectionHeader
