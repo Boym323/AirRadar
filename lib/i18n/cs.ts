@@ -118,6 +118,11 @@ export const cs = {
     inPrefix: "za",
     now: "teď",
     elevation: "elevace",
+    justOverhead: "Právě proletělo poblíž",
+    justOverheadDescription: "Posledních 20 minut z existující Time Machine historie; tvoje poloha se do API neposílá.",
+    historyUnavailable: "Historie průletů je dočasně nedostupná.",
+    historyTruncated: "Historické okno bylo omezeno; některé průlety mohou chybět.",
+    closestAt: "nejblíže",
   },
   notificationCenter: {
     title: "Centrum oznámení",
