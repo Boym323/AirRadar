@@ -23,6 +23,19 @@ function epochMilliseconds(value: number, field: string): number {
 function validSample(sample: PredictionSample, now: number): boolean {
   return sample.observedAt <= now && now - sample.observedAt <= MAX_SAMPLE_AGE_MS && Math.abs(sample.lat) <= 90 && Math.abs(sample.lon) <= 180;
 }
+function recentValidSamples(samples: readonly PredictionSample[], now: number): PredictionSample[] {
+  const valid: PredictionSample[] = [];
+  let ordered = true;
+  let previousObservedAt = Number.NEGATIVE_INFINITY;
+  for (const sample of samples) {
+    if (!validSample(sample, now)) continue;
+    if (sample.observedAt < previousObservedAt) ordered = false;
+    previousObservedAt = sample.observedAt;
+    valid.push(sample);
+  }
+  if (!ordered) valid.sort((a, b) => a.observedAt - b.observedAt);
+  return valid.length > 24 ? valid.slice(-24) : valid;
+}
 function runwayEnds(runways: readonly PredictionRunway[]) {
   return runways.flatMap((runway) => [
     runway.leIdent && finite(runway.leLatitude) && finite(runway.leLongitude) && finite(runway.leHeadingDegT) ? { ident: runway.leIdent, lat: runway.leLatitude, lon: runway.leLongitude, heading: runway.leHeadingDegT } : null,
@@ -114,7 +127,7 @@ function trajectory(input: PredictiveInput, valid: readonly PredictionSample[]):
 }
 export function evaluatePredictiveIntelligence(input: PredictiveInput): { prediction: PredictiveFlightState; durationMs: number } {
   const started = performance.now();
-  const valid = [...input.recentSamples].filter((sample) => validSample(sample, input.now)).sort((a, b) => a.observedAt - b.observedAt).slice(-24);
+  const valid = recentValidSamples(input.recentSamples, input.now);
   const prediction = { modelVersion: PREDICTIVE_INTELLIGENCE_VERSION, evaluatedAt: epochMilliseconds(input.now, "evaluatedAt"), eta: eta(input, valid), runway: runway(input, valid), trajectory: trajectory(input, valid) };
   return { prediction, durationMs: Math.round((performance.now() - started) * 100) / 100 };
 }
