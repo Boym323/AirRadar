@@ -86,7 +86,7 @@ describe("Notification Dedup & Grouping V1", () => {
 
   it("groups one aircraft into a bounded five-minute timeline and promotes the most important change", () => {
     const items = [
-      entry("new", "new_aircraft", "2026-10-07T10:00:00Z", { notificationStatus: "disabled" }),
+      entry("new", "new_aircraft", "2026-10-07T10:00:00Z", { notificationStatus: "center_only" }),
       entry("seen", "aircraft_appeared", "2026-10-07T10:01:00Z"),
       entry("radius", "entered_radius", "2026-10-07T10:02:00Z"),
       entry("approach", "intelligence_approach", "2026-10-07T10:03:00Z"),
@@ -104,7 +104,7 @@ describe("Notification Dedup & Grouping V1", () => {
   });
 
   it("keeps reacquisition semantics instead of presenting it as first seen", () => {
-    const firstSeen = entry("new", "new_aircraft", "2026-10-07T10:00:00Z", { notificationStatus: "disabled" });
+    const firstSeen = entry("new", "new_aircraft", "2026-10-07T10:00:00Z", { notificationStatus: "center_only" });
     const reacquired = entry("again", "aircraft_appeared", "2026-10-07T10:01:00Z");
     const group = groupNotificationEntries([firstSeen, reacquired])[0]!;
 
