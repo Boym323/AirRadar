@@ -432,6 +432,27 @@ describe("aircraft state service", () => {
     });
   });
 
+  it("keeps single-aircraft extended lookup equivalent to the extended snapshot merge", () => {
+    vi.useFakeTimers();
+    const base = new Date("2026-09-22T08:10:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver, base);
+    const network = normalizeAircraft({ hex: "ABC123", flight: "NETWORK123", lat: 50.101, lon: 14.101, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!local || !network) throw new Error("test aircraft could not be normalized");
+    const networkObservation = { ...network, origin: "adsblol" as const };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+    };
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: base.toISOString(), provider: "readsb" });
+    internal.applyNetworkSnapshot({ aircraft: [networkObservation], fetchedAt: base.toISOString(), provider: "adsb.lol" });
+
+    const expected = service.getSnapshot({ coverage: "extended", includeTrails: true }).aircraft.find((item) => item.icaoHex === "ABC123");
+    expect(service.getAircraft("abc123", "extended")).toEqual(expected);
+  });
+
   it("retains a missing network aircraft until its stale window expires", () => {
     vi.useFakeTimers();
     vi.stubEnv("ADSBLOL_STALE_AFTER_MS", "30000");
