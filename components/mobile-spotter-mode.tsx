@@ -23,6 +23,7 @@ import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-sh
 import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
 import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotter-visual-acquisition";
 import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
+import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
@@ -568,6 +569,30 @@ export function MobileSpotterMode() {
       )
     : null;
 
+  const photoOpportunity = skyStory && visualAcquisition && lightContext
+    ? scorePhotoOpportunity(skyStory.story.interest, visualAcquisition, lightContext)
+    : null;
+
+  const upcomingSkyWithPhoto = useMemo(() => {
+    if (!observer) return [];
+    const at = snapshot?.fetchedAt ? new Date(snapshot.fetchedAt) : new Date();
+    const sun = solarPosition(at, observer);
+    return upcomingSky
+      .map((item) => {
+        const geometry = observerGeometry(item.aircraft, observer);
+        if (!geometry) return { ...item, photoOpportunity: null };
+        const visual = evaluateVisualAcquisition(item.aircraft, observer, nearestMetar);
+        const light = lightGeometry(sun, geometry.bearingDeg);
+        return {
+          ...item,
+          photoOpportunity: scorePhotoOpportunity(item.interest, visual, light),
+        };
+      })
+      .sort((a, b) => (b.photoOpportunity?.score ?? -1) - (a.photoOpportunity?.score ?? -1)
+        || a.closestApproach.secondsUntilClosest - b.closestApproach.secondsUntilClosest
+        || a.aircraft.icaoHex.localeCompare(b.aircraft.icaoHex));
+  }, [nearestMetar, observer, snapshot?.fetchedAt, upcomingSky]);
+
   const recentPasses = useMemo(
     () => observer ? findRecentObserverPasses(historyTracks, observer, 10, 8) : [],
     [historyTracks, observer],
@@ -780,6 +805,22 @@ export function MobileSpotterMode() {
         <div><dt>{copy.bearingFromYou}</dt><dd>{formatTrack(lightContext.aircraftBearingDeg)}</dd></div>
         <div><dt>{copy.lightAngle}</dt><dd>{formatNumber(lightContext.azimuthDifferenceDeg)}°</dd></div>
       </dl>
+    </Panel> : null}
+
+    {distanceOrigin === "observer" && observerState === "ready" && photoOpportunity ? <Panel>
+      <SectionHeader
+        kicker="MY SKY / PHOTO"
+        title={copy.photoOpportunity}
+        description={copy.photoOpportunityDescription}
+        actions={<StatusBadge variant={photoOpportunity.score >= 75 ? "live" : photoOpportunity.score >= 45 ? "stale" : "neutral"}>
+          {photoOpportunity.score}/100
+        </StatusBadge>}
+      />
+      <div className={styles.interestReasons}>
+        {photoOpportunity.reasons.map((reason) => <span key={reason.code}>
+          {copy.photoReasons[reason.code]} {reason.points >= 0 ? "+" : ""}{reason.points}
+        </span>)}
+      </div>
     </Panel> : null}
 
     {prgArrival ? <Panel>
@@ -1002,10 +1043,10 @@ export function MobileSpotterMode() {
       </div>
     </Panel> : null}
 
-    {distanceOrigin === "observer" && observerState === "ready" && upcomingSky.length ? <Panel>
+    {distanceOrigin === "observer" && observerState === "ready" && upcomingSkyWithPhoto.length ? <Panel>
       <SectionHeader kicker="MY SKY / NEXT" title={copy.whatsNext} description={copy.whatsNextDescription} />
       <div className={styles.passList}>
-        {upcomingSky.map(({ aircraft, closestApproach, interest, rankScore }) => {
+        {upcomingSkyWithPhoto.map(({ aircraft, closestApproach, interest, rankScore, photoOpportunity: passPhoto }) => {
           const route = aircraft.enrichment?.route;
           const identity = aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex;
           const lead = closestApproach.secondsUntilClosest < 30
@@ -1018,7 +1059,7 @@ export function MobileSpotterMode() {
               {route?.origin || route?.destination
                 ? <small>{route?.origin ?? "—"} → {route?.destination ?? "—"}</small>
                 : null}
-              <small>{copy.interestScore}: {interest.score} · {copy.rank}: {formatNumber(rankScore)}</small>
+              <small>{copy.interestScore}: {interest.score} · {copy.rank}: {formatNumber(rankScore)}{passPhoto ? " · " + copy.photoOpportunity + ": " + passPhoto.score : ""}</small>
             </div>
             <div className={styles.passMetrics}>
               <strong>{formatDistance(closestApproach.closestHorizontalDistanceKm)}</strong>
