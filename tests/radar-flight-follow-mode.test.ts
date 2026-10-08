@@ -21,6 +21,20 @@ describe("Flight Follow Mode V1 boundaries", () => {
     expect(hud).not.toContain("localStorage");
   });
 
+  it("collapses the follow HUD to identity and toggle while aircraft detail shows live telemetry", async () => {
+    const app = await readFile(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+    const hud = await readFile(new URL("../components/radar/radar-flight-follow-hud.tsx", import.meta.url), "utf8");
+    const styles = await readFile(new URL("../components/radar/radar-flight-follow-hud.module.css", import.meta.url), "utf8");
+
+    expect(app).toContain('compact={drawerState === "aircraft"}');
+    expect(hud).toContain('data-compact={compact ? "true" : "false"}');
+    expect(hud).toContain("{!compact && <div className={styles.telemetry}");
+    expect(hud).toContain("{!compact && <div className={styles.metrics}");
+    expect(hud).toContain("aria-pressed={following}");
+    expect(styles).toContain(".hud.compact");
+    expect(styles).toContain(".compact .toggle");
+  });
+
   it("fails closed when the selected aircraft is no longer available or the drawer leaves aircraft mode", async () => {
     const app = await readFile(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 
