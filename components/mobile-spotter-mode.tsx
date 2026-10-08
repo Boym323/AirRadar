@@ -800,6 +800,7 @@ export function MobileSpotterMode() {
       || !alertPreferences.enabled
       || !connected
       || !snapshot?.sourceOnline
+      || !observer
       || !("serviceWorker" in navigator)
     ) return;
 
@@ -809,7 +810,7 @@ export function MobileSpotterMode() {
     }
 
     for (const item of visibleAircraft) {
-      const closestApproach = predictClosestApproach(item.aircraft, observer!);
+      const closestApproach = predictClosestApproach(item.aircraft, observer);
       const interest = scoreSpotterInterest(item.aircraft,
         labelsByHex.get(item.aircraft.icaoHex) ?? [], closestApproach?.closestHorizontalDistanceKm ?? null,
         discovery?.todayReceptionRecord?.icaoHex ?? null);
