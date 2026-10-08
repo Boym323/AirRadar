@@ -1489,7 +1489,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const pathname = new URL(response.url()).pathname;
             const expectedRateLimitedApi =
               pathname === "/api/logbook/summary"
-              || /^\/api\/navigation-integrity\/aircraft\/[A-F0-9]{6}$/i.test(pathname);
+              || /^\/api\/navigation-integrity\/aircraft\/[A-F0-9]{6}$/i.test(pathname)
+              // Optional per-aircraft enrichment may reach the API rate limit
+              // during the multi-viewport visual sweep. Layout and UI safety
+              // must still be checked, but a bounded 429 is not a JS crash.
+              || /^\/api\/aircraft\/[A-F0-9]{6}\/situation$/i.test(pathname)
+              || (pathname === "/api/intelligence/events"
+                && new URL(response.url()).searchParams.has("aircraft"));
             if (expectedRateLimitedApi) {
               expectedRateLimitedApiErrors += 1;
               console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${response.request().resourceType()} initiator=${response.request().frame()?.url() ?? "(no frame)"}`);
