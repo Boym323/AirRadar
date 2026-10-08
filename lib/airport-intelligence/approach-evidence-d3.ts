@@ -43,7 +43,10 @@ export function buildAirportApproachEvidenceD3(input: {
 }): ApproachEvidenceD3 {
   const now = (input.now ?? new Date()).getTime();
   const histories = new Map<number, AirportMovement[]>();
-  for (const movement of (input.operations?.recentMovements ?? []).slice(0, 500)) {
+  for (const movement of [
+    ...(input.operations?.eventEvidence ?? []).slice(0, 250),
+    ...(input.operations?.recentMovements ?? []).slice(0, 250),
+  ]) {
     if (!EVENT_TYPES.has(movement.movement) || validTime(movement.observedAt, now) === null) continue;
     const history = histories.get(movement.flightId) ?? [];
     history.push(movement);
@@ -100,6 +103,7 @@ export function buildAirportApproachEvidenceD3(input: {
       approach: items.filter((row) => ["APPROACH_EVIDENCE", "FINAL_APPROACH_EVIDENCE"].includes(row.state)).length,
       liveOnly: items.filter((row) => row.state === "LIVE_ONLY").length,
     },
-    complete: Boolean(input.operations?.complete && !input.operations?.truncated),
+    complete: Boolean(input.operations?.complete && !input.operations?.truncated
+      && !input.operations?.eventEvidenceTruncated),
   };
 }
