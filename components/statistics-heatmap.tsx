@@ -69,7 +69,7 @@ export default function StatisticsHeatmap() {
 
   return (
     <div className={styles.wrapper}>
-      <section className={"statistics-card " + styles.panel} aria-labelledby="statistics-heatmap-title">
+      <section className={"statistics-card " + styles.panel} data-state={unavailable ? "unavailable" : !data ? "loading" : data.cells.length === 0 ? "empty" : "ready"} aria-labelledby="statistics-heatmap-title">
         <div className={"statistics-card-header " + styles.header}>
           <div className={styles.headerCopy}>
             <h2 id="statistics-heatmap-title">{text.title}</h2>
