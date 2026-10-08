@@ -200,3 +200,30 @@ const en: typeof cs = {
 export function receiverExplorerCopy(locale: string): typeof cs {
   return locale.startsWith("cs") ? cs : en;
 }
+
+export function receiverCoveragePeriodLabel(period: string, locale: string): string {
+  if (locale.startsWith("cs")) return period === "7d" ? "7 dní" : period === "30d" ? "30 dní" : period === "today" ? "Dnes" : "Živě";
+  return period === "7d" ? "7 days" : period === "30d" ? "30 days" : period === "today" ? "Today" : "Live";
+}
+
+export function receiverCardinals(locale: string): readonly string[] {
+  return locale.startsWith("cs") ? ["S", "V", "J", "Z"] : ["N", "E", "S", "W"];
+}
+
+export function receiverPolarCellAria(locale: string, from: number, to: number, near: number, far: number, captured: number, total: number, ratio: string): string {
+  return locale.startsWith("cs")
+    ? `Azimut ${from} až ${to} stupňů, vzdálenost ${near} až ${far} námořních mil, zachyceno ${captured} z ${total}, ${ratio}.`
+    : `Azimuth ${from} to ${to} degrees, distance ${near} to ${far} nautical miles, captured ${captured} of ${total}, ${ratio}.`;
+}
+
+export function receiverRangeChartAria(locale: string, days: number): string {
+  return locale.startsWith("cs")
+    ? `Směrový dosah přijímače za ${days} dní. Medián, P95 a maximální denní dosah v sektorech.`
+    : `Directional receiver range over ${days} days. Median, P95 and maximum daily sector range.`;
+}
+
+export function receiverRangeSectorAria(locale: string, from: number, to: number, median: string, p95: string, maximum: string): string {
+  return locale.startsWith("cs")
+    ? `${from} až ${to} stupňů. Medián ${median}, P95 ${p95}, maximum ${maximum}.`
+    : `${from} to ${to} degrees. Median ${median}, P95 ${p95}, maximum ${maximum}.`;
+}
