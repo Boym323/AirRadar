@@ -18,6 +18,7 @@ import { buildRunwayChangePublicRolloutDecision } from "@/lib/predictive-intelli
 import { buildTrajectoryPublicRolloutDecision } from "@/lib/predictive-intelligence/trajectory-rollout";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import { buildPredictiveCaptureHealth, type PredictiveCaptureHealth } from "@/lib/predictive-intelligence/capture-health";
+import { buildPredictiveAccuracyTrends, type PredictiveAccuracyTrends, type PredictiveTrendSample } from "@/lib/predictive-intelligence/accuracy-trends";
 import {
   PREDICTIVE_OUTCOME_TRUTH_VERSION,
   scoreRunwayChangeOutcome,
@@ -135,6 +136,7 @@ export interface PredictiveReadinessReport {
   calibration: PredictiveGraduationCalibration;
   rollout: PredictivePublicRolloutReport;
   captureHealth: PredictiveCaptureHealth;
+  accuracyTrends: PredictiveAccuracyTrends;
 }
 
 export interface PredictivePublicRolloutReport {
@@ -424,6 +426,7 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
       now, sourceAvailable: false, complete: false,
       captureConfigured: process.env.AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED === "true",
     }),
+    accuracyTrends: buildPredictiveAccuracyTrends([], { now, sourceAvailable: false, complete: false }),
   };
 }
 
@@ -435,6 +438,7 @@ export function buildPredictiveReadinessEvidence(
   evidence: PredictiveReadinessEvidence;
   matchedLandingTruth: number;
   captureStaleObservations: number;
+  trendSamples: PredictiveTrendSample[];
 } {
   const truths = landingRows.flatMap((row) => {
     const truth = landingTruth(row);
@@ -606,7 +610,25 @@ export function buildPredictiveReadinessEvidence(
     },
     integrity,
   };
-  return { evidence, matchedLandingTruth, captureStaleObservations };
+  const trendSamples: PredictiveTrendSample[] = [
+    ...etaRows.map((row, index) => ({
+      capability: "ETA" as const,
+      lifecycleKey: row.lifecycleKey,
+      observationKey: row.observationKey,
+      predictedAtMs: epochMs(row.predictedAt),
+      scored: etaScores[index]?.status === "SCORED",
+      etaAbsoluteErrorSeconds: etaScores[index]?.absoluteErrorSeconds ?? null,
+    })),
+    ...runwayRows.map((row, index) => ({
+      capability: "RUNWAY" as const,
+      lifecycleKey: row.lifecycleKey,
+      observationKey: row.observationKey,
+      predictedAtMs: epochMs(row.predictedAt),
+      scored: runwayScores[index]?.status === "SCORED",
+      runwayExactEnd: runwayScores[index]?.exactEnd ?? null,
+    })),
+  ];
+  return { evidence, matchedLandingTruth, captureStaleObservations, trendSamples };
 }
 
 async function queryReadinessRows(now: Date): Promise<{
@@ -667,7 +689,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
   const complete = rows.observations.length < PREDICTIVE_READINESS_OBSERVATION_LIMIT
     && rows.landings.length < PREDICTIVE_READINESS_LANDING_LIMIT
     && rows.outcomeComplete;
-  const { evidence, matchedLandingTruth, captureStaleObservations } = buildPredictiveReadinessEvidence(
+  const { evidence, matchedLandingTruth, captureStaleObservations, trendSamples } = buildPredictiveReadinessEvidence(
     rows.observations,
     rows.landings,
     rows.outcomes,
@@ -714,6 +736,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
       now, sourceAvailable: true, complete,
       captureConfigured: process.env.AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED === "true",
     }),
+    accuracyTrends: buildPredictiveAccuracyTrends(trendSamples, { now, sourceAvailable: true, complete }),
   };
   cached = { expiresAt: now.getTime() + PREDICTIVE_READINESS_CACHE_MS, report };
   return report;

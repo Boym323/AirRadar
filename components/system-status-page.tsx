@@ -359,6 +359,53 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
         {capability.result.reasons.length > 0 && <p className="system-predictive-reasons"><strong>{dictionary.system.predictiveReasons}:</strong> {capability.result.reasons.join(" · ")}</p>}
       </section>)}
     </div>
+
+    <div className="system-card-header" data-testid="predictive-accuracy-trends-heading">
+      <div>
+        <h2>{dictionary.system.predictiveTrendTitle}</h2>
+        <p className="system-card-subtitle">{dictionary.system.predictiveTrendSubtitle}</p>
+      </div>
+    </div>
+    <div className="system-predictive-capabilities" data-testid="predictive-accuracy-trends">
+      {(["ETA", "RUNWAY"] as const).map((key) => {
+        const trend = report.accuracyTrends.capabilities[key];
+        const recentMetric = key === "ETA"
+          ? formatPredictiveError(trend.recent.etaMaeSeconds, dictionary)
+          : formatPredictivePercent(trend.recent.runwayExactEndAccuracy, dictionary);
+        const previousMetric = key === "ETA"
+          ? formatPredictiveError(trend.previous.etaMaeSeconds, dictionary)
+          : formatPredictivePercent(trend.previous.runwayExactEndAccuracy, dictionary);
+        const metricLabel = key === "ETA"
+          ? dictionary.system.predictiveTrendEtaMae
+          : dictionary.system.predictiveTrendRunwayAccuracy;
+        const delta = key === "ETA" ? trend.deltaEtaMaeSeconds : trend.deltaRunwayAccuracyPercentagePoints;
+        const deltaLabel = key === "ETA" ? dictionary.system.predictiveTrendDeltaEta : dictionary.system.predictiveTrendDeltaRunway;
+        return <section key={key} className="system-predictive-capability" data-testid={`predictive-accuracy-trend-${key.toLowerCase()}`}>
+          <div className="system-predictive-capability-heading">
+            <strong>{key}</strong>
+            <UiStatusBadge variant={trend.state === "COMPARABLE" ? "neutral" : "warning"}>
+              {dictionary.system.predictiveTrendStateLabels[trend.state]}
+            </UiStatusBadge>
+          </div>
+          <dl>
+            <Field label={`${dictionary.system.predictiveTrendRecent} · ${dictionary.system.predictiveTrendSampleRatio}`}
+              value={`${formatNumber(trend.recent.scoreableFlights, 0, dictionary.locale)} / ${formatNumber(trend.recent.observedFlights, 0, dictionary.locale)}`} />
+            <Field label={`${dictionary.system.predictiveTrendPrevious} · ${dictionary.system.predictiveTrendSampleRatio}`}
+              value={`${formatNumber(trend.previous.scoreableFlights, 0, dictionary.locale)} / ${formatNumber(trend.previous.observedFlights, 0, dictionary.locale)}`} />
+            <Field label={`${dictionary.system.predictiveTrendRecent} · ${metricLabel}`} value={recentMetric} />
+            <Field label={`${dictionary.system.predictiveTrendPrevious} · ${metricLabel}`} value={previousMetric} />
+            {key === "ETA" && <>
+              <Field label={`${dictionary.system.predictiveTrendRecent} · ${dictionary.system.predictiveTrendEtaMedian}`} value={formatPredictiveError(trend.recent.etaMedianAbsoluteErrorSeconds, dictionary)} />
+              <Field label={`${dictionary.system.predictiveTrendRecent} · ${dictionary.system.predictiveTrendEtaP90}`} value={formatPredictiveError(trend.recent.etaP90AbsoluteErrorSeconds, dictionary)} />
+            </>}
+            <Field label={deltaLabel} value={delta === null
+              ? dictionary.system.predictiveTrendInsufficient
+              : `${delta > 0 ? "+" : ""}${formatNumber(delta, 1, dictionary.locale)}`} />
+          </dl>
+        </section>;
+      })}
+    </div>
+    <p className="system-predictive-reasons">{dictionary.system.predictiveTrendDisclaimer}</p>
   </UiCard>;
 }
 
