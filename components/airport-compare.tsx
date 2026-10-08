@@ -165,12 +165,13 @@ function SideHeader({ airport, code, metrics }: { airport: Airport | undefined; 
 }
 
 function RunwayPanel({ data, title }: { data: AirportMovementsResponse | null; title: string }) {
+  const cs = t.locale.startsWith("cs");
   const rows = data?.summary.probableRunways ?? [];
   const total = data?.summary.runwayRelevantMovements ?? 0;
   return (
     <Panel className={styles.runwayPanel}>
-      <SectionHeader title={title} description={data ? String(data.summary.probableRunwayMovements) + " classified / " + String(total) + " runway-relevant" : undefined} />
-      {!data || rows.length === 0 ? <EmptyState title="No runway sample" /> : (
+      <SectionHeader title={title} description={data ? String(data.summary.probableRunwayMovements) + (cs ? " klasifikováno / " : " classified / ") + String(total) + (cs ? " souvisejících s drahou" : " runway-relevant") : undefined} />
+      {!data || rows.length === 0 ? <EmptyState title={cs ? "Chybí údaje o využití drah" : "No runway sample"} /> : (
         <div className={styles.runwayList}>
           {rows.slice(0, 6).map((item) => {
             const share = total > 0 ? item.count / total : 0;
