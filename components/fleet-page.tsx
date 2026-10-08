@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "@/components/locale-provider";
 import type { FleetAircraft, FleetResponse } from "@/lib/server/fleet";
-import { formatDateTime, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
+import { formatDateTime, formatNumber, getTranslations, type LocaleDictionary } from "@/lib/i18n";
 import type { AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 
 function FleetPhoto({ aircraft, dictionary }: { aircraft: FleetAircraft; dictionary: LocaleDictionary }) {
@@ -72,7 +73,7 @@ function FleetCard({ aircraft, dictionary }: { aircraft: FleetAircraft; dictiona
 }
 
 export function FleetPage({ data }: { data: FleetResponse }) {
-  const [locale, setLocale] = useState<LocaleKey>("cs");
+  const { locale } = useLocale();
   const dictionary = getTranslations(locale);
   return <main className="history-page fleet-page">
     <header className="history-page-header fleet-page-header">
@@ -83,7 +84,7 @@ export function FleetPage({ data }: { data: FleetResponse }) {
       </div>
       <nav className="fleet-nav" aria-label={dictionary.fleet.navigation}>
         <Link href="/">{dictionary.fleet.backToRadar}</Link>
-        <button type="button" className="language-button" onClick={() => setLocale((current) => current === "cs" ? "en" : "cs")} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button>
+        
       </nav>
     </header>
     {data.ignoredRuleCount > 0 && <p className="fleet-note">{dictionary.fleet.ignoredRules(data.ignoredRuleCount)}</p>}
