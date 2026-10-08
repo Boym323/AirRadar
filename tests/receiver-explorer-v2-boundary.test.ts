@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const pageSource = readFileSync(new URL("../components/receiver-coverage-page.tsx", import.meta.url), "utf8");
 const polarSource = readFileSync(new URL("../components/receiver-range-polar.tsx", import.meta.url), "utf8");
 const serverSource = readFileSync(new URL("../lib/server/statistics-coverage-intelligence.ts", import.meta.url), "utf8");
+const receiverCopy = readFileSync(new URL("../lib/i18n/receiver-explorer.ts", import.meta.url), "utf8");
 
 describe("Receiver Explorer V2 boundary", () => {
   it("reuses existing receiver data lanes without a new backend endpoint", () => {
@@ -34,7 +35,9 @@ describe("Receiver Explorer V2 boundary", () => {
   it("keeps source mix explicitly live-only and range analytics historical", () => {
     expect(pageSource).toContain('aircraft.source === "ADS-B"');
     expect(pageSource).toContain('aircraft.source === "MLAT"');
-    expect(pageSource).toContain("Pouze aktuální stav lokálního přijímače");
+    expect(pageSource).toContain("description={copy.sourceDescription}");
+    expect(receiverCopy).toContain("Pouze aktuální stav lokálního přijímače");
+    expect(receiverCopy).toContain("Current local receiver state only");
     expect(pageSource).toContain('const historyRanges: CoverageIntelligenceRange[] = ["7d", "30d"]');
   });
 

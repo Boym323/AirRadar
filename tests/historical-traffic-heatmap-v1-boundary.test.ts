@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 
 const page = readFileSync(new URL("../app/heatmap/page.tsx", import.meta.url), "utf8");
 const heatmap = readFileSync(new URL("../components/statistics-heatmap.tsx", import.meta.url), "utf8");
+const heatmapView = readFileSync(new URL("../components/heatmap-page-content.tsx", import.meta.url), "utf8");
 const server = readFileSync(new URL("../lib/server/statistics-heatmap.ts", import.meta.url), "utf8");
 
 describe("Historical Traffic Heatmap V1 boundary", () => {
   it("promotes the existing heatmap product at /heatmap", () => {
-    expect(page).toContain("<StatisticsHeatmap />");
+    expect(page).toContain("<HeatmapPageContent />");
+    expect(heatmapView).toContain("<StatisticsHeatmap />");
     expect(heatmap).toContain("/api/statistics/heatmap?range=");
     expect(heatmap).not.toContain("getPrisma");
     expect(heatmap).not.toContain("/api/heatmap");
