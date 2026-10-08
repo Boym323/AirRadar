@@ -76,7 +76,8 @@ function trackRelation(
   aircraft: AircraftView,
   airport: Airport,
 ): AirportTerminalTrackRelation {
-  if (!finite(aircraft.lat) || !finite(aircraft.lon) || !finite(aircraft.track)) return "UNKNOWN";
+  if (!finite(aircraft.lat) || !finite(aircraft.lon) || !finite(aircraft.track)
+    || aircraft.track < 0 || aircraft.track > 360) return "UNKNOWN";
   const bearing = initialBearing(aircraft.lat, aircraft.lon, airport.latitude, airport.longitude);
   const difference = angleDifference(aircraft.track, bearing);
   if (difference <= 70) return "TOWARD";
@@ -100,10 +101,14 @@ export function buildAirportTerminalDemandHorizonV9(input: {
 
   const candidates = input.liveAircraft.flatMap((aircraft): AirportTerminalDemandHorizonItem[] => {
     const destination = routeDestination(aircraft, identifiers);
-    if (!destination || aircraft.onGround || !finite(aircraft.lat) || !finite(aircraft.lon)) return [];
-    if (aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds > FRESH_POSITION_SECONDS) return [];
+    if (!destination || aircraft.onGround || !finite(aircraft.lat) || !finite(aircraft.lon)
+      || Math.abs(aircraft.lat) > 90 || Math.abs(aircraft.lon) > 180) return [];
+    // Missing, negative, or future-looking age must not certify fresh position evidence.
+    if (!finite(aircraft.seenPosSeconds) || aircraft.seenPosSeconds < 0
+      || aircraft.seenPosSeconds > FRESH_POSITION_SECONDS) return [];
     const lastSeenMs = Date.parse(aircraft.lastSeen);
-    if (!Number.isFinite(lastSeenMs) || nowMs - lastSeenMs > FRESH_OBSERVATION_MS) return [];
+    if (!Number.isFinite(lastSeenMs) || lastSeenMs > nowMs
+      || nowMs - lastSeenMs > FRESH_OBSERVATION_MS) return [];
 
     const distanceKm = haversineDistanceKm(
       aircraft.lat,
@@ -115,8 +120,13 @@ export function buildAirportTerminalDemandHorizonV9(input: {
     const groundSpeedKt = finite(aircraft.groundSpeed) && aircraft.groundSpeed >= 60
       ? aircraft.groundSpeed
       : null;
+    const relation = trackRelation(aircraft, input.airport);
     const distanceNm = distanceKm / 1.852;
-    const rawEta = groundSpeedKt === null ? null : distanceNm / groundSpeedKt * 60;
+    // Groundspeed and direct distance do not imply an inbound ETA while
+    // crossing, moving away, or lacking trustworthy track evidence.
+    const rawEta = groundSpeedKt === null || relation !== "TOWARD"
+      ? null
+      : distanceNm / groundSpeedKt * 60;
     const etaMinutes = rawEta !== null && rawEta <= MAX_ETA_MINUTES
       ? Number(rawEta.toFixed(1))
       : null;
@@ -128,7 +138,7 @@ export function buildAirportTerminalDemandHorizonV9(input: {
       etaMinutes,
       altitudeFt: aircraft.baroAltitude ?? aircraft.altitude ?? aircraft.geomAltitude ?? null,
       groundSpeedKt,
-      trackRelation: trackRelation(aircraft, input.airport),
+      trackRelation: relation,
       routeDestination: destination,
       estimateBasis: "DIRECT_DISTANCE_GROUNDSPEED",
     }];
