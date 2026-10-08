@@ -1008,8 +1008,24 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: [] }) });
             });
             await visualPage.route(/\/api\/operations\/predictive(?:\?.*)?$/, async (route) => {
-              const body = target.mockPredictiveOperations === "public" ? predictiveOperationsPublicFixture : predictiveOperationsAdminFixture;
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+              const fixture = target.mockPredictiveOperations === "public" ? predictiveOperationsPublicFixture : predictiveOperationsAdminFixture;
+              // Preview data are valid for only 45 seconds. Refresh their
+              // observation time per intercepted request: earlier screenshots
+              // must not make a later mobile capture falsely report STALE.
+              const evaluatedAt = new Date(Date.now() - 8_000).toISOString();
+              const etaAt = new Date(Date.now() + 28 * 60_000).toISOString();
+              const items = fixture.items.map((item) => {
+                const refreshed = { ...item };
+                for (const key of ["etaAdvisory", "runwayAdvisory", "trajectoryAdvisory", "etaAdminPreview", "runwayAdminPreview", "trajectoryAdminPreview"]) {
+                  if (!item[key]) continue;
+                  refreshed[key] = {
+                    ...item[key], evaluatedAt,
+                    ...(key === "etaAdvisory" || key === "etaAdminPreview" ? { estimatedArrivalAt: etaAt } : {}),
+                  };
+                }
+                return refreshed;
+              });
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...fixture, items }) });
             });
           }
           if (target.mockDailyRecap) {
