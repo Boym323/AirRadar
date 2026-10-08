@@ -181,6 +181,66 @@ describe("aircraft state service", () => {
     expect(service.getDiagnostics().trackFusionShadow.evaluations).toBe(before);
   });
 
+  it("continues publishing fresh network positions while initial metadata is pending", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("READSB_POLL_INTERVAL_MS", "30000");
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    vi.setSystemTime(new Date("2026-10-08T07:05:54.000Z"));
+    let finishMetadata!: (value: null) => void;
+    const getMetadata = vi.fn(() => new Promise<null>((resolve) => { finishMetadata = resolve; }));
+    const enrichment = new EnrichmentService({
+      initialAircraftMetadata: { name: "pending-catalog", getMetadata },
+    });
+    const networkGetSnapshot = vi.fn(async () => {
+      const now = new Date();
+      const aircraft = normalizeAircraft({
+        hex: "DEF456", lat: 50.2, lon: 14.2 + networkGetSnapshot.mock.calls.length / 1000,
+        seen: 0, seen_pos: 0, type: "adsb_icao",
+      }, receiver, now)!;
+      return { aircraft: [{ ...aircraft, origin: "adsblol" as const }],
+        fetchedAt: now.toISOString(), provider: "network-test" };
+    });
+    const service = new AircraftStateService(
+      { name: "empty-local", getSnapshot: async () => ({
+        aircraft: [], receiver, fetchedAt: new Date().toISOString(), provider: "empty-local",
+      }) },
+      enrichment,
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+      undefined, undefined,
+      {
+        name: "network-test", start: vi.fn(), stop: vi.fn(async () => undefined),
+        getSnapshot: networkGetSnapshot, getNextPollDelayMs: () => 1000,
+        getDiagnostics: () => ({
+          enabled: true, status: "online", lastAttemptAt: null, lastSuccessAt: null,
+          latencyMs: null, consecutiveFailures: 0, aircraftCount: 1,
+          positionedAircraftCount: 1, mlatAircraftCount: 0, radiusNm: 250,
+          pollIntervalMs: 1000, retryAfterMs: null,
+        }),
+      },
+    );
+    services.push(service);
+    const published: StateSnapshot[] = [];
+    service.subscribe((snapshot) => published.push(snapshot), { coverage: "extended" });
+    await service.waitForReady();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(getMetadata).toHaveBeenCalledOnce();
+
+    // Longer than the position TTL: a frozen first snapshot would disappear.
+    await vi.advanceTimersByTimeAsync(35_000);
+    expect(networkGetSnapshot.mock.calls.length).toBeGreaterThanOrEqual(36);
+    expect(getMetadata).toHaveBeenCalledOnce(); // No growing enrichment queue.
+    const aircraft = published.at(-1)?.aircraft.find((item) => item.icaoHex === "DEF456");
+    expect(aircraft?.lat).toBe(50.2);
+    expect(aircraft?.lastSeen).toBe(new Date().toISOString());
+    expect(aircraft?.lon).toBeGreaterThan(14.201);
+
+    await service.stop();
+    const notificationCount = published.length;
+    finishMetadata(null);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(published).toHaveLength(notificationCount);
+  });
+
   it("shares one cached snapshot construction across many listeners", async () => {
     const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
     services.push(service);

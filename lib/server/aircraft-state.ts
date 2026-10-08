@@ -239,6 +239,7 @@ export class AircraftStateService {
   private running = false;
   private refreshing = false;
   private networkRefreshing = false;
+  private networkMetadataRefreshing = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private networkTimer: ReturnType<typeof setTimeout> | null = null;
   private initialRefresh: Promise<void> | null = null;
@@ -905,14 +906,20 @@ export class AircraftStateService {
       this.applyNetworkSnapshot(networkSnapshot);
       this.notify();
 
-      // Network-only aircraft should still receive the same initial metadata
-      // lookup as local aircraft, but enrichment is deliberately best-effort.
-      try {
-        const aircraft = await this.hydrateInitialIconMetadata(networkSnapshot.aircraft, this.networkAircraft);
-        if (!this.running) return;
-        this.applyNetworkInitialMetadata(aircraft);
-      } catch (error) {
-        logger.debug({ error }, "AirRadar network metadata hydration skipped");
+      // Metadata must not hold the ingest lock or delay its next poll.
+      // One pending batch bounds work even if the catalog never settles.
+      if (!this.networkMetadataRefreshing && this.enrichment.hasInitialMetadataProvider) {
+        this.networkMetadataRefreshing = true;
+        void this.hydrateInitialIconMetadata(networkSnapshot.aircraft, this.networkAircraft)
+          .then((aircraft) => {
+            if (this.running) this.applyNetworkInitialMetadata(aircraft);
+          })
+          .catch((error) => {
+            logger.debug({ error }, "AirRadar network metadata hydration skipped");
+          })
+          .finally(() => {
+            this.networkMetadataRefreshing = false;
+          });
       }
     } catch {
       // The optional provider owns its bounded stale state and diagnostics.
