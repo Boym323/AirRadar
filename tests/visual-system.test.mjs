@@ -53,7 +53,7 @@ describe("visual system v3.1", () => {
       "../components/radar/radar-operations-center.module.css",
     ]) {
       const radarCss = readFileSync(new URL(relativePath, import.meta.url), "utf8");
-      expect(radarCss).not.toMatch(/font-size:\s*9px;/);
+      expect(radarCss).not.toMatch(/font-size:\s*[789]px\s*;/);
     }
   });
 
