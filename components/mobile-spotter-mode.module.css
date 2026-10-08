@@ -611,3 +611,186 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* My Sky V2 — one accessible, responsive focus point over the existing tools. */
+.focusPanel {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.focusWelcome {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.focusWelcome p {
+  margin: 0;
+}
+
+.focusWelcome small {
+  color: var(--muted);
+}
+
+.focusHero {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.focusIdentity {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.focusIdentity > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.focusIdentity strong {
+  font-size: clamp(1.15rem, 3vw, 1.65rem);
+  overflow-wrap: anywhere;
+}
+
+.focusIdentity small,
+.focusIdentity span,
+.focusRoute,
+.focusInterest small {
+  color: var(--muted);
+}
+
+.focusInterest {
+  flex: 0 0 auto;
+  display: grid;
+  text-align: center;
+  justify-items: center;
+  min-width: 3.5rem;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.focusInterest strong {
+  font-size: 1.35rem;
+}
+
+.focusRoute {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.focusFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  gap: var(--space-2);
+}
+
+.focusFacts > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.focusFacts dt {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.focusFacts dd {
+  margin: 0;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.focusActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.focusActions a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: .45rem .4rem;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: .77rem;
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.focusActions a:hover,
+.focusActions a:focus-visible {
+  background: var(--panel);
+  outline-offset: 2px;
+}
+
+.focusChoices {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.focusChoice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.focusChoice[data-selected="true"] {
+  outline: 2px solid currentColor;
+  outline-offset: -3px;
+}
+
+.focusChoice > span:first-child {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.focusChoice strong {
+  overflow-wrap: anywhere;
+}
+
+.focusChoice small {
+  color: var(--muted);
+}
+
+@media (min-width: 640px) {
+  .focusFacts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 350px) {
+  .focusActions {
+    grid-template-columns: 1fr;
+  }
+}

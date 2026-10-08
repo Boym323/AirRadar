@@ -963,6 +963,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
+        { name: "my-sky-focus-mobile", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 390, height: 844 }, fullPage: false },
         // Visual V3.3: reproducible data, empty, unavailable, locale and menu states.
         { name: "weather-data-desktop", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockWeather: "data" },
         { name: "weather-empty-mobile", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 390, height: 844 }, fullPage: true, mockWeather: "empty" },
@@ -1156,6 +1158,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             console.warn(`[production-gates] visual smoke ${target.path} root was not visible after initial navigation; retrying page load`);
             await visualPage.reload({ waitUntil: "domcontentloaded" });
             await targetRoot.waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.name.startsWith("my-sky-focus-")) {
+            await visualPage.locator('[data-testid="my-sky-focus-v2"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Ukázat moje nebe", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.name === "system-desktop") {
             // The public status must load successfully before we reuse its
