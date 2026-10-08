@@ -17,6 +17,46 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.362] - 2026-10-08
+
+Changes since v1.0.361.
+
+**Features touched:** Time Machine.
+
+### Changed
+
+- Visual V3.3-B: tematické menu Více a sjednocené mobilní ikony (#599) (f7b609c8)
+- Visual V3.3-D: Time Machine bez falešného data 1970 (#600) (360ae3d0)
+- Visual V3.3-C: deterministické screenshoty chybějících stránek (#601) (dfc657fc)
+- Replace legacy HUD literals with equivalent design tokens (#603) (2c79e3ff)
+
+### Fixed
+
+- Aktualizovat navigační testy po Visual System V3.3-B (#604) (05388396)
+- Mobilní menu ve screenshot testu cílit na viditelný panel (#605) (f4786820)
+- Obnovit čas prediktivních dat u každého screenshotu (#606) (33557285)
+- Odstranit Playwright response-disposed race v systémovém snapshotu (#607) (e6ccec44)
+- Aktualizovat i18n test systémového snapshotu po opravě race (#608) (6ca4efd2)
+
+### Maintenance
+
+- Sync generated repository metadata (#602) (510facdc)
+
+<details>
+<summary>Technical commits</summary>
+
+- Visual V3.3-B: tematické menu Více a sjednocené mobilní ikony (#599) (f7b609c8)
+- chore(metadata): sync generated repository metadata (#602) (510facdc)
+- Visual V3.3-D: Time Machine bez falešného data 1970 (#600) (360ae3d0)
+- Visual V3.3-C: deterministické screenshoty chybějících stránek (#601) (dfc657fc)
+- refactor(visual): replace legacy HUD literals with equivalent design tokens (#603) (2c79e3ff)
+- fix(ci): aktualizovat navigační testy po Visual System V3.3-B (#604) (05388396)
+- fix(visual): mobilní menu ve screenshot testu cílit na viditelný panel (#605) (f4786820)
+- fix(visual): obnovit čas prediktivních dat u každého screenshotu (#606) (33557285)
+- fix(visual): odstranit Playwright response-disposed race v systémovém snapshotu (#607) (e6ccec44)
+- fix(ci): aktualizovat i18n test systémového snapshotu po opravě race (#608) (6ca4efd2)
+
+</details>
 ## [1.0.361] - 2026-10-08
 
 Changes since v1.0.360.
