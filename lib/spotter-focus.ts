@@ -1,5 +1,7 @@
 import type { AircraftView, LogbookLabel } from "@/lib/aircraft/types";
 import { isLocalSpotterAircraft } from "@/lib/spotter";
+import { mySkyPersonalSignal, type MySkyFavorites, type MySkyPersonalSignal } from "@/lib/spotter-personalization";
+import type { SpotterLogbookState } from "@/lib/spotter-logbook";
 import { scoreSpotterInterest, type SpotterInterestScore } from "@/lib/spotter-interest";
 import {
   observerGeometry, predictClosestApproach,
@@ -15,6 +17,7 @@ export interface MySkyFocusItem {
   interest: SpotterInterestScore;
   kind: MySkyFocusKind;
   rank: number;
+  personal: MySkyPersonalSignal;
 }
 
 export interface MySkyFocus {
@@ -44,6 +47,7 @@ export function buildMySkyFocus(
   labelsByHex: ReadonlyMap<string, readonly LogbookLabel[]> = new Map(),
   receptionRecordHex: string | null = null,
   limit = 5,
+  context: { favorites: MySkyFavorites; logbook: SpotterLogbookState } | null = null,
 ): MySkyFocus {
   const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(8, Math.floor(limit))) : 5;
   const seen = new Set<string>();
@@ -59,10 +63,13 @@ export function buildMySkyFocus(
       closestApproach?.closestHorizontalDistanceKm ?? null, receptionRecordHex,
     );
     const kind = kindFor(geometry, closestApproach, interest);
+    const personal = context ? mySkyPersonalSignal(item.icaoHex, context.favorites, context.logbook)
+      : { favorite: false, sightings: 0, lastSeenAt: null };
     const proximity = Math.max(0, MAX_RADIUS_KM - geometry.horizontalDistanceKm) * 1.5;
     const imminent = kind === "APPROACHING" ? Math.max(0, 10 - closestApproach!.secondsUntilClosest / 60) * 3 : 0;
-    const rank = interest.score * 2 + proximity + imminent + (kind === "OVERHEAD" ? 60 : 0);
-    eligible.push({ aircraft: item, geometry, closestApproach, interest, kind, rank });
+    const rank = interest.score * 2 + proximity + imminent + (kind === "OVERHEAD" ? 60 : 0)
+      + (personal.favorite ? 40 : 0) + (personal.sightings > 0 ? 15 : 0);
+    eligible.push({ aircraft: item, geometry, closestApproach, interest, kind, rank, personal });
   }
   eligible.sort((a, b) => b.rank - a.rank
     || a.geometry.horizontalDistanceKm - b.geometry.horizontalDistanceKm
