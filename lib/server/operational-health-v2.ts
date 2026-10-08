@@ -17,6 +17,7 @@ export interface OperationalHealthV2 {
     coalescedSnapshotsSinceStart: number;
   };
   databaseState: SystemStatus;
+  predictiveCapture: "ACTIVE" | "DISABLED" | "UNAVAILABLE";
   deliveryDiagnostics: "SEPARATE_ADMIN_ENDPOINT";
 }
 
@@ -28,6 +29,7 @@ export function buildOperationalHealthV2(input: {
   coalescedAircraftSnapshots: number;
   databaseStatus: "ok" | "offline" | "disabled";
   historyStatus: SystemStatus;
+  predictiveValidation?: { enabled: boolean };
 }): OperationalHealthV2 {
   const count = (n: number) => Number.isFinite(n) ? Math.max(0, Math.min(1_000_000_000, Math.trunc(n))) : 0;
   const reasons: OperationalHealthReason[] = [];
@@ -41,7 +43,7 @@ export function buildOperationalHealthV2(input: {
   const denied = count(input.deniedSse.global) + count(input.deniedSse.channel) + count(input.deniedSse.client);
   return {
     version: "operational-health-v2",
-    state: reasons.length ? "DEGRADED" : input.source.availability === "UNKNOWN" ? "INSUFFICIENT_DATA" : "HEALTHY",
+    state: reasons.length ? "DEGRADED" : input.source.availability === "UNKNOWN" || input.databaseStatus === "disabled" ? "INSUFFICIENT_DATA" : "HEALTHY",
     reasons,
     sourceAvailability: input.source.availability,
     stream: {
@@ -51,6 +53,7 @@ export function buildOperationalHealthV2(input: {
       coalescedSnapshotsSinceStart: count(input.coalescedAircraftSnapshots),
     },
     databaseState: input.databaseStatus,
+    predictiveCapture: !input.predictiveValidation ? "UNAVAILABLE" : input.predictiveValidation.enabled ? "ACTIVE" : "DISABLED",
     deliveryDiagnostics: "SEPARATE_ADMIN_ENDPOINT",
   };
 }
