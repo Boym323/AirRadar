@@ -43,7 +43,9 @@ describe("persistent Czech / English language switch", () => {
     expect(shell).toContain('className="desktop-language-switch"');
     expect(shell).toContain('className="mobile-language-switch"');
     expect(shell).toContain('function primaryNavigation()');
-    expect(shell).toContain('function moreNavigation()');
+    expect(shell).toContain('function moreNavigationGroups()');
+    expect(shell).toContain('<MoreNavigationGroups pathname={pathname} />');
+    expect(shell).toContain('<MoreNavigationGroups pathname={pathname} mobile />');
     expect(shell).toContain('function radarRailNavigation()');
     expect(css).toContain("@media (max-width: 820px)");
     expect(css).toContain(".desktop-language-switch { display: none; }");
