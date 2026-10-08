@@ -17,6 +17,20 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.354] - 2026-10-08
+
+Changes since v1.0.353.
+
+### Added
+
+- Implement isFreshNetworkPosition function and update references in source-merge and adsblol-provider (c6426947)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: implement isFreshNetworkPosition function and update references in source-merge and adsblol-provider (c6426947)
+
+</details>
 ## [1.0.353] - 2026-10-08
 
 Changes since v1.0.352.
