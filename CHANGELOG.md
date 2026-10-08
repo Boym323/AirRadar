@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.367] - 2026-10-08
+
+Changes since v1.0.366.
+
+**Features touched:** Mobile Spotter Mode.
+
+### Changed
+
+- Complete stage B: private My Sky favorites, sighting memory, Follow Journey and opt-in alerts (#620) (078755f4)
+
+### Maintenance
+
+- Sync generated repository metadata (#619) (94220b22)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#619) (94220b22)
+- Complete stage B: private My Sky favorites, sighting memory, Follow Journey and opt-in alerts (#620) (078755f4)
+
+</details>
 ## [1.0.366] - 2026-10-08
 
 Changes since v1.0.365.
