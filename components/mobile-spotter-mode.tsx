@@ -665,7 +665,7 @@ export function MobileSpotterMode() {
     ? evaluateVisualAcquisition(skyStory.aircraft, observer, nearestMetar)
     : null;
 
-  const skyTarget = useMemo(() => {
+  const skyTarget = (() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
     const preferred = focusItem
       ?? interestingAircraft[0]
@@ -681,7 +681,7 @@ export function MobileSpotterMode() {
       geometry,
       direction,
     };
-  }, [deviceHeading, distanceOrigin, focusItem, interestingAircraft, observer, upcomingPasses, visibleAircraft]);
+  })();
 
   const lightContext = skyTarget && observer
     ? lightGeometry(
