@@ -61,7 +61,7 @@ export function DeliveryHealthPage() {
       kicker={copy.kicker}
       title={copy.title}
       description={copy.description}
-      actions={data ? <StatusBadge variant={statusVariant(data.status)}>{data.status === "HEALTHY" ? copy.healthy : data.status === "DEGRADED" ? copy.degraded : data.status}</StatusBadge> : undefined}
+      actions={data ? <StatusBadge variant={statusVariant(data.status)}>{data.status === "HEALTHY" ? copy.healthy : data.status === "DEGRADED" ? copy.degraded : copy.disabled}</StatusBadge> : undefined}
     />
     {error ? <EmptyState title={copy.unavailable} /> : !data ? <p>{t.common.loading}</p> : <>
       <MetricStrip>
