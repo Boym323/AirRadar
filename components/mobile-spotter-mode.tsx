@@ -831,13 +831,6 @@ export function MobileSpotterMode() {
       </div>}
     />
 
-    <MetricStrip className={styles.metrics}>
-      <MetricCard value={snapshot ? formatNumber(localAircraft.length) : "—"} label={copy.liveNearby} />
-      <MetricCard value={discovery ? formatNumber(discovery.newAircraftToday) : "—"} label={copy.newToday} />
-      <MetricCard value={discovery ? formatNumber(discovery.rareAircraftToday) : "—"} label={copy.rareToday} />
-      <MetricCard value={discovery?.todayReceptionRecord ? formatDistance(discovery.todayReceptionRecord.distanceKm) : "—"} label={copy.receptionRecord} />
-    </MetricStrip>
-
     <Panel className={styles.locationMode}>
       <SectionHeader
         kicker="MY SKY"
@@ -868,8 +861,8 @@ export function MobileSpotterMode() {
         kicker="MY SKY / NOW"
         title={copy.mySkyFocusTitle}
         description={copy.mySkyFocusDescription}
-        actions={<StatusBadge variant={feedState === "live" && observerState === "ready" ? "live" : feedState === "unavailable" ? "danger" : "stale"}>
-          {feedState === "live" && observerState === "ready" ? copy.live : feedState === "unavailable" ? copy.unavailable : copy.stale}
+        actions={<StatusBadge variant={feedState === "live" ? "live" : feedState === "unavailable" ? "danger" : feedState === "stale" ? "stale" : "neutral"}>
+          {feedState === "live" ? copy.live : feedState === "unavailable" ? copy.unavailable : feedState === "stale" ? copy.stale : copy.loading}
         </StatusBadge>}
       />
       {distanceOrigin !== "observer" ? <div className={styles.focusWelcome}>
@@ -943,6 +936,13 @@ export function MobileSpotterMode() {
             </> : <EmptyState title={copy.mySkyFocusEmpty} description={copy.mySkyFocusEmptyDescription} />}
           </>}
     </Panel>
+
+    <MetricStrip className={styles.metrics}>
+      <MetricCard value={snapshot ? formatNumber(localAircraft.length) : "—"} label={copy.liveNearby} />
+      <MetricCard value={discovery ? formatNumber(discovery.newAircraftToday) : "—"} label={copy.newToday} />
+      <MetricCard value={discovery ? formatNumber(discovery.rareAircraftToday) : "—"} label={copy.rareToday} />
+      <MetricCard value={discovery?.todayReceptionRecord ? formatDistance(discovery.todayReceptionRecord.distanceKm) : "—"} label={copy.receptionRecord} />
+    </MetricStrip>
 
     {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
       <SectionHeader
