@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.352] - 2026-10-08
+
+Changes since v1.0.351.
+
+### Fixed
+
+- Avoid redundant npm ci for validated Prisma-unchanged artifacts (#570) (c755d9ab)
+
+### Maintenance
+
+- Sync generated repository metadata (#568) (d951ef4e)
+- Visual System V3.1 readability and source HUD polish (#569) (97629472)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#568) (d951ef4e)
+- style: Visual System V3.1 readability and source HUD polish (#569) (97629472)
+- fix(deploy): avoid redundant npm ci for validated Prisma-unchanged artifacts (#570) (c755d9ab)
+
+</details>
 ## [1.0.351] - 2026-10-08
 
 Changes since v1.0.350.
