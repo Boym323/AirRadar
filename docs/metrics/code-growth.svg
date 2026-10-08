@@ -7,9 +7,9 @@
   <text x="48" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#59636e">Daily Git history · non-empty physical source lines</text>
 
   <line x1="500" y1="47" x2="528" y2="47" stroke="#0969da" stroke-width="3" stroke-linecap="round"/>
-  <text x="536" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Production 130,584</text>
+  <text x="536" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Production 130,777</text>
   <line x1="700" y1="47" x2="728" y2="47" stroke="#8250df" stroke-width="3" stroke-linecap="round"/>
-  <text x="736" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Tests 39,465</text>
+  <text x="736" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Tests 39,541</text>
 
   <line x1="72" y1="92.0" x2="928" y2="92.0" stroke="#d8dee4" stroke-width="1"/>
   <text x="60" y="96.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">200k</text>
@@ -27,15 +27,15 @@
   <line x1="72" y1="92" x2="72" y2="344" stroke="#8c959f" stroke-width="1"/>
   <line x1="72" y1="344" x2="928" y2="344" stroke="#8c959f" stroke-width="1"/>
 
-  <path d="M 72.0 334.6 L 97.3 331.6 L 126.5 319.9 L 151.8 314.3 L 180.8 304.3 L 206.7 299.2 L 232.3 293.8 L 288.0 293.2 L 311.7 291.0 L 339.4 291.0 L 371.3 288.8 L 390.2 284.2 L 424.7 279.9 L 447.4 277.4 L 498.0 276.2 L 530.0 273.8 L 614.0 267.7 L 640.4 259.6 L 663.9 254.9 L 693.8 253.3 L 770.9 250.4 L 799.5 249.0 L 829.2 234.8 L 855.6 219.3 L 885.1 203.0 L 910.8 181.2 L 928.0 179.5" fill="none" stroke="#0969da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 72.0 342.5 L 97.3 341.0 L 126.5 337.2 L 151.8 335.4 L 180.8 332.4 L 206.7 330.7 L 232.3 329.6 L 288.0 329.4 L 311.7 329.3 L 339.4 329.3 L 371.3 328.9 L 390.2 328.0 L 424.7 327.1 L 447.4 326.3 L 498.0 325.5 L 530.0 324.7 L 614.0 322.2 L 640.4 320.3 L 663.9 319.8 L 693.8 318.7 L 770.9 318.3 L 799.5 317.6 L 829.2 311.6 L 855.6 305.1 L 885.1 299.6 L 910.8 295.0 L 928.0 294.3" fill="none" stroke="#8250df" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="928.0" cy="179.5" r="4.5" fill="#0969da"/>
-  <circle cx="928.0" cy="294.3" r="4.5" fill="#8250df"/>
+  <path d="M 72.0 334.6 L 97.2 331.6 L 126.4 319.9 L 151.7 314.3 L 180.6 304.3 L 206.4 299.2 L 232.0 293.8 L 287.6 293.2 L 311.2 291.0 L 338.9 291.0 L 370.8 288.8 L 389.6 284.2 L 424.0 279.9 L 446.7 277.4 L 497.2 276.2 L 529.1 273.8 L 613.0 267.7 L 639.3 259.6 L 662.8 254.9 L 692.6 253.3 L 769.6 250.4 L 798.1 249.0 L 827.8 234.8 L 854.1 219.3 L 883.6 203.0 L 909.2 181.2 L 928.0 179.2" fill="none" stroke="#0969da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 72.0 342.5 L 97.2 341.0 L 126.4 337.2 L 151.7 335.4 L 180.6 332.4 L 206.4 330.7 L 232.0 329.6 L 287.6 329.4 L 311.2 329.3 L 338.9 329.3 L 370.8 328.9 L 389.6 328.0 L 424.0 327.1 L 446.7 326.3 L 497.2 325.5 L 529.1 324.7 L 613.0 322.2 L 639.3 320.3 L 662.8 319.8 L 692.6 318.7 L 769.6 318.3 L 798.1 317.6 L 827.8 311.6 L 854.1 305.1 L 883.6 299.6 L 909.2 295.0 L 928.0 294.2" fill="none" stroke="#8250df" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="928.0" cy="179.2" r="4.5" fill="#0969da"/>
+  <circle cx="928.0" cy="294.2" r="4.5" fill="#8250df"/>
 
   <text x="72.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-06</text>
-  <text x="206.7" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-11</text>
-  <text x="371.3" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-17</text>
-  <text x="614.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-26</text>
-  <text x="799.5" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-10-03</text>
+  <text x="206.4" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-11</text>
+  <text x="370.8" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-17</text>
+  <text x="613.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-26</text>
+  <text x="798.1" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-10-03</text>
   <text x="928.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-10-08</text>
 </svg>
