@@ -16,6 +16,7 @@ import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-
 import { buildAirportArrivalFlowIntelligence } from "@/lib/airport-intelligence/arrival-flow-v8";
 import { buildAirportRunwayChangeEvidenceD2 } from "@/lib/airport-intelligence/runway-change-evidence-d2";
 import { buildAirportApproachEvidenceD3 } from "@/lib/airport-intelligence/approach-evidence-d3";
+import { buildAirportContextD4 } from "@/lib/airport-intelligence/airport-context-d4";
 import { airportDText } from "@/lib/i18n/airport-d-extras";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
@@ -346,6 +347,7 @@ export function AirportOperationsBoard({
   });
   const runwayEvidenceD2 = buildAirportRunwayChangeEvidenceD2(runwayFlow, arrivalFlow);
   const approachEvidenceD3 = buildAirportApproachEvidenceD3({traffic: activeTraffic, operations});
+  const airportContextD4 = buildAirportContextD4({runway: runwayEvidenceD2, arrival: arrivalFlow, approach: approachEvidenceD3, windAvailable: Boolean(weather?.metar)});
   const airportDCopy = airportDText(t.locale);
   const terminalDemandHorizon = operations?.terminalDemandHorizon ?? null;
   const timeline = buildAirportOperationsTimeline(operations);
@@ -689,6 +691,17 @@ export function AirportOperationsBoard({
         </li>)}
       </ol> : <p className="airport-v3-empty">{airportDCopy.noApproach}</p>}
       <p className="airport-v3-disclaimer">{airportDCopy.approachDisclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-d4-operational-context" aria-label={airportDCopy.contextHeading}>
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D4</span><h3>{airportDCopy.contextHeading}</h3></div>
+      </div>
+      {airportContextD4.signals.length ? <ul className="airport-live-flight-list">
+        {airportContextD4.signals.map((signal) => <li key={signal}>{airportDCopy.contextSignals[signal]}</li>)}
+      </ul> : <p className="airport-v3-empty">{airportDCopy.noContext}</p>}
+      <p><Link href="/airspace">{airportDCopy.contextAtcLink} ↗</Link></p>
+      <p className="airport-v3-disclaimer">{airportDCopy.contextDisclaimer}</p>
     </section>
 
     {terminalDemandHorizon ? <section
