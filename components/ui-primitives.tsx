@@ -225,7 +225,7 @@ export function IconButton({
 export function UiIcon({
   name,
 }: {
-  name: "close" | "back" | "play" | "pause" | "layers" | "search" | "aircraft" | "airport" | "waypoint" | "radar" | "flight" | "statistics" | "time" | "atc" | "system";
+  name: "close" | "back" | "play" | "pause" | "layers" | "search" | "aircraft" | "airport" | "waypoint" | "radar" | "flight" | "statistics" | "time" | "atc" | "system" | "home" | "more";
 }) {
   const paths = {
     close: "M6 6 18 18M18 6 6 18",
@@ -243,6 +243,8 @@ export function UiIcon({
     time: "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
     atc: "M12 3v18M3 12h18M6 6l12 12M18 6 6 18",
     system: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-5v2m0 14v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M3 12h2m14 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+    home: "M3 10.5 12 3l9 7.5V21h-6v-7H9v7H3V10.5Z",
+    more: "M5 12h.1M12 12h.1M19 12h.1",
   } as const;
   return (
     <svg
