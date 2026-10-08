@@ -31,8 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="cs" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        <AirRadarQueryProvider><LocaleProvider>{children}<CommandPalette /></LocaleProvider></AirRadarQueryProvider>
-        <PwaRegister />
+        <AirRadarQueryProvider><LocaleProvider>{children}<CommandPalette /><PwaRegister /></LocaleProvider></AirRadarQueryProvider>
       </body>
     </html>
   );
