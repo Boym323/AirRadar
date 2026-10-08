@@ -377,6 +377,7 @@ export function AirportOperationsBoard({
           detail={runwayShare ? `${runwayShare} · n=${runway.inferredCount}` : t.airport.operationalNoRunway}
         />
         <MetricCard
+          className="airport-v3-wind-metric"
           label={t.airport.operationalWind}
           value={wind ?? "—"}
           detail={weather?.metar?.flightCategory ?? t.airport.operationalNoWind}
