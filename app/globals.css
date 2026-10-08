@@ -5977,8 +5977,9 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 
-/* Visual System V3 mobile hotfix: keep narrow controls inside the viewport. */
-@media (max-width: 480px) {
+/* Visual System V3 mobile/tablet hotfix: keep the Layers sheet inside
+ * the viewport for the full map-only breakpoint. */
+@media (max-width: 820px) {
   .map-layers-menu {
     position: fixed;
     top: calc(var(--radar-topbar-height-mobile) + 64px);
