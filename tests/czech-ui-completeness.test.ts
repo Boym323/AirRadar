@@ -50,6 +50,36 @@ describe("Czech UI localization coverage", () => {
     }
   });
 
+  it("keeps operations, airport boards and prediction diagnostics in Czech", () => {
+    const cs = getTranslations();
+    expect(cs.operations.contextDisclaimer).toContain("nejde o výstrahu před srážkou");
+    expect(cs.operations.attentionDescription).toContain("Regionální situace");
+    expect(cs.airport.liveBoardV7ArrivalKicker).toBe("Pořadí příletů");
+    expect(cs.airport.liveBoardV9Kicker).toBe("Výhled příletové poptávky");
+    expect(cs.system.predictiveRolloutStateLabels.SHADOW_COLLECTING).toBe("EXPERIMENTÁLNÍ · sběr podkladů");
+    expect(cs.system.predictiveRolloutStateLabels.READY_FOR_PUBLIC_CONFIG).toBe("Připraveno k veřejnému zapnutí");
+    expect(cs.system.predictiveCalibrationPhaseLabels.READY).toBe("Připraveno ke kontrole");
+    expect(cs.system.predictiveCalibrationPhaseLabels.TRUTH_BLOCKED).toBe("Blokováno nedostatkem ověření nebo měření");
+    expect(cs.aircraft.predictiveAdminPreview).toBe("SPRÁVA · EXPERIMENTÁLNÍ NÁHLED");
+  });
+
+  it("keeps production smoke expectations synchronized with Czech user-facing labels", () => {
+    const gates = source("scripts/production-gates.mjs");
+    const cs = getTranslations();
+    for (const copy of [
+      cs.system.predictiveRolloutStateLabels.SHADOW_COLLECTING,
+      cs.system.predictiveRolloutStateLabels.READY_FOR_PUBLIC_CONFIG,
+      cs.system.predictiveCalibrationPhaseLabels.READY,
+      cs.system.predictiveCalibrationPhaseLabels.COLLECTING,
+      cs.system.predictiveCalibrationPhaseLabels.TRUTH_BLOCKED,
+      cs.aircraft.predictiveAdminPreview,
+    ]) {
+      expect(gates, copy).toContain(JSON.stringify(copy));
+    }
+    expect(gates).not.toContain("SHADOW · sbírání evidence");
+    expect(gates).not.toContain("ADMIN · SHADOW PREVIEW");
+  });
+
   it("renders Czech receiver coverage text including SVG and dynamic health", () => {
     const explorer = source("components/receiver-coverage-page.tsx");
     const polar = source("components/receiver-coverage-polar.tsx");
