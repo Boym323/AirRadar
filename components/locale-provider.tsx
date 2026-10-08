@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { localizedPageMetadata } from "@/lib/i18n/page-metadata";
 import { createContext, Fragment, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { DEFAULT_LOCALE, normalizeLocalePreference, setClientLocale, type LocaleKey } from "@/lib/i18n";
 
@@ -12,6 +14,7 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 export function LocaleProvider({ children }: { children: ReactNode }) {
   // Match SSR's Czech markup for hydration. Restore the saved language after mounting.
   const [locale, updateLocale] = useState<LocaleKey>(DEFAULT_LOCALE);
+  const pathname = usePathname();
 
   const setLocale = useCallback((next: LocaleKey) => {
     setClientLocale(next);
@@ -31,6 +34,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     window.addEventListener("storage", syncFromAnotherTab);
     return () => window.removeEventListener("storage", syncFromAnotherTab);
   }, [setLocale]);
+
+  useEffect(() => {
+    const metadata = localizedPageMetadata(pathname ?? "/", locale);
+    if (metadata.title) document.title = metadata.title;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", metadata.description);
+  }, [locale, pathname]);
 
   return <LocaleContext.Provider value={{ locale, setLocale }}>
     {/* Remount local UI on change so even existing consumers of the shared t dictionary update.
