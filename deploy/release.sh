@@ -650,8 +650,61 @@ NODE
   log "Prepared CI build staged for commit ${NEW_SHA}"
 }
 
+# The standalone artifact already contains its runtime dependencies. Avoid a
+# second full npm install on the memory-constrained production host when the
+# *currently served* release has the same Prisma schema/migrations. The checkout
+# SHA alone is not trustworthy: a failed deploy may have fast-forwarded HEAD
+# without activating its build.
+prepared_artifact_needs_no_prisma_bootstrap() {
+  local version_url version_response deployed_sha
+
+  (( AUTOMATED == 1 )) && [[ -n "${PREPARED_BUILD_ROOT}" ]] || return 1
+
+  version_url="${PUBLIC_HEALTH_URL%/api/health}/api/version"
+  if ! version_response="$(curl --fail --silent --show-error --max-time 10 "${version_url}")"; then
+    warn "Could not determine the live production commit; retaining the full Prisma bootstrap."
+    return 1
+  fi
+
+  if ! deployed_sha="$(printf '%s' "${version_response}" | node -e '
+    let raw = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => { raw += chunk; });
+    process.stdin.on("end", () => {
+      try {
+        const value = JSON.parse(raw);
+        if (value.channel !== "production" || !/^[0-9a-f]{8,40}$/i.test(value.commit || "")) process.exit(1);
+        process.stdout.write(value.commit);
+      } catch {
+        process.exit(1);
+      }
+    });
+  ')"; then
+    warn "Production version metadata is invalid; retaining the full Prisma bootstrap."
+    return 1
+  fi
+
+  if ! git_cmd cat-file -e "${deployed_sha}^{commit}"; then
+    warn "Served production commit ${deployed_sha} is unavailable locally; retaining the full Prisma bootstrap."
+    return 1
+  fi
+
+  if ! git_cmd diff --quiet "${deployed_sha}" "${NEW_SHA}" -- migrations prisma prisma.config.ts; then
+    log "Prisma sources/migrations changed since deployed commit ${deployed_sha}; dependency install and migration apply are required."
+    return 1
+  fi
+
+  log "Validated standalone artifact with unchanged Prisma sources since ${deployed_sha}; skipping redundant npm ci/Prisma tooling."
+  return 0
+}
+
 run_release_steps() {
   cleanup_stale_smoke_validation_dirs
+
+  if prepared_artifact_needs_no_prisma_bootstrap; then
+    validate_and_stage_prepared_build
+    return 0
+  fi
 
   log "Installing deploy dependencies"
   npm ci --prefer-offline --no-audit --no-fund
