@@ -76,7 +76,7 @@ describe("Czech UI localization coverage", () => {
       ["components/traffic-geography.tsx", 'title: "Geografie provozu"'],
       ["components/flight-compare.tsx", 'distance: "Délka zaznamenané stopy"'],
       ["components/airport-compare.tsx", 'title: "Porovnání letišť"'],
-      ["components/aircraft-discovery.tsx", 'sourceUnavailable: "Údaje o objevovaných letadlech jsou dočasně nedostupná."'],
+      ["components/aircraft-discovery.tsx", 'sourceUnavailable: "Údaje o objevovaných letadlech jsou dočasně nedostupné."'],
       ["components/aircraft-type-explorer.tsx", 'title: "Typy letadel"'],
       ["components/operator-explorer.tsx", 'topAirline: "Nejčastější společnost"'],
       ["components/flight-intelligence-analytics.tsx", 'title: "Analýza událostí letů"'],
