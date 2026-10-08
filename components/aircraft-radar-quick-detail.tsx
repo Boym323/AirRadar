@@ -729,6 +729,7 @@ export function AircraftRadarQuickDetail({
   sectorTraffic,
 }: AircraftRadarQuickDetailProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("flight");
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const metadata = aircraft.enrichment?.metadata;
   const registration: string | null = aircraft.registration ?? metadata?.registration ?? databaseAircraft?.registration ?? null;
   const headerType = metadata?.icaoTypeCode ?? aircraft.aircraftType ?? databaseAircraft?.aircraftType ?? null;
@@ -766,6 +767,7 @@ export function AircraftRadarQuickDetail({
     <header className="aircraft-quick-header">
       <div className="aircraft-quick-header-actions">
         <button type="button" className="detail-back-button" onClick={onBack}>{t.radar.trafficNearby}</button>
+        <button type="button" className="aircraft-quick-mobile-expand" aria-controls="radar-sidebar" aria-expanded={mobileExpanded} aria-label={mobileExpanded ? t.radar.collapseAircraftPanel : t.radar.expandAircraftPanel} title={mobileExpanded ? t.radar.collapseAircraftPanel : t.radar.expandAircraftPanel} onClick={() => setMobileExpanded((value) => !value)}><span aria-hidden="true">{mobileExpanded ? "↓" : "↑"}</span></button>
         <button type="button" className="close-button" onClick={onClose} aria-label={t.history.closeAircraftDetails}>×</button>
       </div>
       <div className="aircraft-quick-identity-row">

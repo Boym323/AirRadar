@@ -917,6 +917,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
         { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
+        { name: "radar-mobile-selected-expanded", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true, expandAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW – provozní přehled" },
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
@@ -1182,6 +1183,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible", timeout: 15_000 });
             await sidebar.locator(".aircraft-row").first().click();
             await visualPage.locator('[data-testid="aircraft-quick-detail"]').waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.expandAircraft) {
+            const drawer = visualPage.locator("#radar-sidebar");
+            const before = await drawer.boundingBox();
+            const expand = drawer.locator(".aircraft-quick-mobile-expand");
+            await expand.waitFor({ state: "visible", timeout: 15_000 });
+            await expand.click();
+            await visualPage.waitForFunction(() => document.querySelector(".aircraft-quick-mobile-expand")?.getAttribute("aria-expanded") === "true");
+            const after = await drawer.boundingBox();
+            if (!before || !after || after.height <= before.height + 40) {
+              throw new Error("Mobile aircraft detail expand did not increase visible drawer height");
+            }
           }
           if (target.expandTelemetry) {
             const disclosure = visualPage.locator(".aircraft-adsb-telemetry-disclosure");

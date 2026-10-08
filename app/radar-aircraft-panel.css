@@ -1207,3 +1207,33 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Visual refinement B: compact mobile flight glance; expand for deep detail. */
+.aircraft-quick-mobile-expand { display: none; }
+@media (max-width: 820px) {
+  .radar-content .sidebar.drawer-aircraft.has-selection {
+    height: min(52svh, 490px);
+    max-height: calc(100svh - var(--radar-topbar-height-mobile) - var(--radar-mobile-nav-height) - var(--space-4));
+  }
+  .radar-content .sidebar.drawer-aircraft.has-selection:has(.aircraft-quick-mobile-expand[aria-expanded="true"]) {
+    height: min(80svh, 760px);
+  }
+  .aircraft-quick-mobile-expand {
+    display: grid;
+    place-items: center;
+    min-width: var(--control-height-touch);
+    min-height: var(--control-height-touch);
+    margin-left: auto;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-interactive);
+    color: var(--accent);
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+  .aircraft-quick-header-actions { gap: var(--space-2); }
+  .aircraft-quick-tabs button { font-size: var(--font-size-md); }
+  .aircraft-quick-summary-line span,
+  .aircraft-quick-source-line,
+  .aircraft-quick-header-context { font-size: var(--font-size-md); }
+}
