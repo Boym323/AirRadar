@@ -82,12 +82,15 @@ describe("visual system v3.1", () => {
 
     for (const label of [
       t.aircraft.altitude,
-      t.aircraft.groundSpeed,
+      t.layers.colorModes.speed,
       t.aircraft.track,
-      t.aircraft.verticalRate,
     ]) {
       expect(markup).toContain("<span>" + label + "</span>");
     }
+    expect(markup).toContain('title="' + t.aircraft.groundSpeed + '"');
+    expect(markup).toContain('title="' + t.aircraft.verticalRate + '"');
+    expect(markup).toContain('aria-label="' + t.aircraft.verticalRate + '"');
+    expect(markup).toContain(">V/S</span>");
     expect(markup).toContain('aria-label="' + t.aircraft.liveTrackingTitle + '"');
   });
 
