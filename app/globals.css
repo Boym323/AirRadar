@@ -6218,3 +6218,12 @@ button, input, select, textarea { color-scheme: dark; }
     font-size: var(--font-size-base);
   }
 }
+
+/* Keep the radar controls within the usable map at compact desktop widths. */
+@media (min-width: 821px) and (max-width: 950px) {
+  .map-overlay-primary { gap: var(--space-1); }
+  .map-summary-card { gap: var(--space-2); padding: var(--space-2); }
+  .map-summary-item span { font-size: var(--font-size-xs); }
+  .traffic-trigger { padding-inline: var(--space-2); font-size: var(--font-size-xs); }
+  .map-layers > summary { padding-inline: var(--space-2); font-size: var(--font-size-xs); }
+}
