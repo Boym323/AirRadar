@@ -15,6 +15,7 @@ import {
 import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import { buildAirportArrivalFlowIntelligence } from "@/lib/airport-intelligence/arrival-flow-v8";
 import { buildAirportRunwayChangeEvidenceD2 } from "@/lib/airport-intelligence/runway-change-evidence-d2";
+import { buildAirportApproachEvidenceD3 } from "@/lib/airport-intelligence/approach-evidence-d3";
 import { airportDText } from "@/lib/i18n/airport-d-extras";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
@@ -344,6 +345,7 @@ export function AirportOperationsBoard({
     referenceTime: arrivalSequence.generatedAt ?? operations?.generatedAt ?? null,
   });
   const runwayEvidenceD2 = buildAirportRunwayChangeEvidenceD2(runwayFlow, arrivalFlow);
+  const approachEvidenceD3 = buildAirportApproachEvidenceD3({traffic: activeTraffic, operations});
   const airportDCopy = airportDText(t.locale);
   const terminalDemandHorizon = operations?.terminalDemandHorizon ?? null;
   const timeline = buildAirportOperationsTimeline(operations);
@@ -667,6 +669,26 @@ export function AirportOperationsBoard({
       </div>
       <p>{airportDCopy.runwayDetail(runwayEvidenceD2.previousRunway, runwayEvidenceD2.observedRunway, runwayEvidenceD2.observedSamples)}</p>
       <p className="airport-v3-disclaimer">{airportDCopy.runwayDisclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-d3-approach-evidence" aria-label={airportDCopy.approachHeading}>
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D3</span><h3>{airportDCopy.approachHeading}</h3></div>
+        <span>{approachEvidenceD3.items.length}</span>
+      </div>
+      {approachEvidenceD3.items.length ? <ol className="airport-live-flight-list">
+        {approachEvidenceD3.items.map((item) => <li key={item.icaoHex}>
+          <span className="airport-live-flight-main">
+            <Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.label}</Link>
+            <small>{item.state === "REAPPROACH_EVIDENCE" ? airportDCopy.reapproach
+              : item.state === "GO_AROUND_EVIDENCE" ? airportDCopy.goAround
+              : item.state === "HOLDING_EVIDENCE" ? airportDCopy.holding
+              : item.state === "FINAL_APPROACH_EVIDENCE" ? airportDCopy.finalApproach
+              : item.state === "APPROACH_EVIDENCE" ? airportDCopy.approach : airportDCopy.liveOnly}</small>
+          </span>
+        </li>)}
+      </ol> : <p className="airport-v3-empty">{airportDCopy.noApproach}</p>}
+      <p className="airport-v3-disclaimer">{airportDCopy.approachDisclaimer}</p>
     </section>
 
     {terminalDemandHorizon ? <section
