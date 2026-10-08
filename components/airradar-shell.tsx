@@ -41,34 +41,78 @@ function primaryNavigation() { return [
   { href: "/journeys", label: t.locale.startsWith("cs") ? "Cesty" : "Journeys" },
 ] as const; }
 
-function moreNavigation() { return [
-  { href: "/history", label: t.history.title },
-  { href: "/time-machine", label: t.timeMachine.title },
-  { href: "/statistics", label: t.statistics.title },
-  { href: "/baselines", label: t.locale.startsWith("cs") ? "Historické referenční hodnoty" : "Baselines" },
-  { href: "/fleet", label: t.fleet.title },
-  { href: "/airspace", label: t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace" },
-  { href: "/weather", label: t.locale.startsWith("cs") ? "Počasí" : "Weather" },
-  { href: "/routes", label: t.locale.startsWith("cs") ? "Trasy" : "Routes" },
-  { href: "/navigation", label: t.locale.startsWith("cs") ? "Navigace" : "Navigation" },
-  { href: "/procedures", label: t.locale.startsWith("cs") ? "Procedury" : "Procedures" },
-  { href: "/operations", label: t.operations.title },
-  { href: "/intelligence", label: t.intelligence.title },
-  { href: "/alerts", label: t.alerts.title },
-  { href: "/notifications", label: t.locale.startsWith("cs") ? "Oznámení" : "Notifications" },
-  { href: "/recap/daily", label: t.recap.daily },
-  { href: "/recap/weekly", label: t.recap.weekly },
-  { href: "/watchlist", label: t.watchlist.title },
-  { href: "/workspaces", label: t.locale.startsWith("cs") ? "Uložená pracoviště" : "Workspaces" },
-  { href: "/system", label: t.system.title },
-] as const; }
+function moreNavigationGroups() {
+  const cs = t.locale.startsWith("cs");
+  return [
+    {
+      id: "operations",
+      label: cs ? "Provoz a radar" : "Operations & radar",
+      items: [
+        { href: "/operations", label: t.operations.title },
+        { href: "/airspace", label: cs ? "Vzdušný prostor" : "Airspace" },
+        { href: "/weather", label: cs ? "Počasí" : "Weather" },
+        { href: "/watchlist", label: t.watchlist.title },
+        { href: "/alerts", label: t.alerts.title },
+        { href: "/notifications", label: cs ? "Oznámení" : "Notifications" },
+        { href: "/workspaces", label: cs ? "Uložená pracoviště" : "Workspaces" },
+      ],
+    },
+    {
+      id: "history",
+      label: cs ? "Historie a analýza" : "History & analysis",
+      items: [
+        { href: "/history", label: t.history.title },
+        { href: "/time-machine", label: t.timeMachine.title },
+        { href: "/statistics", label: t.statistics.title },
+        { href: "/baselines", label: cs ? "Historické referenční hodnoty" : "Baselines" },
+        { href: "/recap/daily", label: t.recap.daily },
+        { href: "/recap/weekly", label: t.recap.weekly },
+        { href: "/intelligence", label: t.intelligence.title },
+      ],
+    },
+    {
+      id: "aviation",
+      label: cs ? "Letecká data" : "Aviation data",
+      items: [
+        { href: "/fleet", label: t.fleet.title },
+        { href: "/routes", label: cs ? "Trasy" : "Routes" },
+        { href: "/navigation", label: cs ? "Navigace" : "Navigation" },
+        { href: "/procedures", label: cs ? "Procedury" : "Procedures" },
+      ],
+    },
+    {
+      id: "system",
+      label: cs ? "Systém" : "System",
+      items: [{ href: "/system", label: t.system.title }],
+    },
+  ] as const;
+}
+
+function MoreNavigationGroups({ pathname, mobile = false }: { pathname: string; mobile?: boolean }) {
+  return moreNavigationGroups().map((group) => (
+    <div className="navigation-more-group" role="group" aria-label={group.label} key={group.id}>
+      <div className="navigation-more-group-title" aria-hidden="true">{group.label}</div>
+      {mobile && group.id === "operations" ? <>
+        <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
+        <a href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</a>
+      </> : null}
+      {group.items.map(({ href, label }) => {
+        const active = pathMatches(pathname, href);
+        const attributes = { "aria-current": active ? "page" as const : undefined, className: active ? "active" : undefined };
+        return mobile
+          ? <a key={href} href={href} {...attributes}>{label}</a>
+          : <Link key={href} href={href} {...attributes}>{label}</Link>;
+      })}
+    </div>
+  ));
+}
 
 function pathMatches(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function isMorePath(pathname: string): boolean {
-  return moreNavigation().some(({ href }) => pathMatches(pathname, href))
+  return moreNavigationGroups().some(({ items }) => items.some(({ href }) => pathMatches(pathname, href)))
     || ["/aircraft", "/flights"].some((prefix) => pathname.startsWith(prefix));
 }
 
@@ -177,10 +221,7 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
           <details className="topbar-nav-more">
             <summary className={isMorePath(pathname) ? "active" : undefined}>{t.common.more}</summary>
             <div>
-              {moreNavigation().map(({ href, label }) => {
-                const active = pathMatches(pathname, href);
-                return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : undefined}>{label}</Link>;
-              })}
+              <MoreNavigationGroups pathname={pathname} />
             </div>
           </details>
         </nav>
@@ -207,31 +248,26 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const moreActive = isMorePath(pathname) || pathMatches(pathname, "/airports") || pathMatches(pathname, "/journeys");
 
-  const item = (href: Route, label: string, icon: string) => {
+  const item = (href: Route, label: string, icon: Parameters<typeof UiIcon>[0]["name"]) => {
     const active = pathMatches(pathname, href);
     return <a className={active ? "active" : ""} href={href} aria-current={active ? "page" : undefined}>
-      <span className="mobile-bottom-nav-icon" aria-hidden="true">{icon}</span>
+      <span className="mobile-bottom-nav-icon" aria-hidden="true"><UiIcon name={icon} /></span>
       <span>{label}</span>
     </a>;
   };
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
-      {item("/my-airradar", t.myAirRadar.title, "⌂")}
-      {item("/", t.radar.liveAirPicture, "⌁")}
-      {item("/spotter", "Spotter", "✦")}
-      {item("/events", t.locale.startsWith("cs") ? "Události" : "Events", "≋")}
+      {item("/my-airradar", t.myAirRadar.title, "home")}
+      {item("/", t.radar.liveAirPicture, "radar")}
+      {item("/spotter", "Spotter", "aircraft")}
+      {item("/events", t.locale.startsWith("cs") ? "Události" : "Events", "time")}
       <details className="mobile-bottom-more">
         <summary className={moreActive ? "active" : undefined}>
-          <span className="mobile-bottom-nav-icon" aria-hidden="true">⋯</span>
+          <span className="mobile-bottom-nav-icon" aria-hidden="true"><UiIcon name="more" /></span>
           <span>{t.common.more}</span>
         </summary>
         <div>
-          <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
-          <a href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</a>
-          {moreNavigation().map(({ href, label }) => {
-            const active = pathMatches(pathname, href);
-            return <a key={href} href={href} aria-current={active ? "page" : undefined} className={active ? "active" : undefined}>{label}</a>;
-          })}
+          <MoreNavigationGroups pathname={pathname} mobile />
           <div className="mobile-language-switch"><LanguageSwitch /></div>
         </div>
       </details>

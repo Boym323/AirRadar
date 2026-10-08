@@ -1957,9 +1957,13 @@ button, input, select, textarea { color-scheme: dark; }
 .topbar-nav-more > summary { cursor: pointer; list-style: none; }
 .topbar-nav-more > summary::-webkit-details-marker { display: none; }
 .topbar-nav-more > summary::after { content: "⌄"; margin-left: 4px; color: var(--text-muted); }
-.topbar-nav-more > div { position: absolute; z-index: 10; top: calc(100% + 9px); right: -8px; display: grid; min-width: 158px; padding: 5px; border: 1px solid var(--border-strong); border-radius: 6px; background: rgba(8, 17, 29, .99); box-shadow: 0 18px 34px rgba(0, 0, 0, .42); }
-.topbar-nav-more > div a { min-height: 36px; display: flex; align-items: center; padding: 7px 9px; border-radius: 3px; }
-.topbar-nav-more > div a:hover { background: rgba(55, 214, 192, .09); }
+.topbar-nav-more > div { position: absolute; z-index: var(--z-dropdown); top: calc(100% + 9px); right: -8px; display: grid; width: min(288px, calc(100vw - 24px)); max-height: min(75svh, 560px); overflow-y: auto; padding: var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface-overlay); box-shadow: var(--shadow-floating); }
+.topbar-nav-more > div a { min-height: var(--control-height); display: flex; align-items: center; padding: 7px 9px; border-radius: var(--radius-sm); }
+.topbar-nav-more > div a:hover { background: var(--surface-accent-soft); }
+.navigation-more-group { display: grid; gap: 2px; }
+.navigation-more-group + .navigation-more-group { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border-subtle); }
+.navigation-more-group-title { padding: 5px 9px; color: var(--text-muted); font-size: var(--font-size-xs); font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+.navigation-more-group a { overflow-wrap: anywhere; }
 
 .topbar-meta { gap: 12px; color: var(--text-secondary); font-size: 11px; }
 .topbar-receiver-label { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
@@ -3169,7 +3173,8 @@ button, input, select, textarea { color-scheme: dark; }
     color: var(--accent-primary);
     background: rgba(67, 216, 194, .08);
   }
-  .mobile-bottom-nav-icon { color: currentColor; font-size: 18px; line-height: 1; }
+  .mobile-bottom-nav-icon { display: inline-grid; place-items: center; color: currentColor; width: 22px; height: 22px; }
+  .mobile-bottom-nav-icon .ui-icon { width: 20px; height: 20px; }
   .mobile-bottom-more { position: relative; }
 .mobile-bottom-more > div {
     position: absolute;
@@ -3178,15 +3183,15 @@ button, input, select, textarea { color-scheme: dark; }
     display: grid;
     max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px);
     overflow-y: auto;
-    min-width: 176px;
-    padding: 5px;
+    width: min(320px, calc(100vw - 16px));
+    padding: var(--space-2);
     border: 1px solid var(--border-strong);
-    border-radius: 7px;
-    background: rgba(7, 19, 31, .99);
-    box-shadow: 0 18px 34px rgba(0, 0, 0, .42);
+    border-radius: var(--radius-lg);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-floating);
   }
   .mobile-bottom-more > div a {
-    min-height: 40px;
+    min-height: var(--control-height-touch);
     display: flex;
     align-items: center;
     padding: 8px 10px;
