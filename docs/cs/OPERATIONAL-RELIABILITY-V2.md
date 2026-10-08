@@ -1,5 +1,7 @@
 # Provozní spolehlivost V2 (C1–C5)
 
+[English](../OPERATIONAL-RELIABILITY-V2.md)
+
 ## Účel a původ dat
 
 Stávající jednoprocestní cesta readsb → RAM → SSE se nemění.
