@@ -651,7 +651,6 @@ export const en = {
     seenByBothCount: (count: string) => `${count} seen by both`,
     networkUnavailable: "Network unavailable · local radar remains active",
     networkRateLimited: "Network temporarily limited",
-    networkAttribution: "Network coverage: ADSB.lol · ODbL 1.0",
     followMode: "Flight follow",
     followHudLabel: "Selected aircraft follow controls and live context",
     followTelemetry: "Live aircraft telemetry",
