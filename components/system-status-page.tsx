@@ -599,7 +599,7 @@ export function SystemStatusPage() {
         </>}
         {trackFusionOutcome && <>
           <Field label={dictionary.system.trackFusionOutcome} value={String(trackFusionOutcome.decision ?? dictionary.system.notAvailable)} />
-          <Field label={dictionary.system.trackFusionOutcomeWindow} value={`${formatNumber(diagnosticNumber(trackFusionOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(trackFusionOutcome, "completed"), 0, dictionary.locale)} completed`} />
+          <Field label={dictionary.system.trackFusionOutcomeWindow} value={`${formatNumber(diagnosticNumber(trackFusionOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(trackFusionOutcome, "completed"), 0, dictionary.locale)} ${dictionary.uiExtras.completed}`} />
           <Field label={dictionary.system.trackFusionOutcomeSamples} value={`${formatNumber(diagnosticNumber(trackFusionOutcome, "completed"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusionOutcome, "pending"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.trackFusionOutcomeWins} value={`${formatNumber(diagnosticNumber(trackFusionOutcomeOverall, "fusedBetter"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusionOutcomeOverall, "canonicalBetter"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusionOutcomeOverall, "ties"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.trackFusionOutcomeMargin} value={diagnosticOptionalNumber(trackFusionOutcomeOverall, "netWinMargin") === null
@@ -628,7 +628,7 @@ export function SystemStatusPage() {
           <Field label={dictionary.system.version} value={String(operationalTwinOutcome.version ?? dictionary.system.notAvailable)} />
           <Field label={dictionary.system.operationalTwinOutcomeDecision} value={String(operationalTwinOutcome.decision ?? dictionary.system.notAvailable)} />
           <Field label={dictionary.system.operationalTwinOutcomeTruth} value={String(operationalTwinOutcome.truthSource ?? dictionary.system.notAvailable)} />
-          <Field label={dictionary.system.operationalTwinOutcomeWindow} value={`${formatNumber(diagnosticNumber(operationalTwinOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} completed`} />
+          <Field label={dictionary.system.operationalTwinOutcomeWindow} value={`${formatNumber(diagnosticNumber(operationalTwinOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} ${dictionary.uiExtras.completed}`} />
           <Field label={dictionary.system.operationalTwinOutcomeSamples} value={`${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(operationalTwinOutcome, "pending"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.operationalTwinOutcomeError} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanPositionErrorNm") === null
             ? dictionary.system.notAvailable
@@ -644,7 +644,7 @@ export function SystemStatusPage() {
             : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
           <Field label={dictionary.system.operationalTwinOutcomeHorizons} value={`5m ${formatNumber(diagnosticNumber(operationalTwinOutcome5, "samples"), 0, dictionary.locale)} · 15m ${formatNumber(diagnosticNumber(operationalTwinOutcome15, "samples"), 0, dictionary.locale)} · 30m ${formatNumber(diagnosticNumber(operationalTwinOutcome30, "samples"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.operationalTwinOutcomeCapture} value={diagnosticBoolean(operationalTwinOutcome, "requestDrivenCapture") ? dictionary.system.operationalTwinOutcomeRequestDriven : dictionary.system.notAvailable} />
-          <Link className="secondary-button" href="/admin/operational-twin/calibration">Calibration Center</Link>
+          <Link className="secondary-button" href="/admin/operational-twin/calibration">{dictionary.calibrationCenter.title}</Link>
         </div>
       </Card>}
 
