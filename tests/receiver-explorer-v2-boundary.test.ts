@@ -34,7 +34,7 @@ describe("Receiver Explorer V2 boundary", () => {
   it("keeps source mix explicitly live-only and range analytics historical", () => {
     expect(pageSource).toContain('aircraft.source === "ADS-B"');
     expect(pageSource).toContain('aircraft.source === "MLAT"');
-    expect(pageSource).toContain("Current local receiver snapshot only");
+    expect(pageSource).toContain("Pouze aktuální stav lokálního přijímače");
     expect(pageSource).toContain('const historyRanges: CoverageIntelligenceRange[] = ["7d", "30d"]');
   });
 
