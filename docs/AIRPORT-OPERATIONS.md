@@ -217,8 +217,10 @@ windows require at least three unique-flight samples and >=60% dominant share
 for observed transition; otherwise it returns UNKNOWN. Weather is supporting
 context only and cannot prove an ATC runway assignment.
 
-D3 adds a bounded live approach-evidence panel over the existing correlated
-receiver snapshot and at most 500 existing recent airport movements. A live
+D3 adds a bounded live approach-evidence panel over the correlated receiver
+snapshot, at most 250 already classified movements and up to 250 canonical
+FlightEvent exceptions from the existing movement query (no additional SQL).
+The latest observed approach is not replaced by an older exception event. A live
 stage without matching ICAO, flight instance, valid timestamp, and recent
 movement is `LIVE_ONLY`, never a verified approach transition. A re-approach
 requires a GO_AROUND followed by a later APPROACH in the **same Flight ID**.
