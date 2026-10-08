@@ -25,7 +25,7 @@ describe("D4 airport context", () => {
   it("does not claim available wind or correlated ATC when sources are missing", () => {
     const got = buildAirportContextD4({
       runway: {...runway, state: "UNKNOWN", windAlignment: "UNKNOWN"},
-      arrival: {...arrival, compression: {state: "UNKNOWN"}},
+      arrival: {...arrival, compression: {...arrival.compression, state: "UNKNOWN"}},
       approach: {...approach, counts: {...approach.counts, goAround: 0}, complete: true},
       windAvailable: false,
     });
