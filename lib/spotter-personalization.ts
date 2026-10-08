@@ -56,24 +56,38 @@ export function toggleMySkyFavorite(value: MySkyFavorites, icaoHex: string): MyS
     : [hex, ...current].slice(0, MY_SKY_FAVORITES_MAX) };
 }
 
+// O(entries + favorites) per snapshot; prevents scanning the 500-entry
+// personal logbook once for every aircraft in a busy LOCAL stream.
+export function indexMySkyPersonalSignals(
+  favorites: MySkyFavorites,
+  logbook: SpotterLogbookState,
+): ReadonlyMap<string, MySkyPersonalSignal> {
+  const indexed = new Map<string, MySkyPersonalSignal>();
+  for (const candidate of favorites.icaoHexes) {
+    const hex = normalizeMySkyIcao(candidate);
+    if (hex) indexed.set(hex, { favorite: true, sightings: 0, lastSeenAt: null });
+  }
+  for (const entry of logbook.entries) {
+    const hex = normalizeMySkyIcao(entry.icaoHex);
+    if (!hex) continue;
+    const existing = indexed.get(hex) ?? { favorite: false, sightings: 0, lastSeenAt: null };
+    const at = Date.parse(entry.observedAt);
+    indexed.set(hex, {
+      favorite: existing.favorite,
+      sightings: existing.sightings + 1,
+      lastSeenAt: Number.isFinite(at) && (existing.lastSeenAt === null || at > Date.parse(existing.lastSeenAt))
+        ? new Date(at).toISOString() : existing.lastSeenAt,
+    });
+  }
+  return indexed;
+}
+
 export function mySkyPersonalSignal(
   icaoHex: string,
   favorites: MySkyFavorites,
   logbook: SpotterLogbookState,
 ): MySkyPersonalSignal {
   const hex = normalizeMySkyIcao(icaoHex);
-  if (!hex) return { favorite: false, sightings: 0, lastSeenAt: null };
-  let sightings = 0;
-  let latestMs = Number.NEGATIVE_INFINITY;
-  for (const item of logbook.entries) {
-    if (item.icaoHex.toUpperCase() !== hex) continue;
-    sightings++;
-    const ms = Date.parse(item.observedAt);
-    if (Number.isFinite(ms) && ms > latestMs) latestMs = ms;
-  }
-  return {
-    favorite: favorites.icaoHexes.includes(hex),
-    sightings,
-    lastSeenAt: Number.isFinite(latestMs) ? new Date(latestMs).toISOString() : null,
-  };
+  return (hex ? indexMySkyPersonalSignals(favorites, logbook).get(hex) : null)
+    ?? { favorite: false, sightings: 0, lastSeenAt: null };
 }
