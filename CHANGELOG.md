@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.365] - 2026-10-08
+
+Changes since v1.0.364.
+
+**Features touched:** Mobile Spotter Mode.
+
+### Changed
+
+- My Sky Experience V2: personal LOCAL overhead focus and unified aircraft actions (#616) (22c44d45)
+
+### Maintenance
+
+- Sync generated repository metadata (#615) (57d99519)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#615) (57d99519)
+- My Sky Experience V2: personal LOCAL overhead focus and unified aircraft actions (#616) (22c44d45)
+
+</details>
 ## [1.0.364] - 2026-10-08
 
 Changes since v1.0.363.
