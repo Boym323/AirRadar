@@ -47,6 +47,6 @@ describe("Aircraft Operational Focus UI V1 boundary", () => {
       expect(source).toContain("operationalFocusDisclaimer");
     }
     expect(enSource).toContain("NORMAL is not an all-clear");
-    expect(csSource).toContain("NORMAL neznamená all-clear");
+    expect(csSource).toContain("NORMAL neznamená, že je situace bez rizika");
   });
 });
