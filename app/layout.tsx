@@ -3,6 +3,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
+import "./language-switch.css";
 import "./radar-aircraft-panel.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { AirRadarQueryProvider } from "@/components/query-provider";
