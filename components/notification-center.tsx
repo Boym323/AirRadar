@@ -38,18 +38,18 @@ function eventTitle(entry: AlertHistoryEntry, cs: boolean): string {
   if (entry.type === "aircraft_appeared") return cs ? "Sledované letadlo zachyceno" : "Watchlisted aircraft detected";
   if (entry.type === "entered_radius") return cs ? "Vstup do sledovaného dosahu" : "Entered watch radius";
   if (entry.type === "new_aircraft") return cs ? "Nové letadlo" : "New aircraft";
-  if (entry.type === "reception_record") return "Reception record";
-  if (entry.type === "emergency" || entry.type.startsWith("emergency_")) return entry.squawk ? `Emergency · Squawk ${entry.squawk}` : "Emergency";
+  if (entry.type === "reception_record") return cs ? "Rekord příjmu" : "Reception record";
+  if (entry.type === "emergency" || entry.type.startsWith("emergency_")) return entry.squawk ? `${cs ? "Nouzový stav" : "Emergency"} · Squawk ${entry.squawk}` : cs ? "Nouzový stav" : "Emergency";
   if (entry.type.startsWith("intelligence_")) {
     const label = entry.intelligence?.eventType ?? entry.type.slice("intelligence_".length);
-    return `Flight Intelligence · ${label.replaceAll("_", " ")}`;
+    return `${cs ? "Analýza letů" : "Flight Intelligence"} · ${t.intelligence.types[label as keyof typeof t.intelligence.types] ?? label.replaceAll("_", " ")}`;
   }
   if (entry.type === "predictive_eta") return cs ? "Watchlist · ETA limit" : "Watchlist · ETA threshold";
   if (entry.type === "predictive_runway_change") return cs ? "Watchlist · predikovaná změna RWY" : "Watchlist · predicted runway change";
   if (entry.type === "alert_v1") {
     if (entry.alertV1?.trigger === "SQUAWK") return entry.squawk ? `Emergency · Squawk ${entry.squawk}` : "Emergency";
     if (entry.alertV1?.sourceType === "FLIGHT_EVENT" && entry.alertV1.flightEventType) {
-      return `Flight Intelligence · ${entry.alertV1.flightEventType.replaceAll("_", " ")}`;
+      return `${cs ? "Analýza letů" : "Flight Intelligence"} · ${t.intelligence.types[entry.alertV1.flightEventType as keyof typeof t.intelligence.types] ?? entry.alertV1.flightEventType.replaceAll("_", " ")}`;
     }
     return entry.alertV1?.ruleName ?? (cs ? "Alert pravidlo" : "Alert rule");
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "@/components/locale-provider";
 import { useEffect, useState } from "react";
 import type { AlertHistoryEntry, AlertHistoryFilter, AlertHistoryPage, AlertNotificationStatus } from "@/lib/server/alert-history";
 import { formatDateTime, formatDistance, formatTrack, getTranslations, type LocaleKey } from "@/lib/i18n";
@@ -110,7 +111,7 @@ function AlertRow({ entry, dictionary }: { entry: AlertHistoryEntry; dictionary:
 }
 
 export function AlertHistoryPage() {
-  const [locale, setLocale] = useState<LocaleKey>("cs");
+  const { locale } = useLocale();
   const dictionary = getTranslations(locale);
   const [data, setData] = useState<AlertHistoryPage | null>(null);
   const [error, setError] = useState(false);
@@ -133,7 +134,7 @@ export function AlertHistoryPage() {
   return <main className="history-page alert-history-page">
     <header className="history-page-header">
       <div><Link className="back-link" href="/">{dictionary.alerts.backToRadar}</Link><h1>{dictionary.alerts.title}</h1><p className="statistics-subtitle">{dictionary.alerts.subtitle}</p></div>
-      <nav className="system-nav" aria-label={dictionary.alerts.navigation}><Link href="/watchlist">{dictionary.watchlist.title}</Link><Link href="/statistics">{dictionary.statistics.title}</Link><button type="button" className="language-button" onClick={() => setLocale((current) => current === "cs" ? "en" : "cs")} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button></nav>
+      <nav className="system-nav" aria-label={dictionary.alerts.navigation}><Link href="/watchlist">{dictionary.watchlist.title}</Link><Link href="/statistics">{dictionary.statistics.title}</Link></nav>
     </header>
     <p className="alert-history-intro">{dictionary.alerts.description}</p>
     <div className="watchlist-editor-actions" role="group" aria-label={locale === "cs" ? "Filtr upozornění" : "Alert filter"}>

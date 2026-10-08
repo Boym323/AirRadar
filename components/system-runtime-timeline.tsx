@@ -352,13 +352,13 @@ export function SystemRuntimeTimeline({ locale }: { locale: LocaleKey }) {
 
   return <Card className={styles.card} data-testid="system-runtime-timeline-v1">
     <SectionHeader
-      kicker="LAST 60 MINUTES"
+      kicker={cs ? "POSLEDNÍCH 60 MINUT" : "LAST 60 MINUTES"}
       title={copy.title}
       description={copy.subtitle}
       actions={<StatusBadge
         variant={status === "ok" ? "success" : status === "auth" ? "warning" : "danger"}
       >
-        {status === "ok" ? copy.source : status === "auth" ? "AUTH REQUIRED" : "UNAVAILABLE"}
+        {status === "ok" ? copy.source : status === "auth" ? (cs ? "VYŽADOVÁNO PŘIHLÁŠENÍ" : "AUTH REQUIRED") : (cs ? "NEDOSTUPNÉ" : "UNAVAILABLE")}
       </StatusBadge>}
     />
 

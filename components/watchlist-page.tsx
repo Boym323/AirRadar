@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "@/components/locale-provider";
 import { WatchlistActivity } from "@/components/watchlist-activity";
 import { WatchlistIntelligenceV2 } from "@/components/watchlist-intelligence-v2";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
+import { getTranslations, type LocaleDictionary } from "@/lib/i18n";
 import type { PublicWatchlistResponse, PublicWatchlistRule } from "@/lib/server/watchlist-store";
 
 type RuleType = PublicWatchlistRule["type"];
@@ -211,7 +212,7 @@ function CurrentState({ rule, dictionary }: { rule: PublicWatchlistRule; diction
 }
 
 export function WatchlistPage() {
-  const [locale, setLocale] = useState<LocaleKey>("cs");
+  const { locale } = useLocale();
   const dictionary = getTranslations(locale);
   const [data, setData] = useState<PublicWatchlistResponse | null>(null);
   const [form, setForm] = useState<RuleForm>(emptyForm);
@@ -391,7 +392,7 @@ export function WatchlistPage() {
         <nav className="watchlist-nav" aria-label={dictionary.watchlist.navigation}>
           <Link className="secondary-button" href="/alerts">{dictionary.alerts.title}</Link>
           <Link className="secondary-button" href="/fleet">{dictionary.watchlist.fleet}</Link>
-          <button type="button" className="language-button" onClick={() => setLocale((current) => current === "cs" ? "en" : "cs")} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button>
+          
         </nav>
       </header>
 

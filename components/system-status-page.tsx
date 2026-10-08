@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
+import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary } from "@/lib/i18n";
 import type { AircraftWeatherStatus, OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
 import type { NavigationIntegrityStatus } from "@/lib/server/system-status-contract";
 import type { PredictiveReadinessReport } from "@/lib/server/predictive-readiness";
@@ -11,6 +11,7 @@ import type {
   PredictiveGraduationQualityMargin,
   PredictiveGraduationTruthRequirement,
 } from "@/lib/predictive-intelligence/graduation-calibration";
+import { useLocale } from "@/components/locale-provider";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 import { SystemRuntimeTimeline } from "@/components/system-runtime-timeline";
 
@@ -350,19 +351,18 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
   </UiCard>;
 }
 
-function LinkNav({ dictionary, locale, onLocaleChange }: { dictionary: LocaleDictionary; locale: LocaleKey; onLocaleChange: () => void }) {
+function LinkNav({ dictionary }: { dictionary: LocaleDictionary }) {
   return <nav className="system-nav" aria-label={dictionary.system.navigation}>
     <Link href="/">{dictionary.system.backToRadar}</Link>
     <Link href="/statistics">{dictionary.statistics.title}</Link>
     <Link href="/history">{dictionary.history.title}</Link>
     <Link href="/watchlist">{dictionary.watchlist.title}</Link>
     <Link href="/alerts">{dictionary.alerts.title}</Link>
-    <button type="button" className="language-button" onClick={onLocaleChange} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button>
   </nav>;
 }
 
 export function SystemStatusPage() {
-  const [locale, setLocale] = useState<LocaleKey>("cs");
+  const { locale } = useLocale();
   const dictionary = getTranslations(locale);
   const [data, setData] = useState<SystemStatusApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -475,7 +475,7 @@ export function SystemStatusPage() {
         <h1>{dictionary.system.pageTitle}</h1>
         <p className="statistics-subtitle">{dictionary.system.pageSubtitle}</p>
       </div>
-      <LinkNav dictionary={dictionary} locale={locale} onLocaleChange={() => setLocale((current) => current === "cs" ? "en" : "cs")} />
+      <LinkNav dictionary={dictionary} />
     </header>
 
     <div className="system-toolbar">
