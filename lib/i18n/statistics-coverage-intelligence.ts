@@ -164,4 +164,8 @@ const en = {
   rangeRecord: "period record",
 };
 
-export const statisticsCoverageIntelligenceText = t.locale.startsWith("cs") ? cs : en;
+export const statisticsCoverageIntelligenceText = new Proxy(cs, {
+  get(_target, property) {
+    return Reflect.get(t.locale.startsWith("cs") ? cs : en, property);
+  },
+});
