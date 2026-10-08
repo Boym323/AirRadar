@@ -17,6 +17,44 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.351] - 2026-10-08
+
+Changes since v1.0.350.
+
+### Fixed
+
+- Rescan CodeQL on main pushes (#562) (1f1aa625)
+- Contain Visual System V3 controls at 320px (#564) (028f1ad9)
+- Clamp mobile layers menu through 480px (#565) (f729eefa)
+- Contain Visual System V3 controls at tablet widths (#566) (7de1b9a7)
+- Align production gate with Visual System V3 quick detail (#567) (b5240f92)
+
+### Documentation
+
+- Update changelog for v1.0.351 (bbff2d03)
+
+### Maintenance
+
+- Sync generated repository metadata (#560) (66b45670)
+- Enhance summary styling and layout adjustments (0dad942d)
+- Sync generated repository metadata (#561) (cda352cd)
+- Visual System V3 density and hierarchy pass (#563) (80cce819)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#560) (66b45670)
+- style(radar-preset-menu): enhance summary styling and layout adjustments (0dad942d)
+- docs: update changelog for v1.0.351 (bbff2d03)
+- chore(metadata): sync generated repository metadata (#561) (cda352cd)
+- fix(security): rescan CodeQL on main pushes (#562) (1f1aa625)
+- style: Visual System V3 density and hierarchy pass (#563) (80cce819)
+- fix: contain Visual System V3 controls at 320px (#564) (028f1ad9)
+- fix: clamp mobile layers menu through 480px (#565) (f729eefa)
+- fix: contain Visual System V3 controls at tablet widths (#566) (7de1b9a7)
+- fix: align production gate with Visual System V3 quick detail (#567) (b5240f92)
+
+</details>
 ## [1.0.350] - 2026-10-07
 
 Changes since v1.0.349.
