@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.357] - 2026-10-08
+
+Changes since v1.0.356.
+
+### Added
+
+- Persistent CZ/EN language switch and localization completion (#582) (ba47531e)
+
+### Maintenance
+
+- Sync generated repository metadata (#581) (98ac6fd7)
+- Align remaining release navigation tests with dynamic menus (#583) (23d5e0ae)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#581) (98ac6fd7)
+- feat(i18n): persistent CZ/EN language switch and localization completion (#582) (ba47531e)
+- test(i18n): align remaining release navigation tests with dynamic menus (#583) (23d5e0ae)
+
+</details>
 ## [1.0.356] - 2026-10-08
 
 Changes since v1.0.355.
