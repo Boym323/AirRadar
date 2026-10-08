@@ -1306,6 +1306,24 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.reload({ waitUntil: "domcontentloaded" });
     await routeSmoke.waitForFunction(() => document.documentElement.lang === "en"
       && document.querySelector('.desktop-language-switch button[lang="en"]')?.getAttribute("aria-pressed") === "true");
+    // Locale navigation regression: a stored English choice must apply to
+    // independent pages, server-fed intelligence and receiver empty/loading UI.
+    for (const { path, heading } of [
+      { path: "/system", heading: "System status" },
+      { path: "/watchlist", heading: "Watchlist rule management" },
+      { path: "/alerts", heading: "Alert history" },
+      { path: "/heatmap", heading: "Traffic Heatmap" },
+      { path: "/receiver/coverage", heading: "Receiver Analysis V2" },
+    ]) {
+      await routeSmoke.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });
+      await routeSmoke.waitForFunction((expected) =>
+        document.documentElement.lang === "en"
+        && document.querySelector("h1")?.textContent?.includes(expected)
+        && localStorage.getItem("airradar-language") === "en",
+        heading, { timeout: 20_000 });
+    }
+    await routeSmoke.goto(`${baseUrl}/history`, { waitUntil: "domcontentloaded" });
+    await routeSmoke.waitForFunction(() => document.documentElement.lang === "en");
     await desktopLanguageSwitch.locator('button[lang="cs"]').click();
     await routeSmoke.waitForFunction(() => document.documentElement.lang === "cs"
       && document.querySelector(".brand-subtitle")?.textContent?.includes("OSOBNÍ PŘEHLED"));
