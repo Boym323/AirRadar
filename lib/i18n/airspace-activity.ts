@@ -1,3 +1,5 @@
+import { t } from "./index";
+
 export const airspaceActivityMapTranslations = {
   cs: {
     plannedNow: "PLÁNOVÁNO NYNÍ",
@@ -31,4 +33,9 @@ export const airspaceActivityMapTranslations = {
   },
 } as const;
 
-export const airspaceActivityMapT = airspaceActivityMapTranslations.cs;
+// Follow the selected locale without altering aviation identifiers or map geometry.
+export const airspaceActivityMapT = new Proxy(airspaceActivityMapTranslations.cs, {
+  get(_target, property) {
+    return Reflect.get(t.locale.startsWith("en") ? airspaceActivityMapTranslations.en : airspaceActivityMapTranslations.cs, property);
+  },
+});

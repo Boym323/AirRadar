@@ -114,12 +114,12 @@ describe("radar UI polish helpers", () => {
   });
 
   it("keeps secondary routes reachable from the canonical mobile overflow", () => {
-    const moreNavigation = shellSource.slice(shellSource.indexOf("const moreNavigation"), shellSource.indexOf("function pathMatches"));
+    const moreNavigation = shellSource.slice(shellSource.indexOf("function moreNavigation()"), shellSource.indexOf("function pathMatches"));
     const mobile = shellSource.slice(shellSource.indexOf("export function MobileBottomNav"), shellSource.indexOf("export function AirRadarPageShell"));
     expect(shellSource).toContain("mobile-bottom-nav");
     expect(moreNavigation).toContain('href: "/alerts"');
     expect(moreNavigation).toContain('href: "/recap/daily"');
-    expect(mobile).toContain("moreNavigation.map");
+    expect(mobile).toContain("moreNavigation().map");
     expect(globalCss).toContain(".mobile-bottom-more > div");
     expect(globalCss).toContain("max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px)");
   });

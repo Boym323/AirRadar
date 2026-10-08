@@ -160,7 +160,7 @@ export function DigitalTwinCalibrationCenter() {
     >
       <header className="history-page-header">
         <div>
-          <h1>Digital Twin Calibration Center</h1>
+          <h1>{t.calibrationCenter.title}</h1>
           <p className="statistics-subtitle">
             {t.calibrationCenter.subtitle}
           </p>

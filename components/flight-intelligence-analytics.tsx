@@ -121,11 +121,11 @@ export function FlightIntelligenceAnalytics() {
   return (
     <main className={styles.page} data-testid="flight-intelligence-analytics-v1">
       <PageHeader
-        kicker="AIRRADAR · INTELLIGENCE"
+        kicker={t.uiExtras.analyticsHeading}
         title={copy.title}
         description={copy.subtitle}
         backLink={<Link className="back-link" href="/intelligence">{copy.back}</Link>}
-        actions={<StatusBadge variant={unavailable ? "warning" : data ? "success" : "neutral"}>{unavailable ? "UNAVAILABLE" : data ? copy.source : "LOADING"}</StatusBadge>}
+        actions={<StatusBadge variant={unavailable ? "warning" : data ? "success" : "neutral"}>{unavailable ? t.uiExtras.unavailable : data ? copy.source : t.uiExtras.loading}</StatusBadge>}
       />
 
       <div className={styles.controls}>
@@ -143,13 +143,13 @@ export function FlightIntelligenceAnalytics() {
         <MetricCard value={data?.totalEvents === null || !data ? "—" : formatNumber(data.totalEvents)} label={copy.events} />
         <MetricCard value={data ? formatNumber(data.byType.length) : "—"} label={copy.types} />
         <MetricCard value={data ? formatNumber(data.topAircraft.length) : "—"} label={copy.aircraft} />
-        <MetricCard value={peakHour && peakHour.count > 0 ? hourLabel(peakHour.hour) : "—"} label={copy.busiestHour} detail={peakHour && peakHour.count > 0 ? `${formatNumber(peakHour.count)} events` : undefined} />
+        <MetricCard value={peakHour && peakHour.count > 0 ? hourLabel(peakHour.hour) : "—"} label={copy.busiestHour} detail={peakHour && peakHour.count > 0 ? `${formatNumber(peakHour.count)} ${t.uiExtras.events}` : undefined} />
       </MetricStrip>
 
       {!data && !failed ? <p className={styles.status}>{copy.loading}</p> : unavailable ? <EmptyState title={copy.unavailable} /> : data && data.totalEvents ? (
         <div className={styles.grid}>
           <Panel>
-            <SectionHeader kicker="EVENT TYPES" title={copy.mix} description={copy.mixDescription} />
+            <SectionHeader kicker={t.uiExtras.eventTypes} title={copy.mix} description={copy.mixDescription} />
             <div className={styles.ranking}>
               {data.byType.map((item, index) => (
                 <div key={item.type}><span>{index + 1}</span><strong>{item.type}</strong><b>{formatNumber(item.count)}</b></div>
@@ -158,7 +158,7 @@ export function FlightIntelligenceAnalytics() {
           </Panel>
 
           <Panel>
-            <SectionHeader kicker="LOCAL HOUR" title={copy.rhythm} description={copy.rhythmDescription} />
+            <SectionHeader kicker={t.uiExtras.localHour} title={copy.rhythm} description={copy.rhythmDescription} />
             <div className={styles.hours}>
               {data.hourly.map((item) => (
                 <div key={item.hour} title={`${hourLabel(item.hour)} · ${item.count}`}>
@@ -183,7 +183,7 @@ export function FlightIntelligenceAnalytics() {
           </Panel>
 
           <Panel>
-            <SectionHeader kicker="EVENT CONTEXT" title={copy.locations} description={copy.locationsDescription} />
+            <SectionHeader kicker={t.uiExtras.eventContext} title={copy.locations} description={copy.locationsDescription} />
             <div className={styles.locationColumns}>
               <div>
                 <h3>{copy.airports}</h3>

@@ -3,10 +3,12 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
+import "./language-switch.css";
 import "./radar-aircraft-panel.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { AirRadarQueryProvider } from "@/components/query-provider";
 import { CommandPalette } from "@/components/command-palette";
+import { LocaleProvider } from "@/components/locale-provider";
 
 export const metadata: Metadata = {
   title: "AirRadar — osobní radar leteckého provozu",
@@ -29,8 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="cs" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        <AirRadarQueryProvider>{children}<CommandPalette /></AirRadarQueryProvider>
-        <PwaRegister />
+        <AirRadarQueryProvider><LocaleProvider>{children}<CommandPalette /><PwaRegister /></LocaleProvider></AirRadarQueryProvider>
       </body>
     </html>
   );

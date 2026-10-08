@@ -282,7 +282,7 @@ export function AtcSectorDetail({ sectorId }: { sectorId: string }) {
   return (
     <main className={styles.page} data-testid="atc-sector-detail-v1">
       <PageHeader
-        kicker="AIRRADAR · ATC SECTOR"
+        kicker={t.uiExtras.sectorHeading}
         title={traffic ? `${traffic.sectorId} · ${traffic.name}` : `${copy.title} · ${sectorId}`}
         description={copy.subtitle}
         backLink={<Link className="back-link" href="/airspace">{copy.back}</Link>}
@@ -311,7 +311,7 @@ export function AtcSectorDetail({ sectorId }: { sectorId: string }) {
           </Panel>
 
           <Panel>
-            <SectionHeader kicker="COMMS" title={copy.frequencies} description={copy.frequencyDescription} />
+            <SectionHeader kicker={t.uiExtras.comms} title={copy.frequencies} description={copy.frequencyDescription} />
             {traffic.frequencies.length ? <div className={styles.frequencyList}>
               {traffic.frequencies.map((frequency) => (
                 <div key={`${frequency.channel}:${frequency.role}`}>
@@ -320,12 +320,12 @@ export function AtcSectorDetail({ sectorId }: { sectorId: string }) {
                   <small>{frequency.spacing.replace("KHZ_", "").replace("_", ".")} kHz</small>
                 </div>
               ))}
-            </div> : <EmptyState title="No published frequencies" />}
+            </div> : <EmptyState title={t.uiExtras.noFrequencies} />}
           </Panel>
 
           <Panel className={styles.full}>
             <SectionHeader
-              kicker="HISTORY"
+              kicker={t.uiExtras.history}
               title={copy.history}
               description={copy.historyDescription}
               actions={<SegmentedControl role="tablist" aria-label={copy.history}>

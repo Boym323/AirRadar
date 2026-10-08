@@ -181,7 +181,7 @@ export function ReceptionRecordsCenter() {
   return (
     <main className={styles.page} data-testid="reception-records-center-v1">
       <PageHeader
-        kicker="AIRRADAR · RECEIVER"
+        kicker={t.uiExtras.receiverHeading}
         title={copy.title}
         description={copy.subtitle}
         backLink={<Link className="back-link" href="/">{copy.back}</Link>}
@@ -200,7 +200,7 @@ export function ReceptionRecordsCenter() {
 
       <div className={styles.grid}>
         <Panel>
-          <SectionHeader kicker="DISTANCE" title={copy.distanceRecords} description={copy.distanceDescription} />
+          <SectionHeader kicker={t.uiExtras.distance} title={copy.distanceRecords} description={copy.distanceDescription} />
           {recordsFailed ? <p className={styles.warning}>{copy.recordsUnavailable}</p> : null}
           {!todayRecord && !lifetimeRecord && !recordsFailed ? <EmptyState title={copy.noRecords} /> : (
             <div className={styles.records}>
@@ -211,7 +211,7 @@ export function ReceptionRecordsCenter() {
         </Panel>
 
         <Panel>
-          <SectionHeader kicker="LOGBOOK" title={copy.milestones} description={copy.milestonesDescription} />
+          <SectionHeader kicker={t.uiExtras.logbook} title={copy.milestones} description={copy.milestonesDescription} />
           {summaryFailed ? <p className={styles.warning}>{copy.summaryUnavailable}</p> : null}
           {milestones.length ? (
             <div className={styles.milestones}>
