@@ -85,6 +85,16 @@ describe("Czech/English full-site localization remediation", () => {
     expect(getTranslations("cs").system.pageTitle).toBe("Stav systému");
   });
 
+  it("reuses a real system snapshot for desktop and mobile predictive visual fixtures", () => {
+    const gates = source("scripts/production-gates.mjs");
+    expect(gates).toContain("let systemStatusSnapshot = null;");
+    expect(gates).toContain('target.name === "system-desktop"');
+    expect(gates).toContain("if (upstream.ok()) systemStatusSnapshot = await upstream.json()");
+    expect(gates).toContain('visualPage.locator(".system-grid").waitFor');
+    expect(gates).toContain('JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" })');
+    expect(gates).toContain("Predictive visual smoke requires a successful real system status snapshot");
+  });
+
   it("translates comparison, alert event titles and map layer names without changing data IDs", () => {
     const compare = source("components/airport-compare.tsx");
     const notifications = source("components/notification-center.tsx");
