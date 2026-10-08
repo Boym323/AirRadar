@@ -1072,11 +1072,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             });
           }
           if (target.name === "system-desktop") {
-            await visualPage.route("**/api/system/status", async (route) => {
-              const upstream = await route.fetch();
-              if (upstream.ok()) systemStatusSnapshot = await upstream.json();
-              await route.fulfill({ response: upstream });
-            });
+            // Acquire the real public snapshot outside Playwright routing.
+            // A second in-flight status response can be disposed when this
+            // screenshot page closes, leaving an unhandled route callback.
+            const upstream = await get("/api/system/status");
+            if (!upstream.ok) throw new Error(`System visual smoke status returned HTTP ${upstream.status}`);
+            systemStatusSnapshot = await upstream.json();
           }
           if (target.mockPredictiveReadiness) {
             if (!systemStatusSnapshot) throw new Error("Predictive visual smoke requires a successful real system status snapshot");
