@@ -308,6 +308,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
         <dl>
           <Field label={dictionary.system.predictiveCaptureRecent24h} value={formatNumber(capability.capture.recent24h, 0, dictionary.locale)} />
           <Field label={dictionary.system.predictiveCaptureLast} value={formatDateTime(capability.capture.lastPersistedAt, dictionary)} />
+          <Field label={dictionary.system.predictiveEvidenceAction} value={dictionary.system.predictiveEvidenceActionLabels[report.evidencePlan.capabilities[capability.key].action]} />
           {capability.metrics.map(([label, value]) => <Field key={label} label={label} value={value} />)}
         </dl>
         <dl className="system-predictive-calibration" data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}>
@@ -406,6 +407,35 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       })}
     </div>
     <p className="system-predictive-reasons">{dictionary.system.predictiveTrendDisclaimer}</p>
+    <div className="system-card-header" data-testid="predictive-horizon-quality-heading">
+      <div>
+        <h2>{dictionary.system.predictiveHorizonTitle}</h2>
+        <p className="system-card-subtitle">{dictionary.system.predictiveHorizonSubtitle}</p>
+      </div>
+    </div>
+    <dl className="system-fields">
+      <Field label={dictionary.system.predictiveHorizonMinimum} value={formatNumber(report.horizonQuality.minimumConfirmedFlights, 0, dictionary.locale)} />
+      <Field label={dictionary.system.predictiveHorizonUnclassified} value={formatNumber(report.horizonQuality.unclassifiedFlights, 0, dictionary.locale)} />
+    </dl>
+    <div className="system-predictive-capabilities" data-testid="predictive-horizon-quality">
+      {report.horizonQuality.bands.map((band) => <section key={band.bucket} className="system-predictive-capability" data-testid={`predictive-horizon-${band.bucket}`}>
+        <div className="system-predictive-capability-heading">
+          <strong>{band.bucket}</strong>
+          <UiStatusBadge variant={band.state === "MEASURED" ? "neutral" : "warning"}>
+            {dictionary.system.predictiveHorizonStateLabels[band.state]}
+          </UiStatusBadge>
+        </div>
+        <dl>
+          <Field label={dictionary.system.predictiveHorizonFlights} value={formatNumber(band.flights, 0, dictionary.locale)} />
+          <Field label={dictionary.system.predictiveHorizonMae} value={formatPredictiveError(band.maeSeconds, dictionary)} />
+          <Field label={dictionary.system.predictiveHorizonMedian} value={formatPredictiveError(band.medianAbsoluteErrorSeconds, dictionary)} />
+          <Field label={dictionary.system.predictiveHorizonP90} value={formatPredictiveError(band.p90AbsoluteErrorSeconds, dictionary)} />
+          <Field label={dictionary.system.predictiveHorizonBias} value={band.biasSeconds === null ? dictionary.system.notAvailable : `${band.biasSeconds > 0 ? "+" : ""}${formatNumber(band.biasSeconds, 0, dictionary.locale)} s`} />
+        </dl>
+      </section>)}
+    </div>
+    <p className="system-predictive-reasons">{dictionary.system.predictiveHorizonDisclaimer}</p>
+    <p className="system-predictive-reasons">{dictionary.system.predictiveEvidenceActionDisclaimer}</p>
   </UiCard>;
 }
 
