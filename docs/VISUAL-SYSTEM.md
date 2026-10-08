@@ -131,6 +131,33 @@ while the existing browser gate already hard-fails on responsive horizontal
 overflow and runtime/browser errors. The screenshots provide a stable review
 surface for visual changes without creating false failures from live data.
 
+## V3.4 final screenshot review (2026-10-08)
+
+The last successful production release (workflow #37803889859, commit `6ca4efd2`)
+produced 46 desktop, tablet, and mobile PNG screenshots. The review sampled
+all major surface families: map/selection, aircraft detail, statistics,
+airport board, weather, notifications, watchlist, receiver coverage,
+predictive panels, Time Machine, search, and system diagnostics.
+
+No large redesign was warranted. Three concrete visual consistency
+improvements were identified and implemented:
+
+- **Mobile bottom navigation:** use the short visible label "Radar" instead
+  of wrapping a lengthy live-picture title over two lines; retain the full
+  localized `aria-label` for assistive technology.
+- **320 px mobile overflow menu:** render the grouped menu on a fully opaque
+  elevated surface so underlying page copy does not bleed through the items.
+- **Weather page gutters:** align the weather layout's 12 px content inset
+  with adjacent operational pages; reserve bottom clearance for the fixed
+  mobile navigation so the last weather panel remains scrollable.
+
+Regressions are covered by `tests/visual-system-v3-4.test.ts`. Existing
+production Playwright screenshot fixtures cover both the 320 px English
+overflow and mobile weather empty state, as well as the remaining pages.
+The screenshots are review evidence, **not** an approved image-diff baseline;
+passing browser smoke does not certify typography and aesthetics without
+human review of a fresh post-change artifact.
+
 ## Migration policy
 
 When touching an existing feature:
