@@ -92,7 +92,7 @@ export default function StatisticsTrafficIntelligence() {
   const unavailable = failed || data?.source === "unavailable";
   return (
     <div className={styles.wrapper}>
-      <section className={`statistics-card ${styles.panel}`} aria-labelledby="statistics-traffic-title">
+      <section className={`statistics-card ${styles.panel}`} data-state={unavailable ? "unavailable" : !data ? "loading" : "ready"} aria-labelledby="statistics-traffic-title">
         <div className={`statistics-card-header ${styles.header}`}>
           <div className={styles.headerCopy}>
             <h2 id="statistics-traffic-title">{text.title}</h2>

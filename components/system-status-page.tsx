@@ -353,7 +353,6 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
 
 function LinkNav({ dictionary }: { dictionary: LocaleDictionary }) {
   return <nav className="system-nav" aria-label={dictionary.system.navigation}>
-    <Link href="/">{dictionary.system.backToRadar}</Link>
     <Link href="/statistics">{dictionary.statistics.title}</Link>
     <Link href="/history">{dictionary.history.title}</Link>
     <Link href="/watchlist">{dictionary.watchlist.title}</Link>
