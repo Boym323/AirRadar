@@ -154,10 +154,11 @@ describe("production release metadata gate", () => {
     expect(source).toContain('"operational-twin-navigation-integrity-corridor-v1"');
   });
 
-  it("keeps visual smoke readiness independent of remote map tiles", () => {
+  it("captures radar visual evidence only after basemap features are rendered", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain("return Boolean(map);");
-    expect(source).toContain("}, undefined, { timeout: 15_000 });");
+    expect(source).toContain("map?.isStyleLoaded()");
+    expect(source).toContain("map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer))");
+    expect(source).toContain("}, undefined, { timeout: 25_000 });");
   });
 
   it("keeps mobile navigation geometry assertions out of the Node global scope", () => {
