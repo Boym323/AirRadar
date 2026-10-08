@@ -27,6 +27,6 @@ describe("Aviation Weather Fusion V1 boundaries", () => {
     expect(component).toContain("weatherFusionSourcesTitle");
     expect(component).toContain("weatherFusionDisclaimer");
     expect(detail).toContain("<AircraftWeatherFusion");
-    expect(cs).toContain("Není to certifikovaný meteorologický produkt");
+    expect(cs).toContain("Nejde o certifikovaný meteorologický produkt");
   });
 });
