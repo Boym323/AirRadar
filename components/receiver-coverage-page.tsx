@@ -40,6 +40,16 @@ function altitudeLabel(minFt: number, maxFt: number | null): string {
     : `${formatNumber(minFt)}–${formatNumber(maxFt)} ft`;
 }
 
+function healthStateLabel(state: string): string {
+  switch (state) {
+    case "GOOD": return "DOBRÝ";
+    case "IMPROVED": return "ZLEPŠENÝ";
+    case "DEGRADED": return "ZHORŠENÝ";
+    case "INSUFFICIENT_DATA": return "NEDOSTATEK DAT";
+    default: return "NEURČENO";
+  }
+}
+
 function liveSourceCounts(snapshot: PublicStateSnapshot | null) {
   const counts = { adsb: 0, mlat: 0, modes: 0, other: 0 };
   for (const aircraft of snapshot?.aircraft ?? []) {
@@ -163,7 +173,7 @@ export default function ReceiverCoveragePage() {
         description="Směrový dosah, výškové pokrytí, vývoj příjmu, slabé sektory a aktuální poměr zdrojů ADS-B a MLAT z dostupných údajů přijímače."
         actions={
           <div className={styles.headerActions}>
-            <Link className={styles.headerLink} href="/statistics">Statistics</Link>
+            <Link className={styles.headerLink} href="/statistics">Statistiky</Link>
             <Link className={styles.headerLink} href="/">Radar</Link>
           </div>
         }
@@ -219,7 +229,7 @@ export default function ReceiverCoveragePage() {
               detail={intelligence.records.farthestReception ? `${formatTrack(intelligence.records.farthestReception.bearing)} · ${intelligence.records.farthestReception.registration ?? intelligence.records.farthestReception.icaoHex}` : undefined}
             />
             <MetricCard
-              value={intelligence.intelligenceV2.health.state.replaceAll("_", " ")}
+              value={healthStateLabel(intelligence.intelligenceV2.health.state)}
               label="Kvalita zachycení"
               detail={`24 h ${percent(intelligence.intelligenceV2.health.currentRatio)} · Δ ${delta(intelligence.intelligenceV2.health.deltaPercentagePoints)}`}
             />
@@ -249,7 +259,7 @@ export default function ReceiverCoveragePage() {
           />
           <div className={styles.healthRow}>
             <span className={styles.healthBadge} data-state={streamConnected ? "GOOD" : "INSUFFICIENT_DATA"}>
-              {streamConnected ? "LIVE" : "RECONNECTING"}
+              {streamConnected ? "ŽIVĚ" : "PŘIPOJOVÁNÍ"}
             </span>
             <span className={styles.delta}>{formatNumber(totalSources)} letadel se známou polohou nebo sledovaných v aktuálním lokálním přehledu</span>
           </div>
@@ -258,7 +268,7 @@ export default function ReceiverCoveragePage() {
               ["ADS-B", sourceCounts.adsb],
               ["MLAT", sourceCounts.mlat],
               ["Mode-S / TIS-B", sourceCounts.modes],
-              ["Other / unknown", sourceCounts.other],
+              ["Ostatní / neznámé", sourceCounts.other],
             ].map(([label, value]) => (
               <div className={styles.sourceItem} key={String(label)}>
                 <strong>{formatNumber(Number(value))}</strong>
@@ -278,10 +288,10 @@ export default function ReceiverCoveragePage() {
             <>
               <div className={styles.healthRow}>
                 <span className={styles.healthBadge} data-state={intelligence.intelligenceV2.health.state}>
-                  {intelligence.intelligenceV2.health.state.replaceAll("_", " ")}
+                  {healthStateLabel(intelligence.intelligenceV2.health.state)}
                 </span>
                 <span className={styles.delta}>
-                  {intelligence.intelligenceV2.health.degradedSectors} degraded · {intelligence.intelligenceV2.health.improvedSectors} improved
+                  {intelligence.intelligenceV2.health.degradedSectors} zhoršených · {intelligence.intelligenceV2.health.improvedSectors} zlepšených
                 </span>
               </div>
               {weakSectors.length || improvedSectors.length ? (
@@ -295,7 +305,7 @@ export default function ReceiverCoveragePage() {
                           <td>{percent(sector.currentRatio)}</td>
                           <td>{percent(sector.baselineRatio)}</td>
                           <td>{delta(sector.deltaPercentagePoints)}</td>
-                          <td>{sector.state}</td>
+                          <td>{healthStateLabel(sector.state)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -413,7 +423,7 @@ export default function ReceiverCoveragePage() {
                     key={item}
                     onClick={() => setCapturePeriod(item)}
                   >
-                    {item.toUpperCase()}
+                    {item === "live" ? "ŽIVĚ" : item === "today" ? "DNES" : item.toUpperCase()}
                   </button>
                 ))}
               </div>
