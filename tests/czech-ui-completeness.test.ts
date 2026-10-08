@@ -129,16 +129,23 @@ describe("Czech UI localization coverage", () => {
     const explorer = source("components/receiver-coverage-page.tsx");
     const polar = source("components/receiver-coverage-polar.tsx");
     const range = source("components/receiver-range-polar.tsx");
+    const translations = source("lib/i18n/receiver-explorer.ts");
 
-    expect(explorer).toContain('title="Analýza přijímače V2"');
-    expect(explorer).toContain('title="Směrové zachycení oproti síti"');
+    expect(explorer).toContain("title={copy.headerTitle}");
+    expect(translations).toContain('headerTitle: "Analýza přijímače V2"');
+    expect(translations).toContain('headerTitle: "Receiver Analysis V2"');
+    expect(explorer).toContain("title={copy.referenceTitle}");
+    expect(translations).toContain('referenceTitle: "Směrové zachycení oproti síti"');
     expect(explorer).toContain("healthStateLabel(intelligence.intelligenceV2.health.state)");
     expect(explorer).not.toContain("Loading receiver history");
     expect(explorer).not.toContain("Reliable sectors");
-    expect(polar).toContain("Polární mapa pokrytí přijímače");
-    expect(polar).toContain("Podíl zachycení");
+    expect(polar).toContain("copy.polarSvgTitle");
+    expect(translations).toContain('polarSvgTitle: "Polární mapa pokrytí přijímače"');
+    expect(polar).toContain("copy.captureShare");
+    expect(translations).toContain('captureShare: "Podíl zachycení"');
     expect(polar).not.toContain("No coverage observations");
-    expect(range).toContain("Směrový dosah");
+    expect(range).toContain("copy.rangeLegend");
+    expect(translations).toContain('rangeLegend: "Směrový dosah"');
     expect(range).not.toContain("Directional receiver range");
   });
 
