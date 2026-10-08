@@ -190,6 +190,52 @@ configured/effective `SHADOW / PUBLIC` policy. The output is displayed
 only in the authenticated `/system` report. A trend is not proof of causal
 model improvement and should not be used to graduate a model automatically.
 
+## Horizon Quality and Closure V1 (Stages A3–A4)
+
+The authenticated predictive readiness report adds read-only
+`predictive-horizon-quality-v1`, based on **independently confirmed actual
+landing time** (not the model's predicted arrival or claimed horizon).
+Each scored ETA observation is placed into one non-overlapping ground-truth
+time-to-landing band: 0–5, 5–15, 15–30, 30–60, or 60+ minutes (up to six
+hours, consistent with the existing independent truth matcher). For a single
+lifecycle, only its **earliest** observation per band is retained, and an
+observation cannot be moved into a different band by manipulating the
+predicted ETA. The report provides count, absolute-error MAE, median, P90 and
+signed bias (positive = prediction too late, negative = too early).
+
+Each band is `MEASURED` only when the bounded evidence collection is
+complete, the source is available, and it contains at least ten independent
+scoreable flight observations. Otherwise its numeric quality metrics are null
+and its state explicitly says unavailable, incomplete or insufficient truth.
+An additional count records unique flights with ETA observations that cannot
+be safely classified from independent truth. The small ten-flight threshold
+is **descriptive**, not a new graduation gate or proof of stable calibration.
+
+`predictive-evidence-plan-v1` maps the existing canonical readiness,
+graduation calibration and capture-health signals into conservative next-step
+guidance per ETA / RUNWAY / RUNWAY_CHANGE / TRAJECTORY: investigate missing
+PostgreSQL data, bounded collection, identity collisions, disabled or quiet
+capture, missing outcome truth, insufficient samples or failed quality
+thresholds. `MANUAL_REVIEW` means only that the existing calibrated
+readiness is eligible for human review. No guidance code can change a runtime
+policy or bypass the separate fail-closed `PUBLIC` mechanism.
+
+All A1–A4 diagnostics share the existing bounded cached database reads and
+admin-only authenticated `/api/admin/predictive/readiness`; they add no
+background job, hot-path work, new table, migration, new public API, or
+persistence write. Unit tests cover horizon boundaries, same-flight dedupe,
+truth provenance, insufficient sample gates and guidance priority; the
+production screenshot fixture now includes the full admin report structure
+and checks that the three new diagnostic surfaces actually render.
+
+**Engineering completion vs evidence-based promotion.** The A-stage
+diagnostic functionality is complete when its CI/browser gates and deployment
+pass. Actual model promotion remains blocked until enough **real** independent
+truth is collected, calibration reports PASS, and an operator explicitly
+authorizes a PUBLIC policy change. Prospective validation capture and any
+production schema migration must be enabled via the separately approved
+runbook stages below, never automatically as part of this UI/analysis stage.
+
 ## Rollout
 
 1. Stage 0: refresh `airradar_dev` from a read-only PROD snapshot, apply
