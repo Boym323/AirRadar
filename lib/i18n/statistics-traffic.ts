@@ -44,4 +44,8 @@ const en = {
   metricNote: "Counts are persisted Flight instances observed by this receiver. They are neither position counts nor official air-traffic totals.",
 };
 
-export const statisticsTrafficText = t.locale.startsWith("cs") ? cs : en;
+export const statisticsTrafficText = new Proxy(cs, {
+  get(_target, property) {
+    return Reflect.get(t.locale.startsWith("cs") ? cs : en, property);
+  },
+});
