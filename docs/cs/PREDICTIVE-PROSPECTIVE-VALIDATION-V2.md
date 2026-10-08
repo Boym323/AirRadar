@@ -153,6 +153,44 @@ neproběhly žádné způsobilé lety. Diagnostika nemění `PASS / WAIT / FAIL`
 politiku. Produkční databázová migrace a povolení sběru zůstávají
 samostatnými rozhodnutími správce.
 
+## Vývoj přesnosti predikcí V1 (etapa A2)
+
+Autorizovaná zpráva o připravenosti nově obsahuje
+`predictive-accuracy-trends-v1`. Tato diagnostika pouze pro čtení srovnává
+posledních sedm dní s předchozími sedmi dny, jako posuvná časová okna UTC
+podle **času vytvoření predikce**. Zahrnuje pouze ETA a odhad konkrétního
+směru přistávací dráhy. Změny drah a stav trajektorie mají vlastní nezávislé
+vyhodnocování připravenosti.
+
+Za každou kombinaci letu (lifecycle) a predikční schopnosti je do celého
+14denního srovnání započítán **nejvýše jeden záznam**: nejstarší uložená
+predikce, s deterministickým rozlišením shodných časových značek. Jedno
+letadlo může přispět několika různými lety, ale opakované ukládání predikce
+téhož letu jeho váhu nezvětší. Zda lze první predikci ověřit, určují stejné
+mechanismy nezávislé skutečnosti a `scoreEta` / `scoreRunway` jako v
+readiness. Chybějící či nepotvrzený výsledek je `unscorableFlights`, nikoliv
+špatně předpovězené ETA nebo dráha. ETA uvádí průměrnou absolutní chybu,
+medián a P90 za jednotlivé lety; u drah se vyhodnocuje správný konkrétní
+směr. Změna znamená aktuální mínus předchozí období, v sekundách u ETA a
+procentních bodech u dráhy. Záporná změna chyby ETA nebo kladná změna
+přesnosti drah může být zlepšením, **nikoli** schválením predikcí.
+
+Stavy srovnání jsou `SOURCE_UNAVAILABLE`, `COLLECTION_INCOMPLETE`,
+`INSUFFICIENT_TRUTH` a `COMPARABLE`. Rozdíl se zveřejní pouze tehdy,
+pokud obě období samostatně obsahují alespoň 20 ověřených letů, databáze
+je dostupná a stávající omezený 30denní sběr je kompletní. Tento práh
+je určen pouze pro popisné srovnání a nenahrazuje přísnější podmínky
+pro veřejné predikce. Lety dosud bez potvrzeného přistání zůstávají
+nehodnotitelné.
+
+Výsledek se počítá z již načtené cachované 30denní kolekce administrace.
+**Nevzniká** nový SQL dotaz, migrace, operace v příjmové smyčce, zápis,
+veřejné API ani notifikace. Srovnání nemění kanonické 30denní důkazy,
+`PASS / WAIT / FAIL`, `manualReviewEligible` ani pravidla
+`SHADOW / PUBLIC`. Výsledek je pouze v chráněném `/system`.
+Trend sám nedokazuje příčinu zlepšení modelu a nesmí vyvolat automatické
+povýšení schopnosti do veřejného provozu.
+
 ## Rollout
 
 1. Stage 0: obnovit `airradar_dev` z read-only PROD snapshotu, aplikovat
