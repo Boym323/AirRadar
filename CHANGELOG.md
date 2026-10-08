@@ -17,6 +17,22 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.369] - 2026-10-08
+
+Changes since v1.0.368.
+
+### Changed
+
+- C5: targeted PR production smoke for critical runtime changes (#625) (4aec60f1)
+- C4: unified admin operational reliability health panel (#626) (2e848b6f)
+
+<details>
+<summary>Technical commits</summary>
+
+- C5: targeted PR production smoke for critical runtime changes (#625) (4aec60f1)
+- C4: unified admin operational reliability health panel (#626) (2e848b6f)
+
+</details>
 ## [1.0.368] - 2026-10-08
 
 Changes since v1.0.367.
