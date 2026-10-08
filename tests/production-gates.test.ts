@@ -167,6 +167,7 @@ describe("production release metadata gate", () => {
     expect(source).toContain('pathname === "/api/intelligence/events"');
     expect(source).toContain("searchParams.has(\"aircraft\")");
     expect(source).toContain("situation$/i.test(pathname)");
+    expect(source).toContain("history\\/[A-F0-9]{6}$/i.test(pathname)");
     expect(source).toContain("expectedRateLimitedApiErrors += 1");
     expect(source).toContain("browserErrors.push(`http ${response.status()}");
   });
