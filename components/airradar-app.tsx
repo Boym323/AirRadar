@@ -142,7 +142,7 @@ import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
 import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
-import { AIRRADAR_BASE_MAP_STYLE_URL, AIRRADAR_MAP_ATTRIBUTION, applyAirRadarBasemapReadability } from "@/lib/map-style";
+import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBasemapReadability } from "@/lib/map-style";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
@@ -621,6 +621,7 @@ export function AirRadarApp() {
   const sidebarBrowseRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const attributionControlRef = useRef<maplibregl.AttributionControl | null>(null);
   const centeredTrafficRef = useRef(false);
   const focusedAircraftRef = useRef<string | null>(null);
   const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -1311,7 +1312,9 @@ export function AirRadarApp() {
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
-    map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: AIRRADAR_MAP_ATTRIBUTION }), "bottom-right");
+    const attributionControl = new maplibregl.AttributionControl({ compact: true, customAttribution: airRadarMapAttributions(false) });
+    map.addControl(attributionControl, "bottom-right");
+    attributionControlRef.current = attributionControl;
     mapRef.current = map;
     const mapDiagnostics = new URLSearchParams(window.location.search).get("mapDiagnostics") === "1";
     if (mapDiagnostics) {
@@ -2064,6 +2067,7 @@ export function AirRadarApp() {
       performanceDiagnosticsDisposed = true;
       performanceDiagnostics?.stop();
       map.remove();
+      attributionControlRef.current = null;
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
       if (window.__airradarMapStyleLoadedForDiagnostics !== undefined) delete window.__airradarMapStyleLoadedForDiagnostics;
       if (window.__airradarMapStyleLoadCountForDiagnostics !== undefined) delete window.__airradarMapStyleLoadCountForDiagnostics;
@@ -2074,6 +2078,21 @@ export function AirRadarApp() {
       setMapReady(false);
     };
   }, [liveTrailsRef, router, selectAircraft, selectOgn]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const previous = attributionControlRef.current;
+    if (!map || !previous) return;
+    // MapLibre's public AttributionControl API has no runtime setter. Replace
+    // just this control when network availability changes; never recreate the map.
+    const next = new maplibregl.AttributionControl({
+      compact: true,
+      customAttribution: airRadarMapAttributions(networkEnabled),
+    });
+    map.removeControl(previous);
+    map.addControl(next, "bottom-right");
+    attributionControlRef.current = next;
+  }, [networkEnabled]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -3151,10 +3170,7 @@ export function AirRadarApp() {
                 </div>
               </div> : <div className="map-layer-notice">{t.layers.radarUnavailable}</div>}
             </div> : null}
-            {(networkNotice || networkEnabled) && <div className="map-source-notice">
-              {networkNotice && <span className="network-notice">{networkNotice}</span>}
-              {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
-            </div>}
+            {networkNotice && <div className="map-source-notice"><span className="network-notice">{networkNotice}</span></div>}
             {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || (selectedAircraftVisible && selectedOperationalTwin?.status === "available") || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
               {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
               {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
