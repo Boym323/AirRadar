@@ -28,6 +28,7 @@ import {
 } from "@/lib/server/system-status-diagnostics";
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 import { buildReceiverMonitoring } from "@/lib/server/receiver-monitoring";
+import { buildSourceReliability } from "@/lib/server/source-reliability";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { getAircraftWeatherDiagnostics, type AircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
@@ -705,6 +706,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         snapshotAgeSeconds: ageSeconds(lastSnapshot, now),
         quality: receiverQuality,
         monitoring: buildReceiverMonitoring({ quality: receiverQuality, online: input.snapshot.readsbOnline, sourceStatus, now }),
+        sourceReliability: buildSourceReliability({ online: input.snapshot.readsbOnline && !isDemo, sourceStatus, lastSnapshot, network: input.adsbLol, now }),
       },
     },
     ...(input.localAdsb ? { localAdsb: input.localAdsb } : {}),
