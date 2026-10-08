@@ -102,6 +102,17 @@ describe("Czech UI localization coverage", () => {
     expect(delivery).not.toContain('<MetricCard value={data.durable.queueDepth} label="Queue depth"');
   });
 
+  it("localizes alert rule simulation while keeping rule identifiers unchanged", () => {
+    const simulator = source("components/alert-rule-simulator-page.tsx");
+    expect(simulator).toContain('title: "Simulátor pravidel upozornění"');
+    expect(simulator).toContain('flightEvent: "Letová událost"');
+    expect(simulator).toContain('match: "SHODA"');
+    expect(simulator).toContain("copy.actionableRules(result.matchedRuleIds.length)");
+    expect(simulator).toContain('<option value="GEOFENCE_ENTER">{copy.geofenceEnter}</option>');
+    expect(simulator).toContain('title: "Alert Rule Simulator"');
+    expect(simulator).not.toContain('<button className="primary-button" type="submit">Simulate</button>');
+  });
+
   it("keeps historical baselines and predictive explanations readable in Czech", () => {
     const baseline = source("components/historical-baselines.tsx");
     const predictive = source("components/predictive-aircraft-advisories.tsx");
