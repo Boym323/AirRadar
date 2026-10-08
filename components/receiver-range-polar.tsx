@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import type { CoverageIntelligenceSector } from "@/lib/statistics-coverage-intelligence";
 import { polarPoint } from "@/lib/receiver-coverage-polar";
-import { formatDistance, formatNumber } from "@/lib/i18n";
+import { formatDistance, formatNumber, t } from "@/lib/i18n";
+import { receiverExplorerCopy, receiverRangeChartAria, receiverRangeSectorAria, receiverCardinals } from "@/lib/i18n/receiver-explorer";
 import styles from "./receiver-explorer.module.css";
 
 const SIZE = 520;
@@ -36,6 +37,7 @@ export function ReceiverRangePolar({
   sectors: readonly CoverageIntelligenceSector[];
   periodDays: number;
 }) {
+  const copy = receiverExplorerCopy(t.locale);
   const [selected, setSelected] = useState<CoverageIntelligenceSector | null>(null);
   const scaleKm = useMemo(() => scaleFor(sectors), [sectors]);
   const median = useMemo(
@@ -59,7 +61,7 @@ export function ReceiverRangePolar({
           className={styles.rangePolarPlot}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           role="img"
-          aria-label={`Směrový dosah přijímače za ${periodDays} dní. Medián, P95 a maximální denní dosah v sektorech.`}
+          aria-label={receiverRangeChartAria(t.locale, periodDays)}
         >
           {rings.map((fraction) => (
             <g key={fraction}>
@@ -99,7 +101,7 @@ export function ReceiverRangePolar({
                 r="8"
                 tabIndex={0}
                 role="button"
-                aria-label={`${sector.bearingFrom} až ${sector.bearingTo} stupňů. Medián ${formatDistance(sector.medianDailyMaxDistanceKm)}, P95 ${formatDistance(sector.p95DailyMaxDistanceKm)}, maximum ${formatDistance(sector.maxDistanceKm)}.`}
+                aria-label={receiverRangeSectorAria(t.locale, sector.bearingFrom, sector.bearingTo, formatDistance(sector.medianDailyMaxDistanceKm), formatDistance(sector.p95DailyMaxDistanceKm), formatDistance(sector.maxDistanceKm))}
                 onFocus={() => setSelected(sector)}
                 onMouseEnter={() => setSelected(sector)}
                 onClick={() => setSelected(sector)}
@@ -107,10 +109,10 @@ export function ReceiverRangePolar({
             );
           })}
           {[
-            ["N", CENTER, 17],
-            ["E", SIZE - 17, CENTER],
-            ["S", CENTER, SIZE - 17],
-            ["W", 17, CENTER],
+            [receiverCardinals(t.locale)[0], CENTER, 17],
+            [receiverCardinals(t.locale)[1], SIZE - 17, CENTER],
+            [receiverCardinals(t.locale)[2], CENTER, SIZE - 17],
+            [receiverCardinals(t.locale)[3], 17, CENTER],
           ].map(([label, x, y]) => (
             <text
               key={String(label)}
@@ -128,23 +130,23 @@ export function ReceiverRangePolar({
       </div>
       <div className={styles.rangePolarSide}>
         <div className={styles.legend}>
-          <strong>Směrový dosah</strong>
+          <strong>{copy.rangeLegend}</strong>
           <span><i className={styles.legendMedian} /> Medián denního maxima</span>
           <span><i className={styles.legendP95} /> P95 denního maxima</span>
           <span><i className={styles.legendMaximum} /> Rekord období</span>
-          <small>Dosah vychází z pozorování přijímače; nejde o zaručenou citlivost antény.</small>
+          <small>{copy.rangeDisclaimer}</small>
         </div>
         {selected ? (
           <div className={styles.rangeDetail} role="status">
             <strong>{String(selected.bearingFrom).padStart(3, "0")}°–{String(selected.bearingTo).padStart(3, "0")}°</strong>
-            <span>Medián: {formatDistance(selected.medianDailyMaxDistanceKm)}</span>
+            <span>{copy.median}: {formatDistance(selected.medianDailyMaxDistanceKm)}</span>
             <span>P95: {formatDistance(selected.p95DailyMaxDistanceKm)}</span>
             <span>Maximum: {formatDistance(selected.maxDistanceKm)}</span>
-            <span>Pozorováno: {selected.observedDays}/{periodDays} dní</span>
-            <span>{selected.reliable ? "Spolehlivý sektor" : "Omezené údaje"}</span>
+            <span>{copy.observed}: {selected.observedDays}/{periodDays} {copy.observedDays.replace(" pozorování", "").replace(" observed", "")}</span>
+            <span>{selected.reliable ? copy.reliable : copy.limited}</span>
           </div>
         ) : (
-          <p className={styles.rangeHint}>Vyberte bod sektoru a zobrazte jeho směrový dosah.</p>
+          <p className={styles.rangeHint}>{copy.rangeSelect}</p>
         )}
       </div>
     </div>
