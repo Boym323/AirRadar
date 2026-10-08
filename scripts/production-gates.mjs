@@ -548,6 +548,35 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             },
           },
         },
+        // Deterministic admin evidence diagnostics, kept in sync with
+        // PredictiveReadinessReport. Never mock a PUBLIC decision here.
+        captureHealth: {
+          version: "predictive-capture-health-v1", state: "RECENT_SAMPLES",
+          captureConfigured: true, observationRows: 420, timestampedRows: 420,
+          recent24h: 18, lastPersistedAt: "2026-10-04T08:52:00.000Z",
+          perCapability: {
+            ETA: { recent24h: 10, lastPersistedAt: "2026-10-04T08:52:00.000Z" },
+            RUNWAY: { recent24h: 4, lastPersistedAt: "2026-10-04T08:48:00.000Z" },
+            RUNWAY_CHANGE: { recent24h: 2, lastPersistedAt: "2026-10-04T08:40:00.000Z" },
+            TRAJECTORY: { recent24h: 2, lastPersistedAt: "2026-10-04T08:35:00.000Z" },
+          },
+        },
+        accuracyTrends: {
+          version: "predictive-accuracy-trends-v1", periodDays: 7,
+          minimumConfirmedFlightsPerPeriod: 20, sourceAvailable: true, complete: true,
+          capabilities: Object.fromEntries(["ETA", "RUNWAY"].map((key) => [
+            key, {
+              state: "INSUFFICIENT_TRUTH",
+              recent: { from: "2026-09-27T09:00:00.000Z", to: "2026-10-04T09:00:00.000Z", observedFlights: 16, scoreableFlights: 8, unscorableFlights: 8,
+                etaMaeSeconds: key === "ETA" ? 165 : null, etaMedianAbsoluteErrorSeconds: key === "ETA" ? 140 : null, etaP90AbsoluteErrorSeconds: key === "ETA" ? 380 : null,
+                runwayExactEndAccuracy: key === "RUNWAY" ? 0.75 : null },
+              previous: { from: "2026-09-20T09:00:00.000Z", to: "2026-09-27T09:00:00.000Z", observedFlights: 14, scoreableFlights: 7, unscorableFlights: 7,
+                etaMaeSeconds: key === "ETA" ? 170 : null, etaMedianAbsoluteErrorSeconds: key === "ETA" ? 145 : null, etaP90AbsoluteErrorSeconds: key === "ETA" ? 390 : null,
+                runwayExactEndAccuracy: key === "RUNWAY" ? 0.7 : null },
+              deltaEtaMaeSeconds: null, deltaRunwayAccuracyPercentagePoints: null,
+            },
+          ])),
+        },
         rollout: {
           ETA: {
             version: "eta-public-rollout-v1",
