@@ -33,7 +33,7 @@ const moreNavigation = [
   { href: "/history", label: t.history.title },
   { href: "/time-machine", label: t.timeMachine.title },
   { href: "/statistics", label: t.statistics.title },
-  { href: "/baselines", label: t.locale.startsWith("cs") ? "Baseline" : "Baselines" },
+  { href: "/baselines", label: t.locale.startsWith("cs") ? "Historické referenční hodnoty" : "Baselines" },
   { href: "/fleet", label: t.fleet.title },
   { href: "/airspace", label: t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace" },
   { href: "/weather", label: t.locale.startsWith("cs") ? "Počasí" : "Weather" },
@@ -47,7 +47,7 @@ const moreNavigation = [
   { href: "/recap/daily", label: t.recap.daily },
   { href: "/recap/weekly", label: t.recap.weekly },
   { href: "/watchlist", label: t.watchlist.title },
-  { href: "/workspaces", label: t.locale.startsWith("cs") ? "Workspace" : "Workspaces" },
+  { href: "/workspaces", label: t.locale.startsWith("cs") ? "Uložená pracoviště" : "Workspaces" },
   { href: "/system", label: t.system.title },
 ] as const;
 
