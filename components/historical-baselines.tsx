@@ -20,7 +20,9 @@ function badge(state: BaselineState): "neutral" | "success" | "warning" {
 export function HistoricalBaselines() {
   const cs = t.locale.startsWith("cs");
   const copy = cs ? {
-    title: "Historické baseline",
+    title: "Historické referenční hodnoty",
+    kicker: "AIRRADAR / REFERENČNÍ HODNOTY",
+    medianKicker: "MEDIÁN ZA 30 DNÍ",
     subtitle: "Průběžné dnešní hodnoty proti mediánu dokončených dnů z vlastních 30denních agregátů AirRadaru.",
     comparison: "Dnes vs 30 dní",
     description: "Deskriptivní srovnání, ne test statistické významnosti. Dnešek je průběžný, historické dny jsou dokončené.",
@@ -29,14 +31,16 @@ export function HistoricalBaselines() {
     distance: "Max. dosah",
     current: "Dnes zatím",
     median: "Medián",
-    days: "dnů baseline",
-    above: "NAD BASELINE",
-    near: "BLÍZKO BASELINE",
-    below: "POD BASELINE",
+    days: "referenčních dnů",
+    above: "NAD REFERENČNÍ HODNOTOU",
+    near: "BLÍZKO REFERENČNÍ HODNOTY",
+    below: "POD REFERENČNÍ HODNOTOU",
     insufficient: "MÁLO DAT",
-    unavailable: "30denní statistický baseline není dostupný.",
+    unavailable: "Referenční statistiky za posledních 30 dní nejsou dostupné.",
   } : {
     title: "Historical Baselines",
+    kicker: "AIRRADAR / BASELINES",
+    medianKicker: "30D MEDIAN",
     subtitle: "Today's in-progress values against the median of completed days from AirRadar's own 30-day aggregates.",
     comparison: "Today vs 30 days",
     description: "Descriptive comparison, not a statistical significance test. Today is partial; historical days are complete.",
@@ -88,7 +92,7 @@ export function HistoricalBaselines() {
   </article>;
 
   return <main className={styles.page} data-testid="historical-baselines-v1">
-    <PageHeader kicker="AIRRADAR / BASELINES" title={copy.title} description={copy.subtitle} />
+    <PageHeader kicker={copy.kicker} title={copy.title} description={copy.subtitle} />
     {failed ? <EmptyState title={copy.unavailable} /> : summary ? <>
       <MetricStrip>
         <MetricCard value={summary.uniqueAircraft.deltaPercent === null ? "—" : (summary.uniqueAircraft.deltaPercent > 0 ? "+" : "") + formatNumber(summary.uniqueAircraft.deltaPercent, 0) + "%"} label={copy.unique} />
@@ -96,7 +100,7 @@ export function HistoricalBaselines() {
         <MetricCard value={summary.maxDistanceKm.deltaPercent === null ? "—" : (summary.maxDistanceKm.deltaPercent > 0 ? "+" : "") + formatNumber(summary.maxDistanceKm.deltaPercent, 0) + "%"} label={copy.distance} />
       </MetricStrip>
       <Panel>
-        <SectionHeader kicker="30D MEDIAN" title={copy.comparison} description={copy.description} actions={<TrustStamp provenance={{ kind: "INFERRED", source: "ReceiverDailyStats · 30d" }} />} />
+        <SectionHeader kicker={copy.medianKicker} title={copy.comparison} description={copy.description} actions={<TrustStamp provenance={{ kind: "INFERRED", source: "ReceiverDailyStats · 30d" }} />} />
         <div className={styles.grid}>
           {card(copy.unique, summary.uniqueAircraft, (n) => formatNumber(n, 0))}
           {card(copy.concurrent, summary.maxConcurrentAircraft, (n) => formatNumber(n, 0))}
