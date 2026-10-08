@@ -1,12 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { RadarTrafficHero } from "../components/radar/radar-traffic-hero";
+import { t } from "../lib/i18n";
 import {
   analyzeVisualSystem,
   assertVisualSystemBudget,
 } from "../scripts/visual-system-audit.mjs";
 import { AIRRADAR_MAP_THEME } from "../lib/map-theme";
 
-describe("visual system v2", () => {
+describe("visual system v3.1", () => {
   it("keeps the global stylesheet within the visual debt budget", () => {
     const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
     const report = analyzeVisualSystem(css);
@@ -39,8 +43,7 @@ describe("visual system v2", () => {
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.placeLabel");
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.airportLabel");
     expect(mapStyle).toContain("AIRRADAR_MAP_THEME.basemap.boundary");
-    expect(css).not.toMatch(/font-size:\s*9px;/);
-    expect(css).not.toContain("font-size:9px;");
+    expect(css).not.toMatch(/font-size:\s*[789]px\s*;/);
 
     for (const relativePath of [
       "../app/radar-aircraft-panel.css",
@@ -50,8 +53,45 @@ describe("visual system v2", () => {
       "../components/radar/radar-operations-center.module.css",
     ]) {
       const radarCss = readFileSync(new URL(relativePath, import.meta.url), "utf8");
-      expect(radarCss).not.toMatch(/font-size:\s*9px;/);
+      expect(radarCss).not.toMatch(/font-size:\s*[789]px\s*;/);
     }
+  });
+
+  it("keeps the radar source breakdown behind a keyboard-accessible disclosure", () => {
+    const app = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+    const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+    const quickDetailCss = readFileSync(new URL("../app/radar-aircraft-panel.css", import.meta.url), "utf8");
+
+    expect(app).toContain('<details className="source-counter-details">');
+    expect(app).toContain('className="source-counter-strip" aria-label={t.radar.trafficSourceLabel}');
+    expect(app).toContain("<summary aria-label={t.radar.trafficSourceLabel}");
+    expect(css).toContain(".source-counter-details:not([open]) > .source-counter-strip");
+    expect(css).toContain(".map-summary-card:has(.source-counter-details[open])");
+    expect(quickDetailCss).toContain("font-size: clamp(12px, 1vw, 14px);");
+  });
+
+  it("uses existing Czech and English translations for traffic-hero metrics", () => {
+    const markup = renderToStaticMarkup(createElement(RadarTrafficHero, {
+      sourceLabel: "ADS-B",
+      primaryLabel: "OK-TEST",
+      altitude: "1 000 ft",
+      speed: "250 kt",
+      track: "90°",
+      verticalRate: "+100 ft/min",
+    }));
+
+    for (const label of [
+      t.aircraft.altitude,
+      t.layers.colorModes.speed,
+      t.aircraft.track,
+    ]) {
+      expect(markup).toContain("<span>" + label + "</span>");
+    }
+    expect(markup).toContain('title="' + t.aircraft.groundSpeed + '"');
+    expect(markup).toContain('title="' + t.aircraft.verticalRate + '"');
+    expect(markup).toContain('aria-label="' + t.aircraft.verticalRate + '"');
+    expect(markup).toContain(">V/S</span>");
+    expect(markup).toContain('aria-label="' + t.aircraft.liveTrackingTitle + '"');
   });
 
   it("exposes the shared visual primitives used by feature pages", () => {

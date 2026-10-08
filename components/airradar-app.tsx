@@ -3027,12 +3027,18 @@ export function AirRadarApp() {
             <div className="map-overlay-primary">
               <Panel className="map-overlay-card map-summary-card">
                 <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
-                {activeCoverage === "extended" && snapshot.sourceStats && <div className="source-counter-strip" aria-label="Aircraft source counters">
-                  <span><strong>{formatNumber(snapshot.sourceStats.local)}</strong><small>LOCAL</small></span>
-                  <span><strong>{formatNumber(snapshot.sourceStats.network)}</strong><small>NETWORK</small></span>
-                  <span><strong>{formatNumber(snapshot.sourceStats.overlap)}</strong><small>OVERLAP</small></span>
-                  <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
-                </div>}
+                {activeCoverage === "extended" && snapshot.sourceStats && <details className="source-counter-details">
+                  <summary aria-label={t.radar.trafficSourceLabel} title={t.radar.trafficSourceLabel}>
+                    <UiIcon name="statistics" />
+                    <span className="source-counter-label">{t.aircraft.source}</span>
+                  </summary>
+                  <div className="source-counter-strip" aria-label={t.radar.trafficSourceLabel}>
+                    <span><strong>{formatNumber(snapshot.sourceStats.local)}</strong><small>LOCAL</small></span>
+                    <span><strong>{formatNumber(snapshot.sourceStats.network)}</strong><small>NETWORK</small></span>
+                    <span><strong>{formatNumber(snapshot.sourceStats.overlap)}</strong><small>OVERLAP</small></span>
+                    <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
+                  </div>
+                </details>}
                 {hasActiveMapFilters && <div className="map-summary-filter-state" aria-label={`${t.filters.active}: ${activeFilterCount}`}>
                   <span>{t.filters.title}</span><strong>{activeFilterCount}</strong>
                 </div>}
