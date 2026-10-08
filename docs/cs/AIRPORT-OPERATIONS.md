@@ -220,8 +220,10 @@ Odděluje pozorovanou změnu dráhy, nesoulad predikce a stabilní provoz. Pro
 pozorovanou změnu vyžaduje obě okna nejméně tři odlišné lety a dominantní
 podíl alespoň 60 %. Jinak vrací UNKNOWN. Vítr nepředstavuje potvrzení ATC.
 
-D3 využívá existující korelovaný živý provoz a maximálně 500 nedávných
-pohybů. Živá fáze bez odpovídající ICAO identity, instance letu, času a
+D3 využívá existující korelovaný živý provoz, nejvýše 250 klasifikovaných
+pohybů a 250 kanonických výjimek FlightEvent z již prováděného dotazu
+(bez další SQL operace). Novější pozorované přiblížení nesmí přepsat starší
+go-around. Živá fáze bez odpovídající ICAO identity, instance letu, času a
 čerstvého pohybu má stav `LIVE_ONLY`. Opakované přiblížení vyžaduje
 GO_AROUND následovaný APPROACH ve **stejné instanci Flight ID**. Neúplná
 historie neprokazuje přistání ani absenci události.
