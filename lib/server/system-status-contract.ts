@@ -11,6 +11,7 @@ import type { RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
 import type { ReceiverQuality } from "@/lib/server/receiver-quality";
 import type { ReceiverMonitoring } from "@/lib/server/receiver-monitoring";
+import type { SourceReliability } from "@/lib/server/source-reliability";
 import type { NavigationIntegrityDiagnostics } from "@/lib/navigation-integrity/types";
 import type { FlightPositionPersistenceShadowDiagnostics } from "@/lib/server/flight-position-persistence-shadow";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
@@ -61,6 +62,7 @@ export interface SystemStatusResponse {
       snapshotAgeSeconds: number | null;
       quality?: ReceiverQuality;
       monitoring: ReceiverMonitoring;
+      sourceReliability: SourceReliability;
     };
   };
   localAdsb?: Record<string, unknown>;
