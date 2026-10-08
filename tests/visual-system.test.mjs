@@ -9,8 +9,26 @@ import {
   assertVisualSystemBudget,
 } from "../scripts/visual-system-audit.mjs";
 import { AIRRADAR_MAP_THEME } from "../lib/map-theme";
+import { AIRRADAR_MAP_ATTRIBUTION, AIRRADAR_NETWORK_DATA_ATTRIBUTION, airRadarMapAttributions } from "../lib/map-style";
 
 describe("visual system v3.1", () => {
+  it("moves optional ADSB.lol licensing into MapLibre attribution without a floating badge", () => {
+    expect(airRadarMapAttributions(false)).toEqual([AIRRADAR_MAP_ATTRIBUTION]);
+    expect(airRadarMapAttributions(true)).toEqual([
+      AIRRADAR_MAP_ATTRIBUTION,
+      AIRRADAR_NETWORK_DATA_ATTRIBUTION,
+    ]);
+    expect(AIRRADAR_NETWORK_DATA_ATTRIBUTION).toContain('href="https://www.adsb.lol/"');
+    expect(AIRRADAR_NETWORK_DATA_ATTRIBUTION).toContain('href="https://opendatacommons.org/licenses/odbl/1-0/"');
+
+    const app = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+    expect(app).toContain('customAttribution: airRadarMapAttributions(networkEnabled)');
+    expect(app).toContain('map.removeControl(previous)');
+    expect(app).not.toContain('className="network-attribution"');
+    expect(app).toContain('networkNotice && <div className="map-source-notice"');
+    expect(app).toContain('className="network-notice"');
+  });
+
   it("keeps the global stylesheet within the visual debt budget", () => {
     const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
     const report = analyzeVisualSystem(css);
