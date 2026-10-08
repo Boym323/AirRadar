@@ -25,9 +25,9 @@ export function RadarTrafficHero({ sourceLabel, primaryLabel, secondaryLabel, al
     {showIdentity && secondaryLabel && <p className="radar-traffic-hero-secondary">{secondaryLabel}</p>}
     <div className="radar-traffic-hero-metrics" data-testid="radar-traffic-hero-metrics" aria-label={t.aircraft.liveTrackingTitle}>
       <div data-testid="radar-traffic-hero-metric-altitude" data-state={metricState(altitude)}><strong>{altitude}</strong><span>{t.aircraft.altitude}</span></div>
-      <div data-testid="radar-traffic-hero-metric-speed" data-state={metricState(speed)}><strong>{speed}</strong><span>{t.aircraft.groundSpeed}</span></div>
+      <div data-testid="radar-traffic-hero-metric-speed" data-state={metricState(speed)}><strong>{speed}</strong><span title={t.aircraft.groundSpeed}>{t.layers.colorModes.speed}</span></div>
       <div data-testid="radar-traffic-hero-metric-track" data-state={metricState(track)}><strong>{track}</strong><span>{t.aircraft.track}</span></div>
-      <div data-testid="radar-traffic-hero-metric-vertical-rate" data-state={metricState(verticalRate)}><strong>{verticalRate}</strong><span>{t.aircraft.verticalRate}</span></div>
+      <div data-testid="radar-traffic-hero-metric-vertical-rate" data-state={metricState(verticalRate)}><strong>{verticalRate}</strong><span title={t.aircraft.verticalRate} aria-label={t.aircraft.verticalRate}>V/S</span></div>
     </div>
   </section>;
 }
