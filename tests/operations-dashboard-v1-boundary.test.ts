@@ -50,6 +50,6 @@ describe("Operations Dashboard V1 boundary", () => {
     ]) {
       expect(dashboardSource).toContain('data-testid="' + testId + '"');
     }
-    expect(csSource).toContain("nikoli collision warning ani separation product");
+    expect(csSource).toContain("nejde o výstrahu před srážkou ani o podklad pro rozstupy mezi letadly");
   });
 });
