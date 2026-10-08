@@ -92,6 +92,10 @@ function MoreNavigationGroups({ pathname, mobile = false }: { pathname: string; 
   return moreNavigationGroups().map((group) => (
     <div className="navigation-more-group" role="group" aria-label={group.label} key={group.id}>
       <div className="navigation-more-group-title" aria-hidden="true">{group.label}</div>
+      {mobile && group.id === "operations" ? <>
+        <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
+        <a href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</a>
+      </> : null}
       {group.items.map(({ href, label }) => {
         const active = pathMatches(pathname, href);
         const attributes = { "aria-current": active ? "page" as const : undefined, className: active ? "active" : undefined };
@@ -263,8 +267,6 @@ export function MobileBottomNav() {
           <span>{t.common.more}</span>
         </summary>
         <div>
-          <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
-          <a href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</a>
           <MoreNavigationGroups pathname={pathname} mobile />
           <div className="mobile-language-switch"><LanguageSwitch /></div>
         </div>
