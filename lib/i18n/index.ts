@@ -28,7 +28,7 @@ export const t: LocaleDictionary = new Proxy(cs, {
   },
 });
 
-export function getTranslations(locale: string = DEFAULT_LOCALE): LocaleDictionary {
+export function getTranslations(locale: string = t.locale): LocaleDictionary {
   return dictionaries[locale as LocaleKey] ?? t;
 }
 
