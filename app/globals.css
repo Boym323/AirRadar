@@ -6165,3 +6165,56 @@ button, input, select, textarea { color-scheme: dark; }
   .map-layers > summary,
   .traffic-trigger { min-height: var(--control-height-touch); }
 }
+
+/* Visual refinement C: compact unavailable statistics and readable operations. */
+.secondary-page-content > .statistics-page {
+  min-height: 0;
+}
+.secondary-page-content > .statistics-page:has(.statistics-error) {
+  padding-bottom: var(--space-5);
+}
+.secondary-page-content > .statistics-page + * {
+  margin-top: var(--space-4);
+}
+.secondary-page-content:has(> .statistics-page) .statistics-export-button:disabled,
+.statistics-card[data-state="unavailable"] .statistics-export-button,
+.statistics-card[data-state="empty"] .statistics-export-button {
+  display: none;
+}
+.statistics-card[data-state="unavailable"],
+.statistics-card[data-state="empty"] {
+  padding-bottom: var(--space-4);
+}
+.statistics-card[data-state="unavailable"] .statistics-card-header,
+.statistics-card[data-state="empty"] .statistics-card-header {
+  margin-bottom: 0;
+}
+.airport-v3-wind-metric .ui-metric-value,
+.airport-v3-wind-metric .ui-metric-detail {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+.system-page .system-card-header h2 {
+  font-size: var(--font-size-lg);
+}
+.system-page .system-fields dt,
+.system-page .system-fields dd {
+  font-size: var(--font-size-md);
+}
+.system-page .system-nav a {
+  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .airport-v3-metrics .airport-v3-wind-metric {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--space-2);
+  }
+  .system-page .system-card-header h2 {
+    font-size: var(--font-size-base);
+  }
+}
