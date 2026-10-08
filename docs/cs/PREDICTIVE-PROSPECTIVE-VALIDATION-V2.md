@@ -128,6 +128,31 @@ výslovně pouze preview a není rozhodovacím FAIL gate.
 `manualReviewEligible` vyžaduje kompletní bounded collection a readiness PASS
 a nikdy samo nemění capability policy.
 
+## Diagnostika ukládání podkladů V1
+
+Autorizovaná zpráva o připravenosti nyní obsahuje diagnostiku
+`predictive-capture-health-v1` určenou pouze ke čtení. Rozlišuje nedostupný
+PostgreSQL zdroj, záměrně vypnutý sběr, neúplnou kolekci kvůli limitům,
+chybějící platné časy uložení, absenci nových uložených vzorků za 24 hodin a
+nově uložené vzorky. Uvádí počet záznamů s platným časem, čas posledního
+uložení a počty za 24 hodin odděleně pro ETA, RUNWAY, RUNWAY_CHANGE a
+TRAJECTORY. Hodnoty zobrazuje administrační stránka `/system`.
+
+Přehled používá *stejný omezený a cachovaný 30denní dotaz* jako stávající
+readiness report. Nepřidává databázové čtení ani zápisy, frontu, poller nebo
+veřejné API. Aktuálnost se počítá z uloženého `createdAt`, nikoli z času
+předpovídaného příletu či poslední pozice letadla. Neplatné, budoucí nebo
+příliš staré časové značky jsou vyřazeny a neúplná kolekce se výslovně
+označí. Historické záznamy jsou viditelné i při vypnutém aktuálním sběru.
+
+Nedávno uložený vzorek **není** potvrzeným časem přistání, ověřenou
+předpovědí, důkazem správného fungování sběru ani způsobilostí k uvolnění
+do provozu. Stejně tak 24 hodin bez vzorků nemusí znamenat závadu, pokud
+neproběhly žádné způsobilé lety. Diagnostika nemění `PASS / WAIT / FAIL`,
+`manualReviewEligible`, režimy `PUBLIC` / `SHADOW` ani migrační a release
+politiku. Produkční databázová migrace a povolení sběru zůstávají
+samostatnými rozhodnutími správce.
+
 ## Rollout
 
 1. Stage 0: obnovit `airradar_dev` z read-only PROD snapshotu, aplikovat
