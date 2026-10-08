@@ -434,8 +434,8 @@ function TechnicalDetails({ aircraft }: { aircraft: AircraftView }) {
       <DetailValue label={t.aircraft.source} value={aircraft.sourceType ?? aircraft.source} />
       <DetailValue label={t.aircraft.seenBy} value={aircraft.provenance?.seenLocal && aircraft.provenance.seenNetwork ? t.aircraft.localAndNetwork : aircraft.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver} />
       <DetailValue label={t.aircraft.dataSource} value={classifyAircraftSource(aircraft)} />
-      <DetailValue label="Last LOCAL observation" value={observationAge(aircraft.provenance?.lastLocalSeen)} />
-      <DetailValue label="Last NETWORK observation" value={observationAge(aircraft.provenance?.lastNetworkSeen)} />
+      <DetailValue label={t.uiExtras.localObservation} value={observationAge(aircraft.provenance?.lastLocalSeen)} />
+      <DetailValue label={t.uiExtras.networkObservation} value={observationAge(aircraft.provenance?.lastNetworkSeen)} />
       <DetailValue label={t.aircraft.positionSource} value={aircraft.provenance?.positionSource ?? aircraft.source} />
       <DetailValue label={t.aircraft.position} value={position} />
       <DetailValue label={t.aircraft.baroGeomAltitude} value={altitudeValues.length > 0 ? altitudeValues.join(" / ") : null} />
