@@ -152,6 +152,44 @@ modify `PASS / WAIT / FAIL`, `manualReviewEligible`, `PUBLIC` / `SHADOW`,
 or migration and rollout policy. Production database migration and enabling
 capture remain separately approved operator actions.
 
+## Prediction Accuracy Trends V1 (Stage A2)
+
+The authenticated readiness report also exposes
+`predictive-accuracy-trends-v1`. This read-only diagnostic compares the last
+seven days against the preceding seven days, as sliding UTC windows based on
+the **prediction timestamp**. Only ETA and predicted runway-end estimates are
+included; runway-change and trajectory outcomes remain in their independent
+readiness contracts.
+
+A flight/lifecycle and capability contribute **at most one record across the
+entire 14-day comparison**, selected as the earliest persisted prospective
+prediction (with deterministic observation-key tie breaking). One aircraft
+can contribute multiple distinct flights, but repeated prediction captures
+for one flight do not increase its weight. The original independent terminal
+truth matcher and `scoreEta` / `scoreRunway` determine whether that initial
+prediction can be scored. A missing or unconfirmed outcome counts as
+`unscorableFlights`, never as a wrong ETA or runway. ETA reports per-flight
+MAE, median, and p90 absolute error; runway reports exact-end accuracy.
+Displayed change is signed recent minus previous, in seconds for ETA MAE and
+percentage points for runway accuracy. Negative ETA change or positive runway
+change is an improvement, **not** a readiness decision.
+
+Comparison state is `SOURCE_UNAVAILABLE`, `COLLECTION_INCOMPLETE`,
+`INSUFFICIENT_TRUTH`, or `COMPARABLE`. Deltas are exposed only when both
+periods independently contain at least 20 scored flights, the database is
+available, and all existing 30-day bounded collection queries are complete.
+This minimum is for descriptive comparison and is deliberately separate from
+the more stringent capability graduation thresholds. Cohorts are labeled by
+prediction time; flights awaiting landing may remain unscorable.
+
+The trend is computed from the existing cached 30-day admin collector and
+adds **no** database query, migration, hot-path operation, persistence write,
+public endpoint or notification. It never changes the canonical 30-day
+readiness evidence, `PASS / WAIT / FAIL`, `manualReviewEligible`, or
+configured/effective `SHADOW / PUBLIC` policy. The output is displayed
+only in the authenticated `/system` report. A trend is not proof of causal
+model improvement and should not be used to graduate a model automatically.
+
 ## Rollout
 
 1. Stage 0: refresh `airradar_dev` from a read-only PROD snapshot, apply
