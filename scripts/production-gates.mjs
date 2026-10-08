@@ -577,6 +577,28 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             },
           ])),
         },
+        horizonQuality: {
+          version: "predictive-horizon-quality-v1",
+          minimumConfirmedFlights: 10, sourceAvailable: true, complete: true,
+          unclassifiedFlights: 14,
+          bands: ["0-5m", "5-15m", "15-30m", "30-60m", "60m+"].map((bucket, index) => ({
+            bucket, state: index === 0 ? "INSUFFICIENT_TRUTH" : "MEASURED",
+            flights: index === 0 ? 8 : 12,
+            maeSeconds: index === 0 ? null : (index + 1) * 65,
+            medianAbsoluteErrorSeconds: index === 0 ? null : (index + 1) * 48,
+            p90AbsoluteErrorSeconds: index === 0 ? null : (index + 1) * 110,
+            biasSeconds: index === 0 ? null : -25,
+          })),
+        },
+        evidencePlan: {
+          version: "predictive-evidence-plan-v1",
+          capabilities: {
+            ETA: { action: "MANUAL_REVIEW", decision: "PASS", blockerCount: 0, largestEvidenceGap: null, operatorReviewSuggested: true },
+            RUNWAY: { action: "COLLECT_MORE_FLIGHTS", decision: "WAIT", blockerCount: 1, largestEvidenceGap: { key: "independentTruthFlights", missing: 28 }, operatorReviewSuggested: false },
+            RUNWAY_CHANGE: { action: "OBTAIN_INDEPENDENT_TRUTH", decision: "WAIT", blockerCount: 1, largestEvidenceGap: null, operatorReviewSuggested: false },
+            TRAJECTORY: { action: "OBTAIN_INDEPENDENT_TRUTH", decision: "WAIT", blockerCount: 2, largestEvidenceGap: null, operatorReviewSuggested: false },
+          },
+        },
         rollout: {
           ETA: {
             version: "eta-public-rollout-v1",
@@ -1195,6 +1217,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.mockPredictiveReadiness) {
             await visualPage.locator('[data-testid="predictive-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-accuracy-trends"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-horizon-quality"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-horizon-15-30m"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("ETA", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("PASS", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
