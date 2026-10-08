@@ -1494,6 +1494,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               // during the multi-viewport visual sweep. Layout and UI safety
               // must still be checked, but a bounded 429 is not a JS crash.
               || /^\/api\/aircraft\/[A-F0-9]{6}\/situation$/i.test(pathname)
+              || /^\/api\/history\/[A-F0-9]{6}$/i.test(pathname)
               || (pathname === "/api/intelligence/events"
                 && new URL(response.url()).searchParams.has("aircraft"));
             if (expectedRateLimitedApi) {
