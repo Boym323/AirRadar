@@ -1915,7 +1915,7 @@ export const cs = {
     liveBoardV9TrackAway: "kurz aktuálně od letiště",
     liveBoardV9TrackUnknown: "vztah tracku neznámý",
     liveBoardV9NoInbound: "Aktuálně není zachyceno žádné letadlo s odpovídajícím cílovým letištěm.",
-    liveBoardV9Disclaimer: "V9 rozšiřuje přehled příletů za hranici 30 km pomocí aktuálně zachycených lokálních letadel s cílovým letištěm. Čas příletu je přibližný odhad z přímé vzdálenosti a rychlosti vůči zemi, nikoli veřejná predikce, pořadí ATC ani odhad zpoždění.",
+    liveBoardV9Disclaimer: "V9 rozšiřuje přehled příletů pomocí čerstvých dat LOCAL letadel se shodným cílovým letištěm. Orientační čas se ukazuje pouze při ověřeném kurzu k letišti, aktuální poloze a použitelné rychlosti; jinak zůstává neznámý. Nejde o veřejnou predikci, pořadí ATC ani odhad zpoždění.",
     liveBoardJourneyInbound: "Přílet",
     liveBoardJourneyHolding: "Holding",
     liveBoardJourneyApproach: "Přiblížení",
