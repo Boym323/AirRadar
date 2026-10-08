@@ -27,7 +27,7 @@ describe("Product Navigation V2", () => {
     ]) {
       expect(grouped).toContain(`href: "${href}"`);
     }
-    expect(grouped.match(/\\{ href: "\\/[^"]+", label:/g)).toHaveLength(19);
+    expect(grouped.match(/href: "\/[^"]+"/g)).toHaveLength(19);
     expect(grouped).toContain('label: cs ? "Provoz a radar" : "Operations & radar"');
     expect(grouped).toContain('label: cs ? "Historie a analýza" : "History & analysis"');
     expect(grouped).toContain('label: cs ? "Letecká data" : "Aviation data"');
