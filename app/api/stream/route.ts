@@ -1,6 +1,6 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
-import { acquireSseClient, recordSsePayload, type SseProtocol } from "@/lib/server/sse-capacity";
+import { acquireSseClient, recordSsePayload, recordCoalescedAircraftSnapshot, type SseProtocol } from "@/lib/server/sse-capacity";
 import { parseCoverage } from "@/lib/server/coverage";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
 import { getRateLimitClientKey } from "@/lib/server/rate-limit";
@@ -70,6 +70,7 @@ export async function GET(request: Request): Promise<Response> {
         } else {
           // Keep only the newest internal snapshot for a slow client; the
           // delta encoder advances only after the chunk is actually queued.
+          if (pendingSnapshot) recordCoalescedAircraftSnapshot();
           pendingSnapshot = snapshot;
         }
       };
@@ -77,7 +78,10 @@ export async function GET(request: Request): Promise<Response> {
       const send = (snapshot: ReturnType<typeof service.getSnapshot>) => {
         if (closed) return;
         if ((controller.desiredSize ?? 0) > 0) deliver(snapshot);
-        else pendingSnapshot = snapshot;
+        else {
+          if (pendingSnapshot) recordCoalescedAircraftSnapshot();
+          pendingSnapshot = snapshot;
+        }
       };
       unsubscribe = service.subscribe(send, { coverage });
       send(service.getSnapshot({ coverage }));
