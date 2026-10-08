@@ -10,6 +10,8 @@ import { TrustStamp } from "@/components/trust-stamp";
 import type { PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import { isSpotterInteresting, scoreSpotterInterest } from "@/lib/spotter-interest";
+import { isLocalSpotterAircraft } from "@/lib/spotter";
+import { MY_SKY_FAVORITES_CHANGED_EVENT, MY_SKY_FAVORITES_STORAGE_KEY, parseMySkyFavorites, type MySkyFavorites } from "@/lib/spotter-personalization";
 import { SPOTTER_LOGBOOK_STORAGE_KEY, parseSpotterLogbook, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
 import styles from "./my-airradar-home.module.css";
 
@@ -46,6 +48,7 @@ export function MyAirRadarHome() {
   const [airportOperations, setAirportOperations] = useState<AirportOperations | null>(null);
   const [airportFailed, setAirportFailed] = useState(false);
   const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: 2, entries: [] });
+  const [favoriteAircraft, setFavoriteAircraft] = useState<MySkyFavorites>({ version: 1, icaoHexes: [] });
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const selectedHexRef = useRef<string | null>(null);
   const favoriteAirport = favorites[0] ?? null;
@@ -66,6 +69,26 @@ export function MyAirRadarHome() {
     } catch {
       setLogbook({ version: 2, entries: [] });
     }
+  }, []);
+
+  useEffect(() => {
+    const refreshFavorites = () => {
+      try {
+        setFavoriteAircraft(parseMySkyFavorites(window.localStorage.getItem(MY_SKY_FAVORITES_STORAGE_KEY)));
+      } catch {
+        setFavoriteAircraft({ version: 1, icaoHexes: [] });
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === MY_SKY_FAVORITES_STORAGE_KEY) refreshFavorites();
+    };
+    refreshFavorites();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(MY_SKY_FAVORITES_CHANGED_EVENT, refreshFavorites);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(MY_SKY_FAVORITES_CHANGED_EVENT, refreshFavorites);
+    };
   }, []);
 
   useEffect(() => {
@@ -105,6 +128,10 @@ export function MyAirRadarHome() {
     .sort((a, b) => b.interest.score - a.interest.score)
     .slice(0, 4), [snapshot?.aircraft]);
 
+  const currentFavoriteAircraft = useMemo(() => (snapshot?.aircraft ?? [])
+    .filter((item) => isLocalSpotterAircraft(item) && favoriteAircraft.icaoHexes.includes(item.icaoHex.toUpperCase()))
+    .sort((a, b) => a.icaoHex.localeCompare(b.icaoHex)), [favoriteAircraft, snapshot?.aircraft]);
+
   const activeWatchlist = useMemo(() => (watchlist?.rules ?? [])
     .filter((rule) => rule.enabled && rule.currentState?.status === "matching"), [watchlist?.rules]);
   const logbookStats = useMemo(() => spotterLogbookStats(logbook), [logbook]);
@@ -132,6 +159,30 @@ export function MyAirRadarHome() {
           </Link>)}
         </div> : <EmptyState title={snapshot ? copy.noInteresting : copy.connecting} description={copy.mySkyPrivacy} />}
         <p className={styles.note}>{copy.mySkyPrivacy}</p>
+      </Panel>
+
+      <Panel data-testid="my-airradar-favorite-aircraft">
+        <SectionHeader kicker="MY SKY / PERSONAL" title={t.spotter.mySkyFavoriteAircraft}
+          description={t.spotter.mySkyFavoriteAircraftDescription}
+          actions={<Link className={styles.openLink} href={"/spotter" as Route}>{copy.openSpotter} →</Link>} />
+        <div className={styles.metrics}>
+          <div><small>{t.spotter.mySkySavedCount}</small><strong>{formatNumber(favoriteAircraft.icaoHexes.length)}</strong></div>
+          <div><small>{copy.localAircraft}</small><strong>{formatNumber(currentFavoriteAircraft.length)}</strong></div>
+        </div>
+        {currentFavoriteAircraft.length ? <div className={styles.list}>
+          {currentFavoriteAircraft.slice(0, 5).map(item => <Link key={item.icaoHex} href={("/aircraft/" + encodeURIComponent(item.icaoHex)) as Route}>
+            <span><strong>{item.callsign ?? item.registration ?? item.icaoHex}</strong>
+              <small>{item.aircraftType ?? item.aircraftDescription ?? item.icaoHex}</small></span>
+            <StatusBadge variant={stream.connected && snapshot?.sourceOnline ? "live" : "stale"}>
+              {stream.connected && snapshot?.sourceOnline ? copy.live : copy.stale}
+            </StatusBadge>
+          </Link>)}
+        </div> : <EmptyState
+          title={favoriteAircraft.icaoHexes.length ? t.spotter.mySkyFavoriteOffline : t.spotter.mySkyFavoriteEmpty}
+        />}
+        {favoriteAircraft.icaoHexes.length ? <p className={styles.note}>
+          {favoriteAircraft.icaoHexes.join(" · ")}
+        </p> : null}
       </Panel>
 
       <Panel>
