@@ -48,7 +48,7 @@ describe("Prediction Timeline V1 boundary", () => {
     expect(serverSource).toContain("buildPublicRunwayAdvisory(state, effectivePolicy");
     expect(serverSource).toContain("buildPublicTrajectoryAdvisory(state, effectivePolicy");
     expect(componentSource).toContain('data.limitations.includes("PUBLIC_PREDICTION_UNAVAILABLE")');
-    expect(csSource).toContain("readiness gate dovolí PUBLIC výstup");
+    expect(csSource).toContain("jen po splnění kontroly připravenosti");
   });
 
   it("preserves source, provenance and confidence instead of inventing new prediction evidence", () => {
