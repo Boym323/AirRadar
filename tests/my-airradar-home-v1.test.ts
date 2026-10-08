@@ -22,6 +22,14 @@ describe("My AirRadar Home V1", () => {
     expect(component).toContain("SPOTTER_LOGBOOK_STORAGE_KEY");
   });
 
+  it("reuses browser favorites and limits live favorite matches to LOCAL provenance", () => {
+    expect(component).toContain("MY_SKY_FAVORITES_STORAGE_KEY");
+    expect(component).toContain('data-testid="my-airradar-favorite-aircraft"');
+    expect(component).toContain("isLocalSpotterAircraft(item)");
+    expect(component).toContain('window.addEventListener("storage"');
+    expect(component).not.toContain("/api/my-sky");
+  });
+
   it("surfaces the personal home in canonical desktop and mobile navigation", () => {
     const primary = shell.slice(shell.indexOf("function primaryNavigation()"), shell.indexOf("function moreNavigation()"));
     const mobile = shell.slice(shell.indexOf("export function MobileBottomNav"), shell.indexOf("export function AirRadarPageShell"));
