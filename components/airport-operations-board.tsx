@@ -14,6 +14,10 @@ import {
 } from "@/lib/airport-intelligence/v3";
 import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import { buildAirportArrivalFlowIntelligence } from "@/lib/airport-intelligence/arrival-flow-v8";
+import { buildAirportRunwayChangeEvidenceD2 } from "@/lib/airport-intelligence/runway-change-evidence-d2";
+import { buildAirportApproachEvidenceD3 } from "@/lib/airport-intelligence/approach-evidence-d3";
+import { buildAirportContextD4 } from "@/lib/airport-intelligence/airport-context-d4";
+import { airportDText } from "@/lib/i18n/airport-d-extras";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -341,6 +345,10 @@ export function AirportOperationsBoard({
     runwayFlow,
     referenceTime: arrivalSequence.generatedAt ?? operations?.generatedAt ?? null,
   });
+  const runwayEvidenceD2 = buildAirportRunwayChangeEvidenceD2(runwayFlow, arrivalFlow);
+  const approachEvidenceD3 = buildAirportApproachEvidenceD3({traffic: activeTraffic, operations});
+  const airportContextD4 = buildAirportContextD4({runway: runwayEvidenceD2, arrival: arrivalFlow, approach: approachEvidenceD3, windAvailable: Boolean(weather?.metar)});
+  const airportDCopy = airportDText(t.locale);
   const terminalDemandHorizon = operations?.terminalDemandHorizon ?? null;
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
@@ -651,6 +659,49 @@ export function AirportOperationsBoard({
         </div>)}
       </div> : null}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV8Disclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-d2-runway-evidence" aria-label={airportDCopy.runwayHeading}>
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D2</span><h3>{airportDCopy.runwayHeading}</h3></div>
+        <strong>{runwayEvidenceD2.state === "OBSERVED_TRANSITION" ? airportDCopy.observedTransition
+          : runwayEvidenceD2.state === "PREDICTED_DIVERGENCE" ? airportDCopy.predictedDivergence
+          : runwayEvidenceD2.state === "OBSERVED_STABLE" ? airportDCopy.observedStable
+          : airportDCopy.unknown}</strong>
+      </div>
+      <p>{airportDCopy.runwayDetail(runwayEvidenceD2.previousRunway, runwayEvidenceD2.observedRunway, runwayEvidenceD2.observedSamples)}</p>
+      <p className="airport-v3-disclaimer">{airportDCopy.runwayDisclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-d3-approach-evidence" aria-label={airportDCopy.approachHeading}>
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D3</span><h3>{airportDCopy.approachHeading}</h3></div>
+        <span>{approachEvidenceD3.items.length}</span>
+      </div>
+      {approachEvidenceD3.items.length ? <ol className="airport-live-flight-list">
+        {approachEvidenceD3.items.map((item) => <li key={item.icaoHex}>
+          <span className="airport-live-flight-main">
+            <Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.label}</Link>
+            <small>{item.state === "REAPPROACH_EVIDENCE" ? airportDCopy.reapproach
+              : item.state === "GO_AROUND_EVIDENCE" ? airportDCopy.goAround
+              : item.state === "HOLDING_EVIDENCE" ? airportDCopy.holding
+              : item.state === "FINAL_APPROACH_EVIDENCE" ? airportDCopy.finalApproach
+              : item.state === "APPROACH_EVIDENCE" ? airportDCopy.approach : airportDCopy.liveOnly}</small>
+          </span>
+        </li>)}
+      </ol> : <p className="airport-v3-empty">{airportDCopy.noApproach}</p>}
+      <p className="airport-v3-disclaimer">{airportDCopy.approachDisclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-d4-operational-context" aria-label={airportDCopy.contextHeading}>
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D4</span><h3>{airportDCopy.contextHeading}</h3></div>
+      </div>
+      {airportContextD4.signals.length ? <ul className="airport-live-flight-list">
+        {airportContextD4.signals.map((signal) => <li key={signal}>{airportDCopy.contextSignals[signal]}</li>)}
+      </ul> : <p className="airport-v3-empty">{airportDCopy.noContext}</p>}
+      <p><Link href="/airspace">{airportDCopy.contextAtcLink} ↗</Link></p>
+      <p className="airport-v3-disclaimer">{airportDCopy.contextDisclaimer}</p>
     </section>
 
     {terminalDemandHorizon ? <section

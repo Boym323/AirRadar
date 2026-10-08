@@ -60,6 +60,9 @@ export interface AirportMovementsResponse {
   complete: boolean;
   truncated: boolean;
   movements: AirportMovement[];
+  /** Bounded canonical approach-exception history; distinct from classified movements. */
+  eventEvidence?: AirportMovement[];
+  eventEvidenceTruncated?: boolean;
   summary: {
     approaches: number;
     landings: number;
@@ -390,6 +393,27 @@ export async function getAirportMovements(
       current.push(position);
       positionsByFlight.set(position.flightId, current);
     }
+    // Reuse the already fetched canonical FlightEvent batch. These events are
+    // evidence only and must not change movement counts or runway usage.
+    const eventEvidence: AirportMovement[] = [];
+    let eventEvidenceTruncated = eventRows.length >= POSITION_QUERY_LIMIT;
+    const flightsById = new Map(candidateFlights.map((flight) => [flight.id, flight]));
+    for (const event of eventRows) {
+      const flight = event.flightId === null ? null : flightsById.get(event.flightId);
+      if (!flight || (event.type !== "GO_AROUND" && event.type !== "HOLDING")
+        || (event.airportIcao !== null && event.airportIcao.toUpperCase() !== airport.icaoCode.toUpperCase())) continue;
+      const observedAt = isoTimestamp(event.occurredAt);
+      const observedMs = Date.parse(observedAt);
+      if (!Number.isFinite(observedMs) || observedMs > now.getTime() + 120_000
+        || now.getTime() - observedMs > 20 * 60_000) continue;
+      if (eventEvidence.length >= 250) { eventEvidenceTruncated = true; break; }
+      eventEvidence.push({
+        flightId: flight.id, icaoHex: flight.aircraft.icaoHex,
+        callsign: flight.callsign, registration: flight.registration ?? flight.aircraft.registration,
+        movement: event.type, confidence: "medium", airport: airport.icaoCode,
+        runway: null, observedAt, evidence: ["canonical Flight Intelligence event"],
+      });
+    }
     const movements: AirportMovement[] = [];
     for (const flight of candidateFlights) {
       const flightPositions = positionsByFlight.get(flight.id) ?? [];
@@ -409,7 +433,13 @@ export async function getAirportMovements(
         (event.type === "GO_AROUND" || event.type === "HOLDING")
         && (event.airportIcao === null || event.airportIcao.toUpperCase() === airport.icaoCode.toUpperCase()),
       );
-      if (movement && canonical) {
+      // Never replace a newer observed approach with an older exception event:
+      // doing so would hide a real return to approach after go-around.
+      const canonicalAt = canonical ? Date.parse(isoTimestamp(canonical.occurredAt)) : Number.NaN;
+      const movementAt = movement ? Date.parse(movement.observedAt) : Number.NaN;
+      if (movement && canonical && Number.isFinite(canonicalAt)
+        && Number.isFinite(movementAt) && canonicalAt >= movementAt
+        && canonicalAt <= now.getTime() + 120_000) {
         movement = {
           ...movement,
           movement: canonical.type as "GO_AROUND" | "HOLDING",
@@ -425,7 +455,7 @@ export async function getAirportMovements(
     lastDiagnostics = { enabled: true, lastQueryDurationMs: queryDurationMs, flightsExamined: candidateFlights.length, positionsExamined: Math.min(positions.length, POSITION_QUERY_LIMIT), truncated };
     return {
       airport: { icao: airport.icaoCode, name: airport.name }, period, generatedAt: now.toISOString(), complete: !truncated, truncated,
-      movements, summary,
+      movements, eventEvidence, eventEvidenceTruncated, summary,
       diagnostics: { flightsExamined: candidateFlights.length, positionsExamined: Math.min(positions.length, POSITION_QUERY_LIMIT), queryDurationMs },
     };
   } catch (error) {

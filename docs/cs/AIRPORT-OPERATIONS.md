@@ -211,3 +211,32 @@ a ATC kontext bez dalšího paralelního dashboardu nebo polleru.
 - **D5: Ověřovaný release.** Deterministické testy scénářů, screenshoty
   a průběžné porovnání s nezávislou skutečností. Bez automatického
   povolení PUBLIC predikcí.
+
+### Implementace a ověření D2–D5
+
+D2 přidává konzervativní vyhodnocení drah z již existujících, po jednotlivých
+letech deduplikovaných 15minutových oken V7 a readiness-gated PUBLIC predikcí V8.
+Odděluje pozorovanou změnu dráhy, nesoulad predikce a stabilní provoz. Pro
+pozorovanou změnu vyžaduje obě okna nejméně tři odlišné lety a dominantní
+podíl alespoň 60 %. Jinak vrací UNKNOWN. Vítr nepředstavuje potvrzení ATC.
+
+D3 využívá existující korelovaný živý provoz, nejvýše 250 klasifikovaných
+pohybů a 250 kanonických výjimek FlightEvent z již prováděného dotazu
+(bez další SQL operace). Novější pozorované přiblížení nesmí přepsat starší
+go-around. Živá fáze bez odpovídající ICAO identity, instance letu, času a
+čerstvého pohybu má stav `LIVE_ONLY`. Opakované přiblížení vyžaduje
+GO_AROUND následovaný APPROACH ve **stejné instanci Flight ID**. Neúplná
+historie neprokazuje přistání ani absenci události.
+
+D4 ukazuje oddělené podklady o dráze, předpovědi, větru a přiblížení a
+odkazuje na existující průzkumník vzdušných prostorů a ATC sektorů. Aktuální
+panel **nepřiřazuje** konkrétním letům pokyny ATC, řízené frekvence ani
+dráhy. Stav `NO_ATC_CLEARANCE_EVIDENCE` toto omezení explicitně zachovává.
+
+D5 zahrnuje testy `airport-runway-change-evidence-d2`,
+`airport-approach-evidence-d3`, `airport-context-d4` a
+`airport-intelligence-d5-release-boundary`. Po zelených PR kontrolách se
+ověřuje release validation, desktop/mobilní browser gate a produkční nasazení
+přesného SHA. Žádná nová API cesta, poller, externí žádost, DB migrace,
+persistenční zápis, SSE ani automatické povolení PUBLIC predikcí. Zelené CI
+samo o sobě není důkazem skutečné provozní přesnosti.
