@@ -306,7 +306,7 @@ export function NotificationCenter() {
 
   return <main className={styles.page} data-testid="notification-center-v2">
     <PageHeader
-      kicker="AIRRADAR / NOTIFICATIONS"
+      kicker={t.uiExtras.notificationHeading}
       title={copy.title}
       description={copy.subtitle}
       actions={<StatusBadge variant={failed ? "warning" : data ? "success" : "neutral"}>{failed ? copy.unavailable : copy.bounded}</StatusBadge>}
@@ -320,7 +320,7 @@ export function NotificationCenter() {
     </MetricStrip>
 
     <Panel>
-      <SectionHeader kicker="DELIVERY POLICY" title={copy.preferences} description={copy.preferencesDescription} />
+      <SectionHeader kicker={t.uiExtras.deliveryPolicy} title={copy.preferences} description={copy.preferencesDescription} />
       {preferenceAccess === "loading" ? <p className={styles.loading}>{t.common.loading}</p> : null}
       {preferenceAccess === "locked" ? <div className={styles.preferenceLocked}>
         <p>{copy.locked}</p>
@@ -356,7 +356,7 @@ export function NotificationCenter() {
     </Panel>
 
     <Panel>
-      <SectionHeader kicker="CENTER V2" title={copy.feed} description={copy.feedDescription} />
+      <SectionHeader kicker={t.uiExtras.notificationCenter} title={copy.feed} description={copy.feedDescription} />
       <div className={styles.filters} aria-label={copy.filters}>
         <label>
           <span>{copy.categoryFilter}</span>
