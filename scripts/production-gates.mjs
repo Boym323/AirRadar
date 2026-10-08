@@ -912,6 +912,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        // Visual V3.3: reproducible data, empty, unavailable, locale and menu states.
+        { name: "weather-data-desktop", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockWeather: "data" },
+        { name: "weather-empty-mobile", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 390, height: 844 }, fullPage: true, mockWeather: "empty" },
+        { name: "watchlist-empty-desktop", path: "/watchlist", selector: ".watchlist-page", viewport: { width: 1366, height: 900 }, fullPage: true, mockWatchlist: true },
+        { name: "watchlist-empty-mobile", path: "/watchlist", selector: ".watchlist-page", viewport: { width: 390, height: 844 }, fullPage: true, mockWatchlist: true },
+        { name: "notifications-empty-desktop", path: "/notifications", selector: '[data-testid="notification-center-v2"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockNotifications: true },
+        { name: "notifications-empty-mobile", path: "/notifications", selector: '[data-testid="notification-center-v2"]', viewport: { width: 390, height: 844 }, fullPage: true, mockNotifications: true },
+        { name: "receiver-unavailable-desktop", path: "/receiver/coverage", selector: '[data-testid="receiver-explorer-v2"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockReceiverUnavailable: true },
+        { name: "receiver-unavailable-mobile", path: "/receiver/coverage", selector: '[data-testid="receiver-explorer-v2"]', viewport: { width: 390, height: 844 }, fullPage: true, mockReceiverUnavailable: true },
+        { name: "more-menu-desktop-cs", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openMore: "desktop" },
+        { name: "more-menu-mobile-en-320", path: "/statistics", selector: ".statistics-page", viewport: { width: 320, height: 568 }, fullPage: false, openMore: "mobile", locale: "en" },
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
@@ -944,6 +955,51 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       for (const target of visualTargets) {
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
+          if (target.locale) {
+            await visualPage.addInitScript((locale) => window.localStorage.setItem("airradar-language", locale), target.locale);
+          }
+          if (target.mockWeather) {
+            const fixtureTime = "2026-10-04T07:30:00.000Z";
+            const hasData = target.mockWeather === "data";
+            const fixtures = [
+              ["**/api/weather/metar-map", { available: hasData, observations: hasData ? [{
+                stationId: "LKPR", flightCategory: "VFR", windSpeed: 12, windDirection: 240, windGust: 18,
+                visibility: 10000, observedAt: fixtureTime,
+              }] : [], fetchedAt: fixtureTime, stale: false }],
+              ["**/api/weather/sigmet", { available: hasData, type: "FeatureCollection", features: [], fetchedAt: fixtureTime, stale: false }],
+              ["**/api/weather/radar/frames", { available: hasData, provider: "CHMI", product: "CZRAD", frames: hasData ? [{ id: "fixture-frame", observedAt: fixtureTime, latest: true, stale: false }] : [], latestFrameId: hasData ? "fixture-frame" : null, generatedAt: fixtureTime }],
+              ["**/api/weather/pirep?*", { available: hasData, reports: [], fetchedAt: fixtureTime, stale: false }],
+              ["**/api/weather/wind?*", { provider: "fixture", model: "ICON-EU", modelRun: null, validAt: fixtureTime,
+                levelHpa: 500, points: hasData ? [{ lat: 50.1, lon: 14.4, speedKt: 22, directionDeg: 240 }] : [],
+                fetchedAt: fixtureTime, stale: false }],
+            ];
+            for (const [pattern, body] of fixtures) {
+              await visualPage.route(pattern, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }));
+            }
+          }
+          if (target.mockWatchlist) {
+            await visualPage.route("**/api/watchlist/session", (route) => route.fulfill({
+              status: 200, contentType: "application/json", body: JSON.stringify({ configured: false, authenticated: false }),
+            }));
+            await visualPage.route("**/api/watchlist", (route) => route.fulfill({
+              status: 200, contentType: "application/json", body: JSON.stringify({ rules: [], cooldownMs: 3600000, emergency: { enabled: false } }),
+            }));
+          }
+          if (target.mockNotifications) {
+            await visualPage.route("**/api/alerts?*", (route) => route.fulfill({
+              status: 200, contentType: "application/json", body: JSON.stringify({ items: [], page: 0, pageSize: 50, nextPage: null, total: 0 }),
+            }));
+            await visualPage.route("**/api/admin/alerts/delivery?*", (route) => route.fulfill({
+              status: 403, contentType: "application/json", body: JSON.stringify({ error: "forbidden" }),
+            }));
+          }
+          if (target.mockReceiverUnavailable) {
+            for (const pattern of ["**/api/statistics/coverage-intelligence?*", "**/api/receiver/coverage?*"]) {
+              await visualPage.route(pattern, (route) => route.fulfill({
+                status: 503, contentType: "application/json", body: JSON.stringify({ error: "fixture_unavailable" }),
+              }));
+            }
+          }
           if (target.mockPredictiveOperations) {
             await visualPage.route("**/api/logbook/summary", async (route) => {
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(predictiveOperationsLogbookFixture) });
@@ -1205,6 +1261,43 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const sources = visualPage.locator("#aircraft-receiver details");
             await sources.waitFor({ state: "visible", timeout: 15_000 });
             await sources.locator("summary").click();
+          }
+          if (target.mockWeather === "data") {
+            await visualPage.getByText("LKPR", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.mockWeather === "empty") {
+            await visualPage.getByText("Data nejsou aktuálně dostupná.", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.mockWatchlist) {
+            await visualPage.waitForFunction(() => {
+              const text = document.querySelector(".watchlist-rules-card .watchlist-empty")?.textContent;
+              return Boolean(text && !/Načít|Loading/i.test(text));
+            }, undefined, { timeout: 15_000 });
+          }
+          if (target.mockNotifications) {
+            await visualPage.waitForFunction(() =>
+              document.querySelector('[data-testid="notification-center-v2"] .ui-metric-value')?.textContent?.trim() === "0",
+              undefined, { timeout: 15_000 });
+          }
+          if (target.mockReceiverUnavailable) {
+            await visualPage.locator('[data-testid="receiver-explorer-summary"] .ui-empty-state')
+              .waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.locale) {
+            await visualPage.waitForFunction((locale) => document.documentElement.lang === locale, target.locale);
+          }
+          if (target.openMore) {
+            const disclosure = target.openMore === "mobile"
+              ? visualPage.locator(".mobile-bottom-more > summary")
+              : visualPage.locator(".topbar-nav-more > summary");
+            await disclosure.click();
+            await visualPage.locator(".navigation-more-group").first().waitFor({ state: "visible", timeout: 15_000 });
+          }
+          const width = await visualPage.evaluate(() => ({
+            scroll: document.documentElement.scrollWidth, viewport: window.innerWidth,
+          }));
+          if (width.scroll > width.viewport + 1) {
+            throw new Error(`Visual smoke ${target.name} overflowed: ${width.scroll}px > ${width.viewport}px`);
           }
           await visualPage.evaluate(async () => {
             if ("fonts" in document) await document.fonts.ready;

@@ -109,12 +109,21 @@ CI.
 The production browser gate captures screenshots for representative desktop and
 mobile surfaces into `artifacts/visual-smoke/`:
 
-- live radar
-- Statistics
-- Time Machine
-- System
-- mobile radar
-- mobile Statistics
+- live radar, selected aircraft (desktop/tablet/mobile) and expanded mobile detail
+- Statistics, Time Machine and System
+- weather (seeded available data on desktop, deterministic empty state on mobile)
+- watchlist (empty on desktop/mobile)
+- notifications (empty on desktop/mobile)
+- receiver analysis (unavailable backend on desktop/mobile)
+- localized and grouped **More** navigation (Czech desktop, English 320 px mobile)
+- mobile radar, Statistics and selected feature details
+
+New V3.3 states use Playwright request interception and deterministic fixtures
+rather than live upstream data. The visual sweep checks horizontal overflow for
+each target before saving its screenshot; it also waits for the expected
+data/empty/unavailable UI to appear. Locale/menu captures validate a real
+English navigation state. This still does **not** constitute an automatic
+pixel-diff comparison against approved baselines.
 
 These screenshots are CI artifacts rather than checked-in pixel baselines.
 Dynamic aircraft, weather and operational data make strict pixel matching noisy,
