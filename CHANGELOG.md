@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.370] - 2026-10-08
+
+Changes since v1.0.369.
+
+### Changed
+
+- D1: qualify airport terminal fallback ETA using fresh inbound track evidence (#629) (4579b16f)
+
+### Maintenance
+
+- Sync generated repository metadata (#627) (ef470202)
+- Sync generated repository metadata (#628) (8a5c91d7)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#627) (ef470202)
+- chore(metadata): sync generated repository metadata (#628) (8a5c91d7)
+- D1: qualify airport terminal fallback ETA using fresh inbound track evidence (#629) (4579b16f)
+
+</details>
 ## [1.0.369] - 2026-10-08
 
 Changes since v1.0.368.
