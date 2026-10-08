@@ -14,6 +14,8 @@ import {
 } from "@/lib/airport-intelligence/v3";
 import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import { buildAirportArrivalFlowIntelligence } from "@/lib/airport-intelligence/arrival-flow-v8";
+import { buildAirportRunwayChangeEvidenceD2 } from "@/lib/airport-intelligence/runway-change-evidence-d2";
+import { airportDText } from "@/lib/i18n/airport-d-extras";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -341,6 +343,8 @@ export function AirportOperationsBoard({
     runwayFlow,
     referenceTime: arrivalSequence.generatedAt ?? operations?.generatedAt ?? null,
   });
+  const runwayEvidenceD2 = buildAirportRunwayChangeEvidenceD2(runwayFlow, arrivalFlow);
+  const airportDCopy = airportDText(t.locale);
   const terminalDemandHorizon = operations?.terminalDemandHorizon ?? null;
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
@@ -651,6 +655,18 @@ export function AirportOperationsBoard({
         </div>)}
       </div> : null}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV8Disclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-d2-runway-evidence" aria-label={airportDCopy.runwayHeading}>
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D2</span><h3>{airportDCopy.runwayHeading}</h3></div>
+        <strong>{runwayEvidenceD2.state === "OBSERVED_TRANSITION" ? airportDCopy.observedTransition
+          : runwayEvidenceD2.state === "PREDICTED_DIVERGENCE" ? airportDCopy.predictedDivergence
+          : runwayEvidenceD2.state === "OBSERVED_STABLE" ? airportDCopy.observedStable
+          : airportDCopy.unknown}</strong>
+      </div>
+      <p>{airportDCopy.runwayDetail(runwayEvidenceD2.previousRunway, runwayEvidenceD2.observedRunway, runwayEvidenceD2.observedSamples)}</p>
+      <p className="airport-v3-disclaimer">{airportDCopy.runwayDisclaimer}</p>
     </section>
 
     {terminalDemandHorizon ? <section
