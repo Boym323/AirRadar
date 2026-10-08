@@ -12,6 +12,7 @@ interface RadarFlightFollowHudProps {
   conformance: TrajectoryConformanceSnapshot | null;
   operationalTwin: OperationalTwinApiResponse | null;
   following: boolean;
+  compact?: boolean;
   onToggle: () => void;
 }
 
@@ -31,6 +32,7 @@ export function RadarFlightFollowHud({
   conformance,
   operationalTwin,
   following,
+  compact = false,
   onToggle,
 }: RadarFlightFollowHudProps) {
   const twin = operationalTwin?.status === "available" ? operationalTwin : null;
@@ -59,24 +61,25 @@ export function RadarFlightFollowHud({
   const conformanceLabel = conformance ? t.routeConformance.statuses[conformance.status] : null;
 
   return <section
-    className={`${styles.hud} ${following ? styles.following : ""}`}
+    className={`${styles.hud} ${following ? styles.following : ""} ${compact ? styles.compact : ""}`}
     aria-label={t.radar.followHudLabel}
     data-testid="radar-flight-follow-hud"
     data-following={following ? "true" : "false"}
+    data-compact={compact ? "true" : "false"}
   >
     <div className={styles.identity}>
       <span className={styles.kicker}>{t.radar.followMode}</span>
       <strong>{identity}</strong>
-      {secondary && <small>{secondary}</small>}
+      {!compact && secondary && <small>{secondary}</small>}
     </div>
 
-    <div className={styles.telemetry} aria-label={t.radar.followTelemetry}>
+    {!compact && <div className={styles.telemetry} aria-label={t.radar.followTelemetry}>
       <strong>{formatAltitude(aircraft.altitude)}</strong>
       <span>{formatSpeed(aircraft.groundSpeed)}</span>
       {climb && <span>{climb}</span>}
-    </div>
+    </div>}
 
-    <div className={styles.metrics}>
+    {!compact && <div className={styles.metrics}>
       {destination && <span className={styles.metric}>
         <small>{t.radar.followDestination}</small>
         <strong>{destination}</strong>
@@ -104,7 +107,7 @@ export function RadarFlightFollowHud({
         <small>{t.radar.followTrajectory}</small>
         <strong>{conformanceLabel}</strong>
       </span>}
-    </div>
+    </div>}
 
     <button
       type="button"
