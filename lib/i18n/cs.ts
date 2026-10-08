@@ -2319,7 +2319,7 @@ export const cs = {
     networkQueueAircraft: (count: number) => `${count} approach/final`,
     networkNextArrival: "Další přílet",
     networkNoInbound: "Žádný odhad příletů",
-    networkRouteFlow: (inbound: number, outbound: number) => `Aktuální provoz na trasách: ${inbound} příletů · ${outbound} odletů`,
+    networkRouteFlow: (inbound: number, outbound: number) => `Aktuální provoz na trasách: ${inbound} ${inbound === 1 ? "přílet" : inbound >= 2 && inbound <= 4 ? "přílety" : "příletů"} · ${outbound} ${outbound === 1 ? "odlet" : outbound >= 2 && outbound <= 4 ? "odlety" : "odletů"}`,
     networkOpenBoard: "Otevřít živý přehled letiště",
     networkDisclaimer: "Síť vychází pouze z lokálně zachyceného provozu a provozních údajů letišť. Odhad pořadí není pokyn ATC. Náhradní odhad času příletu vychází z přímé vzdálenosti a rychlosti vůči zemi, nikoli z veřejné predikce.",
     airportIdentity: "Identita letiště",
