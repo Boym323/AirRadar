@@ -12,6 +12,7 @@ import type {
   PredictiveGraduationTruthRequirement,
 } from "@/lib/predictive-intelligence/graduation-calibration";
 import { useLocale } from "@/components/locale-provider";
+import { operationalHealthLabels } from "@/lib/i18n/operational-health";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 import { SystemRuntimeTimeline } from "@/components/system-runtime-timeline";
 
@@ -451,6 +452,7 @@ function LinkNav({ dictionary }: { dictionary: LocaleDictionary }) {
 export function SystemStatusPage() {
   const { locale } = useLocale();
   const dictionary = getTranslations(locale);
+  const operationalLabels = operationalHealthLabels(dictionary.locale);
   const [data, setData] = useState<SystemStatusApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -581,6 +583,20 @@ export function SystemStatusPage() {
 
     {data && <div className="system-grid">
       <HealthSummary data={data} dictionary={dictionary} streamConnected={streamConnected} />
+      {detailed && data.operationalHealth && <UiCard className="system-card" aria-label={operationalLabels.title}>
+        <div className="system-card-header">
+          <h2>{operationalLabels.title}</h2>
+          <strong>{operationalLabels.state[data.operationalHealth.state]}</strong>
+        </div>
+        <dl className="system-fields">
+          <Field label={operationalLabels.availability} value={data.operationalHealth.sourceAvailability} />
+          <Field label={operationalLabels.connections} value={`${formatNumber(data.operationalHealth.stream.activeClients, 0, dictionary.locale)} / ${formatNumber(data.operationalHealth.stream.capacity, 0, dictionary.locale)}`} />
+          <Field label={operationalLabels.denied} value={formatNumber(data.operationalHealth.stream.deniedSinceStart, 0, dictionary.locale)} />
+          <Field label={operationalLabels.coalesced} value={formatNumber(data.operationalHealth.stream.coalescedSnapshotsSinceStart, 0, dictionary.locale)} />
+          <Field label={operationalLabels.database} value={formatStatus(data.operationalHealth.databaseState, dictionary)} />
+          <Field label={operationalLabels.reasonLabel} value={data.operationalHealth.reasons.map((code) => operationalLabels.reasons[code]).join(", ") || operationalLabels.noIssues} />
+        </dl>
+      </UiCard>}
       <Card title={dictionary.system.application} status={data.application.status} dictionary={dictionary}>
         <Field label={dictionary.system.applicationName} value={data.application.name} />
         <Field label={dictionary.system.version} value={data.application.version ?? dictionary.system.notAvailable} />
