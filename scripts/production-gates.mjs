@@ -548,6 +548,57 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             },
           },
         },
+        // Deterministic admin evidence diagnostics, kept in sync with
+        // PredictiveReadinessReport. Never mock a PUBLIC decision here.
+        captureHealth: {
+          version: "predictive-capture-health-v1", state: "RECENT_SAMPLES",
+          captureConfigured: true, observationRows: 420, timestampedRows: 420,
+          recent24h: 18, lastPersistedAt: "2026-10-04T08:52:00.000Z",
+          perCapability: {
+            ETA: { recent24h: 10, lastPersistedAt: "2026-10-04T08:52:00.000Z" },
+            RUNWAY: { recent24h: 4, lastPersistedAt: "2026-10-04T08:48:00.000Z" },
+            RUNWAY_CHANGE: { recent24h: 2, lastPersistedAt: "2026-10-04T08:40:00.000Z" },
+            TRAJECTORY: { recent24h: 2, lastPersistedAt: "2026-10-04T08:35:00.000Z" },
+          },
+        },
+        accuracyTrends: {
+          version: "predictive-accuracy-trends-v1", periodDays: 7,
+          minimumConfirmedFlightsPerPeriod: 20, sourceAvailable: true, complete: true,
+          capabilities: Object.fromEntries(["ETA", "RUNWAY"].map((key) => [
+            key, {
+              state: "INSUFFICIENT_TRUTH",
+              recent: { from: "2026-09-27T09:00:00.000Z", to: "2026-10-04T09:00:00.000Z", observedFlights: 16, scoreableFlights: 8, unscorableFlights: 8,
+                etaMaeSeconds: key === "ETA" ? 165 : null, etaMedianAbsoluteErrorSeconds: key === "ETA" ? 140 : null, etaP90AbsoluteErrorSeconds: key === "ETA" ? 380 : null,
+                runwayExactEndAccuracy: key === "RUNWAY" ? 0.75 : null },
+              previous: { from: "2026-09-20T09:00:00.000Z", to: "2026-09-27T09:00:00.000Z", observedFlights: 14, scoreableFlights: 7, unscorableFlights: 7,
+                etaMaeSeconds: key === "ETA" ? 170 : null, etaMedianAbsoluteErrorSeconds: key === "ETA" ? 145 : null, etaP90AbsoluteErrorSeconds: key === "ETA" ? 390 : null,
+                runwayExactEndAccuracy: key === "RUNWAY" ? 0.7 : null },
+              deltaEtaMaeSeconds: null, deltaRunwayAccuracyPercentagePoints: null,
+            },
+          ])),
+        },
+        horizonQuality: {
+          version: "predictive-horizon-quality-v1",
+          minimumConfirmedFlights: 10, sourceAvailable: true, complete: true,
+          unclassifiedFlights: 14,
+          bands: ["0-5m", "5-15m", "15-30m", "30-60m", "60m+"].map((bucket, index) => ({
+            bucket, state: index === 0 ? "INSUFFICIENT_TRUTH" : "MEASURED",
+            flights: index === 0 ? 8 : 12,
+            maeSeconds: index === 0 ? null : (index + 1) * 65,
+            medianAbsoluteErrorSeconds: index === 0 ? null : (index + 1) * 48,
+            p90AbsoluteErrorSeconds: index === 0 ? null : (index + 1) * 110,
+            biasSeconds: index === 0 ? null : -25,
+          })),
+        },
+        evidencePlan: {
+          version: "predictive-evidence-plan-v1",
+          capabilities: {
+            ETA: { action: "MANUAL_REVIEW", decision: "PASS", blockerCount: 0, largestEvidenceGap: null, operatorReviewSuggested: true },
+            RUNWAY: { action: "COLLECT_MORE_FLIGHTS", decision: "WAIT", blockerCount: 1, largestEvidenceGap: { key: "independentTruthFlights", missing: 28 }, operatorReviewSuggested: false },
+            RUNWAY_CHANGE: { action: "OBTAIN_INDEPENDENT_TRUTH", decision: "WAIT", blockerCount: 1, largestEvidenceGap: null, operatorReviewSuggested: false },
+            TRAJECTORY: { action: "OBTAIN_INDEPENDENT_TRUTH", decision: "WAIT", blockerCount: 2, largestEvidenceGap: null, operatorReviewSuggested: false },
+          },
+        },
         rollout: {
           ETA: {
             version: "eta-public-rollout-v1",
@@ -1166,6 +1217,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.mockPredictiveReadiness) {
             await visualPage.locator('[data-testid="predictive-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-accuracy-trends"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-horizon-quality"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-horizon-15-30m"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("ETA", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("PASS", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });

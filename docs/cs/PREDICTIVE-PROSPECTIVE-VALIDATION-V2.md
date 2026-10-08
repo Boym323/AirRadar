@@ -191,6 +191,51 @@ veřejné API ani notifikace. Srovnání nemění kanonické 30denní důkazy,
 Trend sám nedokazuje příčinu zlepšení modelu a nesmí vyvolat automatické
 povýšení schopnosti do veřejného provozu.
 
+## Přesnost podle horizontu a dokončení etapy (A3–A4)
+
+Chráněná zpráva o připravenosti nyní zahrnuje diagnostiku
+`predictive-horizon-quality-v1`, odvozenou od **nezávisle potvrzeného
+skutečného času přistání**, nikoliv od odhadovaného ETA modelu.
+Vyhodnotitelná pozorování ETA se rozdělují do vzájemně se nepřekrývajících
+pásem skutečného zbývajícího času: 0–5, 5–15, 15–30, 30–60 a 60+ minut
+(maximálně šest hodin, stejně jako stávající dohledávání nezávislé
+skutečnosti). Za jeden let a časové pásmo se započítává jen **nejstarší**
+predikce. Model proto nemůže měnit příslušnost do pásma vlastním chybným ETA.
+U každého pásma se uvádí počet letů, průměrná absolutní chyba, medián,
+P90 a znaménkové zkreslení (+ = predikce pozdě, − = predikce předčasně).
+
+Pásmo má stav `MEASURED` pouze při kompletní omezené kolekci, dostupném
+zdroji a alespoň deseti nezávisle ověřených letech. Jinak jsou metriky
+kvality prázdné a stav označuje nedostupný zdroj, neúplná data nebo málo
+potvrzených výsledků. Samostatný počet udává unikátní lety bez bezpečně
+určitelného horizontu. Limit deseti letů je **popisný**, nikoliv podmínka
+pro veřejné zpřístupnění nebo důkaz dostatečné kalibrace.
+
+`predictive-evidence-plan-v1` převádí existující výsledky readiness,
+graduation calibration a diagnostiky ukládání do doporučeného dalšího kroku
+pro ETA / RUNWAY / RUNWAY_CHANGE / TRAJECTORY. Rozlišuje chybějící
+PostgreSQL data, neúplné dotazy, konflikty identity, vypnutý nebo neaktivní
+sběr, chybějící nezávislé výsledky, nedostatek vzorků a problémy kvality.
+`MANUAL_REVIEW` pouze upozorňuje na možnost ruční odborné kontroly
+podle stávajících pravidel. Diagnostika nikdy automaticky nemění runtime
+policy ani neobchází bezpečné omezení `PUBLIC`.
+
+Všechna měření A1–A4 používají existující omezené cachované dotazy a
+admin-only `/api/admin/predictive/readiness`. Nepřidávají běh na pozadí,
+operace v příjmové smyčce, tabulky, migrace, veřejná API ani databázové
+zápisy. Regresní testy pokrývají hranice horizontů, deduplikaci letů,
+nezávislou skutečnost, nedostatek vzorků a prioritu operátorských doporučení.
+Produkční screenshotové fixture nyní obsahují úplnou strukturu
+administrační zprávy a kontrolují vykreslení všech tří nových přehledů.
+
+**Dokončení vývoje není schválení predikcí.** Implementaci etapy A lze
+uzavřít po průchodu CI, prohlížečových bran a nasazení. Skutečné povýšení
+modelu zůstává podmíněno dostatkem **reálných** nezávislých výsledků,
+readiness PASS a samostatným schválením změny `PUBLIC` správcem.
+Povolení prospektivního sběru a případná migrace produkční databáze musí
+probíhat samostatnými schválenými kroky níže, nikoliv automaticky při
+implementaci této diagnostiky.
+
 ## Rollout
 
 1. Stage 0: obnovit `airradar_dev` z read-only PROD snapshotu, aplikovat

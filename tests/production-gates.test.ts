@@ -83,6 +83,23 @@ describe("production release metadata gate", () => {
     expect(block).not.toContain('visualPage.route("**/api/system/status"');
   });
 
+  it("keeps predictive browser fixtures in sync with the full admin report contract", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    const start = source.indexOf("const predictiveReadinessFixture = {");
+    const end = source.indexOf("const etaAdvisoryPublicFixture = {", start);
+    expect(start).toBeGreaterThan(-1);
+    const fixture = source.slice(start, end);
+    for (const field of [
+      "captureHealth:", "accuracyTrends:", "horizonQuality:", "evidencePlan:",
+      'version: "predictive-capture-health-v1"',
+      'version: "predictive-accuracy-trends-v1"',
+      'version: "predictive-horizon-quality-v1"',
+      'version: "predictive-evidence-plan-v1"',
+    ]) expect(fixture).toContain(field);
+    expect(source).toContain('data-testid="predictive-horizon-quality"');
+    expect(source).toContain('data-testid="predictive-accuracy-trends"');
+  });
+
   it("retries the real Operations Center click once after hydration", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
