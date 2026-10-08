@@ -1296,8 +1296,25 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await historyLink.waitFor({ state: "visible", timeout: 15_000 });
     await clickAndWaitForNavigation(routeSmoke, historyLink, new URL("/history", baseUrl), "History link");
     await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
+    // Verify a real language change (not merely the presence of two dictionaries),
+    // retained selection after navigation and a hard reload, and return to Czech.
+    const desktopLanguageSwitch = routeSmoke.locator('.desktop-language-switch [data-testid="language-switch"]');
+    await desktopLanguageSwitch.locator('button[lang="en"]').click();
+    await routeSmoke.waitForFunction(() => document.documentElement.lang === "en"
+      && localStorage.getItem("airradar-language") === "en"
+      && document.querySelector(".brand-subtitle")?.textContent?.includes("PERSONAL AVIATION"));
+    await routeSmoke.reload({ waitUntil: "domcontentloaded" });
+    await routeSmoke.waitForFunction(() => document.documentElement.lang === "en"
+      && document.querySelector('.desktop-language-switch button[lang="en"]')?.getAttribute("aria-pressed") === "true");
+    await desktopLanguageSwitch.locator('button[lang="cs"]').click();
+    await routeSmoke.waitForFunction(() => document.documentElement.lang === "cs"
+      && document.querySelector(".brand-subtitle")?.textContent?.includes("OSOBNÍ PŘEHLED"));
     await routeSmoke.setViewportSize({ width: 390, height: 844 });
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await routeSmoke.locator(".topbar-menu > summary").click();
+    await routeSmoke.locator('.topbar-menu .mobile-language-switch button[lang="en"]').click();
+    await routeSmoke.waitForFunction(() => document.documentElement.lang === "en"
+      && localStorage.getItem("airradar-language") === "en");
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
     const mobileMoreLink = routeSmoke.locator('.mobile-bottom-more a[href="/airports"]').first();
     await mobileMoreLink.waitFor({ state: "visible", timeout: 15_000 });
