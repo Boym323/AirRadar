@@ -5755,26 +5755,50 @@ button, input, select, textarea { color-scheme: dark; }
   background: var(--surface-accent-soft);
 }
 
+/* Keep the tight map HUD and compact UTC readout at 10px on constrained
+ * widths, while increasing labels users need to scan repeatedly. */
 .map-summary-item span,
 .map-summary-filter-state,
 .topbar-live-status,
 .topbar-metric span,
-.topbar-utc span,
-.radar-rail-label,
-.map-layer-group-title,
-.map-layer-subgroup-heading {
+.topbar-utc span {
   font-size: var(--font-size-2xs);
 }
 
+.radar-rail-label,
+.map-layer-group-title,
+.map-layer-subgroup-heading,
 .sidebar .coverage-switch button,
+.sidebar .dashboard-logbook-metric span,
+.sidebar .dashboard-record > span {
+  font-size: var(--font-size-xs);
+}
+
 .sidebar .coverage-subcount,
 .sidebar .atc-panel-live,
 .sidebar .atc-panel-disclaimer,
-.sidebar .dashboard-logbook-metric span,
 .sidebar .dashboard-logbook-highlights h3,
-.sidebar .dashboard-record > span,
 .sidebar .dashboard-record small {
   font-size: var(--font-size-2xs);
+}
+
+@media (min-width: 821px) {
+  .map-summary-item span,
+  .map-summary-filter-state,
+  .detail-hero-metrics span,
+  .detail-item-label,
+  .detail-section h3 {
+    font-size: var(--font-size-md);
+  }
+}
+
+@media (min-width: 1401px) {
+  .topbar-live-status,
+  .topbar-metric span,
+  .topbar-utc span,
+  .topbar-receiver-label {
+    font-size: var(--font-size-xs);
+  }
 }
 
 @media (min-width: 1101px) and (max-width: 1500px) {
