@@ -1079,8 +1079,9 @@
 }
 
 .aircraft-quick-header-hero .radar-traffic-hero-metrics strong {
-  font-size: var(--font-size-sm);
+  font-size: clamp(12px, 1vw, 14px);
   font-family: var(--font-geist-mono), monospace;
+  overflow-wrap: anywhere;
 }
 
 .aircraft-quick-header-context {
