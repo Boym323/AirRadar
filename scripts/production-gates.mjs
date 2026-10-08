@@ -1291,7 +1291,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               ? visualPage.locator(".mobile-bottom-more > summary")
               : visualPage.locator(".topbar-nav-more > summary");
             await disclosure.click();
-            await visualPage.locator(".navigation-more-group").first().waitFor({ state: "visible", timeout: 15_000 });
+            // Both desktop and mobile menus remain mounted in the DOM.
+            // Scope visibility to the menu opened by this visual target.
+            const menu = target.openMore === "mobile" ? ".mobile-bottom-more" : ".topbar-nav-more";
+            await visualPage.locator(`${menu} .navigation-more-group`).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           const width = await visualPage.evaluate(() => ({
             scroll: document.documentElement.scrollWidth, viewport: window.innerWidth,

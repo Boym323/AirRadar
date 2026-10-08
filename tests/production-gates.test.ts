@@ -57,6 +57,13 @@ describe("production release metadata gate", () => {
     expect(source).toContain("secondary route ${path} root was not visible after initial navigation; retrying page load");
   });
 
+  it("scopes localized More-menu screenshot assertions to the opened navigation surface", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('const menu = target.openMore === "mobile" ? ".mobile-bottom-more" : ".topbar-nav-more"');
+    expect(source).toContain('visualPage.locator(`${menu} .navigation-more-group`).first().waitFor');
+    expect(source).not.toContain('visualPage.locator(".navigation-more-group").first().waitFor');
+  });
+
   it("retries the real Operations Center click once after hydration", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
