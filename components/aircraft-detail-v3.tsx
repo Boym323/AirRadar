@@ -328,6 +328,8 @@ export function AircraftDetailV3({
 
   return <main className={`aircraft-page ${styles.page}`}>
     <header className={`aircraft-page-header ${styles.heroHeader}`}>
+      <div className={styles.heroOverview}>
+        <div className={styles.heroIntro}>
       <Link className="back-link" href={backLink}>{t.history.backToRadar}</Link>
       <div className="aircraft-page-kicker">{t.history.aircraftDetail}</div>
       <h1>{title}</h1>
@@ -357,6 +359,7 @@ export function AircraftDetailV3({
         <a href="#aircraft-receiver">{t.aircraft.detailSections.data}</a>
       </nav>
 
+        </div>
       <div className={styles.heroBody} id="aircraft-overview">
         {liveAircraft && <section className={`aircraft-live-hero ${styles.heroMetrics}`} aria-label={t.aircraft.liveAdsb}>
           <div><strong>{formatAltitude(liveAircraft.altitude)}</strong><span>{t.aircraft.altitude}</span></div>
@@ -368,6 +371,7 @@ export function AircraftDetailV3({
         <div className={styles.photoSlot}>
           <AircraftHeroPhoto icaoHex={icaoHex} registration={registration} onAvailabilityChange={handlePhotoAvailability} />
         </div>
+      </div>
       </div>
       <PredictiveAircraftAdvisories
         icaoHex={icaoHex}
