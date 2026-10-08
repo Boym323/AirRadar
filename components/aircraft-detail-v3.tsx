@@ -429,7 +429,7 @@ export function AircraftDetailV3({
                 </span>
               </DetailValue>}
               {flightAware.progressPercent !== undefined && <DetailValue label={t.aircraft.progressLabel}>{formatNumber(flightAware.progressPercent, 0)}%</DetailValue>}
-              {flightAware.codesharesIata?.length ? <DetailValue label="Codeshare">{flightAware.codesharesIata.slice(0, 8).join(" · ")}</DetailValue> : null}
+              {flightAware.codesharesIata?.length ? <DetailValue label={t.uiExtras.codeshare}>{flightAware.codesharesIata.slice(0, 8).join(" · ")}</DetailValue> : null}
             </div>
           </FlightSection>}
 
