@@ -1199,11 +1199,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.path.includes("mapDiagnostics=1")) {
             await visualPage.waitForFunction(() => {
               const map = window.__airradarMapForDiagnostics;
-              // The visual contract is the rendered AirRadar UI. Map style
-              // and tile completion depend on external providers and must
-              // not make CI fail when a remote request is delayed.
-              return Boolean(map);
-            }, undefined, { timeout: 15_000 });
+              // Screenshot evidence is only useful once actual vector
+              // basemap features have been rendered. A map instance alone
+              // can still produce a featureless black visual baseline.
+              if (!map?.isStyleLoaded()) return false;
+              try {
+                return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
+              } catch {
+                return false;
+              }
+            }, undefined, { timeout: 25_000 });
           }
           await visualPage.addStyleTag({
             content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
