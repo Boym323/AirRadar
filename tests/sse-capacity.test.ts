@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   acquireSseClient,
+  getSseDiagnostics,
+  recordCoalescedAircraftSnapshot,
   getActiveSseClientCount,
   MAX_SSE_CLIENTS,
   MAX_SSE_CLIENTS_PER_CHANNEL,
@@ -51,4 +53,18 @@ describe("SSE capacity", () => {
     intelligenceRelease?.();
     expect(getActiveSseClientCount()).toBe(0);
   });
+  it("records bounded capacity denials and coalescing without exposing client identities", () => {
+    const before = getSseDiagnostics();
+    const releases = Array.from({ length: MAX_SSE_CLIENTS_PER_CLIENT }, () =>
+      acquireSseClient("v2", "same-user", "aircraft"));
+    expect(acquireSseClient("v2", "same-user", "aircraft")).toBeNull();
+    recordCoalescedAircraftSnapshot();
+    const after = getSseDiagnostics();
+    expect(after.deniedSse.client).toBe(before.deniedSse.client + 1);
+    expect(after.coalescedAircraftSnapshots).toBe(before.coalescedAircraftSnapshots + 1);
+    expect(JSON.stringify(after)).not.toContain("same-user");
+    releases.forEach((release) => release?.());
+    expect(getActiveSseClientCount()).toBe(0);
+  });
+
 });
