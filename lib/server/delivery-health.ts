@@ -1,3 +1,4 @@
+import { buildNotificationDeliveryQuality, type NotificationDeliveryQuality } from "@/lib/server/notification-delivery-quality";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 import { getLegacyPushoverDiagnostics } from "@/lib/server/alert-notifier";
@@ -11,6 +12,7 @@ export interface DeliveryHealthSnapshot {
   pushover: ReturnType<typeof getLegacyPushoverDiagnostics>;
   webPush: ReturnType<typeof getWebPushDiagnostics> & { subscriptions: number };
   status: "HEALTHY" | "DEGRADED" | "DISABLED";
+  quality: NotificationDeliveryQuality;
 }
 
 export async function getDeliveryHealthSnapshot(): Promise<DeliveryHealthSnapshot> {
@@ -38,5 +40,15 @@ export async function getDeliveryHealthSnapshot(): Promise<DeliveryHealthSnapsho
     pushover,
     webPush,
     status: !anyConfigured ? "DISABLED" : degraded ? "DEGRADED" : "HEALTHY",
+    quality: buildNotificationDeliveryQuality({
+      configured: anyConfigured,
+      workerRunning: worker.running,
+      queueDepth: durable.queueDepth,
+      processing: durable.processing,
+      retryPending: durable.retryPending,
+      sent: durable.sent,
+      terminalFailures: durable.terminalFailures,
+      recentTransportFailure: Boolean(worker.lastError || pushover.lastError || webPush.lastError),
+    }),
   };
 }
