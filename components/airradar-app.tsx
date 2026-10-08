@@ -3132,6 +3132,7 @@ export function AirRadarApp() {
             ) : null}
             {selectedAircraftVisible && selectedAircraft ? <RadarFlightFollowHud
               aircraft={selectedAircraft}
+              compact={drawerState === "aircraft"}
               corridor={selectedRouteCorridor.corridor}
               conformance={selectedRouteCorridor.conformance}
               operationalTwin={selectedOperationalTwin}
