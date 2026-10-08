@@ -42,6 +42,11 @@ describe("C4 Operational Health V2", () => {
       receiver: { readsb: { sourceReliability: source } },
       runtime: { activeSseClients: 1, sseClientLimit: 128, sseDenied: input.deniedSse, sseCoalescedAircraftSnapshots: 0 },
       database: { status: "ok", history: { status: "ok" } },
+      application: { nodeVersion: "hidden", nextVersion: null },
+      adsbLol: {}, adsbdb: { persistence: {} },
+      ogn: { ddb: { persistence: {}, softRf: {} } },
+      weather: { cache: {}, persistence: {} },
+      mapLayers: { historicalContext: { radar: {}, metar: {}, wind: {}, aup: {} } },
     } as unknown as SystemStatusResponse;
     expect(toAdminSystemStatus(status).operationalHealth?.state).toBe("HEALTHY");
     expect(toPublicSystemStatus(status).operationalHealth).toBeUndefined();
