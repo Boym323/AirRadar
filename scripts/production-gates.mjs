@@ -1090,10 +1090,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.locator('[data-testid="predictive-rollout-trajectory"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("eta-public-rollout-v1", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("runway-change-public-rollout-v1", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("Připraveno pro PUBLIC konfiguraci", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Připraveno k veřejnému zapnutí", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("EXPERIMENTÁLNÍ · sběr podkladů", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("Připraveno k review", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("Sbírání evidence", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Připraveno ke kontrole", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Shromažďování podkladů", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("Blokováno nedostatkem ověření nebo měření", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockEtaAdvisory) {
