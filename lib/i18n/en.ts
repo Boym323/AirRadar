@@ -1917,7 +1917,7 @@ export const en = {
     liveBoardV9TrackAway: "track currently away",
     liveBoardV9TrackUnknown: "track relation unknown",
     liveBoardV9NoInbound: "No fresh LOCAL aircraft with a matching route destination is currently visible.",
-    liveBoardV9Disclaimer: "V9 extends visibility beyond the 30 km active-arrival board using fresh LOCAL aircraft whose route destination matches this airport. Approximate minutes are direct-distance/current-groundspeed fallback estimates, not PUBLIC ETA, ATC sequencing, slots, capacity or delay forecasts.",
+    liveBoardV9Disclaimer: "V9 shows fresh LOCAL aircraft with a matching route destination. Approximate minutes require verified track toward the airport, a fresh position and usable groundspeed; otherwise ETA remains unknown. This is not PUBLIC ETA, ATC sequencing, airport capacity or a delay forecast.",
     liveBoardJourneyInbound: "Inbound",
     liveBoardJourneyHolding: "Holding",
     liveBoardJourneyApproach: "Approach",
