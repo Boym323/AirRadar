@@ -7,7 +7,26 @@ export type LocaleDictionary = typeof cs;
 export const DEFAULT_LOCALE: LocaleKey = "cs";
 export const DEFAULT_INTL_LOCALE = cs.locale;
 export const dictionaries: Record<LocaleKey, LocaleDictionary> = { cs, en };
-export const t: LocaleDictionary = dictionaries[DEFAULT_LOCALE];
+// On the server, rendering always starts with the Czech default. Client locale is
+// changed only from the browser language provider, avoiding request-to-request state.
+let clientLocale: LocaleKey = DEFAULT_LOCALE;
+
+export function normalizeLocalePreference(value: string | null | undefined): LocaleKey {
+  return value === "en" ? "en" : DEFAULT_LOCALE;
+}
+
+export function setClientLocale(locale: LocaleKey): void {
+  if (typeof window !== "undefined") clientLocale = normalizeLocalePreference(locale);
+}
+
+// A stable reference lets existing UI code keep using `t`; reading a property
+// resolves it against the currently selected client dictionary.
+export const t: LocaleDictionary = new Proxy(cs, {
+  get(_target, property) {
+    const locale = typeof window === "undefined" ? DEFAULT_LOCALE : clientLocale;
+    return Reflect.get(dictionaries[locale], property);
+  },
+});
 
 export function getTranslations(locale: string = DEFAULT_LOCALE): LocaleDictionary {
   return dictionaries[locale as LocaleKey] ?? t;
@@ -25,7 +44,7 @@ function countPhrase(count: number, forms: LocaleDictionary["counts"]["aircraft"
   return `${formatNumber(count, 0, dictionary.locale)} ${pluralForm(count, forms, dictionary.locale)}`;
 }
 
-export function formatNumber(value: number | null | undefined, digits = 0, locale = DEFAULT_INTL_LOCALE): string {
+export function formatNumber(value: number | null | undefined, digits = 0, locale = t.locale): string {
   return value === null || value === undefined || !Number.isFinite(value)
     ? t.common.emptyValue
     : new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(value);
