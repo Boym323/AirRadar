@@ -1,6 +1,6 @@
 import type { AircraftView, LogbookLabel } from "@/lib/aircraft/types";
 import { isLocalSpotterAircraft } from "@/lib/spotter";
-import { mySkyPersonalSignal, type MySkyFavorites, type MySkyPersonalSignal } from "@/lib/spotter-personalization";
+import { indexMySkyPersonalSignals, type MySkyFavorites, type MySkyPersonalSignal } from "@/lib/spotter-personalization";
 import type { SpotterLogbookState } from "@/lib/spotter-logbook";
 import { scoreSpotterInterest, type SpotterInterestScore } from "@/lib/spotter-interest";
 import {
@@ -52,6 +52,7 @@ export function buildMySkyFocus(
   const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(8, Math.floor(limit))) : 5;
   const seen = new Set<string>();
   const eligible: MySkyFocusItem[] = [];
+  const personalIndex = context ? indexMySkyPersonalSignals(context.favorites, context.logbook) : null;
   for (const item of aircraft) {
     if (!isLocalSpotterAircraft(item) || seen.has(item.icaoHex)) continue;
     seen.add(item.icaoHex);
@@ -63,8 +64,8 @@ export function buildMySkyFocus(
       closestApproach?.closestHorizontalDistanceKm ?? null, receptionRecordHex,
     );
     const kind = kindFor(geometry, closestApproach, interest);
-    const personal = context ? mySkyPersonalSignal(item.icaoHex, context.favorites, context.logbook)
-      : { favorite: false, sightings: 0, lastSeenAt: null };
+    const personal = personalIndex?.get(item.icaoHex.toUpperCase())
+      ?? { favorite: false, sightings: 0, lastSeenAt: null };
     const proximity = Math.max(0, MAX_RADIUS_KM - geometry.horizontalDistanceKm) * 1.5;
     const imminent = kind === "APPROACHING" ? Math.max(0, 10 - closestApproach!.secondsUntilClosest / 60) * 3 : 0;
     const rank = interest.score * 2 + proximity + imminent + (kind === "OVERHEAD" ? 60 : 0)
