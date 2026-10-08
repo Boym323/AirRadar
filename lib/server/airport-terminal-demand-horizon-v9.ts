@@ -51,6 +51,7 @@ const MAX_ITEMS = 12;
 const MAX_ETA_MINUTES = 120;
 const FRESH_POSITION_SECONDS = 60;
 const FRESH_OBSERVATION_MS = 120_000;
+const MAX_FUTURE_CLOCK_SKEW_MS = 5_000;
 
 function finite(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -107,7 +108,7 @@ export function buildAirportTerminalDemandHorizonV9(input: {
     if (!finite(aircraft.seenPosSeconds) || aircraft.seenPosSeconds < 0
       || aircraft.seenPosSeconds > FRESH_POSITION_SECONDS) return [];
     const lastSeenMs = Date.parse(aircraft.lastSeen);
-    if (!Number.isFinite(lastSeenMs) || lastSeenMs > nowMs
+    if (!Number.isFinite(lastSeenMs) || lastSeenMs > nowMs + MAX_FUTURE_CLOCK_SKEW_MS
       || nowMs - lastSeenMs > FRESH_OBSERVATION_MS) return [];
 
     const distanceKm = haversineDistanceKm(
