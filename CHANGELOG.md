@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.366] - 2026-10-08
+
+Changes since v1.0.365.
+
+**Features touched:** Mobile Spotter Mode.
+
+### Changed
+
+- My Sky V2 polish: bring location CTA above mobile fold and correct LIVE badge (#618) (f410d9f1)
+
+### Maintenance
+
+- Sync generated repository metadata (#617) (80d298c5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#617) (80d298c5)
+- My Sky V2 polish: bring location CTA above mobile fold and correct LIVE badge (#618) (f410d9f1)
+
+</details>
 ## [1.0.365] - 2026-10-08
 
 Changes since v1.0.364.
