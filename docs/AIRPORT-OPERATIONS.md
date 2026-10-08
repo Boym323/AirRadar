@@ -206,3 +206,36 @@ runway and ATC evidence, rather than creating another dashboard or poller.
 - **D5: Evidence-backed release.** Deterministic scenario tests, realistic
   browser screenshots and longitudinal comparisons with independent recorded
   outcomes. No automatic PUBLIC prediction graduation.
+
+### D2–D5 implementation and verification
+
+D2 adds a **separate** conservative runway-evidence projection over existing
+V7 observed, per-flight deduplicated 15-minute runway windows and V8
+readiness-gated PUBLIC runway predictions. It distinguishes an observed
+transition from a prediction disagreement and a stable observed runway. Both
+windows require at least three unique-flight samples and >=60% dominant share
+for observed transition; otherwise it returns UNKNOWN. Weather is supporting
+context only and cannot prove an ATC runway assignment.
+
+D3 adds a bounded live approach-evidence panel over the existing correlated
+receiver snapshot and at most 500 existing recent airport movements. A live
+stage without matching ICAO, flight instance, valid timestamp, and recent
+movement is `LIVE_ONLY`, never a verified approach transition. A re-approach
+requires a GO_AROUND followed by a later APPROACH in the **same Flight ID**.
+Missing or incomplete history does not imply landing or an absent event.
+
+D4 presents source-separated runway/arrival/wind/holding evidence alongside a
+link to the already existing airspace and ATC explorer. Airport-level ATC
+instructions are **not** correlated to individual aircraft in this panel;
+its `NO_ATC_CLEARANCE_EVIDENCE` limitation is mandatory. Nothing infers
+clearances, tuned frequencies, runway assignments, causal links or capacity.
+
+D5 regression coverage is in `tests/airport-runway-change-evidence-d2.test.ts`,
+`tests/airport-approach-evidence-d3.test.ts`,
+`tests/airport-context-d4.test.ts` and
+`tests/airport-intelligence-d5-release-boundary.test.ts`. Run these and the
+existing V7–V9 and D1 tests through PR CI/CodeQL, then verify main release
+validation, desktop/mobile browser gates and exact-SHA production deployment.
+The change introduces no new API, provider request, polling loop, database
+migration, persistence, stream or auto-PUBLIC graduation. Engineering release
+success is not evidence of independently validated real-world accuracy.
