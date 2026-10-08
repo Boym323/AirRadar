@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.364] - 2026-10-08
+
+Changes since v1.0.363.
+
+### Changed
+
+- Prediction Quality A1: 24h Evidence Capture Health (#612) (e1af12ba)
+- Prediction Quality A2: 7-day verified ETA and runway accuracy trends (#613) (9e6310b9)
+- Prediction Quality A3–A4: ETA horizon calibration, evidence next steps, release smoke fix (#614) (2425c998)
+
+### Maintenance
+
+- Sync generated repository metadata (#611) (6363afd4)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#611) (6363afd4)
+- Prediction Quality A1: 24h Evidence Capture Health (#612) (e1af12ba)
+- Prediction Quality A2: 7-day verified ETA and runway accuracy trends (#613) (9e6310b9)
+- Prediction Quality A3–A4: ETA horizon calibration, evidence next steps, release smoke fix (#614) (2425c998)
+
+</details>
 ## [1.0.363] - 2026-10-08
 
 Changes since v1.0.362.
