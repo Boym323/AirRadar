@@ -1,6 +1,21 @@
 /** Small dedicated bilingual copy for read-only Airport Intelligence stages D2-D4. */
 export const airportDExtras = {
   cs: {
+    contextHeading: "Provozní kontext letiště",
+    contextSignals: {
+      RUNWAY_TRANSITION_OBSERVED: "Pozorovaná změna používané dráhy",
+      PUBLIC_RUNWAY_DIFFERS: "Veřejná predikce dráhy se liší od pozorování",
+      RUNWAY_STABLE: "Pozorovaný provoz na dráze je stabilní",
+      WIND_SUPPORTS_OBSERVED: "Směr větru odpovídá pozorované dráze",
+      WIND_DIFFERS: "Směr větru neodpovídá dominantní pozorované dráze",
+      WIND_UNAVAILABLE: "Nelze spolehlivě porovnat vítr a dráhu",
+      HOLDING_OR_GO_AROUND_OBSERVED: "Zachycen holding nebo go-around",
+      ARRIVAL_COMPRESSION_PREDICTED: "Veřejné ETA ukazují zahuštění příletů",
+      PARTIAL_RECEIVER_HISTORY: "Historie přijímače není úplná",
+    },
+    contextAtcLink: "Prozkoumat vzdušný prostor a ATC sektory",
+    contextDisclaimer: "Kontext spojuje oddělené zdroje. Neprokazuje pokyny ATC, přidělenou dráhu ani příčinu provozních změn.",
+    noContext: "Bez dalších průkazných provozních signálů.",
     approachHeading: "Evidence průběhu přiblížení",
     reapproach: "Opakované přiblížení po go-around",
     goAround: "Pozorovaný go-around",
@@ -20,6 +35,21 @@ export const airportDExtras = {
     runwayDisclaimer: "Jde o porovnání pozorovaných pohybů a pouze veřejných predikcí, nikoliv potvrzenou volbu dráhy nebo pokyn ATC.",
   },
   en: {
+    contextHeading: "Airport operating context",
+    contextSignals: {
+      RUNWAY_TRANSITION_OBSERVED: "Observed runway traffic transition",
+      PUBLIC_RUNWAY_DIFFERS: "PUBLIC runway prediction differs from observations",
+      RUNWAY_STABLE: "Observed runway traffic remains stable",
+      WIND_SUPPORTS_OBSERVED: "Wind direction aligns with the observed runway",
+      WIND_DIFFERS: "Wind differs from the dominant observed runway",
+      WIND_UNAVAILABLE: "Wind/runway comparison unavailable",
+      HOLDING_OR_GO_AROUND_OBSERVED: "Holding or go-around observed",
+      ARRIVAL_COMPRESSION_PREDICTED: "PUBLIC ETAs indicate compressed arrivals",
+      PARTIAL_RECEIVER_HISTORY: "Receiver history is incomplete",
+    },
+    contextAtcLink: "Explore airspace and ATC sectors",
+    contextDisclaimer: "Context combines separate evidence streams. It does not prove ATC instructions, runway assignments or operational causes.",
+    noContext: "No additional reliable operating signals.",
     approachHeading: "Approach evolution evidence",
     reapproach: "Re-approach after observed go-around",
     goAround: "Observed go-around",
