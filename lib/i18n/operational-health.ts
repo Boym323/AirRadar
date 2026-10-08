@@ -10,6 +10,8 @@ type OperationalHealthLocale = {
   denied: string;
   coalesced: string;
   database: string;
+  predictiveCapture: string;
+  predictiveState: Record<OperationalHealthV2["predictiveCapture"], string>;
   noIssues: string;
   reasonLabel: string;
 };
@@ -26,7 +28,8 @@ const cs: OperationalHealthLocale = {
   },
   stateLabel: "Stav", availability: "Dostupné zdroje", connections: "SSE spojení",
   denied: "Odmítnutí od startu", coalesced: "Sloučené snapshoty od startu",
-  database: "Databáze", noIssues: "Bez potvrzených problémů", reasonLabel: "Zjištění",
+  database: "Databáze", predictiveCapture: "Sběr podkladů predikcí",
+  predictiveState: { ACTIVE: "Zapnuto", DISABLED: "Vypnuto", UNAVAILABLE: "Neznámý stav" }, noIssues: "Bez potvrzených problémů", reasonLabel: "Zjištění",
 };
 const en: OperationalHealthLocale = {
   title: "Operational reliability",
@@ -40,7 +43,8 @@ const en: OperationalHealthLocale = {
   },
   stateLabel: "State", availability: "Feed availability", connections: "SSE sessions",
   denied: "Denied since startup", coalesced: "Coalesced snapshots since startup",
-  database: "Database", noIssues: "No confirmed issues", reasonLabel: "Findings",
+  database: "Database", predictiveCapture: "Prediction evidence capture",
+  predictiveState: { ACTIVE: "Enabled", DISABLED: "Disabled", UNAVAILABLE: "Unknown" }, noIssues: "No confirmed issues", reasonLabel: "Findings",
 };
 
 export function operationalHealthLabels(locale: string): OperationalHealthLocale {
