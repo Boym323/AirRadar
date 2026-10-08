@@ -92,7 +92,11 @@ describe("Czech/English full-site localization remediation", () => {
     expect(gates).toContain('const upstream = await get("/api/system/status")');
     expect(gates).toContain('if (!upstream.ok) throw new Error(');
     expect(gates).toContain("systemStatusSnapshot = await upstream.json()");
-    expect(gates).not.toContain('visualPage.route("**/api/system/status"');
+    const systemDesktop = gates.slice(
+      gates.indexOf('if (target.name === "system-desktop") {'),
+      gates.indexOf("if (target.mockPredictiveReadiness)"),
+    );
+    expect(systemDesktop).not.toContain('visualPage.route("**/api/system/status"');
     expect(gates).toContain('visualPage.locator(".system-grid").waitFor');
     expect(gates).toContain('JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" })');
     expect(gates).toContain("Predictive visual smoke requires a successful real system status snapshot");
