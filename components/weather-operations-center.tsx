@@ -249,7 +249,7 @@ export function WeatherOperationsCenter() {
 
   return <main className={styles.page} data-testid="weather-operations-center-v1">
     <PageHeader
-      kicker="AIRRADAR / WEATHER"
+      kicker={t.uiExtras.weatherHeading}
       title={copy.title}
       description={copy.subtitle}
       actions={<div className={styles.headerMeta}>
@@ -284,7 +284,7 @@ export function WeatherOperationsCenter() {
       </Panel>
 
       <Panel>
-        <SectionHeader kicker="ADVISORIES" title={copy.sigmets} description={copy.sigmetsDescription} />
+        <SectionHeader kicker={t.uiExtras.advisories} title={copy.sigmets} description={copy.sigmetsDescription} />
         {sigmets.length ? <div className={styles.sigmetList}>
           {sigmets.slice(0, 10).map((feature) => <article key={feature.id}>
             <div>
