@@ -161,6 +161,16 @@ describe("production release metadata gate", () => {
     expect(source).toContain("}, undefined, { timeout: 25_000 });");
   });
 
+  it("accepts only bounded per-aircraft enrichment rate limits in the visual sweep", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('pathname === "/api/logbook/summary"');
+    expect(source).toContain('pathname === "/api/intelligence/events"');
+    expect(source).toContain("searchParams.has(\"aircraft\")");
+    expect(source).toContain("situation$/i.test(pathname)");
+    expect(source).toContain("expectedRateLimitedApiErrors += 1");
+    expect(source).toContain("browserErrors.push(`http ${response.status()}");
+  });
+
   it("keeps mobile navigation geometry assertions out of the Node global scope", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("navLayout.items.some((item) => item.y < 0 || item.right > viewport.width + 1)");
