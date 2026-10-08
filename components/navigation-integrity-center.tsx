@@ -475,7 +475,7 @@ export function NavigationIntegrityCenter() {
                   <div><dt>LOCAL</dt><dd>{anomaly.evidence.localAircraft}</dd></div>
                   <div><dt>NETWORK</dt><dd>{anomaly.evidence.networkAircraft}</dd></div>
                   <div><dt>{copy.duration}</dt><dd>{durationLabel(anomaly.evidence.durationSeconds)}</dd></div>
-                  <div><dt>Cells</dt><dd>{anomaly.cellKeys.length}</dd></div>
+                  <div><dt>{cs ? "Buňky" : "Cells"}</dt><dd>{anomaly.cellKeys.length}</dd></div>
                 </dl>
                 <div className={styles.anomalyFoot}>
                   <span>{copy.bands}: {altitudeBandsLabel(anomaly.altitudeBands)}</span>
@@ -493,7 +493,7 @@ export function NavigationIntegrityCenter() {
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
-                <tr><th>Cell</th><th>State</th><th>Confidence</th><th>{copy.affected}</th><th>{copy.samples}</th><th>LOCAL</th><th>NETWORK</th><th>NIC / NACp / NACv</th></tr>
+                <tr><th>{cs ? "Buňka" : "Cell"}</th><th>{cs ? "Stav" : "State"}</th><th>{cs ? "Spolehlivost" : "Confidence"}</th><th>{copy.affected}</th><th>{copy.samples}</th><th>LOCAL</th><th>NETWORK</th><th>NIC / NACp / NACv</th></tr>
               </thead>
               <tbody>
                 {degradedCells.map((cell) => (
