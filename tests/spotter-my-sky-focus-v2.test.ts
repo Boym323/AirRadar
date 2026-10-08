@@ -71,6 +71,24 @@ describe("My Sky Focus V2", () => {
     expect(view).not.toContain('feedState === "live" && observerState === "ready"');
   });
 
+  it("prioritizes browser favorites and past manually verified sightings without inventing LOCAL coverage", () => {
+    const normal = aircraft("ABC123", { lat: 50.01, aircraftType: "A320" });
+    const iconic = aircraft("ABC124", { lat: 50.01, aircraftType: "A388" });
+    const personal = {
+      favorites: { version: 1 as const, icaoHexes: ["ABC123"] },
+      logbook: { version: 2 as const, entries: [{
+        icaoHex: "ABC123", observedAt: "2026-10-07T12:00:00Z",
+      }] as import("@/lib/spotter-logbook").SpotterLogbookEntry[] },
+    };
+    const report = buildMySkyFocus([normal, iconic], observer, new Map(), null, 5, personal);
+    expect(report.items.find(item => item.aircraft.icaoHex === "ABC123")?.personal)
+      .toMatchObject({ favorite: true, sightings: 1 });
+    expect(report.items.find(item => item.aircraft.icaoHex === "ABC124")?.personal)
+      .toMatchObject({ favorite: false, sightings: 0 });
+    expect(report.nearbyCount).toBe(2);
+    expect(buildMySkyFocus([aircraft("ABC123", { origin: "adsblol" })], observer, new Map(), null, 5, personal).items).toEqual([]);
+  });
+
   it("keeps observer GPS client-side and reuses existing watchlist, map and detail flows", () => {
     const component = readFileSync(new URL("../components/mobile-spotter-mode.tsx", import.meta.url), "utf8");
     const helper = readFileSync(new URL("../lib/spotter-focus.ts", import.meta.url), "utf8");
