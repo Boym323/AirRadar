@@ -30,16 +30,16 @@ function sourceLabel(source: AviationEventFeedSource): string {
 export function AviationEventFeed() {
   const cs = t.locale.startsWith("cs");
   const copy = cs ? {
-    title: "Letecký event feed",
-    subtitle: "Jedna chronologická osa nad existujícími AirRadar událostmi. Žádný nový detector ani paralelní intelligence engine.",
+    title: "Přehled leteckých událostí",
+    subtitle: "Chronologický přehled již dostupných událostí AirRadaru. Bez dalšího detektoru či samostatného systému analýzy letů.",
     feed: "Události",
-    feedDescription: "Flight Intelligence, alerty, Navigation Integrity a významné pohyby na prvním oblíbeném letišti.",
-    loading: "Načítám eventové zdroje…",
-    empty: "V aktuálním bounded okně nejsou žádné události.",
-    degraded: "Část eventových zdrojů je nedostupná.",
-    live: "CURRENT",
+    feedDescription: "Analýza letů, upozornění, integrita navigačních dat a významné pohyby na prvním oblíbeném letišti.",
+    loading: "Načítám zdroje událostí…",
+    empty: "V aktuálním časovém období nejsou žádné události.",
+    degraded: "Část zdrojů událostí je nedostupná.",
+    live: "AKTUÁLNÍ",
     open: "Otevřít",
-    favoriteHint: "Airport Operations se přidají, pokud máš zvolené oblíbené letiště.",
+    favoriteHint: "Provozní události letiště se přidají po výběru oblíbeného letiště.",
   } : {
     title: "Aviation Event Feed",
     subtitle: "One chronological timeline over existing AirRadar events. No new detector or parallel intelligence engine.",
