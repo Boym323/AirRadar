@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.368] - 2026-10-08
+
+Changes since v1.0.367.
+
+### Changed
+
+- C1: read-only LOCAL/NETWORK source reliability diagnostics (#622) (8e878b1a)
+- C2: bounded SSE rejection and backpressure diagnostics (#623) (e96be381)
+- C3: notification delivery quality evidence and reason codes (#624) (d7507756)
+
+### Maintenance
+
+- Sync generated repository metadata (#621) (f29eb94e)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#621) (f29eb94e)
+- C1: read-only LOCAL/NETWORK source reliability diagnostics (#622) (8e878b1a)
+- C2: bounded SSE rejection and backpressure diagnostics (#623) (e96be381)
+- C3: notification delivery quality evidence and reason codes (#624) (d7507756)
+
+</details>
 ## [1.0.367] - 2026-10-08
 
 Changes since v1.0.366.
