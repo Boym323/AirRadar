@@ -61,6 +61,16 @@ describe("My Sky Focus V2", () => {
     expect(selectMySkyFocus(buildMySkyFocus([], observer), "AAAAAA")).toBeNull();
   });
 
+  it("shows the My Sky location CTA before secondary metrics and does not confuse GPS consent with stream freshness", () => {
+    const source = readFileSync(new URL("../components/mobile-spotter-mode.tsx", import.meta.url), "utf8");
+    const view = source.slice(source.indexOf("return <main className={styles.page}"));
+    expect(view.indexOf('data-testid="my-sky-focus-v2"')).toBeGreaterThan(0);
+    expect(view.indexOf('data-testid="my-sky-focus-v2"')).toBeLessThan(view.indexOf("label={copy.liveNearby}"));
+    expect(view.indexOf("label={copy.liveNearby}")).toBeLessThan(view.indexOf('kicker="MY SKY / BRIEFING"'));
+    expect(view).toContain('onClick={() => setDistanceOrigin("observer")}');
+    expect(view).not.toContain('feedState === "live" && observerState === "ready"');
+  });
+
   it("keeps observer GPS client-side and reuses existing watchlist, map and detail flows", () => {
     const component = readFileSync(new URL("../components/mobile-spotter-mode.tsx", import.meta.url), "utf8");
     const helper = readFileSync(new URL("../lib/spotter-focus.ts", import.meta.url), "utf8");
