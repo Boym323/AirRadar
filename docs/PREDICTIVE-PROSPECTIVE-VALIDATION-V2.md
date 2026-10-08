@@ -127,6 +127,31 @@ non-decisioning while readiness is WAIT. `manualReviewEligible` requires a
 complete bounded collection plus readiness PASS and never changes capability
 policy automatically.
 
+## Prediction Evidence Health V1
+
+The authenticated readiness report now includes a read-only
+`predictive-capture-health-v1` view. It distinguishes a missing PostgreSQL
+source, deliberately disabled capture, bounded/incomplete collection, missing
+valid persistence timestamps, no sample persisted within 24 hours, and recent
+persisted samples. It exposes the number of timestamped observations, last
+persistence timestamp and 24-hour persisted counts separately for ETA, RUNWAY,
+RUNWAY_CHANGE and TRAJECTORY. The admin `/system` page displays these values.
+
+The summary uses the *same capped, cached 30-day observation query* as the
+existing readiness report. It adds no database read, write, queue, polling
+timer or public API. Freshness uses the saved row's `createdAt`, not the
+predicted ETA or live aircraft timestamp. Invalid, future-dated and out-of-
+window timestamps are ignored; incomplete collections are explicitly flagged.
+Past samples remain visible when current capture configuration is off.
+
+A recent persisted sample is **not** confirmed landing ground truth, a
+calibrated prediction, proof that capture is correctly functioning, or an
+eligibility gate. Conversely, no samples within 24 hours does not prove a
+fault (there may have been no eligible flights). This diagnostic does not
+modify `PASS / WAIT / FAIL`, `manualReviewEligible`, `PUBLIC` / `SHADOW`,
+or migration and rollout policy. Production database migration and enabling
+capture remain separately approved operator actions.
+
 ## Rollout
 
 1. Stage 0: refresh `airradar_dev` from a read-only PROD snapshot, apply
