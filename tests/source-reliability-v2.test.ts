@@ -44,7 +44,7 @@ describe("C1 source availability diagnostics", () => {
   });
 
   it("keeps consecutive failure diagnostics bounded and never performs source switching", () => {
-    const result = buildSourceReliability({ ...input, network: network({ status: "offline", consecutiveFailures: 10_000_000 }) });
+    const result = buildSourceReliability({ ...input, network: network({ status: "disconnected", consecutiveFailures: 10_000_000 }) });
     expect(result.network.consecutiveFailures).toBe(1_000_000);
     expect(result.network.state).toBe("STALE");
     expect(result.availability).toBe("LOCAL_ONLY");
