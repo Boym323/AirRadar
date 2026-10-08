@@ -17,6 +17,7 @@ import { buildRunwayPublicRolloutDecision } from "@/lib/predictive-intelligence/
 import { buildRunwayChangePublicRolloutDecision } from "@/lib/predictive-intelligence/runway-change-rollout";
 import { buildTrajectoryPublicRolloutDecision } from "@/lib/predictive-intelligence/trajectory-rollout";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
+import { buildPredictiveCaptureHealth, type PredictiveCaptureHealth } from "@/lib/predictive-intelligence/capture-health";
 import {
   PREDICTIVE_OUTCOME_TRUTH_VERSION,
   scoreRunwayChangeOutcome,
@@ -133,6 +134,7 @@ export interface PredictiveReadinessReport {
   capabilities: PredictiveReadinessEvaluation["capabilities"];
   calibration: PredictiveGraduationCalibration;
   rollout: PredictivePublicRolloutReport;
+  captureHealth: PredictiveCaptureHealth;
 }
 
 export interface PredictivePublicRolloutReport {
@@ -418,6 +420,10 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
       capabilities.capabilities,
       calibration,
     ),
+    captureHealth: buildPredictiveCaptureHealth([], {
+      now, sourceAvailable: false, complete: false,
+      captureConfigured: process.env.AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED === "true",
+    }),
   };
 }
 
@@ -704,6 +710,10 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
       evaluation.capabilities,
       calibration,
     ),
+    captureHealth: buildPredictiveCaptureHealth(rows.observations, {
+      now, sourceAvailable: true, complete,
+      captureConfigured: process.env.AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED === "true",
+    }),
   };
   cached = { expiresAt: now.getTime() + PREDICTIVE_READINESS_CACHE_MS, report };
   return report;

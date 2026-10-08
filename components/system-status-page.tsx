@@ -215,6 +215,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       result: report.capabilities.ETA,
       calibration: report.calibration.capabilities.ETA,
       rollout: report.rollout.ETA,
+      capture: report.captureHealth.perCapability.ETA,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.ETA.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.ETA.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -230,6 +231,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       result: report.capabilities.RUNWAY,
       calibration: report.calibration.capabilities.RUNWAY,
       rollout: report.rollout.RUNWAY,
+      capture: report.captureHealth.perCapability.RUNWAY,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -244,6 +246,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       result: report.capabilities.RUNWAY_CHANGE,
       calibration: report.calibration.capabilities.RUNWAY_CHANGE,
       rollout: report.rollout.RUNWAY_CHANGE,
+      capture: report.captureHealth.perCapability.RUNWAY_CHANGE,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -258,6 +261,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       result: report.capabilities.TRAJECTORY,
       calibration: report.calibration.capabilities.TRAJECTORY,
       rollout: report.rollout.TRAJECTORY,
+      capture: report.captureHealth.perCapability.TRAJECTORY,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.TRAJECTORY.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveValidatedCandidates, formatNumber(report.capabilities.TRAJECTORY.evidence.validatedCandidates, 0, dictionary.locale)],
@@ -278,6 +282,10 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       <UiStatusBadge variant={report.source === "postgres" ? "neutral" : "stale"}>{report.source.toUpperCase()}</UiStatusBadge>
     </div>
     <dl className="system-fields system-predictive-readiness-meta">
+      <Field label={dictionary.system.predictiveCaptureState} value={dictionary.system.predictiveCaptureStateLabels[report.captureHealth.state]} />
+      <Field label={dictionary.system.predictiveCaptureConfigured} value={report.captureHealth.captureConfigured ? dictionary.system.yes : dictionary.system.no} />
+      <Field label={dictionary.system.predictiveCaptureRecent24h} value={formatNumber(report.captureHealth.recent24h, 0, dictionary.locale)} />
+      <Field label={dictionary.system.predictiveCaptureLast} value={formatDateTime(report.captureHealth.lastPersistedAt, dictionary)} />
       <Field label={dictionary.system.predictiveThresholdVersion} value={report.thresholds.version} />
       <Field label={dictionary.system.predictiveOutcomeTruthVersion} value={report.outcomeTruthVersion} />
       <Field label={dictionary.system.predictiveCalibrationVersion} value={report.calibration.version} />
@@ -288,6 +296,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       <Field label={dictionary.system.predictiveEffectivePolicy} value={policies(report.effectivePolicy)} />
       <Field label={dictionary.system.predictiveIntegrity} value={`${dictionary.system.predictiveCrossIcao}: ${report.integrity.crossIcaoLifecycleConflicts} · ${dictionary.system.predictiveCrossFlight}: ${report.integrity.crossFlightLifecycleConflicts}`} />
     </dl>
+    <p className="system-predictive-reasons">{dictionary.system.predictiveCaptureDisclaimer}</p>
     <div className="system-predictive-capabilities">
       {capabilities.map((capability) => <section key={capability.key} className="system-predictive-capability">
         <div className="system-predictive-capability-heading">
@@ -297,6 +306,8 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
           </UiStatusBadge>
         </div>
         <dl>
+          <Field label={dictionary.system.predictiveCaptureRecent24h} value={formatNumber(capability.capture.recent24h, 0, dictionary.locale)} />
+          <Field label={dictionary.system.predictiveCaptureLast} value={formatDateTime(capability.capture.lastPersistedAt, dictionary)} />
           {capability.metrics.map(([label, value]) => <Field key={label} label={label} value={value} />)}
         </dl>
         <dl className="system-predictive-calibration" data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}>
