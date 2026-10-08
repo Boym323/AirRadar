@@ -64,6 +64,15 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain('visualPage.locator(".navigation-more-group").first().waitFor');
   });
 
+  it("refreshes predictive screenshot timestamps per API interception, not per visual sweep", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    const interceptor = source.slice(source.indexOf("if (target.mockPredictiveOperations) {"), source.indexOf("if (target.mockDailyRecap) {"));
+    expect(interceptor).toContain("const evaluatedAt = new Date(Date.now() - 8_000).toISOString()");
+    expect(interceptor).toContain('key === "etaAdvisory" || key === "etaAdminPreview"');
+    expect(interceptor).toContain('"runwayAdminPreview"');
+    expect(interceptor).toContain("JSON.stringify({ ...fixture, items })");
+  });
+
   it("retries the real Operations Center click once after hydration", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
