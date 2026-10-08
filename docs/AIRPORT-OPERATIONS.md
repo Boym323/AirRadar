@@ -177,3 +177,32 @@ V9 preserves the V8 active-arrival sequence, PUBLIC ETA demand windows and appro
 The extended horizon is not another prediction engine. When current groundspeed is usable, V9 exposes a bounded direct-distance/current-groundspeed estimate up to 120 minutes only as fallback context. It reports route-matched inbound count, estimated coverage, cumulative <=30 and <=60 minute buckets, and track relation to the airport. The list is capped at 12 aircraft and the board renders at most six rows.
 
 This does not replace readiness-gated PUBLIC ETA in V7/V8, does not feed V8 pressure/compression/queue scoring, and does not infer ATC sequencing, slots, airport capacity or delay. V9 reuses the existing 30-second Airport Operations refresh and reads one existing LOCAL aircraft snapshot on the server; it adds no EventSource, browser timer, database query, provider request or persistence path.
+
+## Stage D — Airport Intelligence V2 (incremental delivery)
+
+Stage D extends the existing Airport Live Board V9 and current prediction,
+runway and ATC evidence, rather than creating another dashboard or poller.
+
+- **D1: Terminal arrival evidence integrity.** The route-matched aircraft count
+  remains separate from the direct-distance ETA cohort. An ETA is computed only
+  for a fresh, valid position (including a verified 0–60 second position age),
+  a recent observation (up to 120 seconds old with at most 5 seconds future clock
+  tolerance), usable groundspeed, and a valid observed track toward the airport.
+  CROSSING, AWAY, UNKNOWN and invalid headings keep the matched aircraft visible
+  with `etaMinutes: null`. Incomplete coverage is not a missed arrival. The
+  30/60-minute direct ETA demand windows count only eligible aircraft. No
+  change to readiness-gated PUBLIC ETA, V8 pressure, SSE, source selection,
+  persistence, external requests or runtime promotion.
+- **D2: Runway change evidence.** Compare existing observed runway-flow windows,
+  PUBLIC runway advisories and current wind, requiring multiple independent
+  samples before classifying a candidate transition. Return UNKNOWN on ties,
+  missing evidence or conflicting time windows; never infer an ATC assignment.
+- **D3: Approach transitions.** Correlate approach, holding and go-around
+  transitions with observed aircraft identity and bounded movement timelines.
+  Suppress stale/ambiguous tracks and avoid implying a completed landing.
+- **D4: Airport / ATC context.** Reuse existing airspace and sector-matching
+  services for probable context only. Missing or outdated context must degrade
+  explanations, never suppress live aircraft.
+- **D5: Evidence-backed release.** Deterministic scenario tests, realistic
+  browser screenshots and longitudinal comparisons with independent recorded
+  outcomes. No automatic PUBLIC prediction graduation.
