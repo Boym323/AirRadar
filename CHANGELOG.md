@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.358] - 2026-10-08
+
+Changes since v1.0.357.
+
+### Fixed
+
+- Unify CZ/EN across diagnostics, receiver and browser metadata (#585) (d46dd6f9)
+
+### Maintenance
+
+- Sync generated repository metadata (#584) (07003216)
+- Preserve full release boundary checks after localization (#586) (550a4016)
+- Stabilize predictive screenshots with verified system snapshot (#587) (1ce03f88)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#584) (07003216)
+- fix(i18n): unify CZ/EN across diagnostics, receiver and browser metadata (#585) (d46dd6f9)
+- test(i18n): preserve full release boundary checks after localization (#586) (550a4016)
+- test(release): stabilize predictive screenshots with verified system snapshot (#587) (1ce03f88)
+
+</details>
 ## [1.0.357] - 2026-10-08
 
 Changes since v1.0.356.
