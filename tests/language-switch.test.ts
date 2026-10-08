@@ -24,7 +24,7 @@ describe("persistent Czech / English language switch", () => {
   it("mounts the same provider on every route without requiring a document reload", () => {
     const layout = source("app/layout.tsx");
     const provider = source("components/locale-provider.tsx");
-    expect(layout).toContain("<LocaleProvider>{children}<CommandPalette /></LocaleProvider>");
+    expect(layout).toContain("<LocaleProvider>{children}<CommandPalette /><PwaRegister /></LocaleProvider>");
     expect(provider).toContain('LANGUAGE_STORAGE_KEY = "airradar-language"');
     expect(provider).toContain('window.localStorage.getItem(LANGUAGE_STORAGE_KEY)');
     expect(provider).toContain('window.localStorage.setItem(LANGUAGE_STORAGE_KEY, next)');
