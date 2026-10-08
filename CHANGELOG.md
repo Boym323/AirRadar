@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.360] - 2026-10-08
+
+Changes since v1.0.359.
+
+**Features touched:** Live Radar.
+
+### Fixed
+
+- Move ADSB.lol attribution into MapLibre credits (#596) (fdfcb5dd)
+
+### Maintenance
+
+- Sync generated repository metadata (#595) (4de539c5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#595) (4de539c5)
+- fix(radar): move ADSB.lol attribution into MapLibre credits (#596) (fdfcb5dd)
+
+</details>
 ## [1.0.359] - 2026-10-08
 
 Changes since v1.0.358.
