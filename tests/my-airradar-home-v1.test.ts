@@ -23,7 +23,7 @@ describe("My AirRadar Home V1", () => {
   });
 
   it("surfaces the personal home in canonical desktop and mobile navigation", () => {
-    const primary = shell.slice(shell.indexOf("const primaryNavigation"), shell.indexOf("const moreNavigation"));
+    const primary = shell.slice(shell.indexOf("function primaryNavigation()"), shell.indexOf("function moreNavigation()"));
     const mobile = shell.slice(shell.indexOf("export function MobileBottomNav"), shell.indexOf("export function AirRadarPageShell"));
     expect(primary).toContain('href: "/my-airradar"');
     expect(mobile).toContain('item("/my-airradar"');
