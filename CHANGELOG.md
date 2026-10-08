@@ -17,6 +17,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.359] - 2026-10-08
+
+Changes since v1.0.358.
+
+### Maintenance
+
+- Sync generated repository metadata (#588) (3fe5132f)
+- Improve radar readability and map screenshot integrity (#589) (2499e840)
+- Improve aircraft hero and mobile radar drawer (#590) (5d017a26)
+- Compact dashboards and fix narrow desktop controls (#592) (815ba487)
+- Allow optional aircraft rate limits during viewport sweeps (#593) (27e37752)
+- Treat bounded aircraft history 429 as optional (#594) (92564009)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#588) (3fe5132f)
+- style(visual A): improve radar readability and map screenshot integrity (#589) (2499e840)
+- style(visual B): improve aircraft hero and mobile radar drawer (#590) (5d017a26)
+- style(visual C): compact dashboards and fix narrow desktop controls (#592) (815ba487)
+- test(visual): allow optional aircraft rate limits during viewport sweeps (#593) (27e37752)
+- test(visual): treat bounded aircraft history 429 as optional (#594) (92564009)
+
+</details>
 ## [1.0.358] - 2026-10-08
 
 Changes since v1.0.357.
