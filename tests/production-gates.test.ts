@@ -73,6 +73,16 @@ describe("production release metadata gate", () => {
     expect(interceptor).toContain("JSON.stringify({ ...fixture, items })");
   });
 
+  it("collects the system snapshot without a disposable Playwright response", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    const begin = source.indexOf('if (target.name === "system-desktop") {');
+    const block = source.slice(begin, source.indexOf("if (target.mockPredictiveReadiness)", begin));
+    expect(begin).toBeGreaterThan(-1);
+    expect(block).toContain('const upstream = await get("/api/system/status")');
+    expect(block).toContain("systemStatusSnapshot = await upstream.json()");
+    expect(block).not.toContain('visualPage.route("**/api/system/status"');
+  });
+
   it("retries the real Operations Center click once after hydration", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
