@@ -3183,11 +3183,12 @@ button, input, select, textarea { color-scheme: dark; }
     display: grid;
     max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     width: min(320px, calc(100vw - 16px));
     padding: var(--space-2);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-lg);
-    background: var(--surface-overlay);
+    background: var(--surface-elevated);
     box-shadow: var(--shadow-floating);
   }
   .mobile-bottom-more > div a {

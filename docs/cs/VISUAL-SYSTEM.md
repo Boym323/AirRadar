@@ -109,19 +109,49 @@ Report se zapisuje do `artifacts/visual-system-audit.json` a nahrává jej CI.
 Produkční browser gate pořizuje screenshoty reprezentativních desktopových a
 mobilních ploch do `artifacts/visual-smoke/`:
 
-- živý radar
-- Statistics
-- Time Machine
-- System
-- mobilní radar
-- mobilní Statistics
+- živý radar, vybrané letadlo na desktopu, tabletu a mobilu včetně rozšířeného detailu;
+- statistiky, Time Machine a systémová diagnostika;
+- počasí: předem připravená dostupná data na desktopu a prázdný stav na mobilu;
+- watchlist bez pravidel na desktopu a mobilu;
+- centrum oznámení bez událostí na desktopu a mobilu;
+- analýza přijímače s nedostupným backendem na obou typech obrazovek;
+- lokalizovaná nabídka „Více“ v češtině na desktopu a angličtině při šířce 320 px;
+- radar na mobilu, statistiky, detaily letadel a prediktivní přehledy.
 
-Tyto screenshoty jsou CI artefakty, nikoli verzované pixelové baseline.
-Dynamická letadla, počasí a provozní data dělají striktní pixel matching
-nestabilní, zatímco existující browser gate už tvrdě selhává při responzivním
-horizontálním overflow a runtime/browser chybách. Screenshoty poskytují
-stabilní plochu pro revizi vizuálních změn bez falešných selhání způsobených
-živými daty.
+Nové scénáře V3.3 používají deterministická testovací data a zachytávání API
+požadavků přes Playwright místo nestabilních živých dat. Test nejprve čeká na
+očekávaný načtený, prázdný či nedostupný stav a hlídá horizontální přetékání
+při každém screenshotu. Nabídka v angličtině ověřuje skutečnou změnu jazyka.
+Nejde však o automatické pixelové porovnání se schválenými obrázky.
+
+Screenshoty jsou artefakty CI, nikoli verzované pixelové baseline. Dynamická
+letadla, počasí a provozní data by způsobovala falešné rozdíly; produkční brána
+už samostatně kontroluje responzivitu a runtime/browser chyby. Obrázky jsou
+podkladem pro lidskou kontrolu vizuálních úprav.
+
+## Závěrečný vizuální audit V3.4 (2026-10-08)
+
+Poslední úspěšné produkční nasazení (workflow #37803889859,
+commit `6ca4efd2`) poskytlo 46 PNG screenshotů desktopu, tabletu a mobilu.
+Audit zahrnoval mapu a výběr letadla, detail letadla, statistiky, letištní
+tabuli, počasí, oznámení, watchlist, dosah přijímače, prediktivní panely,
+Time Machine, vyhledávání a systémovou diagnostiku.
+
+Celkový vzhled je jednotný a není třeba další velká přestavba. Nalezly se
+tři konkrétní drobnosti, které V3.4 opravuje:
+
+- **Spodní navigace na mobilu:** místo dlouhého dvouřádkového názvu je
+  zobrazen krátký text „Radar“; plný lokalizovaný název zůstává v `aria-label`
+  pro asistivní technologie.
+- **Nabídka „Více“ při šířce 320 px:** skupiny odkazů mají neprůhledný
+  zvýšený povrch a texty stránky pod nimi neprosvítají.
+- **Odsazení počasí:** obsah má stejně jako ostatní provozní stránky
+  12px okraje a na mobilu dostatečnou rezervu nad pevnou spodní navigací.
+
+Regresní testy jsou v `tests/visual-system-v3-4.test.ts`. Playwright navíc
+pokrývá anglickou nabídku na 320 px a prázdné počasí na mobilu. Automatické
+testy neprovádějí schválený pixelový diff; teprve kontrola nově pořízených
+screenshotů po nasazení uzavírá estetické ověření.
 
 ## Migrační pravidla
 

@@ -248,9 +248,9 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const moreActive = isMorePath(pathname) || pathMatches(pathname, "/airports") || pathMatches(pathname, "/journeys");
 
-  const item = (href: Route, label: string, icon: Parameters<typeof UiIcon>[0]["name"]) => {
+  const item = (href: Route, label: string, icon: Parameters<typeof UiIcon>[0]["name"], accessibleLabel = label) => {
     const active = pathMatches(pathname, href);
-    return <a className={active ? "active" : ""} href={href} aria-current={active ? "page" : undefined}>
+    return <a className={active ? "active" : ""} href={href} aria-label={accessibleLabel} aria-current={active ? "page" : undefined}>
       <span className="mobile-bottom-nav-icon" aria-hidden="true"><UiIcon name={icon} /></span>
       <span>{label}</span>
     </a>;
@@ -258,7 +258,7 @@ export function MobileBottomNav() {
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
       {item("/my-airradar", t.myAirRadar.title, "home")}
-      {item("/", t.radar.liveAirPicture, "radar")}
+      {item("/", "Radar", "radar", t.radar.liveAirPicture)}
       {item("/spotter", "Spotter", "aircraft")}
       {item("/events", t.locale.startsWith("cs") ? "Události" : "Events", "time")}
       <details className="mobile-bottom-more">
