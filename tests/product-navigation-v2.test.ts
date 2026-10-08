@@ -6,7 +6,7 @@ describe("Product Navigation V2", () => {
   const palette = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
 
   it("promotes the primary product workflows on desktop", () => {
-    const primary = shell.slice(shell.indexOf("const primaryNavigation"), shell.indexOf("const moreNavigation"));
+    const primary = shell.slice(shell.indexOf("function primaryNavigation()"), shell.indexOf("function moreNavigation()"));
     for (const href of ["/my-airradar", "/", "/spotter", "/events", "/airports", "/journeys"]) {
       expect(primary).toContain('href: "' + href + '"');
     }
