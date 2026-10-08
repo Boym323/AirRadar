@@ -27,6 +27,7 @@ import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotte
 import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
 import { buildSpotterBriefing } from "@/lib/spotter-briefing";
+import { buildMySkyFocus, selectMySkyFocus } from "@/lib/spotter-focus";
 import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
 import { browserConnectionHints, spotterRuntimeBudget, type SpotterRuntimeBudget } from "@/lib/spotter-runtime-budget";
 import styles from "./mobile-spotter-mode.module.css";
@@ -47,6 +48,7 @@ export function MobileSpotterMode() {
   const [discoveryFilter, setDiscoveryFilter] = useState<SpotterDiscoveryFilter>("all");
   const [aircraftType, setAircraftType] = useState("");
   const [distanceOrigin, setDistanceOrigin] = useState<SpotterDistanceOrigin>("receiver");
+  const [selectedMySkyHex, setSelectedMySkyHex] = useState<string | null>(null);
   const [observer, setObserver] = useState<SpotterObserverPosition | null>(null);
   const [observerState, setObserverState] = useState<ObserverState>("idle");
   const [historyTracks, setHistoryTracks] = useState<HistoricalAircraftTrack[]>([]);
@@ -424,6 +426,14 @@ export function MobileSpotterMode() {
       .slice(0, 5);
   }, [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, observer, visibleAircraft]);
 
+  const mySkyFocus = useMemo(
+    () => observer && distanceOrigin === "observer"
+      ? buildMySkyFocus(localAircraft, observer, labelsByHex, discovery?.todayReceptionRecord?.icaoHex ?? null)
+      : null,
+    [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, localAircraft, observer],
+  );
+  const focusItem = mySkyFocus ? selectMySkyFocus(mySkyFocus, selectedMySkyHex) : null;
+
   const logbookStats = useMemo(() => spotterLogbookStats(logbook), [logbook]);
 
   const markSkyStorySeen = () => {
@@ -624,7 +634,8 @@ export function MobileSpotterMode() {
 
   const skyStory = (() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
-    const aircraft = interestingAircraft[0]?.aircraft
+    const aircraft = focusItem?.aircraft
+      ?? interestingAircraft[0]?.aircraft
       ?? upcomingPasses[0]?.aircraft
       ?? visibleAircraft[0]?.aircraft;
     if (!aircraft) return null;
@@ -656,7 +667,8 @@ export function MobileSpotterMode() {
 
   const skyTarget = useMemo(() => {
     if (distanceOrigin !== "observer" || !observer || !visibleAircraft.length) return null;
-    const preferred = interestingAircraft[0]
+    const preferred = focusItem
+      ?? interestingAircraft[0]
       ?? upcomingPasses[0]
       ?? visibleAircraft[0];
     const geometry = preferred.geometry ?? observerGeometry(preferred.aircraft, observer);
@@ -669,7 +681,7 @@ export function MobileSpotterMode() {
       geometry,
       direction,
     };
-  }, [deviceHeading, distanceOrigin, interestingAircraft, observer, upcomingPasses, visibleAircraft]);
+  }, [deviceHeading, distanceOrigin, focusItem, interestingAircraft, observer, upcomingPasses, visibleAircraft]);
 
   const lightContext = skyTarget && observer
     ? lightGeometry(
@@ -849,6 +861,87 @@ export function MobileSpotterMode() {
       {distanceOrigin === "observer" && observer?.accuracyMeters !== null && observer?.accuracyMeters !== undefined
         ? <small className={styles.locationAccuracy}>{copy.accuracy}: ±{formatNumber(observer.accuracyMeters)} m</small>
         : null}
+    </Panel>
+
+    <Panel className={styles.focusPanel} data-testid="my-sky-focus-v2">
+      <SectionHeader
+        kicker="MY SKY / NOW"
+        title={copy.mySkyFocusTitle}
+        description={copy.mySkyFocusDescription}
+        actions={<StatusBadge variant={feedState === "live" && observerState === "ready" ? "live" : feedState === "unavailable" ? "danger" : "stale"}>
+          {feedState === "live" && observerState === "ready" ? copy.live : feedState === "unavailable" ? copy.unavailable : copy.stale}
+        </StatusBadge>}
+      />
+      {distanceOrigin !== "observer" ? <div className={styles.focusWelcome}>
+        <p>{copy.mySkyFocusWelcome}</p>
+        <Button size="compact" variant="primary" onClick={() => setDistanceOrigin("observer")}>
+          {copy.mySkyFocusEnable}
+        </Button>
+        <small>{copy.locationPrivate}</small>
+      </div>
+        : observerState !== "ready" || !observer ? <div className={styles.focusWelcome}>
+          <p role="status">{observerMessage}</p>
+          <small>{copy.locationPrivate}</small>
+        </div>
+          : <>
+            <MetricStrip className={styles.metrics}>
+              <MetricCard value={formatNumber(mySkyFocus?.nearbyCount ?? 0)} label={copy.mySkyFocusNearby} />
+              <MetricCard value={formatNumber(mySkyFocus?.interestingCount ?? 0)} label={copy.mySkyFocusInteresting} />
+              <MetricCard value={formatNumber(mySkyFocus?.approachingCount ?? 0)} label={copy.mySkyFocusApproaching} />
+            </MetricStrip>
+            {focusItem ? <>
+              <article className={styles.focusHero} data-testid="my-sky-focus-selected">
+                <div className={styles.focusIdentity}>
+                  <div>
+                    <small>{copy.mySkyFocusKind[focusItem.kind]}</small>
+                    <strong>{focusItem.aircraft.callsign ?? focusItem.aircraft.registration ?? focusItem.aircraft.icaoHex}</strong>
+                    <span>{focusItem.aircraft.aircraftType ?? focusItem.aircraft.enrichment?.metadata?.icaoTypeCode ?? focusItem.aircraft.icaoHex}</span>
+                  </div>
+                  <div className={styles.focusInterest}>
+                    <strong>{focusItem.interest.score}</strong>
+                    <small>{copy.interestScore}</small>
+                  </div>
+                </div>
+                {focusItem.aircraft.enrichment?.route?.origin || focusItem.aircraft.enrichment?.route?.destination
+                  ? <p className={styles.focusRoute}>{focusItem.aircraft.enrichment?.route?.origin ?? "—"} → {focusItem.aircraft.enrichment?.route?.destination ?? "—"}</p>
+                  : <p className={styles.focusRoute}>{copy.routeUnknown}</p>}
+                <dl className={styles.focusFacts}>
+                  <div><dt>{copy.distanceFromYou}</dt><dd>{formatDistance(focusItem.geometry.horizontalDistanceKm)}</dd></div>
+                  <div><dt>{copy.bearingFromYou}</dt><dd>{formatTrack(focusItem.geometry.bearingDeg)}</dd></div>
+                  <div><dt>{copy.altitude}</dt><dd>{formatAltitude(focusItem.aircraft.altitude)}</dd></div>
+                  <div><dt>{copy.closestPass}</dt><dd>{formatDistance(focusItem.closestApproach?.closestHorizontalDistanceKm ?? null)}</dd></div>
+                </dl>
+                {focusItem.interest.reasons.length ? <div className={styles.interestReasons}>
+                  {focusItem.interest.reasons.slice(0, 4).map((reason) => <span key={reason.code}>{copy.interestReasons[reason.code]} +{reason.points}</span>)}
+                </div> : <small className={styles.locationAccuracy}>{copy.mySkyFocusOrdinary}</small>}
+                <div className={styles.focusActions}>
+                  <Link href={("/?aircraft=" + encodeURIComponent(focusItem.aircraft.icaoHex)) as Route}>{copy.radar}</Link>
+                  <Link href={("/aircraft/" + encodeURIComponent(focusItem.aircraft.icaoHex)) as Route}>{copy.detail}</Link>
+                  <Link href={{
+                    pathname: "/watchlist",
+                    query: {
+                      icaoHex: focusItem.aircraft.icaoHex,
+                      ...(focusItem.aircraft.registration ? { registration: focusItem.aircraft.registration } : {}),
+                    },
+                  }}>{copy.mySkyFocusFollow}</Link>
+                </div>
+              </article>
+              {mySkyFocus && mySkyFocus.items.length > 1 ? <div className={styles.focusChoices} aria-label={copy.mySkyFocusChoices}>
+                {mySkyFocus.items.map((item) => <button
+                  type="button" key={item.aircraft.icaoHex}
+                  className={styles.focusChoice}
+                  data-selected={item.aircraft.icaoHex === focusItem.aircraft.icaoHex}
+                  aria-pressed={item.aircraft.icaoHex === focusItem.aircraft.icaoHex}
+                  onClick={() => setSelectedMySkyHex(item.aircraft.icaoHex)}
+                >
+                  <span><strong>{item.aircraft.callsign ?? item.aircraft.registration ?? item.aircraft.icaoHex}</strong>
+                    <small>{copy.mySkyFocusKind[item.kind]}</small></span>
+                  <span>{formatDistance(item.geometry.horizontalDistanceKm)}</span>
+                </button>)}
+              </div> : null}
+              <small className={styles.locationAccuracy}>{copy.mySkyFocusSelectionHelp}</small>
+            </> : <EmptyState title={copy.mySkyFocusEmpty} description={copy.mySkyFocusEmptyDescription} />}
+          </>}
     </Panel>
 
     {distanceOrigin === "observer" && observerState === "ready" ? <Panel>
