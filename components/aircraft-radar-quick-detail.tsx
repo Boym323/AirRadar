@@ -43,6 +43,7 @@ import {
   t,
 } from "@/lib/i18n";
 import { trafficSourcePresentation } from "@/lib/radar/traffic-presentation";
+import { stableAltitudeProfile } from "@/lib/radar/altitude-profile";
 
 interface QuickHistoryTrail {
   points: HistoryResponse["positions"];
@@ -456,6 +457,11 @@ function verticalRateLabel(value: number | null): string {
   return `${value > 0 ? "↑" : value < 0 ? "↓" : "→"} ${formatNumber(Math.abs(value))} ft/min`;
 }
 
+function compactVerticalRateLabel(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return t.common.emptyValue;
+  return `${value > 0 ? "+" : value < 0 ? "−" : ""}${formatNumber(Math.abs(value), 0)} fpm`;
+}
+
 function SituationSummarySection({ summary }: { summary: FlightSituationSummary }) {
   const hasMeaningfulContext = Boolean(
     summary.currentSector
@@ -571,6 +577,7 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
   const summary = trackingSummary(aircraft, historyTrail);
   const livePoint = aircraft.altitude === null ? null : { recordedAt: aircraft.lastSeen, altitude: aircraft.altitude };
   const chartPoints = historyTrail?.points ?? aircraft.trail ?? [];
+  const stableAltitude = stableAltitudeProfile(chartPoints, livePoint);
   return <>
     <section className="aircraft-quick-overview" aria-labelledby="aircraft-flight-overview-title">
       <div className="aircraft-quick-flight-heading">
@@ -581,13 +588,16 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
       <nav className="aircraft-quick-actions" aria-label={t.aircraft.quickActions}>
         <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
         <button type="button" className={`aircraft-quick-action${watchlisted ? " active" : ""}`} aria-pressed={watchlisted} onClick={onToggleWatchlist}>{watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft}</button>
-        <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFullTrail}</Link>
+        <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFlightHistory}</Link>
         <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
       </nav>
     </section>
     <QuickSection id="aircraft-quick-tracking-title" title={t.aircraft.liveTrackingTitle} className="aircraft-quick-tracking">
       {summary.length > 0 && <p className="aircraft-quick-tracking-summary">{summary.join(" · ")}</p>}
-      <AircraftAltitudeChart points={chartPoints} livePoint={livePoint} />
+      {stableAltitude ? <p className="aircraft-quick-stable-altitude" data-testid="aircraft-quick-stable-altitude">
+        <span>{stableAltitude.altitudeFt >= 18_000 ? t.aircraft.stableFlightLevel : t.aircraft.stableAltitude}</span>
+        <strong>{formatAltitude(stableAltitude.altitudeFt)}</strong>
+      </p> : <AircraftAltitudeChart points={chartPoints} livePoint={livePoint} />}
     </QuickSection>
   </>;
 }
@@ -772,7 +782,7 @@ export function AircraftRadarQuickDetail({
             altitude={formatAltitude(aircraft.altitude)}
             speed={formatSpeed(aircraft.groundSpeed)}
             track={formatTrack(aircraft.track)}
-            verticalRate={verticalRateLabel(aircraft.verticalRate)}
+            verticalRate={compactVerticalRateLabel(aircraft.verticalRate)}
           />
           <div className="aircraft-quick-header-context" aria-label={t.aircraft.liveTrackingTitle}>
             {aircraft.distanceKm !== null && <span><strong>{formatDistance(aircraft.distanceKm)}</strong> {t.aircraft.distance}</span>}
