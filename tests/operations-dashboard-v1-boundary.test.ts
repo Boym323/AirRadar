@@ -37,7 +37,7 @@ describe("Operations Dashboard V1 boundary", () => {
     expect(dashboardSource).toContain('<ContextBadge variant="inferred">{t.operations.inferred}</ContextBadge>');
     expect(dashboardSource).toContain(".slice(0, 6)");
     expect(dashboardSource).toContain(".slice(0, 4)");
-    expect(csSource).toContain("Public ETA není dostupná");
+    expect(csSource).toContain("Veřejný odhad příletu není dostupný");
   });
 
   it("exposes the four V1 product blocks plus live traffic and the safety disclaimer", () => {
