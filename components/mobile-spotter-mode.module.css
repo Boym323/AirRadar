@@ -794,3 +794,36 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* B2–B4: personal evidence and opt-in notifications. */
+.focusPersonal,
+.focusJourney {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.focusPersonal small,
+.focusJourney a {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+.focusJourney a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+}
+.favoriteAlertsOptIn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-weight: 700;
+  margin-top: var(--space-2);
+}
+.favoriteAlertsOptIn input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+}

@@ -7,6 +7,7 @@ export interface SpotterAlertPreferences {
   leadMinutes: number;
   minimumInterestScore: number;
   reasons: SpotterInterestReasonCode[];
+  favoriteAlertsEnabled: boolean;
 }
 
 export interface SpotterAlertCandidate {
@@ -16,12 +17,14 @@ export interface SpotterAlertCandidate {
   routeLabel: string | null;
   interest: SpotterInterestScore;
   closestApproach: SpotterClosestApproach | null;
+  favorite?: boolean;
 }
 
 const STORAGE_KEY = "airradar.spotter-alerts.v1";
 
 export const DEFAULT_SPOTTER_ALERT_PREFERENCES: SpotterAlertPreferences = {
   enabled: false,
+  favoriteAlertsEnabled: false,
   maxClosestDistanceKm: 5,
   leadMinutes: 3,
   minimumInterestScore: 40,
@@ -54,6 +57,7 @@ export function sanitizeSpotterAlertPreferences(value: unknown): SpotterAlertPre
     : DEFAULT_SPOTTER_ALERT_PREFERENCES.reasons;
   return {
     enabled: input.enabled === true,
+    favoriteAlertsEnabled: input.favoriteAlertsEnabled === true,
     maxClosestDistanceKm: boundedNumber(input.maxClosestDistanceKm, 5, 0.5, 50),
     leadMinutes: boundedNumber(input.leadMinutes, 3, 1, 15),
     minimumInterestScore: boundedNumber(input.minimumInterestScore, 40, 0, 100),
@@ -89,6 +93,9 @@ export function shouldTriggerSpotterAlert(
   if (!approach || approach.phase !== "approaching") return false;
   if (approach.closestHorizontalDistanceKm > preferences.maxClosestDistanceKm) return false;
   if (approach.secondsUntilClosest > preferences.leadMinutes * 60) return false;
+  // Favorites are an explicit, independent opt-in; retain all spatial and
+  // lead-time limits and require the main notification switch above.
+  if (candidate.favorite && preferences.favoriteAlertsEnabled) return true;
   if (candidate.interest.score < preferences.minimumInterestScore) return false;
   return candidate.interest.reasons.some((reason) => preferences.reasons.includes(reason.code));
 }

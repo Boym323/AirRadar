@@ -66,11 +66,37 @@ describe("Spotter Alerts V1", () => {
       reasons: ["rare", "bogus"],
     })).toEqual({
       enabled: true,
+      favoriteAlertsEnabled: false,
       maxClosestDistanceKm: 50,
       leadMinutes: 1,
       minimumInterestScore: 100,
       reasons: ["rare"],
     });
+  });
+
+  it("keeps opt-in favorite notifications bounded by permission, time and location policy", () => {
+    const ordinaryFavorite = {
+      ...candidate,
+      favorite: true,
+      interest: { score: 0, reasons: [] },
+    };
+    expect(shouldTriggerSpotterAlert(ordinaryFavorite, {
+      ...DEFAULT_SPOTTER_ALERT_PREFERENCES, enabled: true,
+    })).toBe(false);
+    const enabled = { ...DEFAULT_SPOTTER_ALERT_PREFERENCES, enabled: true, favoriteAlertsEnabled: true };
+    expect(shouldTriggerSpotterAlert(ordinaryFavorite, enabled)).toBe(true);
+    expect(shouldTriggerSpotterAlert(ordinaryFavorite, { ...enabled, enabled: false })).toBe(false);
+    expect(shouldTriggerSpotterAlert({
+      ...ordinaryFavorite, closestApproach: { ...candidate.closestApproach, secondsUntilClosest: 999 },
+    }, enabled)).toBe(false);
+    expect(shouldTriggerSpotterAlert({
+      ...ordinaryFavorite, closestApproach: { ...candidate.closestApproach, closestHorizontalDistanceKm: 16 },
+    }, enabled)).toBe(false);
+    expect(shouldTriggerSpotterAlert({
+      ...ordinaryFavorite, closestApproach: { ...candidate.closestApproach, phase: "departing" },
+    }, enabled)).toBe(false);
+    expect(sanitizeSpotterAlertPreferences({ favoriteAlertsEnabled: "true" }).favoriteAlertsEnabled).toBe(false);
+    expect(sanitizeSpotterAlertPreferences({ favoriteAlertsEnabled: true }).favoriteAlertsEnabled).toBe(true);
   });
 
   it("uses a stable per-aircraft notification tag", () => {

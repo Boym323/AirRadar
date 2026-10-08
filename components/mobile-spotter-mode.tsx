@@ -28,6 +28,8 @@ import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
 import { buildSpotterBriefing } from "@/lib/spotter-briefing";
 import { buildMySkyFocus, selectMySkyFocus } from "@/lib/spotter-focus";
+import { MY_SKY_FAVORITES_CHANGED_EVENT, MY_SKY_FAVORITES_STORAGE_KEY, parseMySkyFavorites, serializeMySkyFavorites, toggleMySkyFavorite, type MySkyFavorites } from "@/lib/spotter-personalization";
+import { FollowJourneyButton } from "@/components/follow-journey-button";
 import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
 import { browserConnectionHints, spotterRuntimeBudget, type SpotterRuntimeBudget } from "@/lib/spotter-runtime-budget";
 import styles from "./mobile-spotter-mode.module.css";
@@ -49,6 +51,8 @@ export function MobileSpotterMode() {
   const [aircraftType, setAircraftType] = useState("");
   const [distanceOrigin, setDistanceOrigin] = useState<SpotterDistanceOrigin>("receiver");
   const [selectedMySkyHex, setSelectedMySkyHex] = useState<string | null>(null);
+  const [mySkyFavorites, setMySkyFavorites] = useState<MySkyFavorites>({ version: 1, icaoHexes: [] });
+  const [favoriteStorageError, setFavoriteStorageError] = useState(false);
   const [observer, setObserver] = useState<SpotterObserverPosition | null>(null);
   const [observerState, setObserverState] = useState<ObserverState>("idle");
   const [historyTracks, setHistoryTracks] = useState<HistoricalAircraftTrack[]>([]);
@@ -126,6 +130,11 @@ export function MobileSpotterMode() {
   useEffect(() => {
     setAlertPreferences(readSpotterAlertPreferences());
     try {
+      setMySkyFavorites(parseMySkyFavorites(window.localStorage.getItem(MY_SKY_FAVORITES_STORAGE_KEY)));
+    } catch {
+      setMySkyFavorites({ version: 1, icaoHexes: [] });
+    }
+    try {
       setLogbook(parseSpotterLogbook(window.localStorage.getItem(SPOTTER_LOGBOOK_STORAGE_KEY)));
     } catch {
       setLogbook({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
@@ -133,6 +142,23 @@ export function MobileSpotterMode() {
     setNotificationPermission("Notification" in window && "serviceWorker" in navigator
       ? Notification.permission
       : "unsupported");
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        setMySkyFavorites(parseMySkyFavorites(window.localStorage.getItem(MY_SKY_FAVORITES_STORAGE_KEY)));
+      } catch { /* local storage is optional */ }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === MY_SKY_FAVORITES_STORAGE_KEY) refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(MY_SKY_FAVORITES_CHANGED_EVENT, refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(MY_SKY_FAVORITES_CHANGED_EVENT, refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -428,13 +454,26 @@ export function MobileSpotterMode() {
 
   const mySkyFocus = useMemo(
     () => observer && distanceOrigin === "observer"
-      ? buildMySkyFocus(localAircraft, observer, labelsByHex, discovery?.todayReceptionRecord?.icaoHex ?? null)
+      ? buildMySkyFocus(localAircraft, observer, labelsByHex, discovery?.todayReceptionRecord?.icaoHex ?? null, 5,
+          { favorites: mySkyFavorites, logbook })
       : null,
-    [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, localAircraft, observer],
+    [discovery?.todayReceptionRecord?.icaoHex, distanceOrigin, labelsByHex, localAircraft, logbook, mySkyFavorites, observer],
   );
   const focusItem = mySkyFocus ? selectMySkyFocus(mySkyFocus, selectedMySkyHex) : null;
 
   const logbookStats = useMemo(() => spotterLogbookStats(logbook), [logbook]);
+
+  const toggleFocusFavorite = (hex: string) => {
+    const next = toggleMySkyFavorite(mySkyFavorites, hex);
+    try {
+      window.localStorage.setItem(MY_SKY_FAVORITES_STORAGE_KEY, serializeMySkyFavorites(next));
+      setMySkyFavorites(next);
+      setFavoriteStorageError(false);
+      window.dispatchEvent(new Event(MY_SKY_FAVORITES_CHANGED_EVENT));
+    } catch {
+      setFavoriteStorageError(true);
+    }
+  };
 
   const markSkyStorySeen = () => {
     if (!skyStory) return;
@@ -759,6 +798,9 @@ export function MobileSpotterMode() {
       || distanceOrigin !== "observer"
       || notificationPermission !== "granted"
       || !alertPreferences.enabled
+      || !connected
+      || !snapshot?.sourceOnline
+      || !observer
       || !("serviceWorker" in navigator)
     ) return;
 
@@ -767,7 +809,13 @@ export function MobileSpotterMode() {
       if (now - at > 60 * 60_000) alertedTagsRef.current.delete(tag);
     }
 
-    for (const item of interestingAircraft) {
+    for (const item of visibleAircraft) {
+      const closestApproach = predictClosestApproach(item.aircraft, observer);
+      const interest = scoreSpotterInterest(item.aircraft,
+        labelsByHex.get(item.aircraft.icaoHex) ?? [], closestApproach?.closestHorizontalDistanceKm ?? null,
+        discovery?.todayReceptionRecord?.icaoHex ?? null);
+      const favorite = mySkyFavorites.icaoHexes.includes(item.aircraft.icaoHex.toUpperCase());
+      if (!isSpotterInteresting(interest) && !(favorite && alertPreferences.favoriteAlertsEnabled)) continue;
       const route = item.aircraft.enrichment?.route;
       const candidate = {
         icaoHex: item.aircraft.icaoHex,
@@ -776,8 +824,9 @@ export function MobileSpotterMode() {
         routeLabel: route?.origin || route?.destination
           ? (route?.origin ?? "—") + " → " + (route?.destination ?? "—")
           : null,
-        interest: item.interest,
-        closestApproach: item.closestApproach,
+        interest,
+        closestApproach,
+        favorite,
       };
       if (!shouldTriggerSpotterAlert(candidate, alertPreferences)) continue;
       const tag = spotterAlertTag(candidate);
@@ -805,7 +854,8 @@ export function MobileSpotterMode() {
         }))
         .catch(() => undefined);
     }
-  }, [alertPreferences, copy.inPrefix, copy.lookUp, distanceOrigin, interestingAircraft, notificationPermission, pageVisible]);
+  }, [alertPreferences, connected, copy.inPrefix, copy.lookUp, discovery?.todayReceptionRecord?.icaoHex,
+    distanceOrigin, labelsByHex, mySkyFavorites, notificationPermission, observer, pageVisible, snapshot?.sourceOnline, visibleAircraft]);
 
   const feedState = snapshot
     ? connected && snapshot.sourceOnline ? "live" : "stale"
@@ -904,6 +954,16 @@ export function MobileSpotterMode() {
                   <div><dt>{copy.altitude}</dt><dd>{formatAltitude(focusItem.aircraft.altitude)}</dd></div>
                   <div><dt>{copy.closestPass}</dt><dd>{formatDistance(focusItem.closestApproach?.closestHorizontalDistanceKm ?? null)}</dd></div>
                 </dl>
+                <div className={styles.focusPersonal} data-testid="my-sky-personalization">
+                  <Button size="compact" variant={focusItem.personal.favorite ? "primary" : "secondary"}
+                    aria-pressed={focusItem.personal.favorite}
+                    onClick={() => toggleFocusFavorite(focusItem.aircraft.icaoHex)}>
+                    {focusItem.personal.favorite ? copy.mySkyRemoveFavorite : copy.mySkyAddFavorite}
+                  </Button>
+                  {focusItem.personal.sightings > 0 ? <small>{copy.mySkySeenBefore}: {formatNumber(focusItem.personal.sightings)}
+                    {focusItem.personal.lastSeenAt ? " · " + formatDateTime(focusItem.personal.lastSeenAt, t) : ""}</small> : null}
+                </div>
+                {favoriteStorageError ? <small role="status" className={styles.discoveryWarning}>{copy.mySkyFavoriteError}</small> : null}
                 {focusItem.interest.reasons.length ? <div className={styles.interestReasons}>
                   {focusItem.interest.reasons.slice(0, 4).map((reason) => <span key={reason.code}>{copy.interestReasons[reason.code]} +{reason.points}</span>)}
                 </div> : <small className={styles.locationAccuracy}>{copy.mySkyFocusOrdinary}</small>}
@@ -918,6 +978,17 @@ export function MobileSpotterMode() {
                     },
                   }}>{copy.mySkyFocusFollow}</Link>
                 </div>
+                <div className={styles.focusJourney}>
+                  <FollowJourneyButton
+                    key={focusItem.aircraft.icaoHex}
+                    icaoHex={focusItem.aircraft.icaoHex}
+                    callsign={focusItem.aircraft.callsign ?? null}
+                    registration={focusItem.aircraft.registration ?? null}
+                    origin={focusItem.aircraft.enrichment?.route?.origin ?? null}
+                    destination={focusItem.aircraft.enrichment?.route?.destination ?? null}
+                  />
+                  <Link href={"/my-airradar" as Route}>{copy.mySkyMyAirRadar} →</Link>
+                </div>
               </article>
               {mySkyFocus && mySkyFocus.items.length > 1 ? <div className={styles.focusChoices} aria-label={copy.mySkyFocusChoices}>
                 {mySkyFocus.items.map((item) => <button
@@ -927,8 +998,8 @@ export function MobileSpotterMode() {
                   aria-pressed={item.aircraft.icaoHex === focusItem.aircraft.icaoHex}
                   onClick={() => setSelectedMySkyHex(item.aircraft.icaoHex)}
                 >
-                  <span><strong>{item.aircraft.callsign ?? item.aircraft.registration ?? item.aircraft.icaoHex}</strong>
-                    <small>{copy.mySkyFocusKind[item.kind]}</small></span>
+                  <span><strong>{item.personal.favorite ? "★ " : ""}{item.aircraft.callsign ?? item.aircraft.registration ?? item.aircraft.icaoHex}</strong>
+                    <small>{copy.mySkyFocusKind[item.kind]}{item.personal.sightings > 0 ? " · " + copy.mySkySeenBefore : ""}</small></span>
                   <span>{formatDistance(item.geometry.horizontalDistanceKm)}</span>
                 </button>)}
               </div> : null}
@@ -1232,6 +1303,12 @@ export function MobileSpotterMode() {
           </select>
         </label>
       </div>
+      <label className={styles.favoriteAlertsOptIn}>
+        <input type="checkbox" checked={alertPreferences.favoriteAlertsEnabled}
+          onChange={(event) => updateAlertPreferences({ ...alertPreferences, favoriteAlertsEnabled: event.target.checked })} />
+        <span>{copy.mySkyFavoriteAlerts}</span>
+      </label>
+      <small className={styles.locationAccuracy}>{copy.mySkyFavoriteAlertsHint}</small>
       <div className={styles.alertReasons}>
         <strong>{copy.alertReasons}</strong>
         <div>

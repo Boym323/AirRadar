@@ -62,6 +62,85 @@ browser smoke ukládá deterministické desktopové a 390px
 mobilní snímky stránky `/spotter` bez automatického
 povolení GPS.
 
-Případná další etapa může zlepšit preference upozornění
-a historickou personalizaci. Musí však používat dosavadní
-kontrakty dat a notifikací a nevymýšlet pokrytí přijímače.
+## B2 — Personal Sky Intelligence
+
+Uživatelská **oblíbená letadla** jsou výslovně označené šestimístné
+hexadecimální ICAO identifikátory uložené pod klíčem
+`airradar.my-sky-favorites.v1` v prohlížeči. Omezené a validované
+úložiště pojme maximálně 32 unikátních hodnot. Vybrané letadlo
+lze jedinou výslovnou akcí přidat nebo odebrat. Poškozený,
+nekompatibilní či příliš velký záznam se nepoužije; pokud
+prohlížeč zápis odmítne, aplikace zobrazí chybu a nepředstírá
+úspěšné uložení. Změny se promítají mezi My Sky a Můj AirRadar
+pomocí místní události a standardní události `storage`
+bez nového serverového API.
+
+Počet **Už jsem viděl** a čas posledního pozorování pocházejí
+výhradně z uživatelem **ručně potvrzených** položek stávajícího
+soukromého deníku Spotter. Opakované SSE aktualizace se
+nepovažují za pozorování ani potvrzený průlet nad hlavou.
+Pořadí v My Sky dostává omezenou bonusovou prioritu pro
+oblíbená a dříve ručně pozorovaná letadla, původní
+objektivní důvody zajímavosti se nemění. Deník se při
+výpočtu indexuje jednou, takže pro každý let jde o rychlé
+vyhledání. Personalizace nepovolí NETWORK-only letadlu
+obejít podmínku LOCAL příjmu.
+
+Můj AirRadar zobrazuje uložená oblíbená ICAO a jejich
+aktuálně pozorované LOCAL záznamy ze **stejného lokálního
+úložiště**. Nejde o synchronizaci oblíbených na účet serveru.
+
+## B3 — Sledování letu a upozornění
+
+Hlavní karta My Sky obsahuje vedle odkazů Radar, Detail
+a předvyplněný Watchlist také existující tlačítko
+**Sledovat tento let (Follow Journey)**. Trvalá nebo
+provizorní identita letu se řeší až po kliknutí pomocí
+stávajícího API a lokálního úložiště
+`airradar.followed-journeys.v1`. Oblíbené letadlo,
+Watchlist pravidlo a konkrétní sledovaný let jsou
+**samostatné funkce se samostatným souhlasem**.
+
+Do stávající politiky `airradar.spotter-alerts.v1`
+přibyl přepínač `favoriteAlertsEnabled`, který je
+**výchozím stavem vypnutý**, a to i u starých uložených
+nastavení. Oblíbené letadlo se stává kandidátem k
+upozornění až po povolení hlavních upozornění a příslušného
+oprávnění. Nadále musí splnit limity vzdálenosti,
+předstihu, skutečného přibližování a deduplikaci
+podle ICAO. Používají se existující upozornění
+v otevřeném prohlížeči přes service worker. Nutná
+je aktivní stránka Spotter a živá LOCAL data;
+nevzniká žádný nový push systém ani služba běžící
+na pozadí. Pro serverová upozornění mimo otevřenou
+stránku lze nadále výslovně uložit Spot a nastavit
+existující Watchlist / doručovací pravidla.
+
+## B4 — Uzavření, výkon, soukromí a regresní brány
+
+Stávající geolokace se počítá pouze v prohlížeči a
+zapíná se výslovným přepnutím do režimu Moje poloha.
+Oblíbená letadla ani deník **neobsahují souřadnice**.
+Výpočet je omezen rozsahem LOCAL snapshotu,
+existujícími nejvýše 500 položkami deníku a zobrazením
+pěti nejvhodnějších letadel. Nepřibývají databázové
+zápisy ani další SSE připojení. Přidání oblíbeného
+letadla samo nikdy neaktivuje notifikace nebo
+sledovací pravidlo. Neznámé trasy i zastaralý
+stream mají nadále viditelné stavy.
+
+Testy ověřují validaci a kapacity lokálního úložiště,
+ručně potvrzená pozorování, prioritu oblíbených,
+LOCAL provenienci, zobrazení v obou sekcích,
+souhlas s upozorněními, živost streamu i předání
+sledování původní funkci Follow Journey.
+Produkční 390px Playwright kontrola nasazuje pouze
+testovací lokální oblíbenou ICAO a ověřuje její
+zobrazení v Můj AirRadar. Tato data nejsou
+zapsaná do produkční databáze ani jiných prohlížečů.
+
+Etapa B je vývojově uzavřená až po úspěšných PR
+CI a CodeQL, produkčních browser a výkonových
+kontrolách a potvrzení nasazené verze. Neznamená
+to automatické naplnění uživatelského deníku
+nebo oblíbených letadel — vznikají až akcemi uživatele.

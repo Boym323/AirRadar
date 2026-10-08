@@ -62,6 +62,73 @@ of established watchlist / radar / detail paths. Production browser
 smoke captures deterministic `/spotter` desktop and 390 px mobile
 onboarding views without silently granting GPS access.
 
-A later separate stage may improve notification preferences or
-historical personalization, but it must continue reusing existing
-alert and data contracts and must not invent LOCAL coverage.
+## B2 — Personal Sky Intelligence
+
+The user's **favorites** are explicit ICAO hex identifiers (exactly six hex
+characters) persisted under `airradar.my-sky-favorites.v1` in browser
+`localStorage`. The bounded, sanitized V1 store holds at most 32
+deduplicated favorites. The selected My Sky flight can be added or
+removed with a single deliberate button action. Missing, malformed
+and oversized storage records fail closed to an empty set; storage
+failure shows feedback rather than pretending the favorite was saved.
+The browser `storage` event and a local change event synchronize
+My Sky and My AirRadar without a new API call.
+
+The *spotted before* counter and timestamp derive **only from
+user-confirmed entries** in the existing private Spotter Logbook.
+Merely receiving repeated SSE updates never counts as a sighting or
+proves an aircraft has passed overhead. The main focus ranking adds
+bounded bonuses for explicitly favorited / personally observed aircraft
+without replacing the underlying objective spotter-interest reasons.
+The logbook is indexed once per focus update for efficient O(1)
+per-aircraft lookup. A stale or NETWORK-only track cannot become an
+eligible LOCAL sky candidate through personalization.
+
+My AirRadar now surfaces favorite ICAO IDs and LOCAL currently observed
+matches, using the *same browser store*. This does not make a
+per-browser favorite into a server account preference.
+
+## B3 — Follow Journey and notifications
+
+The My Sky hero exposes the **existing Follow Journey button**
+alongside radar, aircraft detail and prefilled watchlist links.
+Follow Journey resolves canonical durable/provisional flight identity
+only when the user clicks, through its established API and
+`airradar.followed-journeys.v1` local store. Favorites, watchlist
+rules and Follow Journey remain **distinct opt-in concepts**.
+
+The existing `airradar.spotter-alerts.v1` policy has one new
+`favoriteAlertsEnabled` boolean, **false by default**, including
+legacy stored preferences. It only makes a favorite eligible
+when the *main* alert permission and switch are already enabled
+and the same closest-distance, lead-time, approaching-phase
+and per-aircraft cooldown limits pass. The existing service-worker
+foreground notification mechanism is reused. Both a visible
+Spotter tab and live LOCAL stream are required; no push subscriptions
+or background polling are added. For background notifications,
+users can continue explicitly saving a Spot and configuring existing
+server-side watchlist/delivery settings.
+
+## B4 — Closure, performance, consent and release regression
+
+The existing GPS watch remains entirely browser-side and starts
+only after the user requests observer mode. Favorites and logbook
+contain **no coordinates**. The ranker's work is bounded by the
+LOCAL snapshot, max 500 existing private logbook records, and
+a top-five view; no database writes or extra SSE connections
+are created. Favoriting does not implicitly enable notification
+permission or any persistent watch rule. Unknown route and stale
+stream states remain explicit.
+
+Automated checks cover browser-store sanitization, caps,
+repeated manual sightings, favorite ranking, LOCAL provenance,
+cross-page hydration, opt-in alert policy, active-feed notification
+guard and follow journey delegation. A production 390 px My AirRadar
+visual smoke seeds *only* a fake browser-local favorite and asserts
+that the saved ICAO appears. This fixture is isolated per Playwright
+page and cannot affect real users or production data.
+
+B is engineering complete after PR CI and CodeQL, production browser
+and performance gates, and the post-deploy exact-commit verification
+pass. It does **not** mean the user's local browser contains historical
+sightings or favorites before they explicitly save them.
