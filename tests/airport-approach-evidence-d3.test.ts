@@ -25,14 +25,18 @@ describe("D3 approach transition evidence", () => {
     const prior = move("GO_AROUND", "2026-10-08T19:47:00.000Z");
     const latest = move("APPROACH", "2026-10-08T19:57:00.000Z");
     const got = buildAirportApproachEvidenceD3({
-      traffic: snapshot(latest), operations: operations([latest, prior]), now,
+      traffic: snapshot(latest), operations: {...operations([latest]), eventEvidence: [prior]}, now,
     });
     expect(got.items[0]).toMatchObject({state: "REAPPROACH_EVIDENCE", flightId: 17});
     expect(got.counts.reapproach).toBe(1);
     const mismatched = buildAirportApproachEvidenceD3({
-      traffic: snapshot(latest), operations: operations([latest, {...prior, flightId: 18}]), now,
+      traffic: snapshot(latest), operations: {...operations([latest]), eventEvidence: [{...prior, flightId: 18}]}, now,
     });
     expect(mismatched.items[0]?.state).toBe("APPROACH_EVIDENCE");
+    const truncated = buildAirportApproachEvidenceD3({
+      traffic: snapshot(latest), operations: {...operations([latest]), eventEvidence: [prior], eventEvidenceTruncated: true}, now,
+    });
+    expect(truncated.complete).toBe(false);
   });
   it("cannot mistake a live stage for independently observed holding or go-around", () => {
     const got = buildAirportApproachEvidenceD3({
