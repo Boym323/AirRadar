@@ -6,6 +6,13 @@ export const MAX_SSE_CLIENTS_PER_CHANNEL = MAX_SSE_CLIENTS - 16;
 export const MAX_SSE_CLIENTS_PER_CLIENT = 6;
 
 let activeClients = 0;
+const deniedSse = { global: 0, channel: 0, client: 0 };
+let coalescedAircraftSnapshots = 0;
+const incrementBounded = (value: number) => Math.min(1_000_000_000, value + 1);
+
+export function recordCoalescedAircraftSnapshot(): void {
+  coalescedAircraftSnapshots = incrementBounded(coalescedAircraftSnapshots);
+}
 let activeV1Clients = 0;
 let activeV2Clients = 0;
 const activeChannelClients: Record<SseChannel, number> = { aircraft: 0, intelligence: 0, ogn: 0, system: 0 };
@@ -32,9 +39,9 @@ export function acquireSseClient(
   channel: SseChannel = "aircraft",
 ): (() => void) | null {
   const key = normalizedClientKey(clientKey);
-  if (activeClients >= MAX_SSE_CLIENTS) return null;
-  if (activeChannelClients[channel] >= MAX_SSE_CLIENTS_PER_CHANNEL) return null;
-  if ((activeClientCounts.get(key) ?? 0) >= MAX_SSE_CLIENTS_PER_CLIENT) return null;
+  if (activeClients >= MAX_SSE_CLIENTS) { deniedSse.global = incrementBounded(deniedSse.global); return null; }
+  if (activeChannelClients[channel] >= MAX_SSE_CLIENTS_PER_CHANNEL) { deniedSse.channel = incrementBounded(deniedSse.channel); return null; }
+  if ((activeClientCounts.get(key) ?? 0) >= MAX_SSE_CLIENTS_PER_CLIENT) { deniedSse.client = incrementBounded(deniedSse.client); return null; }
 
   activeClients += 1;
   activeChannelClients[channel] += 1;
@@ -91,6 +98,8 @@ export function recordSsePayload(
 export function getSseDiagnostics() {
   return {
     activeClients,
+    deniedSse: { ...deniedSse },
+    coalescedAircraftSnapshots,
     activeV1Clients,
     activeV2Clients,
     activeChannelClients: { ...activeChannelClients },

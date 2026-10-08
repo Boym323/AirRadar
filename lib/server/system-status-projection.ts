@@ -119,6 +119,8 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       externalBytes: 0,
       arrayBuffersBytes: 0,
       activeSseClients: 0,
+      sseDenied: { global: 0, channel: 0, client: 0 },
+      sseCoalescedAircraftSnapshots: 0,
       activeSseV1Clients: 0,
       activeSseV2Clients: 0,
       sseClientLimit: 0,
