@@ -18,6 +18,8 @@ export interface RuntimeDiagnostics {
   externalBytes: number;
   arrayBuffersBytes: number;
   activeSseClients: number;
+  sseDenied: { global: number; channel: number; client: number };
+  sseCoalescedAircraftSnapshots: number;
   activeSseV1Clients: number;
   activeSseV2Clients: number;
   sseClientLimit: number;
@@ -138,6 +140,8 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     externalBytes: nonNegative(memory.external),
     arrayBuffersBytes: nonNegative(memory.arrayBuffers),
     activeSseClients: sse.activeClients,
+    sseDenied: sse.deniedSse,
+    sseCoalescedAircraftSnapshots: sse.coalescedAircraftSnapshots,
     activeSseV1Clients: sse.activeV1Clients,
     activeSseV2Clients: sse.activeV2Clients,
     sseClientLimit: MAX_SSE_CLIENTS,
