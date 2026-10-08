@@ -967,7 +967,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 visibility: 10000, observedAt: fixtureTime,
               }] : [], fetchedAt: fixtureTime, stale: false }],
               ["**/api/weather/sigmet", { available: hasData, type: "FeatureCollection", features: [], fetchedAt: fixtureTime, stale: false }],
-              ["**/api/weather/radar/frames", { available: hasData, provider: "CHMI", product: "CZRAD", frames: [], latestFrameId: null, generatedAt: fixtureTime }],
+              ["**/api/weather/radar/frames", { available: hasData, provider: "CHMI", product: "CZRAD", frames: hasData ? [{ id: "fixture-frame", observedAt: fixtureTime, latest: true, stale: false }] : [], latestFrameId: hasData ? "fixture-frame" : null, generatedAt: fixtureTime }],
               ["**/api/weather/pirep?*", { available: hasData, reports: [], fetchedAt: fixtureTime, stale: false }],
               ["**/api/weather/wind?*", { provider: "fixture", model: "ICON-EU", modelRun: null, validAt: fixtureTime,
                 levelHpa: 500, points: hasData ? [{ lat: 50.1, lon: 14.4, speedKt: 22, directionDeg: 240 }] : [],
@@ -1269,14 +1269,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.getByText("Data nejsou aktuálně dostupná.", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockWatchlist) {
-            await visualPage.waitForFunction(() =>
-              document.querySelector(".watchlist-rules-card .watchlist-empty")?.textContent !== "Načítání…"
-              && document.querySelector(".watchlist-rules-card .watchlist-empty")?.textContent !== "Loading…"
-            );
+            await visualPage.waitForFunction(() => {
+              const text = document.querySelector(".watchlist-rules-card .watchlist-empty")?.textContent;
+              return Boolean(text && !/Načít|Loading/i.test(text));
+            }, undefined, { timeout: 15_000 });
           }
           if (target.mockNotifications) {
-            await visualPage.locator('[data-testid="notification-center-v2"] .ui-metric-value').first()
-              .getByText("0", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.waitForFunction(() =>
+              document.querySelector('[data-testid="notification-center-v2"] .ui-metric-value')?.textContent?.trim() === "0",
+              undefined, { timeout: 15_000 });
           }
           if (target.mockReceiverUnavailable) {
             await visualPage.locator('[data-testid="receiver-explorer-summary"] .ui-empty-state')
