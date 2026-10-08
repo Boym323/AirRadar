@@ -279,7 +279,7 @@ export function OperationsDashboard() {
   return (
     <main className={styles.page} data-testid="operations-dashboard-v1">
       <PageHeader
-        kicker="AIRRADAR / OPERATIONS"
+        kicker={t.uiExtras.operationsHeading}
         title={t.operations.title}
         description={t.operations.subtitle}
         actions={
