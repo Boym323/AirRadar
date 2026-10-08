@@ -649,7 +649,6 @@ export const cs = {
     seenByBothCount: (count: string) => `${count} zachyceno oběma zdroji`,
     networkUnavailable: "Síť není dostupná · lokální radar funguje dál",
     networkRateLimited: "Síť je dočasně omezená",
-    networkAttribution: "Síťové pokrytí: ADSB.lol · ODbL 1.0",
     followMode: "Sledování letu",
     followHudLabel: "Ovládání sledování vybraného letadla a živý kontext",
     followTelemetry: "Živá telemetrie letadla",
