@@ -13,6 +13,7 @@ import {
 } from "@/lib/server/time-machine";
 
 const intelligencePage = readFileSync(new URL("../app/intelligence/page.tsx", import.meta.url), "utf8");
+const intelligenceView = readFileSync(new URL("../components/intelligence-page-content.tsx", import.meta.url), "utf8");
 const timeMachineSource = readFileSync(new URL("../components/time-machine.tsx", import.meta.url), "utf8");
 const windowRoute = readFileSync(new URL("../app/api/time-machine/window/route.ts", import.meta.url), "utf8");
 
@@ -70,8 +71,9 @@ describe("Event Replay V1", () => {
   });
 
   it("wires Intelligence to replay mode without a new event or persistence engine", () => {
-    expect(intelligencePage).toContain('data-testid="event-replay-action"');
-    expect(intelligencePage).toContain('pathname: "/time-machine"');
+    expect(intelligencePage).toContain("<IntelligencePageContent events={events}");
+    expect(intelligenceView).toContain('data-testid="event-replay-action"');
+    expect(intelligenceView).toContain('pathname: "/time-machine"');
     expect(timeMachineSource).toContain('params.get("replay") === String(EVENT_REPLAY_RADIUS_MINUTES)');
     expect(timeMachineSource).toContain('data-testid="event-replay-banner"');
     expect(timeMachineSource).toContain('"&mode=event-replay"');
