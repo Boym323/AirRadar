@@ -6114,3 +6114,54 @@ button, input, select, textarea { color-scheme: dark; }
     display: none;
   }
 }
+
+/* Visual refinement A: elevate operational labels without repainting the map. */
+.map-summary-item span,
+.map-layers > summary,
+.traffic-trigger,
+.map-layer-group-title,
+.map-layers-menu label,
+.map-layer-mode select {
+  font-size: var(--font-size-md);
+}
+.map-summary-item span {
+  color: var(--text-secondary);
+  letter-spacing: .03em;
+}
+.map-overlay-primary {
+  gap: var(--space-2);
+}
+.map-summary-card {
+  gap: var(--space-4);
+}
+.map-overlay-card,
+.map-layers > summary,
+.traffic-trigger {
+  box-shadow: var(--shadow-control);
+}
+.map-layers-menu {
+  max-height: min(70svh, 620px);
+  overflow-y: auto;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.map-layer-group-title {
+  color: var(--accent);
+}
+.map-layers-menu label {
+  min-height: var(--control-height);
+  color: var(--text-secondary);
+}
+.map-layers-menu label:has(input:checked) {
+  color: var(--text-primary);
+}
+.traffic-trigger strong,
+.map-summary-item strong {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 820px) {
+  .map-summary-card { gap: var(--space-3); }
+  .map-overlay-primary { gap: var(--space-2); }
+  .map-summary-item span { font-size: var(--font-size-xs); }
+  .map-layers > summary,
+  .traffic-trigger { min-height: var(--control-height-touch); }
+}
