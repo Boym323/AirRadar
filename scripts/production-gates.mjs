@@ -937,6 +937,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
 
+      // Share one real, validated system snapshot across admin readiness captures.
+      // Repeated upstream calls late in the visual sweep can hit the public rate limit.
+      let systemStatusSnapshot = null;
       for (const target of visualTargets) {
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
@@ -995,14 +998,20 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
-          if (target.mockPredictiveReadiness) {
+          if (target.name === "system-desktop") {
             await visualPage.route("**/api/system/status", async (route) => {
               const upstream = await route.fetch();
-              const body = await upstream.json();
+              if (upstream.ok()) systemStatusSnapshot = await upstream.json();
+              await route.fulfill({ response: upstream });
+            });
+          }
+          if (target.mockPredictiveReadiness) {
+            if (!systemStatusSnapshot) throw new Error("Predictive visual smoke requires a successful real system status snapshot");
+            await visualPage.route("**/api/system/status", async (route) => {
               await route.fulfill({
-                status: upstream.status(),
-                headers: { ...upstream.headers(), "content-type": "application/json" },
-                body: JSON.stringify({ ...body, detailLevel: "admin" }),
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" }),
               });
             });
             await visualPage.route("**/api/system/stream", async (route) => { await route.abort(); });
@@ -1022,6 +1031,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             console.warn(`[production-gates] visual smoke ${target.path} root was not visible after initial navigation; retrying page load`);
             await visualPage.reload({ waitUntil: "domcontentloaded" });
             await targetRoot.waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.name === "system-desktop") {
+            // The public status must load successfully before we reuse its
+            // shape for the admin-only predictive screenshot fixtures.
+            await visualPage.locator(".system-grid").waitFor({ state: "visible", timeout: 15_000 });
+            if (!systemStatusSnapshot) throw new Error("System visual smoke did not receive the expected status response");
           }
           if (target.openOperationsCenter) {
             const operationsTrigger = visualPage.locator('[data-testid="operations-center-trigger"]');
