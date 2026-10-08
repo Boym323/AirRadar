@@ -42,6 +42,8 @@ jobs:
             echo "docs_only=true" >> "${GITHUB_OUTPUT}"
           fi
           echo "base=${base}" >> "${GITHUB_OUTPUT}"
+          critical="$(git diff --name-only -z "${base}" HEAD | node scripts/ci-critical-scope.mjs --stdin0)"
+          echo "critical=${critical}" >> "${GITHUB_OUTPUT}"
           echo "PR scope: ${scope_json}"
       - name: Validate documentation-only change
         if: steps.scope.outputs.docs_only == 'true'
@@ -109,6 +111,9 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+      - name: PR critical runtime smoke
+        if: github.event_name == 'pull_request' && steps.scope.outputs.critical == 'true'
+        run: npm run test:production -- --core
 
   release-scope:
     name: Release scope
