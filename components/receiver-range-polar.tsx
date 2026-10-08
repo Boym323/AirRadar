@@ -131,9 +131,9 @@ export function ReceiverRangePolar({
       <div className={styles.rangePolarSide}>
         <div className={styles.legend}>
           <strong>{copy.rangeLegend}</strong>
-          <span><i className={styles.legendMedian} /> Medián denního maxima</span>
-          <span><i className={styles.legendP95} /> P95 denního maxima</span>
-          <span><i className={styles.legendMaximum} /> Rekord období</span>
+          <span><i className={styles.legendMedian} /> {copy.rangeMedian}</span>
+          <span><i className={styles.legendP95} /> {copy.rangeP95}</span>
+          <span><i className={styles.legendMaximum} /> {copy.rangeMax}</span>
           <small>{copy.rangeDisclaimer}</small>
         </div>
         {selected ? (
@@ -142,7 +142,7 @@ export function ReceiverRangePolar({
             <span>{copy.median}: {formatDistance(selected.medianDailyMaxDistanceKm)}</span>
             <span>P95: {formatDistance(selected.p95DailyMaxDistanceKm)}</span>
             <span>Maximum: {formatDistance(selected.maxDistanceKm)}</span>
-            <span>{copy.observed}: {selected.observedDays}/{periodDays} {copy.observedDays.replace(" pozorování", "").replace(" observed", "")}</span>
+            <span>{copy.observed}: {selected.observedDays}/{periodDays} {copy.days}</span>
             <span>{selected.reliable ? copy.reliable : copy.limited}</span>
           </div>
         ) : (
