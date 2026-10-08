@@ -25,6 +25,8 @@ export interface AirportOperationsResponse {
   departures: AirportMovement[];
   approaches: AirportMovement[];
   recentMovements: AirportMovement[];
+  eventEvidence?: AirportMovement[];
+  eventEvidenceTruncated?: boolean;
   runwayUsage: Array<{ designator: string; arrivals: number; departures: number; total: number }>;
   wind: AirportOperationsWind[];
   goArounds: AirportMovement[];
@@ -76,7 +78,9 @@ export function buildAirportOperations(
     airport: movements.airport, generatedAt: movements.generatedAt, window: movements.period,
     provenance: "INFERRED", complete: movements.complete, truncated: movements.truncated,
     activity: activity(movements.movements.filter((item) => item.movement !== "OVERFLIGHT").length), likelyRunway,
-    arrivals, departures, approaches, recentMovements: movements.movements.slice(0, 20), runwayUsage: usage,
+    arrivals, departures, approaches, recentMovements: movements.movements.slice(0, 20),
+    eventEvidence: movements.eventEvidence ?? [], eventEvidenceTruncated: movements.eventEvidenceTruncated ?? false,
+    runwayUsage: usage,
     wind, goArounds: movements.movements.filter((item) => item.movement === "GO_AROUND"),
     holding: movements.movements.filter((item) => item.movement === "HOLDING"), diagnostics: movements.diagnostics,
   };
