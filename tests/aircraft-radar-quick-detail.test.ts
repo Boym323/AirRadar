@@ -46,7 +46,7 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("altitude={formatAltitude(aircraft.altitude)}");
     expect(componentSource).toContain("speed={formatSpeed(aircraft.groundSpeed)}");
     expect(componentSource).toContain("track={formatTrack(aircraft.track)}");
-    expect(componentSource).toContain("verticalRate={verticalRateLabel(aircraft.verticalRate)}");
+    expect(componentSource).toContain("verticalRate={compactVerticalRateLabel(aircraft.verticalRate)}");
     expect(componentSource).not.toContain('className="aircraft-quick-metrics"');
     expect(componentSource).toContain("detailSections");
     expect(componentSource).toContain("aircraftPositionSourceLabel");
@@ -95,6 +95,17 @@ describe("aircraft radar quick detail", () => {
     expect(telemetrySource).toContain("operational.nicSupplementA");
     expect(telemetrySource).toContain("operational.silSupplement");
     expect(telemetrySource).toContain("!compact");
+  });
+
+  it("compacts stable altitudes, keeps changing climbs visible, and separates history from route enrichment", () => {
+    expect(componentSource).toContain("stableAltitudeProfile(chartPoints, livePoint)");
+    expect(componentSource).toContain('data-testid="aircraft-quick-stable-altitude"');
+    expect(componentSource).toContain("<AircraftAltitudeChart points={chartPoints} livePoint={livePoint} />");
+    expect(componentSource).toContain("t.aircraft.showFlightHistory");
+    expect(componentSource).toContain("compactVerticalRateLabel(aircraft.verticalRate)");
+    expect(componentSource).toContain(" fpm");
+    expect(quickCss).toContain(".aircraft-quick-stable-altitude");
+    expect(quickCss).toContain("white-space: nowrap;");
   });
 
   it("does not use DOM adjacency to identify quick sections", () => {
