@@ -1843,6 +1843,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
           trafficHeroes: element.querySelectorAll('[data-testid="radar-traffic-hero"]').length,
+          headerPrimary: Boolean(element.querySelector(".aircraft-quick-identity h1")?.textContent?.trim()),
           heroPrimary: Boolean(element.querySelector('[data-testid="radar-traffic-hero-primary"]')?.textContent?.trim()),
           heroSource: Boolean(element.querySelector('[data-testid="radar-traffic-hero-source"]')?.textContent?.trim()),
           heroMetrics: ["altitude", "speed", "track", "vertical-rate"].map((metric) => ({
@@ -1860,7 +1861,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (quickContract.tabs.length !== 4
           || quickContract.activePanel !== "aircraft-tabpanel-flight"
           || quickContract.trafficHeroes !== 1
-          || !quickContract.heroPrimary
+          || !quickContract.headerPrimary
+          || quickContract.heroPrimary
           || !quickContract.heroSource
           || missingHeroMetrics.length > 0
           || quickContract.liveMetricContainers !== 1
