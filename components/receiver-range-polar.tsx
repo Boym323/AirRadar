@@ -59,7 +59,7 @@ export function ReceiverRangePolar({
           className={styles.rangePolarPlot}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           role="img"
-          aria-label={`Directional receiver range for ${periodDays} days. Median, P95 and maximum daily sector range.`}
+          aria-label={`Směrový dosah přijímače za ${periodDays} dní. Medián, P95 a maximální denní dosah v sektorech.`}
         >
           {rings.map((fraction) => (
             <g key={fraction}>
@@ -99,7 +99,7 @@ export function ReceiverRangePolar({
                 r="8"
                 tabIndex={0}
                 role="button"
-                aria-label={`${sector.bearingFrom} to ${sector.bearingTo} degrees. Median ${formatDistance(sector.medianDailyMaxDistanceKm)}, P95 ${formatDistance(sector.p95DailyMaxDistanceKm)}, maximum ${formatDistance(sector.maxDistanceKm)}.`}
+                aria-label={`${sector.bearingFrom} až ${sector.bearingTo} stupňů. Medián ${formatDistance(sector.medianDailyMaxDistanceKm)}, P95 ${formatDistance(sector.p95DailyMaxDistanceKm)}, maximum ${formatDistance(sector.maxDistanceKm)}.`}
                 onFocus={() => setSelected(sector)}
                 onMouseEnter={() => setSelected(sector)}
                 onClick={() => setSelected(sector)}
@@ -128,23 +128,23 @@ export function ReceiverRangePolar({
       </div>
       <div className={styles.rangePolarSide}>
         <div className={styles.legend}>
-          <strong>Directional range</strong>
-          <span><i className={styles.legendMedian} /> Median daily maximum</span>
-          <span><i className={styles.legendP95} /> P95 daily maximum</span>
-          <span><i className={styles.legendMaximum} /> Period maximum</span>
-          <small>Range is receiver-observed distance, not guaranteed RF sensitivity.</small>
+          <strong>Směrový dosah</strong>
+          <span><i className={styles.legendMedian} /> Medián denního maxima</span>
+          <span><i className={styles.legendP95} /> P95 denního maxima</span>
+          <span><i className={styles.legendMaximum} /> Rekord období</span>
+          <small>Dosah vychází z pozorování přijímače; nejde o zaručenou citlivost antény.</small>
         </div>
         {selected ? (
           <div className={styles.rangeDetail} role="status">
             <strong>{String(selected.bearingFrom).padStart(3, "0")}°–{String(selected.bearingTo).padStart(3, "0")}°</strong>
-            <span>Median: {formatDistance(selected.medianDailyMaxDistanceKm)}</span>
+            <span>Medián: {formatDistance(selected.medianDailyMaxDistanceKm)}</span>
             <span>P95: {formatDistance(selected.p95DailyMaxDistanceKm)}</span>
             <span>Maximum: {formatDistance(selected.maxDistanceKm)}</span>
-            <span>Observed: {selected.observedDays}/{periodDays} days</span>
-            <span>{selected.reliable ? "Reliable sector" : "Limited evidence"}</span>
+            <span>Pozorováno: {selected.observedDays}/{periodDays} dní</span>
+            <span>{selected.reliable ? "Spolehlivý sektor" : "Omezené údaje"}</span>
           </div>
         ) : (
-          <p className={styles.rangeHint}>Select a sector point to inspect its directional range.</p>
+          <p className={styles.rangeHint}>Vyberte bod sektoru a zobrazte jeho směrový dosah.</p>
         )}
       </div>
     </div>

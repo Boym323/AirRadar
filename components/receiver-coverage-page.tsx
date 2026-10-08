@@ -40,6 +40,16 @@ function altitudeLabel(minFt: number, maxFt: number | null): string {
     : `${formatNumber(minFt)}–${formatNumber(maxFt)} ft`;
 }
 
+function healthStateLabel(state: string): string {
+  switch (state) {
+    case "GOOD": return "DOBRÝ";
+    case "IMPROVED": return "ZLEPŠENÝ";
+    case "DEGRADED": return "ZHORŠENÝ";
+    case "INSUFFICIENT_DATA": return "NEDOSTATEK DAT";
+    default: return "NEURČENO";
+  }
+}
+
 function liveSourceCounts(snapshot: PublicStateSnapshot | null) {
   const counts = { adsb: 0, mlat: 0, modes: 0, other: 0 };
   for (const aircraft of snapshot?.aircraft ?? []) {
@@ -158,12 +168,12 @@ export default function ReceiverCoveragePage() {
   return (
     <main className={styles.page} data-testid="receiver-explorer-v2">
       <PageHeader
-        kicker="AIRRADAR / RECEIVER"
-        title="Receiver Explorer V2"
-        description="Directional range, altitude coverage, receiver trend, weak sectors and live ADS-B / MLAT source mix built from existing AirRadar receiver aggregates."
+        kicker="AIRRADAR / PŘIJÍMAČ"
+        title="Analýza přijímače V2"
+        description="Směrový dosah, výškové pokrytí, vývoj příjmu, slabé sektory a aktuální poměr zdrojů ADS-B a MLAT z dostupných údajů přijímače."
         actions={
           <div className={styles.headerActions}>
-            <Link className={styles.headerLink} href="/statistics">Statistics</Link>
+            <Link className={styles.headerLink} href="/statistics">Statistiky</Link>
             <Link className={styles.headerLink} href="/">Radar</Link>
           </div>
         }
@@ -171,12 +181,12 @@ export default function ReceiverCoveragePage() {
 
       <Panel className={styles.panel} data-testid="receiver-explorer-summary">
         <SectionHeader
-          kicker="RANGE ANALYTICS"
-          title="Receiver range overview"
-          description="Historical values use daily receiver maxima. P95 is preferred for stable directional range; maximum is a record, not a typical range."
+          kicker="ANALÝZA DOSAHU"
+          title="Přehled dosahu přijímače"
+          description="Historické hodnoty vycházejí z denních maxim přijímače. P95 lépe vystihuje opakovaný dosah; maximum představuje rekord, nikoli typickou vzdálenost."
           actions={
-            <div className={styles.controls} role="tablist" aria-label="Receiver Explorer history period">
-              <span className={styles.controlLabel}>History</span>
+            <div className={styles.controls} role="tablist" aria-label="Období historie přijímače">
+              <span className={styles.controlLabel}>Historie</span>
               {historyRanges.map((item) => (
                 <button
                   className={styles.controlButton}
@@ -196,31 +206,31 @@ export default function ReceiverCoveragePage() {
 
         {intelligenceFailed || intelligence?.source === "unavailable" ? (
           <EmptyState
-            title="Historical receiver analytics unavailable"
-            description="The Explorer keeps live source telemetry available, but PostgreSQL-backed 7/30-day range analytics cannot be loaded."
+            title="Historická analýza přijímače není dostupná"
+            description="Živá telemetrie zůstává dostupná, ale historický dosah za 7 nebo 30 dní se z databáze nepodařilo načíst."
           />
         ) : !intelligence ? (
-          <p className={styles.status}>Loading receiver history…</p>
+          <p className={styles.status}>Načítání historie přijímače…</p>
         ) : (
           <MetricStrip className={styles.metrics}>
             <MetricCard
               value={intelligence.coverage.bestReliableP95 ? formatDistance(intelligence.coverage.bestReliableP95.distanceKm) : "—"}
-              label="Best reliable P95"
+              label="Nejlepší spolehlivý dosah P95"
               detail={intelligence.coverage.bestReliableP95 ? sectorLabel(intelligence.coverage.bestReliableP95.bearingFrom, intelligence.coverage.bestReliableP95.bearingTo) : undefined}
             />
             <MetricCard
               value={`${intelligence.coverage.reliableSectors} / 36`}
-              label="Reliable sectors"
-              detail={`≥ ${intelligence.coverage.requiredReliableDays} observed days`}
+              label="Spolehlivé sektory"
+              detail={`≥ ${intelligence.coverage.requiredReliableDays} dní pozorování`}
             />
             <MetricCard
               value={intelligence.records.farthestReception ? formatDistance(intelligence.records.farthestReception.distanceKm) : "—"}
-              label="Period record"
+              label="Rekord období"
               detail={intelligence.records.farthestReception ? `${formatTrack(intelligence.records.farthestReception.bearing)} · ${intelligence.records.farthestReception.registration ?? intelligence.records.farthestReception.icaoHex}` : undefined}
             />
             <MetricCard
-              value={intelligence.intelligenceV2.health.state.replaceAll("_", " ")}
-              label="Capture health"
+              value={healthStateLabel(intelligence.intelligenceV2.health.state)}
+              label="Kvalita zachycení"
               detail={`24 h ${percent(intelligence.intelligenceV2.health.currentRatio)} · Δ ${delta(intelligence.intelligenceV2.health.deltaPercentagePoints)}`}
             />
           </MetricStrip>
@@ -230,35 +240,35 @@ export default function ReceiverCoveragePage() {
       <div className={styles.grid}>
         <Panel className={`${styles.panel} ${styles.full}`} data-testid="receiver-explorer-range-polar">
           <SectionHeader
-            kicker="DIRECTIONAL PROFILE"
-            title="Median / P95 / maximum range by azimuth"
-            description="Thirty-six 10° sectors. Median shows the normal daily maximum, P95 the strong repeatable edge, and maximum the period record."
+            kicker="SMĚROVÝ PROFIL"
+            title="Medián / P95 / maximální dosah podle azimutu"
+            description="Třicet šest sektorů po 10°. Medián ukazuje běžné denní maximum, P95 opakovaně dosažitelnou vzdálenost a maximum rekord období."
           />
           {intelligence?.source === "postgres" ? (
             <ReceiverRangePolar sectors={intelligence.coverage.sectors} periodDays={intelligence.coverage.periodDays} />
           ) : (
-            <EmptyState title="No directional range data" description="Historical receiver coverage has not produced a usable sector profile yet." />
+            <EmptyState title="Chybí údaje o směrovém dosahu" description="Z historických údajů přijímače se zatím nepodařilo sestavit použitelný profil sektorů." />
           )}
         </Panel>
 
         <Panel className={styles.panel} data-testid="receiver-explorer-source-mix">
           <SectionHeader
-            kicker="LIVE SOURCE MIX"
-            title="ADS-B / MLAT telemetry"
-            description="Current local receiver snapshot only; this is not a historical source-distribution metric."
+            kicker="AKTUÁLNÍ ZDROJE PŘÍJMU"
+            title="Telemetrie ADS-B / MLAT"
+            description="Pouze aktuální stav lokálního přijímače, nikoli historické rozdělení zdrojů."
           />
           <div className={styles.healthRow}>
             <span className={styles.healthBadge} data-state={streamConnected ? "GOOD" : "INSUFFICIENT_DATA"}>
-              {streamConnected ? "LIVE" : "RECONNECTING"}
+              {streamConnected ? "ŽIVĚ" : "PŘIPOJOVÁNÍ"}
             </span>
-            <span className={styles.delta}>{formatNumber(totalSources)} positioned / tracked aircraft in current local snapshot</span>
+            <span className={styles.delta}>{formatNumber(totalSources)} letadel se známou polohou nebo sledovaných v aktuálním lokálním přehledu</span>
           </div>
           <div className={styles.sourceMix}>
             {[
               ["ADS-B", sourceCounts.adsb],
               ["MLAT", sourceCounts.mlat],
               ["Mode-S / TIS-B", sourceCounts.modes],
-              ["Other / unknown", sourceCounts.other],
+              ["Ostatní / neznámé", sourceCounts.other],
             ].map(([label, value]) => (
               <div className={styles.sourceItem} key={String(label)}>
                 <strong>{formatNumber(Number(value))}</strong>
@@ -270,24 +280,24 @@ export default function ReceiverCoveragePage() {
 
         <Panel className={styles.panel} data-testid="receiver-explorer-weak-sectors">
           <SectionHeader
-            kicker="SECTOR HEALTH"
-            title="Weak and improving sectors"
-            description="Rolling 24 h network-reference capture compared with the previous 7-day hourly baseline."
+            kicker="STAV SEKTORŮ"
+            title="Slabé a zlepšující se sektory"
+            description="Zachycení letadel za posledních 24 hodin vůči síťovému referenčnímu zdroji v porovnání s předchozími sedmi dny."
           />
           {intelligence ? (
             <>
               <div className={styles.healthRow}>
                 <span className={styles.healthBadge} data-state={intelligence.intelligenceV2.health.state}>
-                  {intelligence.intelligenceV2.health.state.replaceAll("_", " ")}
+                  {healthStateLabel(intelligence.intelligenceV2.health.state)}
                 </span>
                 <span className={styles.delta}>
-                  {intelligence.intelligenceV2.health.degradedSectors} degraded · {intelligence.intelligenceV2.health.improvedSectors} improved
+                  {intelligence.intelligenceV2.health.degradedSectors} zhoršených · {intelligence.intelligenceV2.health.improvedSectors} zlepšených
                 </span>
               </div>
               {weakSectors.length || improvedSectors.length ? (
                 <div className={styles.tableWrap}>
                   <table className={styles.table}>
-                    <thead><tr><th>Sector</th><th>24 h</th><th>Baseline</th><th>Δ</th><th>State</th></tr></thead>
+                    <thead><tr><th>Sektor</th><th>24 h</th><th>Referenční stav</th><th>Δ</th><th>Stav</th></tr></thead>
                     <tbody>
                       {[...weakSectors, ...improvedSectors].slice(0, 12).map((sector) => (
                         <tr key={sector.bearingFrom} className={sector.state === "DEGRADED" ? styles.weakRow : styles.improvedRow}>
@@ -295,26 +305,26 @@ export default function ReceiverCoveragePage() {
                           <td>{percent(sector.currentRatio)}</td>
                           <td>{percent(sector.baselineRatio)}</td>
                           <td>{delta(sector.deltaPercentagePoints)}</td>
-                          <td>{sector.state}</td>
+                          <td>{healthStateLabel(sector.state)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <EmptyState title="No directional degradation detected" description="No evaluated sector currently meets the conservative degraded/improved thresholds." />
+                <EmptyState title="Nebylo zjištěno zhoršení směrového dosahu" description="Žádný vyhodnocený sektor nyní nesplňuje kritéria pro významné zhoršení nebo zlepšení." />
               )}
             </>
           ) : (
-            <p className={styles.status}>Loading sector health…</p>
+            <p className={styles.status}>Načítání stavu sektorů…</p>
           )}
         </Panel>
 
         <Panel className={`${styles.panel} ${styles.full}`} data-testid="receiver-explorer-altitude">
           <SectionHeader
-            kicker="ALTITUDE PROFILE"
-            title="Directional range by altitude band"
-            description="P95 daily maximum distance in each 10° sector. Brighter cells indicate stronger directional reach within the altitude band."
+            kicker="VÝŠKOVÝ PROFIL"
+            title="Směrový dosah podle letové výšky"
+            description="Denní dosah P95 v sektorech po 10°. Světlejší pole značí lepší příjem v daném výškovém pásmu."
           />
           {intelligence?.altitudeCoverage.bands.length ? (
             <div className={styles.altitudeBands}>
@@ -324,9 +334,9 @@ export default function ReceiverCoveragePage() {
                   <div className={styles.altitudeBand} key={band.id}>
                     <div className={styles.altitudeHeader}>
                       <strong>{altitudeLabel(band.minFt, band.maxFt)}</strong>
-                      <span>{band.observedDays} observed days · record {formatDistance(band.maxDistanceKm)}</span>
+                      <span>{band.observedDays} dní pozorování · rekord {formatDistance(band.maxDistanceKm)}</span>
                     </div>
-                    <div className={styles.azimuthStrip} role="img" aria-label={`Directional altitude coverage ${altitudeLabel(band.minFt, band.maxFt)}`}>
+                    <div className={styles.azimuthStrip} role="img" aria-label={`Směrové pokrytí ve výšce ${altitudeLabel(band.minFt, band.maxFt)}`}>
                       {band.sectors.map((sector) => (
                         <span
                           className={styles.azimuthCell}
@@ -341,15 +351,15 @@ export default function ReceiverCoveragePage() {
               })}
             </div>
           ) : (
-            <EmptyState title="No altitude coverage" description="Altitude-banded receiver maxima are not available for this period." />
+            <EmptyState title="Chybí údaje o výškovém pokrytí" description="Maximální dosah přijímače podle výškových pásem není pro toto období dostupný." />
           )}
         </Panel>
 
         <Panel className={styles.panel} data-testid="receiver-explorer-trend">
           <SectionHeader
-            kicker="7 / 30 DAY TREND"
-            title="Daily receiver reach"
-            description="Median directional range and maximum reception distance by day."
+            kicker="VÝVOJ ZA 7 / 30 DNÍ"
+            title="Denní dosah přijímače"
+            description="Medián směrového dosahu a maximální vzdálenost příjmu po dnech."
           />
           {intelligence?.intelligence.trend.recentDays.length ? (
             <div className={styles.trendBars}>
@@ -365,20 +375,20 @@ export default function ReceiverCoveragePage() {
               ))}
             </div>
           ) : (
-            <EmptyState title="No daily trend" description="Not enough daily receiver aggregates are available for this range." />
+            <EmptyState title="Chybí denní vývoj" description="Pro zvolené období není dost denních záznamů přijímače." />
           )}
         </Panel>
 
         <Panel className={styles.panel} data-testid="receiver-explorer-records">
           <SectionHeader
-            kicker="DIRECTIONAL RECORDS"
-            title="Best azimuth sectors"
-            description="Top period maxima by 10° sector, with median and P95 context so one-off records are not mistaken for typical reach."
+            kicker="SMĚROVÉ REKORDY"
+            title="Nejlepší azimutové sektory"
+            description="Největší dosažené vzdálenosti v sektorech po 10° spolu s mediánem a P95, aby jednotlivé rekordy nebyly zaměňovány za běžný dosah."
           />
           {bestDirections.length ? (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
-                <thead><tr><th>Sector</th><th>Median</th><th>P95</th><th>Record</th></tr></thead>
+                <thead><tr><th>Sektor</th><th>Medián</th><th>P95</th><th>Rekord</th></tr></thead>
                 <tbody>
                   {bestDirections.map((sector) => (
                     <tr key={sector.bearingFrom}>
@@ -392,17 +402,17 @@ export default function ReceiverCoveragePage() {
               </table>
             </div>
           ) : (
-            <EmptyState title="No directional records" description="No historical azimuth maxima are available yet." />
+            <EmptyState title="Chybí směrové rekordy" description="Historická maxima pro jednotlivé směry zatím nejsou dostupná." />
           )}
         </Panel>
 
         <Panel className={`${styles.panel} ${styles.full}`} data-testid="receiver-explorer-reference-capture">
           <SectionHeader
-            kicker="NETWORK REFERENCE"
-            title="Reference capture polar"
-            description="Existing capture-ratio diagnostic: local receiver captures divided by eligible network-reference observations. This is not antenna efficiency."
+            kicker="SÍŤOVÁ REFERENCE"
+            title="Směrové zachycení oproti síti"
+            description="Podíl letadel zachycených lokálním přijímačem z dostupných referenčních pozorování v síti. Nejde o účinnost antény."
             actions={
-              <div className={styles.controls} role="tablist" aria-label="Reference capture period">
+              <div className={styles.controls} role="tablist" aria-label="Období referenčního zachycení">
                 {capturePeriods.map((item) => (
                   <button
                     className={styles.controlButton}
@@ -413,23 +423,23 @@ export default function ReceiverCoveragePage() {
                     key={item}
                     onClick={() => setCapturePeriod(item)}
                   >
-                    {item.toUpperCase()}
+                    {item === "live" ? "ŽIVĚ" : item === "today" ? "DNES" : item.toUpperCase()}
                   </button>
                 ))}
               </div>
             }
           />
           {captureFailed ? (
-            <EmptyState title="Reference capture unavailable" description="The network-reference coverage endpoint is temporarily unavailable." />
+            <EmptyState title="Referenční zachycení není dostupné" description="Údaje o referenčním síťovém pokrytí jsou dočasně nedostupné." />
           ) : capture ? (
             <>
               <p className={styles.referenceNote}>
-                {formatNumber(capture.summary.captured)} / {formatNumber(capture.summary.available)} eligible observations captured · radius {formatNumber(capture.comparisonRadiusNm)} NM · reference {capture.metadata.referenceProviders.join(", ") || "none"}
+                {formatNumber(capture.summary.captured)} / {formatNumber(capture.summary.available)} použitelných pozorování zachyceno · poloměr {formatNumber(capture.comparisonRadiusNm)} NM · referenční zdroje {capture.metadata.referenceProviders.join(", ") || "žádné"}
               </p>
               <ReceiverCoveragePolar data={capture} />
             </>
           ) : (
-            <p className={styles.status}>Loading reference capture…</p>
+            <p className={styles.status}>Načítání referenčních údajů…</p>
           )}
         </Panel>
       </div>

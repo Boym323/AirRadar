@@ -136,7 +136,7 @@ function timeLabel(value: string | null): string {
 export function NavigationIntegrityCenter() {
   const cs = t.locale.startsWith("cs");
   const copy = cs ? {
-    title: "Navigation Integrity",
+    title: "Integrita navigačních dat",
     subtitle: "Provozní přehled integrity navigačních dat nad existujícím detektorem AirRadar.",
     back: "Zpět na radar",
     window: "Okno",
@@ -156,7 +156,7 @@ export function NavigationIntegrityCenter() {
     cellsTitle: "Nejhorší buňky",
     cellsDescription: "Buňky mimo stav NORMAL, seřazené podle závažnosti.",
     historyTitle: "Historie",
-    historyDescription: "Persistované anomálie až 30 dní zpět; API vrací nejvýše 200 záznamů.",
+    historyDescription: "Uložené anomálie až 30 dní zpět; služba vrací nejvýše 200 záznamů.",
     affected: "Dotčená letadla",
     samples: "Vzorky",
     duration: "Trvání",
@@ -168,7 +168,7 @@ export function NavigationIntegrityCenter() {
     noHistory: "Pro zvolené filtry není v historii žádná anomálie.",
     noCells: "V aktuálním okně nejsou degradované buňky.",
     loading: "Načítám data integrity…",
-    unavailable: "Navigation Integrity data jsou dočasně nedostupná.",
+    unavailable: "Údaje o integritě navigace jsou dočasně nedostupné.",
     refresh: "Obnovit",
     reset: "Reset filtrů",
     updated: "Aktualizováno",
