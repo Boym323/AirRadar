@@ -183,3 +183,31 @@ V9 zachovává V8 active-arrival sequence, PUBLIC ETA demand windows i semantiku
 Rozšířený horizont není další prediction engine. Pokud je použitelný aktuální groundspeed, V9 zpřístupní omezený fallback odhad z přímé vzdálenosti a aktuálního groundspeedu nejvýše do 120 minut. Reportuje počet inbound letadel se shodnou route destination, coverage odhadů, kumulativní <=30 a <=60minutové bucket a vztah aktuálního tracku k letišti. Seznam je omezen na 12 letadel a board vykreslí nejvýše šest řádků.
 
 Tato vrstva nenahrazuje readiness-gated PUBLIC ETA ve V7/V8, nevstupuje do V8 pressure/compression/queue skóre a neodvozuje ATC pořadí, sloty, kapacitu letiště ani zpoždění. V9 znovu používá existující 30sekundový Airport Operations refresh a na serveru přečte jeden existující LOCAL aircraft snapshot; nepřidává EventSource, browser timer, databázový dotaz, provider request ani persistence cestu.
+
+## Etapa D — Airport Intelligence V2 (postupná realizace)
+
+Etapa D rozvíjí existující Airport Live Board V9, predikce, dráhovou evidenci
+a ATC kontext bez dalšího paralelního dashboardu nebo polleru.
+
+- **D1: Důvěryhodnost příletové evidence.** Počet letadel se shodným cílovým
+  letištěm je nezávislý na počtu použitelných orientačních ETA. ETA vznikne
+  jen z čerstvé platné polohy (ověřené stáří 0–60 sekund), aktuální observace
+  (do 120 sekund, tolerance budoucího času nejvýše 5 sekund), použitelného
+  groundspeedu a platného kurzu směrem k letišti. CROSSING, AWAY, UNKNOWN
+  a neplatné kurzy ponechávají letadlo v seznamu, ale `etaMinutes: null`.
+  Neúplná evidence není chybný přílet. Souhrny 30/60 minut zahrnují jen
+  způsobilé lety. Beze změny veřejných predikcí, V8 pressure, SSE, zdrojů,
+  persistence nebo pravidel automatického zveřejnění.
+- **D2: Evidence změn drah.** Porovnat již dostupná okna pozorovaného
+  dráhového provozu, veřejné predikce a vítr. Změnu označit až při více
+  nezávislých vzorcích. Při chybějících či rozporných datech UNKNOWN; nikdy
+  neprezentovat jako potvrzené pokyny ATC.
+- **D3: Vývoj přiblížení.** Korelovat přiblížení, holding a go-around
+  s identitou letu a omezenou časovou osou. Neúplné či zastaralé dráhy
+  nesmí být vydávány za uskutečněné přistání.
+- **D4: Kontext letiště / ATC.** Využít existující mapování prostorů
+  a sektorů pouze jako pravděpodobný kontext. Chybějící nebo starý kontext
+  nesmí skrývat živá letadla.
+- **D5: Ověřovaný release.** Deterministické testy scénářů, screenshoty
+  a průběžné porovnání s nezávislou skutečností. Bez automatického
+  povolení PUBLIC predikcí.

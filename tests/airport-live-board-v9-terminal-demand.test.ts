@@ -110,4 +110,41 @@ describe("Airport Terminal Demand Horizon V9", () => {
     expect(result.items).toHaveLength(12);
     expect(result.truncated).toBe(true);
   });
+  it("never treats crossing, away or unknown track as a direct-distance arrival ETA", () => {
+    const result = buildAirportTerminalDemandHorizonV9({
+      airport,
+      now,
+      liveAircraft: [
+        aircraft({ hex: "TOWARD", lat: 50.6, destination: "LKPR", track: 180 }),
+        aircraft({ hex: "CROSSING", lat: 50.6, destination: "LKPR", track: 90 }),
+        aircraft({ hex: "AWAY", lat: 50.6, destination: "LKPR", track: 0 }),
+        aircraft({ hex: "UNKNOWN", lat: 50.6, destination: "LKPR", track: null }),
+        aircraft({ hex: "INVALID", lat: 50.6, destination: "LKPR", track: 999 }),
+      ],
+    });
+    expect(result.coverage.routeMatchedInbound).toBe(5);
+    expect(result.coverage.etaEstimated).toBe(1);
+    expect(result.demand.unknownEta).toBe(4);
+    expect(result.items.find((item) => item.icaoHex === "TOWARD")?.etaMinutes).not.toBeNull();
+    for (const hex of ["CROSSING", "AWAY", "UNKNOWN", "INVALID"]) {
+      expect(result.items.find((item) => item.icaoHex === hex)?.etaMinutes).toBeNull();
+    }
+  });
+
+  it("does not accept future observations, unverified position age or invalid coordinates", () => {
+    const result = buildAirportTerminalDemandHorizonV9({
+      airport,
+      now,
+      liveAircraft: [
+        aircraft({ hex: "FUTURE", lat: 50.6, destination: "LKPR", lastSeen: "2026-10-06T10:01:00.000Z" }),
+        aircraft({ hex: "NOAGE", lat: 50.6, destination: "LKPR", seenPosSeconds: null }),
+        aircraft({ hex: "NEGAGE", lat: 50.6, destination: "LKPR", seenPosSeconds: -1 }),
+        aircraft({ hex: "BADLAT", lat: 95, destination: "LKPR" }),
+        aircraft({ hex: "VALID1", lat: 50.6, destination: "LKPR", seenPosSeconds: 0 }),
+      ],
+    });
+    expect(result.coverage.routeMatchedInbound).toBe(1);
+    expect(result.items.map((item) => item.icaoHex)).toEqual(["VALID1"]);
+  });
+
 });
