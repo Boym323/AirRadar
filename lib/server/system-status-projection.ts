@@ -1,7 +1,8 @@
+import { buildOperationalHealthV2, type OperationalHealthV2 } from "@/lib/server/operational-health-v2";
 import type { SystemStatusResponse } from "@/lib/server/system-status-contract";
 
 export type SystemStatusDetailLevel = "public" | "admin";
-export type SystemStatusApiResponse = Omit<SystemStatusResponse, "flightPositionPersistenceShadow"> & { detailLevel: SystemStatusDetailLevel };
+export type SystemStatusApiResponse = Omit<SystemStatusResponse, "flightPositionPersistenceShadow"> & { detailLevel: SystemStatusDetailLevel; operationalHealth?: OperationalHealthV2 };
 
 export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
   const { flightPositionPersistenceShadow: _flightPositionPersistenceShadow, ...publicStatus } = status;
@@ -155,5 +156,17 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
 }
 
 export function toAdminSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
-  return { ...status, detailLevel: "admin" };
+  return {
+    ...status,
+    detailLevel: "admin",
+    operationalHealth: buildOperationalHealthV2({
+      source: status.receiver.readsb.sourceReliability,
+      activeSseClients: status.runtime.activeSseClients,
+      sseClientLimit: status.runtime.sseClientLimit,
+      deniedSse: status.runtime.sseDenied,
+      coalescedAircraftSnapshots: status.runtime.sseCoalescedAircraftSnapshots,
+      databaseStatus: status.database.status,
+      historyStatus: status.database.history.status,
+    }),
+  };
 }
