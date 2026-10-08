@@ -38,4 +38,8 @@ const en = {
   disclaimer: "The heatmap shows sampled persisted receiver positions, not actual traffic density or exact coverage boundaries. Ranked coordinates are only the centers of coarse grid cells.",
 };
 
-export const statisticsHeatmapText = t.locale.startsWith("cs") ? cs : en;
+export const statisticsHeatmapText = new Proxy(cs, {
+  get(_target, property) {
+    return Reflect.get(t.locale.startsWith("cs") ? cs : en, property);
+  },
+});
