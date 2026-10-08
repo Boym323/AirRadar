@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { t } from "@/lib/i18n";
 
 export interface RadarTrafficHeroProps {
   sourceLabel: string;
@@ -22,11 +23,11 @@ export function RadarTrafficHero({ sourceLabel, primaryLabel, secondaryLabel, al
     <span className="source-badge source-badge-prominent" data-testid="radar-traffic-hero-source">{sourceLabel}</span>
     {showIdentity && <h2 className="radar-traffic-hero-primary" data-testid="radar-traffic-hero-primary">{primaryLabel}</h2>}
     {showIdentity && secondaryLabel && <p className="radar-traffic-hero-secondary">{secondaryLabel}</p>}
-    <div className="radar-traffic-hero-metrics" data-testid="radar-traffic-hero-metrics" aria-label="Live traffic metrics">
-      <div data-testid="radar-traffic-hero-metric-altitude" data-state={metricState(altitude)}><strong>{altitude}</strong><span>Altitude</span></div>
-      <div data-testid="radar-traffic-hero-metric-speed" data-state={metricState(speed)}><strong>{speed}</strong><span>Speed</span></div>
-      <div data-testid="radar-traffic-hero-metric-track" data-state={metricState(track)}><strong>{track}</strong><span>Track</span></div>
-      <div data-testid="radar-traffic-hero-metric-vertical-rate" data-state={metricState(verticalRate)}><strong>{verticalRate}</strong><span>V/S</span></div>
+    <div className="radar-traffic-hero-metrics" data-testid="radar-traffic-hero-metrics" aria-label={t.aircraft.liveTrackingTitle}>
+      <div data-testid="radar-traffic-hero-metric-altitude" data-state={metricState(altitude)}><strong>{altitude}</strong><span>{t.aircraft.altitude}</span></div>
+      <div data-testid="radar-traffic-hero-metric-speed" data-state={metricState(speed)}><strong>{speed}</strong><span>{t.aircraft.groundSpeed}</span></div>
+      <div data-testid="radar-traffic-hero-metric-track" data-state={metricState(track)}><strong>{track}</strong><span>{t.aircraft.track}</span></div>
+      <div data-testid="radar-traffic-hero-metric-vertical-rate" data-state={metricState(verticalRate)}><strong>{verticalRate}</strong><span>{t.aircraft.verticalRate}</span></div>
     </div>
   </section>;
 }
