@@ -17,6 +17,35 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.356] - 2026-10-08
+
+Changes since v1.0.355.
+
+### Fixed
+
+- Czech localization completeness pass across AirRadar UI (#576) (60be75ba)
+- Complete Czech UI terminology and release smoke coverage (#579) (656e136d)
+
+### Maintenance
+
+- Sync generated repository metadata (#574) (c339e32b)
+- Sync generated repository metadata (#575) (289cb59f)
+- Align release boundaries with Czech localization (#577) (1dc5cae5)
+- Update production browser gates for Czech predictive copy (#578) (d7ef60ae)
+- Align remaining Czech safety boundary assertions (#580) (21ff4537)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#574) (c339e32b)
+- chore(metadata): sync generated repository metadata (#575) (289cb59f)
+- fix(i18n): Czech localization completeness pass across AirRadar UI (#576) (60be75ba)
+- test(i18n): align release boundaries with Czech localization (#577) (1dc5cae5)
+- test(ci): update production browser gates for Czech predictive copy (#578) (d7ef60ae)
+- fix(i18n): complete Czech UI terminology and release smoke coverage (#579) (656e136d)
+- test(i18n): align remaining Czech safety boundary assertions (#580) (21ff4537)
+
+</details>
 ## [1.0.355] - 2026-10-08
 
 Changes since v1.0.354.
