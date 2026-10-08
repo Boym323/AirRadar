@@ -594,6 +594,7 @@ export function SystemStatusPage() {
           <Field label={operationalLabels.denied} value={formatNumber(data.operationalHealth.stream.deniedSinceStart, 0, dictionary.locale)} />
           <Field label={operationalLabels.coalesced} value={formatNumber(data.operationalHealth.stream.coalescedSnapshotsSinceStart, 0, dictionary.locale)} />
           <Field label={operationalLabels.database} value={formatStatus(data.operationalHealth.databaseState, dictionary)} />
+          <Field label={operationalLabels.predictiveCapture} value={operationalLabels.predictiveState[data.operationalHealth.predictiveCapture]} />
           <Field label={operationalLabels.reasonLabel} value={data.operationalHealth.reasons.map((code) => operationalLabels.reasons[code]).join(", ") || operationalLabels.noIssues} />
         </dl>
       </UiCard>}
