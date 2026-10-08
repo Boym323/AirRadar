@@ -167,6 +167,7 @@ export function toAdminSystemStatus(status: SystemStatusResponse): SystemStatusA
       coalescedAircraftSnapshots: status.runtime.sseCoalescedAircraftSnapshots,
       databaseStatus: status.database.status,
       historyStatus: status.database.history.status,
+      predictiveValidation: status.predictiveValidation,
     }),
   };
 }
