@@ -4,6 +4,16 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 /** Canonical AirRadar/OpenFreeMap basemap shared by live and historical maps. */
 export const AIRRADAR_BASE_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 export const AIRRADAR_MAP_ATTRIBUTION = "© OpenStreetMap contributors · © OpenFreeMap";
+// Optional network data attribution belongs in MapLibre's existing bottom-right
+// attribution control, not in a floating radar status badge.
+export const AIRRADAR_NETWORK_DATA_ATTRIBUTION =
+  'Data: <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">ADSB.lol</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer">ODbL 1.0</a>';
+
+export function airRadarMapAttributions(networkEnabled: boolean): string[] {
+  return networkEnabled
+    ? [AIRRADAR_MAP_ATTRIBUTION, AIRRADAR_NETWORK_DATA_ATTRIBUTION]
+    : [AIRRADAR_MAP_ATTRIBUTION];
+}
 
 
 const PLACE_LABEL_LAYER = /(place|settlement|city|town|village|state|country|region)/i;
