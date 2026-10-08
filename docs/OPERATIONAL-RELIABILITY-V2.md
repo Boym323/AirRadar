@@ -1,5 +1,7 @@
 # Operational Reliability V2 (C1–C5)
 
+[Česky](cs/OPERATIONAL-RELIABILITY-V2.md)
+
 ## Purpose and provenance
 
 The existing single-process readsb → RAM → SSE pipeline remains unchanged.
