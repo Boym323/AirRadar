@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.371] - 2026-10-08
+
+Changes since v1.0.370.
+
+**Features touched:** Airport Intelligence.
+
+### Changed
+
+- Airport Intelligence stage D2–D5: runway, approach, context and release guards (#630) (201823d0)
+
+### Maintenance
+
+- Sync generated repository metadata (#631) (9438a892)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#631) (9438a892)
+- Airport Intelligence stage D2–D5: runway, approach, context and release guards (#630) (201823d0)
+
+</details>
 ## [1.0.370] - 2026-10-08
 
 Changes since v1.0.369.
