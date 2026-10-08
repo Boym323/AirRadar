@@ -381,7 +381,7 @@ export function NavigationIntegrityCenter() {
       <PageHeader
         className={styles.header}
         backLink={<Link className="back-link" href="/">{copy.back}</Link>}
-        kicker="AIRRADAR · INTEGRITY"
+        kicker={t.uiExtras.integrityHeading}
         title={copy.title}
         description={copy.subtitle}
         actions={<div className={styles.headerActions}>
