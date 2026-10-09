@@ -34,19 +34,19 @@ export interface QualityCohort {
 export interface AirportQualityRow {
   airport: string;
   capability: QualityCapability;
-  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE";
+  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE" | "SOURCE_UNAVAILABLE";
   cohort: QualityCohort;
 }
 export interface PhaseQualityRow {
   phase: string;
   capability: QualityCapability;
-  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE";
+  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE" | "SOURCE_UNAVAILABLE";
   cohort: QualityCohort;
 }
 export interface ConfidenceQualityRow {
   capability: QualityCapability;
   confidence: QualityConfidence;
-  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE";
+  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE" | "SOURCE_UNAVAILABLE";
   flights: number;
   confirmed: number;
   successRate: number | null;
@@ -107,6 +107,16 @@ function aggregate(rows: readonly TruthAccuracySample[], capability: QualityCapa
   };
 }
 
+function evidenceState(options: { sourceAvailable: boolean; complete: boolean }, confirmed: number, threshold: number): "SOURCE_UNAVAILABLE" | "COLLECTION_INCOMPLETE" | "INSUFFICIENT_TRUTH" | "MEASURED" {
+  if (!options.sourceAvailable) return "SOURCE_UNAVAILABLE";
+  if (!options.complete) return "COLLECTION_INCOMPLETE";
+  return confirmed < threshold ? "INSUFFICIENT_TRUTH" : "MEASURED";
+}
+
+function maskUnverified(cohort: QualityCohort): QualityCohort {
+  return { ...cohort, etaMaeSeconds: null, etaP90Seconds: null, exactRunwayAccuracy: null };
+}
+
 /** Deterministically select the earliest prediction per lifecycle and capability.
  * Later improved predictions must not replace the original after seeing truth.
  */
@@ -125,8 +135,8 @@ export function buildTruthAccuracyReport(
   }
   const distinct = [...first.values()];
   const truth = {
-    ETA: aggregate(distinct, "ETA"),
-    RUNWAY: aggregate(distinct, "RUNWAY"),
+    ETA: options.sourceAvailable && options.complete ? aggregate(distinct, "ETA") : maskUnverified(aggregate(distinct, "ETA")),
+    RUNWAY: options.sourceAvailable && options.complete ? aggregate(distinct, "RUNWAY") : maskUnverified(aggregate(distinct, "RUNWAY")),
   };
   const airports: AirportQualityRow[] = [];
   const locations = [...new Set(distinct.flatMap((row) => {
@@ -139,10 +149,9 @@ export function buildTruthAccuracyReport(
       if (!cohort.flights) continue;
       airports.push({
         airport, capability,
-        state: !options.complete ? "COLLECTION_INCOMPLETE"
-          : cohort.confirmed < MIN_AIRPORT_FLIGHTS ? "INSUFFICIENT_TRUTH" : "MEASURED",
-        cohort: options.sourceAvailable && options.complete && cohort.confirmed >= MIN_AIRPORT_FLIGHTS
-          ? cohort : { ...cohort, etaMaeSeconds: null, etaP90Seconds: null, exactRunwayAccuracy: null },
+        state: evidenceState(options, cohort.confirmed, MIN_AIRPORT_FLIGHTS),
+        cohort: evidenceState(options, cohort.confirmed, MIN_AIRPORT_FLIGHTS) === "MEASURED"
+          ? cohort : maskUnverified(cohort),
       });
     }
   }
@@ -158,12 +167,11 @@ export function buildTruthAccuracyReport(
   for (const phase of distinctPhases) for (const capability of ["ETA", "RUNWAY"] as const) {
     const cohort = aggregate(distinct.filter((row) => normalizedPhase(row.flightPhase) === phase), capability);
     if (!cohort.flights) continue;
-    const state = !options.complete ? "COLLECTION_INCOMPLETE"
-      : cohort.confirmed < MIN_AIRPORT_FLIGHTS ? "INSUFFICIENT_TRUTH" : "MEASURED";
+    const state = evidenceState(options, cohort.confirmed, MIN_AIRPORT_FLIGHTS);
     phases.push({
       phase, capability, state,
       cohort: state === "MEASURED" ? cohort
-        : { ...cohort, etaMaeSeconds: null, etaP90Seconds: null, exactRunwayAccuracy: null },
+        : maskUnverified(cohort),
     });
   }
   phases.sort((a, b) => b.cohort.confirmed - a.cohort.confirmed || a.phase.localeCompare(b.phase));
@@ -172,10 +180,11 @@ export function buildTruthAccuracyReport(
     for (const level of ["LOW", "MEDIUM", "HIGH"] as const) {
       const rows = distinct.filter((row) => row.capability === capability && confidenceLabel(row.predictionConfidence) === level);
       const scored = rows.filter(validScore);
-      const eligible = options.sourceAvailable && options.complete && scored.length >= MIN_CONFIDENCE_FLIGHTS;
+      const state = evidenceState(options, scored.length, MIN_CONFIDENCE_FLIGHTS);
+      const eligible = state === "MEASURED";
       confidence.push({
         capability, confidence: level,
-        state: !options.complete ? "COLLECTION_INCOMPLETE" : !eligible ? "INSUFFICIENT_TRUTH" : "MEASURED",
+        state,
         flights: rows.length, confirmed: scored.length,
         successRate: eligible ? scored.filter((row) => capability === "ETA"
           ? row.etaAbsoluteErrorSeconds! <= 300 : row.runwayExactEnd === true).length / scored.length : null,
