@@ -243,3 +243,33 @@ curl -fsS http://192.168.1.142:3000/api/health | jq
 ```
 
 The health response reports application, PostgreSQL, readsb, last successful readsb update, current aircraft count, and a sanitized diagnostic message. It never returns `DATABASE_URL`, API keys, or passwords.
+
+## Optional prospective observation retention maintenance
+
+The application never prunes prospective prediction data on the live ADS-B path.
+Review the available 90-day truth/retention policy and confirm PostgreSQL/PBS
+backups before enabling the separate maintenance timer.
+
+Preview a bounded batch, without mutation:
+
+```bash
+sudo -u airradar npm run predictive:retention
+```
+
+After reviewing the preview, an operator may opt in to the systemd timer:
+
+```bash
+sudo install -m 0644 deploy/systemd/airradar-predictive-retention.service /etc/systemd/system/
+sudo install -m 0644 deploy/systemd/airradar-predictive-retention.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now airradar-predictive-retention.timer
+sudo systemctl list-timers airradar-predictive-retention.timer
+```
+
+The service runs a guarded one-shot `npm run predictive:retention -- --apply`
+under the unprivileged `airradar` user. It deletes at most ten batches of
+1,000 `PredictiveObservation` rows per run; a backlog continues on subsequent
+runs. Use `journalctl -u airradar-predictive-retention.service` for the
+bounded JSON report. Disabling the timer leaves all prediction and live ingest
+behaviour unchanged. A timer without database connectivity fails without
+deleting anything.
