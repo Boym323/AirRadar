@@ -1,3 +1,4 @@
+import { classifyDbFailure, type DbFailureFamily } from "@/lib/server/db-failure-classification";
 /**
  * Bounded, process-local attribution for AirRadar-owned explicit DB
  * transactions. This deliberately does not observe SQL or write diagnostics
@@ -25,6 +26,7 @@ type DbTransactionDiagnosticsStore = {
 };
 
 const LANE_SET = new Set<string>(DB_TRANSACTION_LANES);
+const failureFamilies: Record<DbFailureFamily, number> = { timeout: 0, constraint: 0, conflict: 0, connection: 0, other: 0, unknown: 0 };
 const WINDOW_MS = 60 * 60_000;
 const BUCKET_MS = 60_000;
 const globalForDbTransactionDiagnostics = globalThis as typeof globalThis & {
@@ -109,6 +111,7 @@ export async function trackDbTransaction<T>(
     value.commits += 1;
     return result;
   } catch (error) {
+    failureFamilies[classifyDbFailure(error)] += 1;
     value.failures += 1;
     throw error;
   } finally {
@@ -157,4 +160,9 @@ export function getDbTransactionDiagnostics(now = Date.now()): DbTransactionDiag
 
 export function resetDbTransactionDiagnosticsForTests(): void {
   store.lanes.clear();
+}
+
+/** Process-local failure classes, aggregated without error text or parameters. */
+export function getDbTransactionFailureFamilies(): Readonly<Record<DbFailureFamily, number>> {
+  return { ...failureFamilies };
 }
