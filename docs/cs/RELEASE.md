@@ -210,3 +210,26 @@ Health kontroly release skriptu vyžadují, aby `/api/health` vracelo HTTP 2xx,
 top-level `status=ok` a `application.status=ok`. Health odpovědi jsou
 sanitizované a nesmí obsahovat tajné údaje, databázová URL, surové chyby
 providerů ani přechodné provozní hodnoty v dokumentaci.
+
+## Obnova předchozího runtime (pouze ručně a při kompatibilním schématu)
+
+Úspěšné nasazení nyní ponechává právě jeden předchozí sestavený runtime v
+`/var/www/airradar/.next-previous`. Nejde o zálohu databáze. Při dalším
+nasazení se záloha runtime přepíše; je proto nutná kapacita pro dva buildy.
+
+Po neúspěšném release vždy nejprve zkontrolujte logy služby, změny v
+`migrations/` a kompatibilitu schématu PostgreSQL. Samotný starší build může
+být nekompatibilní s novější migrací. Automatický rollback není povolen.
+
+```bash
+cd /var/www/airradar
+sudo bash deploy/recover-previous-build.sh
+sudo bash deploy/recover-previous-build.sh --apply \\
+  --acknowledge-schema-compatible \\
+  --expected-active 'AKTUALNI_BUILD_ID' --expected-previous 'PREDCHOZI_BUILD_ID'
+```
+
+Skript ověřuje obě BUILD_ID, zamyká release a build, požaduje výslovné
+potvrzení kompatibility a kontroluje lokální health endpoint. Při selhání
+obnovy zkusí vrátit původně aktivní runtime. Nemění Git, migrace ani data.
+Po obnovení proveďte také kontrolu veřejných JS/CSS souborů a aplikace.

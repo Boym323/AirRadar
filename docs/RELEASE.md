@@ -228,3 +228,30 @@ The script's release health checks require `/api/health` to report HTTP 2xx,
 top-level `status=ok`, and `application.status=ok`. Health responses are
 sanitized and must not contain secrets, database URLs, raw provider errors, or
 transient operational values in documentation.
+
+## Previous runtime recovery (manual, schema compatible only)
+
+Each successful deployment now retains exactly one preceding standalone Next.js
+build under `/var/www/airradar/.next-previous`. This runtime is distinct from
+a database backup. New deployments replace the previous saved slot; ensure
+sufficient disk space for two runtime build directories.
+
+After a failed release, examine service logs, Git diff under `migrations/`
+and `prisma.config.ts`, and database schema compatibility. Never assume that
+a previous build is safe against a migrated database. A failed health gate does
+**not** automatically restore an older version or undo a migration.
+
+```bash
+cd /var/www/airradar
+sudo bash deploy/recover-previous-build.sh
+sudo bash deploy/recover-previous-build.sh --apply \\
+  --acknowledge-schema-compatible \\
+  --expected-active 'ACTIVE_BUILD_ID' --expected-previous 'PREVIOUS_BUILD_ID'
+```
+
+The recovery command enforces exact BUILD_IDs, release/build locks, explicit
+operator schema acknowledgement, service restart and a local application health
+check; it restores the original active runtime if recovery fails. It does not
+run `prisma:deploy`, mutate the Git branch, revert database migrations or tag
+a release. Verify public JS/CSS static assets and business functions after a
+successful recovery. Do not invoke this script automatically from CI.
