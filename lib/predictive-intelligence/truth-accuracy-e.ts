@@ -15,9 +15,9 @@ export interface TruthAccuracySample {
   lifecycleKey: string;
   capability: QualityCapability;
   predictedAtMs: number | null;
-  destinationIcao: string | null;
-  flightPhase: string | null;
-  predictionConfidence: string | null;
+  destinationIcao?: string | null;
+  flightPhase?: string | null;
+  predictionConfidence?: string | null;
   scored: boolean;
   etaAbsoluteErrorSeconds?: number | null;
   runwayExactEnd?: boolean | null;
@@ -60,11 +60,11 @@ export interface TruthAccuracyReport {
   limitations: readonly ["INDEPENDENT_LANDING_EVIDENCE_ONLY", "NO_APPROACH_RECALL", "NO_ATC_CLEARANCE", "NO_AUTOMATIC_GRADUATION"];
 }
 
-function validAirport(input: string | null): string | null {
+function validAirport(input: string | null | undefined): string | null {
   const normalized = input?.trim().toUpperCase() ?? "";
   return /^[A-Z0-9]{4}$/.test(normalized) ? normalized : null;
 }
-function confidenceLabel(input: string | null): QualityConfidence | null {
+function confidenceLabel(input: string | null | undefined): QualityConfidence | null {
   const normalized = input?.trim().toUpperCase();
   return normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH" ? normalized : null;
 }
