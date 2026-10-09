@@ -9,13 +9,14 @@ const mocks = vi.hoisted(() => ({
   getAtcData: vi.fn(),
   toPublicHealthResponse: vi.fn((_snapshot, database, _at, atc) => ({ status: "ok", database, atc })),
   measureRuntimeAsync: vi.fn((_name, _count, operation) => operation()),
+  measureRuntime: vi.fn((_name, _count, operation) => operation()),
 }));
 vi.mock("@/lib/server/rate-limit", () => ({ checkPublicRateLimit: mocks.checkPublicRateLimit, rateLimitResponse: mocks.rateLimitResponse }));
 vi.mock("@/lib/server/aircraft-state", () => ({ getAircraftStateService: mocks.getAircraftStateService }));
 vi.mock("@/lib/server/db", () => ({ isDatabaseConfigured: mocks.isDatabaseConfigured, getPrisma: mocks.getPrisma }));
 vi.mock("@/lib/server/providers", () => ({ getAtcData: mocks.getAtcData }));
 vi.mock("@/lib/server/public-health", () => ({ toPublicHealthResponse: mocks.toPublicHealthResponse }));
-vi.mock("@/lib/server/runtime-performance", () => ({ measureRuntimeAsync: mocks.measureRuntimeAsync }));
+vi.mock("@/lib/server/runtime-performance", () => ({ measureRuntimeAsync: mocks.measureRuntimeAsync, measureRuntime: mocks.measureRuntime }));
 
 import { GET } from "@/app/api/health/route";
 
@@ -36,13 +37,14 @@ describe("health dependency deadlines", () => {
     mocks.getAtcData.mockResolvedValue({ metadata: { status: "ok" } });
     mocks.toPublicHealthResponse.mockImplementation((_snapshot, database, _at, atc) => ({ status: "ok", database, atc }));
     mocks.measureRuntimeAsync.mockImplementation((_name, _count, operation) => operation());
+    mocks.measureRuntime.mockImplementation((_name, _count, operation) => operation());
   });
 
   it("returns the usual health payload and records each dependency phase", async () => {
     const response = await GET(request());
     expect(response.status).toBe(200);
     expect((await response.json()).database.status).toBe("ok");
-    expect(mocks.measureRuntimeAsync.mock.calls.map((call) => call[0])).toEqual(["health.ready", "health.database", "health.atc"]);
+    expect(mocks.measureRuntimeAsync.mock.calls.map((call) => call[0])).toEqual(["health.total", "health.ready", "health.database", "health.atc"]);
   });
 
   it("returns bounded 503 when readiness never resolves", async () => {

@@ -3,7 +3,7 @@ import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
 import { toPublicHealthResponse } from "@/lib/server/public-health";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { getAtcData } from "@/lib/server/providers";
-import { measureRuntimeAsync } from "@/lib/server/runtime-performance";
+import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 import type { AtcDatasetMetadata } from "@/lib/atc/types";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +39,7 @@ const unavailableAtc: AtcDatasetMetadata = {
 export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("health", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  return measureRuntimeAsync("health.total", 0, async () => { 
   const service = getAircraftStateService();
   try {
     await measureRuntimeAsync("health.ready", 0, () => deadline(service.waitForReady(), READY_TIMEOUT_MS));
@@ -49,7 +50,7 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
-  const snapshot = service.getSnapshot();
+  const snapshot = measureRuntime("health.snapshot", 0, () => service.getSnapshot());
   let database: { status: "ok" | "offline" | "not_configured" };
 
   if (!isDatabaseConfigured()) {
@@ -72,5 +73,6 @@ export async function GET(request: Request): Promise<Response> {
       .catch(() => unavailableAtc));
   return Response.json(toPublicHealthResponse(snapshot, database, undefined, atc, service.getAlertStatus()), {
     headers: { "Cache-Control": "no-store" },
+  });
   });
 }
