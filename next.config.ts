@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(), payment=(), usb=()" },
+        { key: "Permissions-Policy", value: "camera=(), geolocation=(self), microphone=(), payment=(), usb=()" },
         { key: "X-Frame-Options", value: "DENY" },
         // MapLibre needs a blob worker; OSM is the only external map origin.
         // Next.js production runtime currently needs inline bootstrap/style code.
