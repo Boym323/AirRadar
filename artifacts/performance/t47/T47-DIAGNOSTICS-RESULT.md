@@ -119,6 +119,6 @@ Local verification on `perf/t47-admin-diagnostics-attribution`:
   import;
 - CodeQL: pending GitHub workflow result;
 - CI: pending GitHub workflow result;
-- PR: pending creation from this branch.
+- PR: [#669](https://github.com/Boym323/AirRadar/pull/669).
 
 No merge, restart, release, or production deployment was performed.
