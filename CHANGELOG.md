@@ -17,6 +17,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.383] - 2026-10-09
+
+Changes since v1.0.382.
+
+### Changed
+
+- Record T4.6 production validation (#668) (8c382c29)
+
+### Performance
+
+- Expose admin DB failure attribution windows (#669) (2db98247)
+
+### Maintenance
+
+- Sync generated repository metadata (#667) (6a8d7536)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#667) (6a8d7536)
+- audit: record T4.6 production validation (#668) (8c382c29)
+- perf: expose admin DB failure attribution windows (#669) (2db98247)
+
+</details>
 ## [1.0.382] - 2026-10-09
 
 Changes since v1.0.381.
