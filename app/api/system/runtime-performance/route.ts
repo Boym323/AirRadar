@@ -6,7 +6,10 @@ import { getRuntimeHealthObservation } from "@/lib/server/runtime-health-observa
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const HEALTH_PHASES = ["health.total", "health.ready", "health.snapshot", "health.database", "health.atc"] as const;
+const HEALTH_PHASES = [
+  "health.total", "health.ready", "health.snapshot", "health.database", "health.atc",
+  "health.atc.db-query", "health.atc.data-transformation", "health.atc.metadata-assembly", "health.event-loop",
+] as const;
 
 export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("runtimeTelemetry", request);

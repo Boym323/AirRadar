@@ -13,7 +13,7 @@ import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
 import { isAdsbHubEnabled } from "@/lib/server/config";
 import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, NetworkAircraftProvider, ProviderRegistry } from "@/lib/server/provider";
-import { DatabaseAtcSectorProvider, getStoredAtcData, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
+import { DatabaseAtcSectorProvider, getStoredAtcData, getStoredAtcMetadata, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
 import type { AtcDataResponse } from "@/lib/atc/types";
 
 export function createAircraftProvider(): AircraftProvider {
@@ -209,5 +209,20 @@ export async function getAtcData(): Promise<AtcDataResponse> {
       sectorCount: 0,
       transmitterCount: 0,
     },
+  };
+}
+
+/** Health-only ATC projection; full geometry remains exclusive to map consumers. */
+export async function getAtcMetadata(): Promise<AtcDataResponse["metadata"]> {
+  if (shouldUseSampleAtcData()) {
+    return {
+      status: "sample", source: "AirRadar sample data", sourceReference: "demo://airradar-sample-atc",
+      effectiveDate: null, lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+      sectorCount: SAMPLE_ATC_SECTORS.length, transmitterCount: SAMPLE_ATC_TRANSMITTERS.length,
+    };
+  }
+  return await getStoredAtcMetadata() ?? {
+    status: "unavailable", source: null, sourceReference: null, effectiveDate: null,
+    lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0,
   };
 }

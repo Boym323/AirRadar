@@ -2,7 +2,7 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
 import { toPublicHealthResponse } from "@/lib/server/public-health";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
-import { getAtcData } from "@/lib/server/providers";
+import { getAtcMetadata } from "@/lib/server/providers";
 import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 import type { AtcDatasetMetadata } from "@/lib/atc/types";
 
@@ -51,6 +51,9 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const snapshot = measureRuntime("health.snapshot", 0, () => service.getSnapshot());
+  // This probe is intentionally fire-and-forget: it records the delay until
+  // the event loop can schedule a callback without adding to health latency.
+  void measureRuntimeAsync("health.event-loop", 0, () => new Promise<void>((resolve) => setImmediate(resolve)));
   // These probes are independent. Run them together so total health latency
   // is bounded by the slower dependency rather than their sum. Each probe
   // retains its own timeout and fallback so a slow optional dependency cannot
@@ -65,7 +68,7 @@ export async function GET(request: Request): Promise<Response> {
       .then(() => ({ status: "ok" as const }))
       .catch(() => ({ status: "offline" as const })));
   const atcPromise = measureRuntimeAsync("health.atc", 0, () =>
-    deadline(getAtcData().then((value) => value.metadata), ATC_TIMEOUT_MS)
+    deadline(getAtcMetadata(), ATC_TIMEOUT_MS)
       .catch(() => unavailableAtc));
   const [database, atc] = await Promise.all([databasePromise, atcPromise]);
   return Response.json(toPublicHealthResponse(snapshot, database, undefined, atc, service.getAlertStatus()), {
