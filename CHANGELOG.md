@@ -17,6 +17,20 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.379] - 2026-10-09
+
+Changes since v1.0.378.
+
+### Performance
+
+- Add offline rollback attribution candidate reconciliation (#657) (9012aae9)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(db): add offline rollback attribution candidate reconciliation (#657) (9012aae9)
+
+</details>
 ## [1.0.378] - 2026-10-09
 
 Changes since v1.0.377.
