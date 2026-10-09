@@ -20,6 +20,8 @@ export const DB_OPERATION_LANES = [
   "flight-intelligence.terminal-evidence.update",
   "history.list.query",
   "history.flight-detail.query",
+  "flight-story.evidence.predictions.query",
+  "flight-story.evidence.landing.query",
   "history.aircraft-quick.query",
   "history.aircraft-detail.query",
   "predictive-readiness.observations.query",
