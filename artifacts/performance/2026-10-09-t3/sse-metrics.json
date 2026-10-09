@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "partial",
+  "source": "Two bounded public observations (one V1 and one V2); no synthetic fan-out",
+  "samples": {
+    "v1": {"durationSeconds":25,"httpStatus":200,"bytesReceived":22383869,"bytesPerSecond":895354.76,"snapshotEvents":40,"deltaEvents":0,"heartbeatEvents":0,"averageEventBytes":559596.72},
+    "v2": {"durationSeconds":25,"httpStatus":200,"bytesReceived":5797596,"bytesPerSecond":231903.84,"snapshotEvents":1,"deltaEvents":55,"heartbeatEvents":0,"averageEventBytes":103528.5}
+  },
+  "activeClients": {"status":"unavailable","reason":"Public system status redacts process-local SSE counts."},
+  "v1v2Split": {"status":"unavailable","reason":"No public process-local client census."},
+  "serializationAndFanout": {"status":"unavailable","reason":"No public serialization/fan-out counters."},
+  "coalescedSnapshots": "unavailable",
+  "rejectedConnections": "unavailable",
+  "note": "This is a single-client delivery observation, not a production-wide traffic estimate."
+}

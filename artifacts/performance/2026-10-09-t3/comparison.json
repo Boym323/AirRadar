@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "complete-with-limitations",
+  "baseline": "artifacts/performance/2026-10-09/",
+  "comparisons": [
+    {"metric":"CPU","before":"72.5-76.7%","after":"42.5-111.4%, avg 83.4%","classification":"INCONCLUSIVE","reason":"Current interval has materially different live/network traffic and CPU is process-wide across cores."},
+    {"metric":"RSS","before":"956-1117 MiB","after":"1089-1217 MiB; cgroup peak 1361.8 MiB","classification":"INCONCLUSIVE","reason":"Higher observed range, but short runtime and traffic/client conditions differ."},
+    {"metric":"process write_bytes","before":"0.750 MiB/min average","after":"0.771 MiB/min average (0.444-0.938)","classification":"STABLE","reason":"Same process-level metric; traffic and runtime conditions still differ."},
+    {"metric":"DB transactions","before":"967.33/min","after":"1084.0/min","classification":"INCONCLUSIVE","reason":"Transaction counters include all lanes and traffic differs."},
+    {"metric":"DB rollbacks","before":"257.27/min","after":"299.0/min","classification":"INCONCLUSIVE","reason":"Absolute counter has no statement attribution; cause unproven."},
+    {"metric":"WAL","before":"5.151 MiB/min","after":"5.923 MiB/min","classification":"INCONCLUSIVE","reason":"Different write mix and live traffic."},
+    {"metric":"health API","before":"Repeated slow responses and timeouts; incomplete","after":"30/30 HTTP 200, 0 timeouts, p95 2.604s","classification":"IMPROVED","reason":"Functional reliability improved; p95 remains materially non-low and baseline percentiles were unavailable."},
+    {"metric":"SSE V1 single client","before":"19032916 bytes/25s, 32 snapshots","after":"22383869 bytes/25s, 40 snapshots","classification":"INCONCLUSIVE","reason":"Payload and event rate depend on live aircraft traffic; no multi-client census."}
+  ]
+}

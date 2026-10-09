@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "pid": 232192,
+  "unit": "MiB/min; MiB uses 1048576 bytes",
+  "source": "/proc/<pid>/io",
+  "identityStable": true,
+  "windows": [
+    {"window":1,"startedAtUtc":"2026-10-09T12:00:25.591Z","endedAtUtc":"2026-10-09T12:05:25.682Z","durationMinutes":5.002,"rcharMiBPerMin":60.135,"wcharMiBPerMin":4.568,"readBytesMiBPerMin":0.085,"writeBytesMiBPerMin":0.938,"cancelledWriteBytesMiBPerMin":0},
+    {"window":2,"startedAtUtc":"2026-10-09T12:05:25.682Z","endedAtUtc":"2026-10-09T12:10:25.752Z","durationMinutes":5.001,"rcharMiBPerMin":52.802,"wcharMiBPerMin":4.469,"readBytesMiBPerMin":0.095,"writeBytesMiBPerMin":0.444,"cancelledWriteBytesMiBPerMin":0},
+    {"window":3,"startedAtUtc":"2026-10-09T12:10:25.752Z","endedAtUtc":"2026-10-09T12:15:25.852Z","durationMinutes":5.002,"rcharMiBPerMin":61.527,"wcharMiBPerMin":4.994,"readBytesMiBPerMin":0.083,"writeBytesMiBPerMin":0.932,"cancelledWriteBytesMiBPerMin":0}
+  ],
+  "summary": {"writeBytesMiBPerMinMin":0.444,"writeBytesMiBPerMinAverage":0.771,"writeBytesMiBPerMinMax":0.938,"readBytesMiBPerMinAverage":0.088,"wcharMiBPerMinAverage":4.677},
+  "comparison": {"baselineWriteBytesMiBPerMin":0.750,"differenceMiBPerMin":0.021,"relativeDifference":0.028,"classification":"STABLE","note":"Same process-level metric; traffic and runtime conditions still differ."},
+  "physicalDiskStats": {"status":"unavailable","reason":"No separate block-device accounting was collected."}
+}

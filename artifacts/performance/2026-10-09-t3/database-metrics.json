@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "window": {"startedAtUtc": "2026-10-09T11:45:19.281Z", "endedAtUtc": "2026-10-09T12:00:20.595Z", "durationMinutes": 15.022},
+  "database": {"serverVersion": "17.10", "databaseSizeBytes": "unavailable", "statementTimeoutMs": 5000},
+  "transactions": {"commitsDelta": 11805, "rollbacksDelta": 4489, "transactionsDelta": 16294, "transactionsPerMinute": 1084.0, "rollbackPerMinute": 299.0, "rollbackRatio": 0.2755},
+  "cache": {"blksReadDelta": 6537, "blksHitDelta": 548059, "intervalHitRatio": 0.9882, "cumulativeHitRatio": "unavailable"},
+  "wal": {"walBytesDelta": 93233806, "walMiBPerMin": 5.923},
+  "connections": {"endNumBackends": 11, "waitingLocksEnd": 0, "deadlocksDelta": 0},
+  "tables": [
+    {"table":"flight","insertsPerMin":5.3,"updatesPerMin":239.0,"deadRowsEnd":25458},
+    {"table":"flightPosition","insertsPerMin":252.0,"updatesPerMin":0.0,"deadRowsEnd":631364},
+    {"table":"predictiveObservation","insertsPerMin":251.0,"updatesPerMin":0.0,"deadRowsEnd":9950},
+    {"table":"aircraftWeatherObservation","insertsPerMin":121.3,"updatesPerMin":0.0,"deadRowsEnd":212},
+    {"table":"receiverCoverageHourly","insertsPerMin":0.0,"updatesPerMin":103.0,"deadRowsEnd":12233},
+    {"table":"aircraft","insertsPerMin":0.1,"updatesPerMin":13.8,"deadRowsEnd":1802}
+  ],
+  "pgStatStatements": {"status":"unavailable","reason":"Extension not installed; not installed for audit."},
+  "trackIoTiming": {"status":"unavailable","reason":"track_io_timing is off."}
+}

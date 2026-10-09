@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "source": "/proc/<pid>/stat,status and systemd cgroup; 10-second samples",
+  "pid": 232192,
+  "durationSeconds": 900.009,
+  "samples": 90,
+  "identityStable": true,
+  "cpuPercent": {"min": 42.5, "average": 83.439, "max": 111.4, "p50": 85.6, "p95": 107.2, "p99": 111.4, "note": "Process CPU across available cores; not host-wide CPU."},
+  "rssMiB": {"min": 1089.0, "average": 1185.6, "max": 1217.4},
+  "maxRssMiB": 1359.8,
+  "cgroupMemoryCurrentMiB": 1176.4,
+  "cgroupMemoryPeakMiB": 1361.8,
+  "threads": {"min": 11, "average": 11, "max": 11},
+  "restartsDuringWindow": 0,
+  "heap": {"status": "unavailable", "reason": "No safe public endpoint exposes heap counters; inspector was not enabled."},
+  "eventLoopDelay": {"status": "unavailable", "reason": "T3 runtime observation is opt-in and not exposed to the public caller."},
+  "gc": {"status": "unavailable", "reason": "T3 GC observation is opt-in and not exposed to the public caller."}
+}
