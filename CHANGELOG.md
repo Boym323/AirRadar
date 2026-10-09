@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.380] - 2026-10-09
+
+Changes since v1.0.379.
+
+### Added
+
+- T4.4 sanitized DB failure-family counters (#662) (68ca33d3)
+
+### Maintenance
+
+- Sync generated repository metadata (#658) (45e6fac6)
+- Sync generated repository metadata (#659) (9c189a96)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#658) (45e6fac6)
+- chore(metadata): sync generated repository metadata (#659) (9c189a96)
+- feat(db): T4.4 sanitized DB failure-family counters (#662) (68ca33d3)
+
+</details>
 ## [1.0.379] - 2026-10-09
 
 Changes since v1.0.378.
