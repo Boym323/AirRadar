@@ -46,7 +46,17 @@ function addRejection(reason: string): void { store.diagnostics.rejectionReasons
 function finiteInt(value: number | null): number | null { return value === null || !Number.isFinite(value) ? null : Math.round(value); }
 function instant(date: string): Temporal.Instant { return Temporal.Instant.fromEpochMilliseconds(Date.parse(date)); }
 function dedupKey(observation: NavigationIntegrityObservation): string {
-  return `${observation.aircraftHex}:${Math.floor(Date.parse(observation.observedAt) / 60_000)}:${observation.source}:${observation.nic ?? "x"}:${observation.nacP ?? "x"}:${observation.nacV ?? "x"}`;
+  // v2 identity preserves meaningfully distinct same-minute observations.
+  // Stable microdegree coordinates cover movement even when timestamps coincide;
+  // altitude band and classification cover the other changedMeaningfully paths.
+  // The prefix keeps legacy minute-granular keys untouched during rollout.
+  return [
+    "v2", observation.aircraftHex, Date.parse(observation.observedAt),
+    observation.source, observation.nic ?? "x", observation.nacP ?? "x",
+    observation.nacV ?? "x", Math.round(observation.lat * 1_000_000),
+    Math.round(observation.lon * 1_000_000), observation.altitudeBand,
+    classifyNavigationIntegrity(observation).state,
+  ].join(":");
 }
 function changedMeaningfully(previous: NavigationIntegrityObservation | undefined, current: NavigationIntegrityObservation): boolean {
   if (!previous) return true;
@@ -58,12 +68,12 @@ function changedMeaningfully(previous: NavigationIntegrityObservation | undefine
   return Date.parse(current.observedAt) - Date.parse(previous.observedAt) >= HEARTBEAT_MS;
 }
 
-async function persistObservation(observation: NavigationIntegrityObservation): Promise<void> {
+export async function persistNavigationIntegrityObservation(observation: NavigationIntegrityObservation): Promise<void> {
   const database = getPrisma();
   if (!database) return;
   const key = dedupKey(observation);
   const schema = database.orm.public;
-  await trackDbOperation("navigation.observation.create", () => schema.NavigationIntegrityObservation.create({
+  const row = {
     dedupKey: key,
     aircraftHex: observation.aircraftHex,
     flightId: observation.flightId,
@@ -82,7 +92,18 @@ async function persistObservation(observation: NavigationIntegrityObservation): 
     quality: observation.quality,
     confidence: observation.confidence,
     provenanceJson: JSON.stringify(observation.provenance),
-  }));
+  };
+  // ORM 8.0.0-rc.9 has no insert-on-conflict-skip API (added in rc.12).
+  // A non-empty update uses native atomic upsert. Only reassign the same
+  // immutable key on collision; never overwrite a previously stored position,
+  // timestamp, classification, or provenance. PostgreSQL may still touch the
+  // existing tuple, so do not count every successful upsert as a new insert.
+  await trackDbOperation("navigation.observation.create", () =>
+    schema.NavigationIntegrityObservation.upsert({
+      conflictOn: { dedupKey: key },
+      update: { dedupKey: key },
+      create: row,
+    }));
 }
 
 async function persistAnomaly(anomaly: NavigationIntegrityAnomaly): Promise<void> {
@@ -155,7 +176,9 @@ function queueObservation(observation: NavigationIntegrityObservation): boolean 
           pendingObservations.delete(key);
           try {
             if (!getPrisma()) continue;
-            await persistObservation(item);
+            await persistNavigationIntegrityObservation(item);
+            // A successful upsert confirms durable availability, but cannot
+            // distinguish an insert from a duplicate-key self-update.
             store.diagnostics.persisted += 1;
             store.diagnostics.lastPersistedAt = item.observedAt;
           } catch {
