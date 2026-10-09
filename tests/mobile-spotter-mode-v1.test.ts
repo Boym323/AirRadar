@@ -87,6 +87,7 @@ describe("Mobile Spotter Mode V1 local boundary", () => {
 describe("Mobile Spotter Mode V1 runtime boundaries", () => {
   const source = readFileSync(new URL("../components/mobile-spotter-mode.tsx", import.meta.url), "utf8");
   const stream = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
+  const observerHook = readFileSync(new URL("../components/use-spotter-observer.ts", import.meta.url), "utf8");
 
   it("reuses the existing LOCAL live stream and discovery summary", () => {
     expect(source).toContain('activeCoverage: "local"');
@@ -99,8 +100,9 @@ describe("Mobile Spotter Mode V1 runtime boundaries", () => {
     expect(source).toContain("/aircraft/");
     expect(source).toContain("/?aircraft=");
     expect(source).toContain('pathname: "/watchlist"');
-    expect(source).toContain("navigator.geolocation.watchPosition");
-    expect(source).toContain("navigator.geolocation.clearWatch");
+    expect(source).toContain("useSpotterObserver(");
+    expect(observerHook).toContain("navigator.geolocation.watchPosition");
+    expect(observerHook).toContain("navigator.geolocation.clearWatch");
     expect(source).not.toContain("/api/spotter");
     expect(source).toContain("SPOTTER_LOGBOOK_STORAGE_KEY");
     expect(source).toContain("window.localStorage.getItem");
