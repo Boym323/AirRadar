@@ -17,30 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.382] - 2026-10-09
-
-Changes since v1.0.381.
-
-### Performance
-
-- Verify T3 production performance (#655) (9a9b36c0)
-- Add T4 production root cause analysis (#660) (430cce7e)
-
-### Maintenance
-
-- Sync generated repository metadata (#663) (861bb044)
-- Sync generated repository metadata (#664) (7632e09c)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#663) (861bb044)
-- perf(audit): verify T3 production performance (#655) (9a9b36c0)
-- perf(audit): add T4 production root cause analysis (#660) (430cce7e)
-- chore(metadata): sync generated repository metadata (#664) (7632e09c)
-
-</details>
-
 ## [1.0.381] - 2026-10-09
 
 Changes since v1.0.380.
@@ -57,6 +33,7 @@ Changes since v1.0.380.
 - feat(runtime): T4.3 authenticated health-phase diagnostics (#661) (274b18b6)
 
 </details>
+
 ## [1.0.380] - 2026-10-09
 
 Changes since v1.0.379.
@@ -78,6 +55,7 @@ Changes since v1.0.379.
 - feat(db): T4.4 sanitized DB failure-family counters (#662) (68ca33d3)
 
 </details>
+
 ## [1.0.379] - 2026-10-09
 
 Changes since v1.0.378.
@@ -92,6 +70,7 @@ Changes since v1.0.378.
 - perf(db): add offline rollback attribution candidate reconciliation (#657) (9012aae9)
 
 </details>
+
 ## [1.0.378] - 2026-10-09
 
 Changes since v1.0.377.
@@ -115,6 +94,7 @@ Changes since v1.0.377.
 - perf(health): T4.1 attribute total and snapshot health latency (#656) (560c59da)
 
 </details>
+
 ## [1.0.377] - 2026-10-09
 
 Changes since v1.0.376.
@@ -137,6 +117,7 @@ Changes since v1.0.376.
 - perf(audit): record production T1 T2 baseline (#648) (a9380232)
 
 </details>
+
 ## [1.0.376] - 2026-10-09
 
 Changes since v1.0.375.
@@ -158,6 +139,7 @@ Changes since v1.0.375.
 - perf(health): bound readiness, DB and ATC checks; record phase latency (#649) (2b40b277)
 
 </details>
+
 ## [1.0.375] - 2026-10-09
 
 Changes since v1.0.374.
@@ -179,6 +161,7 @@ Changes since v1.0.374.
 - perf(audit): T1/T2 read-only process I/O sampling and optional regression budgets (#646) (7a906753)
 
 </details>
+
 ## [1.0.374] - 2026-10-09
 
 Changes since v1.0.373.
@@ -201,6 +184,7 @@ Changes since v1.0.373.
 - Audit closeout: isolate Spotter browser geolocation lifecycle (#642) (eee8b986)
 
 </details>
+
 ## [1.0.373] - 2026-10-09
 
 Changes since v1.0.372.
@@ -220,6 +204,7 @@ Changes since v1.0.372.
 - Audit wave 1: Spotter GPS policy, airport-event query bounds, E truth integrity (#637) (7e55d84d)
 
 </details>
+
 ## [1.0.372] - 2026-10-09
 
 Changes since v1.0.371.
@@ -241,6 +226,7 @@ Changes since v1.0.371.
 - Fix E-stage /system browser fixture and legacy readiness payload compatibility (#634) (82a7a836)
 
 </details>
+
 ## [1.0.371] - 2026-10-08
 
 Changes since v1.0.370.
@@ -262,6 +248,7 @@ Changes since v1.0.370.
 - Airport Intelligence stage D2–D5: runway, approach, context and release guards (#630) (201823d0)
 
 </details>
+
 ## [1.0.370] - 2026-10-08
 
 Changes since v1.0.369.
@@ -283,6 +270,7 @@ Changes since v1.0.369.
 - D1: qualify airport terminal fallback ETA using fresh inbound track evidence (#629) (4579b16f)
 
 </details>
+
 ## [1.0.369] - 2026-10-08
 
 Changes since v1.0.368.
@@ -299,6 +287,7 @@ Changes since v1.0.368.
 - C4: unified admin operational reliability health panel (#626) (2e848b6f)
 
 </details>
+
 ## [1.0.368] - 2026-10-08
 
 Changes since v1.0.367.
@@ -322,6 +311,7 @@ Changes since v1.0.367.
 - C3: notification delivery quality evidence and reason codes (#624) (d7507756)
 
 </details>
+
 ## [1.0.367] - 2026-10-08
 
 Changes since v1.0.366.
@@ -343,6 +333,7 @@ Changes since v1.0.366.
 - Complete stage B: private My Sky favorites, sighting memory, Follow Journey and opt-in alerts (#620) (078755f4)
 
 </details>
+
 ## [1.0.366] - 2026-10-08
 
 Changes since v1.0.365.
@@ -364,6 +355,7 @@ Changes since v1.0.365.
 - My Sky V2 polish: bring location CTA above mobile fold and correct LIVE badge (#618) (f410d9f1)
 
 </details>
+
 ## [1.0.365] - 2026-10-08
 
 Changes since v1.0.364.
@@ -385,6 +377,7 @@ Changes since v1.0.364.
 - My Sky Experience V2: personal LOCAL overhead focus and unified aircraft actions (#616) (22c44d45)
 
 </details>
+
 ## [1.0.364] - 2026-10-08
 
 Changes since v1.0.363.
@@ -408,6 +401,7 @@ Changes since v1.0.363.
 - Prediction Quality A3–A4: ETA horizon calibration, evidence next steps, release smoke fix (#614) (2425c998)
 
 </details>
+
 ## [1.0.363] - 2026-10-08
 
 Changes since v1.0.362.
@@ -427,6 +421,7 @@ Changes since v1.0.362.
 - Visual System V3.4: závěrečné doladění mobilní navigace a počasí (#610) (2bbaedd6)
 
 </details>
+
 ## [1.0.362] - 2026-10-08
 
 Changes since v1.0.361.
@@ -467,6 +462,7 @@ Changes since v1.0.361.
 - fix(ci): aktualizovat i18n test systémového snapshotu po opravě race (#608) (6ca4efd2)
 
 </details>
+
 ## [1.0.361] - 2026-10-08
 
 Changes since v1.0.360.
@@ -483,6 +479,7 @@ Changes since v1.0.360.
 - style(visual): improve operational label readability at safe breakpoints (#598) (1a34f551)
 
 </details>
+
 ## [1.0.360] - 2026-10-08
 
 Changes since v1.0.359.
@@ -504,6 +501,7 @@ Changes since v1.0.359.
 - fix(radar): move ADSB.lol attribution into MapLibre credits (#596) (fdfcb5dd)
 
 </details>
+
 ## [1.0.359] - 2026-10-08
 
 Changes since v1.0.358.
@@ -528,6 +526,7 @@ Changes since v1.0.358.
 - test(visual): treat bounded aircraft history 429 as optional (#594) (92564009)
 
 </details>
+
 ## [1.0.358] - 2026-10-08
 
 Changes since v1.0.357.
@@ -551,6 +550,7 @@ Changes since v1.0.357.
 - test(release): stabilize predictive screenshots with verified system snapshot (#587) (1ce03f88)
 
 </details>
+
 ## [1.0.357] - 2026-10-08
 
 Changes since v1.0.356.
@@ -572,6 +572,7 @@ Changes since v1.0.356.
 - test(i18n): align remaining release navigation tests with dynamic menus (#583) (23d5e0ae)
 
 </details>
+
 ## [1.0.356] - 2026-10-08
 
 Changes since v1.0.355.
@@ -601,6 +602,7 @@ Changes since v1.0.355.
 - test(i18n): align remaining Czech safety boundary assertions (#580) (21ff4537)
 
 </details>
+
 ## [1.0.355] - 2026-10-08
 
 Changes since v1.0.354.
@@ -617,6 +619,7 @@ Changes since v1.0.354.
 - chore(vscode): update TypeScript settings and exclude unnecessary files from watcher (eabc15c9)
 
 </details>
+
 ## [1.0.354] - 2026-10-08
 
 Changes since v1.0.353.
@@ -631,6 +634,7 @@ Changes since v1.0.353.
 - feat: implement isFreshNetworkPosition function and update references in source-merge and adsblol-provider (c6426947)
 
 </details>
+
 ## [1.0.353] - 2026-10-08
 
 Changes since v1.0.352.
@@ -649,6 +653,7 @@ Changes since v1.0.352.
 - style(radar): Visual System V3.2 aircraft detail polish (#572) (2b32a8de)
 
 </details>
+
 ## [1.0.352] - 2026-10-08
 
 Changes since v1.0.351.
@@ -670,6 +675,7 @@ Changes since v1.0.351.
 - fix(deploy): avoid redundant npm ci for validated Prisma-unchanged artifacts (#570) (c755d9ab)
 
 </details>
+
 ## [1.0.351] - 2026-10-08
 
 Changes since v1.0.350.
@@ -708,6 +714,7 @@ Changes since v1.0.350.
 - fix: align production gate with Visual System V3 quick detail (#567) (b5240f92)
 
 </details>
+
 ## [1.0.350] - 2026-10-07
 
 Changes since v1.0.349.
