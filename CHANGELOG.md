@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.373] - 2026-10-09
+
+Changes since v1.0.372.
+
+### Changed
+
+- Audit wave 1: Spotter GPS policy, airport-event query bounds, E truth integrity (#637) (7e55d84d)
+
+### Maintenance
+
+- Sync generated repository metadata (#636) (117988db)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#636) (117988db)
+- Audit wave 1: Spotter GPS policy, airport-event query bounds, E truth integrity (#637) (7e55d84d)
+
+</details>
 ## [1.0.372] - 2026-10-09
 
 Changes since v1.0.371.
