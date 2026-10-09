@@ -114,6 +114,12 @@ jobs:
       - name: PR critical runtime smoke
         if: github.event_name == 'pull_request' && steps.scope.outputs.critical == 'true'
         run: npm run test:production -- --core
+      - name: Prepare Chromium for strict CSP integration
+        if: github.event_name == 'pull_request' && github.head_ref == 'audit/combined-fix-validation'
+        run: npx playwright install --with-deps chromium
+      - name: Nonce-enabled dynamic system browser gate
+        if: github.event_name == 'pull_request' && github.head_ref == 'audit/combined-fix-validation'
+        run: node scripts/audit-system-nonce-browser.mjs
 
   release-scope:
     name: Release scope
