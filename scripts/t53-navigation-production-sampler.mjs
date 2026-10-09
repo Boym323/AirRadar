@@ -48,6 +48,7 @@ export function navigationSample(diagnostics, status, runtime) {
     appVersion: status?.application?.version ?? null,
     appCommit: status?.application?.commit ?? null,
     diagnosticProcess: status?.runtime?.autocommitOperationAttribution?.processId ?? null,
+    diagnosticStoreId: status?.runtime?.autocommitOperationAttribution?.diagnosticsStoreId ?? null,
   };
 }
 
@@ -128,8 +129,12 @@ async function main() {
   }
   const first = rows[0]?.value;
   const last = rows.at(-1)?.value;
-  const stable = Boolean(first && last && first.appCommit === last.appCommit &&
-    first.diagnosticProcess === last.diagnosticProcess);
+  const stable = Boolean(first && last && first.appCommit && first.appCommit === last.appCommit &&
+    first.diagnosticProcess !== null && first.diagnosticProcess === last.diagnosticProcess &&
+    first.diagnosticStoreId && first.diagnosticStoreId === last.diagnosticStoreId &&
+    rows.every((row) => row.value.appCommit === first.appCommit &&
+      row.value.diagnosticProcess === first.diagnosticProcess &&
+      row.value.diagnosticStoreId === first.diagnosticStoreId));
   const totals = stable ? {
     avoidedUpserts: metricDelta(first, last, ["memo", "avoidedUpserts"]),
     dbAttempts: metricDelta(first, last, ["dbLane", "attempts"]),
