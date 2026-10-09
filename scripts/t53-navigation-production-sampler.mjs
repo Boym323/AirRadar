@@ -4,7 +4,7 @@
  * session. Never removes authentication or writes passwords/cookies into
  * reports. Run on the AirRadar host with WATCHLIST_ADMIN_TOKEN exported.
  *
- * T53_BASE_URL=http://192.168.1.142:3000 T53_SECONDS=900 \
+ * T53_BASE_URL=https://airradar.pomykal.cz T53_SECONDS=900 \
  * T53_INTERVAL_SECONDS=30 node scripts/t53-navigation-production-sampler.mjs
  */
 import { mkdir, writeFile } from "node:fs/promises";
@@ -102,9 +102,11 @@ async function takeSample(base, cookie) {
 async function main() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   if (!token) throw new Error("WATCHLIST_ADMIN_TOKEN is required; no anonymous fallback");
-  const base = process.env.T53_BASE_URL ?? "http://192.168.1.142:3000";
+  const base = process.env.T53_BASE_URL ?? "https://airradar.pomykal.cz";
   const uri = new URL(base);
-  if (uri.protocol !== "http:" && uri.protocol !== "https:") throw new Error("Invalid base URL protocol");
+  if (uri.protocol !== "https:" && !(uri.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(uri.hostname))) {
+    throw new Error("Authenticated sampler requires HTTPS or loopback HTTP");
+  }
   const duration = clampInt(Number(process.env.T53_SECONDS ?? 900), 900, 60, 3600);
   const interval = clampInt(Number(process.env.T53_INTERVAL_SECONDS ?? 30), 30, 15, 120);
   const output = process.env.T53_OUTPUT ?? ("/tmp/airradar-t53-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json");
