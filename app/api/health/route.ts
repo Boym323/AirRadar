@@ -51,26 +51,23 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const snapshot = measureRuntime("health.snapshot", 0, () => service.getSnapshot());
-  let database: { status: "ok" | "offline" | "not_configured" };
-
-  if (!isDatabaseConfigured()) {
-    database = { status: "not_configured" };
-  } else {
-    try {
-      await measureRuntimeAsync("health.database", 0, () => deadline((async () => {
-        const prisma = getPrisma();
-        if (!prisma) throw new Error("Prisma client is not configured");
-        await prisma.orm.public.Aircraft.limit(1).all();
-      })(), DB_TIMEOUT_MS));
-      database = { status: "ok" };
-    } catch {
-      database = { status: "offline" };
-    }
-  }
-
-  const atc = await measureRuntimeAsync("health.atc", 0, () =>
+  // These probes are independent. Run them together so total health latency
+  // is bounded by the slower dependency rather than their sum. Each probe
+  // retains its own timeout and fallback so a slow optional dependency cannot
+  // change the live-radar behavior or the response contract.
+  const databasePromise: Promise<{ status: "ok" | "offline" | "not_configured" }> = !isDatabaseConfigured()
+    ? Promise.resolve({ status: "not_configured" })
+    : measureRuntimeAsync("health.database", 0, () => deadline((async () => {
+      const prisma = getPrisma();
+      if (!prisma) throw new Error("Prisma client is not configured");
+      await prisma.orm.public.Aircraft.limit(1).all();
+    })(), DB_TIMEOUT_MS)
+      .then(() => ({ status: "ok" as const }))
+      .catch(() => ({ status: "offline" as const })));
+  const atcPromise = measureRuntimeAsync("health.atc", 0, () =>
     deadline(getAtcData().then((value) => value.metadata), ATC_TIMEOUT_MS)
       .catch(() => unavailableAtc));
+  const [database, atc] = await Promise.all([databasePromise, atcPromise]);
   return Response.json(toPublicHealthResponse(snapshot, database, undefined, atc, service.getAlertStatus()), {
     headers: { "Cache-Control": "no-store" },
   });

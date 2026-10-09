@@ -47,6 +47,26 @@ describe("health dependency deadlines", () => {
     expect(mocks.measureRuntimeAsync.mock.calls.map((call) => call[0])).toEqual(["health.total", "health.ready", "health.database", "health.atc"]);
   });
 
+  it("starts the database and ATC probes concurrently", async () => {
+    let resolveDatabase!: () => void;
+    let resolveAtc!: () => void;
+    const databaseStarted = new Promise<void>((resolve) => { resolveDatabase = resolve; });
+    const atcStarted = new Promise<void>((resolve) => { resolveAtc = resolve; });
+    let databaseCalls = 0;
+    let atcCalls = 0;
+    mocks.getPrisma.mockReturnValue({ orm: { public: { Aircraft: { limit: () => ({ all: async () => { databaseCalls += 1; await databaseStarted; } }) } } } });
+    mocks.getAtcData.mockImplementation(async () => { atcCalls += 1; await atcStarted; return { metadata: { status: "ok" } }; });
+
+    const result = GET(request());
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(databaseCalls).toBe(1);
+    expect(atcCalls).toBe(1);
+
+    resolveDatabase();
+    resolveAtc();
+    expect((await result).status).toBe(200);
+  });
+
   it("returns bounded 503 when readiness never resolves", async () => {
     vi.useFakeTimers();
     try {
