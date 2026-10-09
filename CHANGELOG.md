@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.372] - 2026-10-09
+
+Changes since v1.0.371.
+
+### Changed
+
+- Stage E: truth integrity, airport outcomes, confidence calibration and flight evidence (#633) (9f0a4a06)
+- Fix E-stage /system browser fixture and legacy readiness payload compatibility (#634) (82a7a836)
+
+### Maintenance
+
+- Sync generated repository metadata (#632) (72392beb)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#632) (72392beb)
+- Stage E: truth integrity, airport outcomes, confidence calibration and flight evidence (#633) (9f0a4a06)
+- Fix E-stage /system browser fixture and legacy readiness payload compatibility (#634) (82a7a836)
+
+</details>
 ## [1.0.371] - 2026-10-08
 
 Changes since v1.0.370.
