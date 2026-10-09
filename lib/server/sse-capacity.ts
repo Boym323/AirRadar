@@ -17,6 +17,12 @@ let activeV1Clients = 0;
 let activeV2Clients = 0;
 const activeChannelClients: Record<SseChannel, number> = { aircraft: 0, intelligence: 0, ogn: 0, system: 0 };
 const activeClientCounts = new Map<string, number>();
+// Cumulative process-local traffic accounting; no payloads or client identifiers retained.
+let totalAircraftEvents = 0;
+let totalAircraftBytes = 0;
+let totalV1AircraftBytes = 0;
+let totalV2AircraftBytes = 0;
+let lastV1SnapshotBytes: number | null = null;
 let lastV2SnapshotBytes: number | null = null;
 let lastV2DeltaBytes: number | null = null;
 let recentDeltaChanged = 0;
@@ -74,8 +80,15 @@ export function recordSsePayload(
   changed = 0,
   removed = 0,
 ): void {
-  if (protocol !== "v2") return;
   const safeBytes = Number.isFinite(bytes) && bytes >= 0 ? Math.min(Math.trunc(bytes), 100_000_000) : 0;
+  totalAircraftEvents = incrementBounded(totalAircraftEvents);
+  totalAircraftBytes = Math.min(Number.MAX_SAFE_INTEGER, totalAircraftBytes + safeBytes);
+  if (protocol === "v1") {
+    totalV1AircraftBytes = Math.min(Number.MAX_SAFE_INTEGER, totalV1AircraftBytes + safeBytes);
+    if (event === "snapshot") lastV1SnapshotBytes = safeBytes;
+    return;
+  }
+  totalV2AircraftBytes = Math.min(Number.MAX_SAFE_INTEGER, totalV2AircraftBytes + safeBytes);
   if (event === "snapshot") {
     lastV2SnapshotBytes = safeBytes;
     return;
@@ -104,6 +117,11 @@ export function getSseDiagnostics() {
     activeV2Clients,
     activeChannelClients: { ...activeChannelClients },
     activeClientKeys: activeClientCounts.size,
+    lastV1SnapshotBytes,
+    totalAircraftEvents,
+    totalAircraftBytes,
+    totalV1AircraftBytes,
+    totalV2AircraftBytes,
     lastV2SnapshotBytes,
     lastV2DeltaBytes,
     recentDeltaChanged,
