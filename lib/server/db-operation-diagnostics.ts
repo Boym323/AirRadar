@@ -1,3 +1,4 @@
+import { classifyDbFailure, type DbFailureFamily } from "@/lib/server/db-failure-classification";
 /** Best-effort attribution for standalone ORM calls (PostgreSQL autocommit candidates). */
 export const DB_OPERATION_LANES = [
   "navigation.observation.create",
@@ -41,6 +42,7 @@ type Bucket = { startedAtMs: number; attempts: number; successes: number; failur
 type LaneState = { attempts: number; successes: number; failures: number; active: number; maxConcurrent: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; buckets: Bucket[] };
 type Store = { startedAtMs: number; storeId: string; lanes: Map<DbOperationLane, LaneState> };
 
+const failureFamilies: Record<DbFailureFamily, number> = { timeout: 0, constraint: 0, conflict: 0, connection: 0, other: 0, unknown: 0 };
 const WINDOW_MS = 60 * 60_000;
 const BUCKET_MS = 60_000;
 const laneSet = new Set<string>(DB_OPERATION_LANES);
@@ -133,7 +135,7 @@ export async function trackDbOperation<T>(lane: DbOperationLane, operation: () =
   state.attempts += 1; state.active += 1; state.maxConcurrent = Math.max(state.maxConcurrent, state.active);
   let success = false;
   try { const result = await operation(); success = true; state.successes += 1; return result; }
-  catch (error) { state.failures += 1; throw error; }
+  catch (error) { failureFamilies[classifyDbFailure(error)] += 1; state.failures += 1; throw error; }
   finally {
     try {
       const duration = Math.max(0, Date.now() - started); state.active = Math.max(0, state.active - 1);
@@ -153,3 +155,8 @@ export function getDbOperationDiagnostics(now = Date.now()): DbOperationDiagnost
 }
 
 export function resetDbOperationDiagnosticsForTests(): void { store.lanes.clear(); }
+
+/** Process-local failure classes, aggregated without error text or parameters. */
+export function getDbOperationFailureFamilies(): Readonly<Record<DbFailureFamily, number>> {
+  return { ...failureFamilies };
+}
