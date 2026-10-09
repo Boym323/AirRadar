@@ -24,7 +24,7 @@ readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
 readonly RUNTIME_STATE_DIRECTORY="/var/lib/airradar"
 readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 readonly RELEASE_BUILD_DIR=".next-release-${BASHPID}"
-readonly RELEASE_BUILD_BACKUP_DIR=".next-release-backup-${BASHPID}"
+readonly RELEASE_BUILD_BACKUP_DIR=".next-previous"
 readonly BUILD_SOURCE_SNAPSHOT_DIR="/tmp/airradar-release-sources-${BASHPID}"
 readonly SMOKE_VALIDATION_TMP_PREFIX="airradar-smoke-validation-"
 readonly SMOKE_VALIDATION_TMP_MAX_AGE_MINUTES=360
@@ -1106,7 +1106,9 @@ activate_staged_build_and_check() {
   check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
   check_static_assets_with_retries "Public" "${PUBLIC_HEALTH_URL%/api/health}"
 
-  rm -rf -- "${backup_build}"
+  # Keep exactly one previous complete runtime for an explicitly approved
+  # schema-compatible recovery. Never auto-switch old code after DB migration.
+  log "Retained previous runtime at ${backup_build} for controlled recovery"
 }
 
 create_release_tag() {
