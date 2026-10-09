@@ -224,7 +224,6 @@ být nekompatibilní s novější migrací. Automatický rollback není povolen.
 ```bash
 cd /var/www/airradar
 sudo bash deploy/recover-previous-build.sh
-# Teprve po ověření kompatibility s aktuálním DB schématem:
 sudo bash deploy/recover-previous-build.sh --apply \\
   --acknowledge-schema-compatible \\
   --expected-active 'AKTUALNI_BUILD_ID' --expected-previous 'PREDCHOZI_BUILD_ID'
