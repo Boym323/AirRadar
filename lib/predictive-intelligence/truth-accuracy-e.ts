@@ -37,6 +37,12 @@ export interface AirportQualityRow {
   state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE";
   cohort: QualityCohort;
 }
+export interface PhaseQualityRow {
+  phase: string;
+  capability: QualityCapability;
+  state: "MEASURED" | "INSUFFICIENT_TRUTH" | "COLLECTION_INCOMPLETE";
+  cohort: QualityCohort;
+}
 export interface ConfidenceQualityRow {
   capability: QualityCapability;
   confidence: QualityConfidence;
@@ -53,6 +59,7 @@ export interface TruthAccuracyReport {
   truth: Record<QualityCapability, QualityCohort>;
   airports: AirportQualityRow[];
   airportOverflow: number;
+  phases: PhaseQualityRow[];
   confidence: ConfidenceQualityRow[];
   decision: "SOURCE_UNAVAILABLE" | "COLLECTION_INCOMPLETE" | "INSUFFICIENT_TRUTH" | "REVIEW_QUALITY" | "MONITOR";
   reasons: string[];
@@ -63,6 +70,10 @@ export interface TruthAccuracyReport {
 function validAirport(input: string | null | undefined): string | null {
   const normalized = input?.trim().toUpperCase() ?? "";
   return /^[A-Z0-9]{4}$/.test(normalized) ? normalized : null;
+}
+function normalizedPhase(input: string | null | undefined): string | null {
+  const phase = input?.trim().toUpperCase() ?? "";
+  return /^[A-Z][A-Z_]{1,23}$/.test(phase) ? phase : null;
 }
 function confidenceLabel(input: string | null | undefined): QualityConfidence | null {
   const normalized = input?.trim().toUpperCase();
@@ -139,6 +150,23 @@ export function buildTruthAccuracyReport(
   airports.sort((a, b) => b.cohort.confirmed - a.cohort.confirmed
     || a.airport.localeCompare(b.airport) || a.capability.localeCompare(b.capability));
 
+  const phases: PhaseQualityRow[] = [];
+  const distinctPhases = [...new Set(distinct.flatMap((row) => {
+    const phase = normalizedPhase(row.flightPhase);
+    return phase ? [phase] : [];
+  }))].sort();
+  for (const phase of distinctPhases) for (const capability of ["ETA", "RUNWAY"] as const) {
+    const cohort = aggregate(distinct.filter((row) => normalizedPhase(row.flightPhase) === phase), capability);
+    if (!cohort.flights) continue;
+    const state = !options.complete ? "COLLECTION_INCOMPLETE"
+      : cohort.confirmed < MIN_AIRPORT_FLIGHTS ? "INSUFFICIENT_TRUTH" : "MEASURED";
+    phases.push({
+      phase, capability, state,
+      cohort: state === "MEASURED" ? cohort
+        : { ...cohort, etaMaeSeconds: null, etaP90Seconds: null, exactRunwayAccuracy: null },
+    });
+  }
+  phases.sort((a, b) => b.cohort.confirmed - a.cohort.confirmed || a.phase.localeCompare(b.phase));
   const confidence: ConfidenceQualityRow[] = [];
   for (const capability of ["ETA", "RUNWAY"] as const) {
     for (const level of ["LOW", "MEDIUM", "HIGH"] as const) {
@@ -173,7 +201,7 @@ export function buildTruthAccuracyReport(
     version: TRUTH_ACCURACY_VERSION,
     sourceAvailable: options.sourceAvailable, complete: options.complete,
     truth, airports: airports.slice(0, MAX_AIRPORTS), airportOverflow: Math.max(0, airports.length - MAX_AIRPORTS),
-    confidence, decision, reasons,
+    phases: phases.slice(0, 8), confidence, decision, reasons,
     limitations: ["INDEPENDENT_LANDING_EVIDENCE_ONLY", "NO_APPROACH_RECALL", "NO_ATC_CLEARANCE", "NO_AUTOMATIC_GRADUATION"],
   };
 }
