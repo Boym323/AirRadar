@@ -60,9 +60,10 @@ export async function GET(request: Request): Promise<Response> {
         if ((controller.desiredSize ?? 0) > 0) {
           try {
             controller.enqueue(chunk);
-            if (nextEvent) {
-              if (nextEvent.event === "delta") recordSsePayload(protocol, nextEvent.event, chunk.byteLength, nextEvent.payload.changed.length, nextEvent.payload.removed.length);
-              else recordSsePayload(protocol, nextEvent.event, chunk.byteLength);
+            if (nextEvent?.event === "delta") {
+              recordSsePayload(protocol, "delta", chunk.byteLength, nextEvent.payload.changed.length, nextEvent.payload.removed.length);
+            } else {
+              recordSsePayload(protocol, "snapshot", chunk.byteLength);
             }
           } catch {
             close();
