@@ -101,7 +101,7 @@ describe("airport movement query bounds", () => {
     const positions = [{id: 1, flightId: 1, recordedAt: new Date("2026-09-12T10:00:00Z"),
       lat: 50, lon: 14, altitude: 2_000, groundSpeed: 220, track: 180, verticalRate: -700}];
     const events = [
-      {flightId: 1, type: "GO_AROUND", airportIcao: "LKPR", occurredAt: new Date("2026-09-12T11:00:00Z")},
+      {flightId: 1, type: "GO_AROUND", airportIcao: "LKPR", occurredAt: new Date("2026-09-12T11:50:00Z")},
       {flightId: 1, type: "HOLDING", airportIcao: "LKPR", occurredAt: new Date("2026-09-09T11:00:00Z")},
       {flightId: 1, type: "LANDING", airportIcao: "LKPR", occurredAt: new Date("2026-09-12T11:30:00Z")},
       {flightId: 1, type: "GO_AROUND", airportIcao: "LKPR", occurredAt: new Date("2026-09-13T11:00:00Z")},
