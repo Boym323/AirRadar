@@ -575,3 +575,20 @@ trigger detector evaluation, persistence or database access.
 The result is descriptive evidence only and cannot alter Navigation Integrity
 classification, canonical aircraft state, Track Fusion, predictions, history
 or alerts.
+
+The pure `predictivePhase`, `isAirportProximity`, and
+`buildPredictiveShadowInput` projections live in
+`lib/server/aircraft-predictive-projection.ts`. `aircraft-state.ts`
+re-exports them for compatibility but remains the sole live state owner.
+Moving projections never adds a poller, subscriber, persistence lane or
+network request.
+
+HTTP CSP currently rejects inline HTML event-handler attributes using
+`script-src-attr 'none'`; the React/Next script bootstrap still requires
+`'unsafe-inline'` under the existing static-rendering setup. Removing that
+directive requires a separately performance-validated per-request nonce
+migration (Next 16 `proxy.ts`, dynamic rendering, full desktop/mobile smoke)
+rather than a blind config change. The Prisma 8 CLI/runtime are exact-pinned
+release candidates: upgrade only after checking upstream RC breaking changes
+and schema/migration parity against a restored DEV database, not during
+unrelated feature work.
