@@ -21,11 +21,13 @@ function sample(): NavigationIntegrityObservation {
 }
 
 describe("navigation integrity persistence", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetModules();
     mocks.upsert.mockReset();
     mocks.track.mockClear();
     mocks.getPrisma.mockReturnValue({ orm: { public: { NavigationIntegrityObservation: { upsert: mocks.upsert } } } });
+    const { resetNavigationWriteMemoForTests } = await import("@/lib/server/navigation-integrity");
+    resetNavigationWriteMemoForTests();
   });
 
   it("uses an atomic native upsert with only immutable-key self-update on duplicates", async () => {
@@ -45,7 +47,7 @@ describe("navigation integrity persistence", () => {
     await persistNavigationIntegrityObservation(sample());
     const original = mocks.upsert.mock.calls[0]?.[0]?.create;
     await persistNavigationIntegrityObservation(sample());
-    expect(mocks.upsert).toHaveBeenCalledTimes(2);
+    expect(mocks.upsert).toHaveBeenCalledTimes(1);
     expect(rows.size).toBe(1);
     expect([...rows.values()][0]).toEqual(original);
     expect(original.dedupKey).toMatch(/^v2:ABC123:/);
@@ -73,6 +75,7 @@ describe("navigation integrity persistence", () => {
     expect([...rows.values()]).toEqual([{ lat: first.lat, lon: first.lon }, { lat: moved.lat, lon: moved.lon }]);
     await persistNavigationIntegrityObservation(first);
     expect(rows.size).toBe(2);
+    expect(mocks.upsert).toHaveBeenCalledTimes(2);
   });
 
   it("does not collapse an altitude-band transition or integrity-state transition", async () => {
@@ -109,4 +112,66 @@ describe("navigation integrity persistence", () => {
     await expect(persistNavigationIntegrityObservation(sample())).resolves.toBeUndefined();
     expect(mocks.upsert).toHaveBeenCalledTimes(2);
   });
+  it("avoids repeated rc9 upserts and exposes only aggregate admin counters", async () => {
+    const { persistNavigationIntegrityObservation, getNavigationWriteMemoDiagnostics } =
+      await import("@/lib/server/navigation-integrity");
+    mocks.upsert.mockResolvedValue({});
+    for (let i = 0; i < 10; i += 1) await persistNavigationIntegrityObservation(sample());
+    expect(mocks.upsert).toHaveBeenCalledTimes(1);
+    expect(getNavigationWriteMemoDiagnostics()).toEqual({
+      scope: "process-local", confirmedKeys: 1, inFlight: 0,
+      avoidedUpserts: 9, ttlMs: 120_000, maxKeys: 1024,
+    });
+  });
+
+  it("coalesces concurrent identical writes and acknowledges only after success", async () => {
+    const { persistNavigationIntegrityObservation, getNavigationWriteMemoDiagnostics } =
+      await import("@/lib/server/navigation-integrity");
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => { finish = resolve; });
+    mocks.upsert.mockImplementation(async () => { await pending; return {}; });
+    const first = persistNavigationIntegrityObservation(sample());
+    const second = persistNavigationIntegrityObservation(sample());
+    expect(mocks.upsert).toHaveBeenCalledTimes(1);
+    expect(getNavigationWriteMemoDiagnostics().confirmedKeys).toBe(0);
+    finish();
+    await Promise.all([first, second]);
+    expect(mocks.upsert).toHaveBeenCalledTimes(1);
+    expect(getNavigationWriteMemoDiagnostics().avoidedUpserts).toBe(1);
+  });
+
+  it("does not acknowledge failures and retries the same key successfully", async () => {
+    const { persistNavigationIntegrityObservation, getNavigationWriteMemoDiagnostics } =
+      await import("@/lib/server/navigation-integrity");
+    const err = Object.assign(new Error("synthetic"), { code: "P2024" });
+    mocks.upsert.mockRejectedValueOnce(err).mockResolvedValueOnce({});
+    await expect(persistNavigationIntegrityObservation(sample())).rejects.toBe(err);
+    expect(getNavigationWriteMemoDiagnostics().confirmedKeys).toBe(0);
+    await persistNavigationIntegrityObservation(sample());
+    expect(mocks.upsert).toHaveBeenCalledTimes(2);
+    expect(getNavigationWriteMemoDiagnostics().confirmedKeys).toBe(1);
+  });
+
+  it("expires acknowledgements and bounds the number of retained keys", async () => {
+    const { persistNavigationIntegrityObservation, getNavigationWriteMemoDiagnostics } =
+      await import("@/lib/server/navigation-integrity");
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      mocks.upsert.mockResolvedValue({});
+      await persistNavigationIntegrityObservation(sample());
+      clock.mockReturnValue(1_000_000 + 120_001);
+      await persistNavigationIntegrityObservation(sample());
+      expect(mocks.upsert).toHaveBeenCalledTimes(2);
+      for (let index = 0; index < 1025; index += 1) {
+        await persistNavigationIntegrityObservation({
+          ...sample(), aircraftHex: `TEST${index.toString().padStart(5, "0")}`,
+        });
+      }
+      expect(getNavigationWriteMemoDiagnostics().confirmedKeys).toBe(1024);
+      expect(getNavigationWriteMemoDiagnostics().inFlight).toBe(0);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
 });
