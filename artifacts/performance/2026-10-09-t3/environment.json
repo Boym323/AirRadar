@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "complete-with-limitations",
+  "measuredAtUtc": "2026-10-09T11:45:11Z/2026-10-09T12:15:25Z",
+  "production": {
+    "version": "1.0.377",
+    "commit": "a93802329e5329509cf81d651e03185c689ce32e",
+    "buildTimeUtc": "2026-10-09T11:24:28Z",
+    "serviceStartedAtUtc": "2026-10-09T11:31:12.353Z",
+    "t3CommitsPresent": true,
+    "t3PullRequests": {"649": "2b40b277", "650": "db5affcb", "651": "cfe49361", "652": "8c71e682"},
+    "mainAtMeasurement": "6ce02dd6a50a4f17ed7913499d35e916e2d2034b"
+  },
+  "service": {"name": "airradar.service", "pid": 232192, "restartCount": 0, "pidStable": true, "status": "active"},
+  "postgresql": {"status": "active", "version": "17.10"},
+  "adsbIngest": {"status": "live", "provider": "local-beast+json-failover", "systemStatus": "ok"},
+  "privacy": "Hostnames, private addresses, credentials, environment values and raw logs omitted."
+}

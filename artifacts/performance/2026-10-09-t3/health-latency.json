@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "endpoint": "/api/health",
+  "method": "GET",
+  "samples": 30,
+  "http200": 30,
+  "degradedOr503": 0,
+  "timeouts": 0,
+  "errors": 0,
+  "latencySeconds": {"min":0.174,"p50":1.966,"p95":2.604,"p99":2.631,"max":2.631},
+  "responses": {"application":"ok","database":"ok","source":"ok"},
+  "clientTimeoutSeconds": 6,
+  "spacingSeconds": 2,
+  "internalPhaseBreakdown": {"status":"unavailable","reason":"Public health response does not expose phase durations."},
+  "interpretation": "No timeout or degraded response occurred, but end-to-end latency remains frequently above 1.5 seconds. Client timeout was not shortened."
+}

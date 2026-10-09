@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "complete-with-limitations",
+  "findings": [
+    {"id":"P1-HEALTH-RELIABILITY","priority":"P1","classification":"improved-but-not-resolved","title":"Health endpoint no longer timed out in bounded probe","evidence":"30/30 HTTP 200; p95 2.604s; p99 2.631s","recommendation":"Attribute remaining latency using existing internal phase telemetry and proxy timing before optimization."},
+    {"id":"P1-CPU-RSS","priority":"P1","classification":"observation-cause-unconfirmed","title":"High process CPU and elevated RSS remain","evidence":"CPU average 83.4%, p95 107.2%; RSS 1089-1217 MiB; cgroup peak 1361.8 MiB","recommendation":"Repeat after stable uptime and use bounded heap/event-loop/GC telemetry in a controlled window."},
+    {"id":"P2-ROLLBACKS","priority":"P2","classification":"observation-cause-unconfirmed","title":"Rollback rate remains material","evidence":"4489 rollback delta; 299.0/min; rollback ratio 27.55% of commit+rollback counters","recommendation":"Use approved statement/lane attribution; do not infer failed business operations from the aggregate counter."},
+    {"id":"P2-DEAD-TUPLES","priority":"P2","classification":"risk","title":"Dead tuples remain material in high-write tables","evidence":"flightPosition 631364; flight 25458; receiverCoverageHourly 12233; predictiveObservation 9950","recommendation":"Review DBA-owned autovacuum activity and thresholds without changing them in this audit."},
+    {"id":"P3-OBSERVABILITY","priority":"P3","classification":"confirmed-gap","title":"Public diagnostics redact required runtime/SSE counters","evidence":"heap, event-loop, GC, active clients, V1/V2 split, fan-out and coalescing unavailable","recommendation":"Expose bounded sanitized diagnostics through authenticated internal system status."}
+  ],
+  "specificQuestions": {"sseSerialization":"Not attributable from public metrics; single-client payload is descriptive only.","flightUpdates":"Update rates are measured, but necessity is not proven without statement/lane attribution.","diagnosticOverhead":"No indication from this audit; runtime observation was not enabled publicly.","nextOptimizationCandidate":"Health phase/proxy latency attribution first; then SSE serialization and persistence lanes under controlled profile."},
+  "decision":"PASS WITH LIMITATIONS"
+}
