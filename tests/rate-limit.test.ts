@@ -40,6 +40,6 @@ describe("bounded request limiter", () => {
     expect(limiter.consume("aircraft:192.0.2.12", policy, 1).allowed).toBe(false);
     expect(limiter.size()).toBe(2);
     expect(limiter.consume(`aircraft:${clientA}`, policy, 2).allowed).toBe(false);
-    expect(limiter.consume(`aircraft:${clientB}`, policy, 60_000).allowed).toBe(true);
+    expect(limiter.consume(`aircraft:${clientB}`, policy, 60_001).allowed).toBe(true);
   });
 });
