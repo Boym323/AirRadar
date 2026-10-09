@@ -17,6 +17,28 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.377] - 2026-10-09
+
+Changes since v1.0.376.
+
+**Features touched:** Live Radar, System Observability.
+
+### Performance
+
+- T3.2 offline rollback and table-update attribution (#650) (db5affcb)
+- T3.3 account V1/V2 aircraft stream traffic (#651) (cfe49361)
+- T3.4 opt-in GC/event-loop observation (#652) (8c71e682)
+- Record production T1 T2 baseline (#648) (a9380232)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(db): T3.2 offline rollback and table-update attribution (#650) (db5affcb)
+- perf(sse): T3.3 account V1/V2 aircraft stream traffic (#651) (cfe49361)
+- perf(runtime): T3.4 opt-in GC/event-loop observation (#652) (8c71e682)
+- perf(audit): record production T1 T2 baseline (#648) (a9380232)
+
+</details>
 ## [1.0.376] - 2026-10-09
 
 Changes since v1.0.375.
