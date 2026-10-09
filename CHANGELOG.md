@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.384] - 2026-10-09
+
+Changes since v1.0.383.
+
+**Features touched:** System Observability.
+
+### Performance
+
+- T4.8 ATC metadata-only fast path with 30s single-flight cache (#671) (e985bf10)
+
+### Maintenance
+
+- Sync generated repository metadata (#670) (89729f0b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#670) (89729f0b)
+- perf(health): T4.8 ATC metadata-only fast path with 30s single-flight cache (#671) (e985bf10)
+
+</details>
 ## [1.0.383] - 2026-10-09
 
 Changes since v1.0.382.
