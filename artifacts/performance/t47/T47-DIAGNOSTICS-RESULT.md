@@ -117,8 +117,8 @@ Local verification on `perf/t47-admin-diagnostics-attribution`:
 - TypeScript typecheck: **passed**;
 - ESLint on changed files: **passed** after removing an existing unused test
   import;
-- CodeQL: pending GitHub workflow result;
-- CI: pending GitHub workflow result;
+- CodeQL: **passed**, [run 37951948478](https://github.com/Boym323/AirRadar/actions/runs/37951948478);
+- CI: **passed**, [run 37951948603](https://github.com/Boym323/AirRadar/actions/runs/37951948603);
 - PR: [#669](https://github.com/Boym323/AirRadar/pull/669).
 
 No merge, restart, release, or production deployment was performed.
