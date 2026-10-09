@@ -17,6 +17,37 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.388] - 2026-10-09
+
+Changes since v1.0.387.
+
+**Features touched:** Navigation Integrity.
+
+### Added
+
+- Expose sanitized process-local navigation write avoidance counters (f0d12f7f)
+
+### Performance
+
+- Avoid repeated durable-key upserts with bounded process-local acknowledgements (3e1af61e)
+
+### Maintenance
+
+- Sync generated repository metadata (#677) (ec2b6815)
+- Sync generated repository metadata (#678) (a37fa84d)
+- Prove bounded duplicate upsert suppression, concurrency, retries and TTL (8a6be87b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#677) (ec2b6815)
+- chore(metadata): sync generated repository metadata (#678) (a37fa84d)
+- perf(navigation): avoid repeated durable-key upserts with bounded process-local acknowledgements (3e1af61e)
+- feat(admin): expose sanitized process-local navigation write avoidance counters (f0d12f7f)
+- test(navigation): prove bounded duplicate upsert suppression, concurrency, retries and TTL (8a6be87b)
+- Merge pull request #679 from Boym323/perf/t52-navigation-duplicate-write-suppression (8b59b2dd)
+
+</details>
 ## [1.0.387] - 2026-10-09
 
 Changes since v1.0.386.
