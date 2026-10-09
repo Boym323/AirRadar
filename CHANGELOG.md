@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.385] - 2026-10-09
+
+Changes since v1.0.384.
+
+### Changed
+
+- Add performance artifacts for ATC metadata, performance, database failure lanes, environment, health windows, PostgreSQL deltas, and runtime memory (#673) (0e535bec)
+
+### Maintenance
+
+- Sync generated repository metadata (#672) (40108e97)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#672) (40108e97)
+- Add performance artifacts for ATC metadata, performance, database failure lanes, environment, health windows, PostgreSQL deltas, and runtime memory (#673) (0e535bec)
+
+</details>
 ## [1.0.384] - 2026-10-09
 
 Changes since v1.0.383.
