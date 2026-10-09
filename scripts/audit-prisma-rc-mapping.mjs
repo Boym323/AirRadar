@@ -44,9 +44,14 @@ export function inspectPrismaTableMappings(source, catalog = null) {
 
 function main() {
   const args = process.argv.slice(2);
-  if (args.some(x => x !== "--require-safe" && x !== "--catalog-json" && x !== "--help"
-      && x !== "--print-candidates" && !args.includes("--catalog-json")))
-    throw new Error("Usage: npm run prisma:upgrade:preflight -- [--catalog-json FILE] [--require-safe] [--print-candidates]");
+  const valid = new Set(["--require-safe", "--catalog-json", "--help", "--print-candidates"]);
+  for (let index = 0; index < args.length; index++) {
+    if (!valid.has(args[index])) throw new Error("Unknown argument: " + args[index]);
+    if (args[index] === "--catalog-json") {
+      if (!args[index + 1] || args[index + 1].startsWith("--")) throw new Error("--catalog-json requires a JSON file");
+      index++;
+    }
+  }
   if (args.includes("--help")) {
     console.log("Read-only RC table mapping preflight. Supply a JSON array of verified PostgreSQL public table names with --catalog-json FILE.");
     return;
