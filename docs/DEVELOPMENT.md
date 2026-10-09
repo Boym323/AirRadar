@@ -365,3 +365,55 @@ reset/recreate a production database without a concrete requirement and
 review. Database schema changes require both the contract and a forward
 migration. Provider/enrichment changes must preserve best-effort isolation,
 bounded caches/concurrency, and the live polling path.
+
+## Security CSP and Prisma RC preflight
+
+### Opt-in strict script nonce on the dynamic system page
+
+The existing `/system` route is `force-dynamic`. The optional Next 16
+`proxy.ts` is restricted to exactly that route. By default
+`AIRRADAR_STRICT_CSP_SYSTEM_ENABLED` is absent/false: all public pages and
+`/system` retain the global `next.config.ts` policy. To experiment on
+**DEV only**, set `AIRRADAR_STRICT_CSP_SYSTEM_ENABLED=true`, restart the
+DEV app and inspect browser console, loading of chunks/styles, client-side
+navigation and the system SSE/event panels. It sets a cryptographically random
+128-bit nonce for each HTML request and delivers the same CSP nonce to
+Next's request header and response. It removes `unsafe-inline` from
+**script-src** only; style-src still needs separate migration. Never enable
+globally or in production based on source-level tests alone.
+
+Verify the actual HTTP response, not just `next.config.ts`:
+
+```bash
+npm run ops:audit:headers -- --origin http://127.0.0.1:3000 --require-hardened --require-nonce
+```
+
+The read-only check verifies same-origin geolocation permission, object/frame
+blocking, script nonce enforcement and uniqueness across requests. The
+`--require-nonce` flag is only for an explicitly enabled nonced DEV /system.
+After staging the combined changes to a test environment, also run the
+desktop/mobile browser gate with the flag enabled and verify there are no
+script CSP violations, regressions to /system interactions or increased
+render latency. The ordinary radar must remain static and cacheable.
+
+### Prisma ORM 8 release-candidate upgrade approval gate
+
+The repository is pinned to older Prisma 8 RC builds. Newer Prisma 8 RC
+versions have changed implicit SQL model/table names. Do **not** just bump
+versions and run `prisma:deploy` against production. Run the read-only
+preflight first:
+
+```bash
+npm run prisma:upgrade:preflight -- --print-candidates
+# On the restored DEV PostgreSQL instance only:
+psql "$DEV_DATABASE_URL" -Atqc "SELECT coalesce(json_agg(tablename ORDER BY tablename), '[]'::json) FROM pg_catalog.pg_tables WHERE schemaname='public';" > /tmp/airradar-dev-table-catalog.json
+npm run prisma:upgrade:preflight -- --catalog-json /tmp/airradar-dev-table-catalog.json --require-safe
+```
+
+Unmapped model names and an absent catalog **must fail** the `--require-safe`
+gate. Legacy name candidates are not proof; confirm each physical table and
+generate verified `@@map` mappings on a dedicated upgrade branch, then
+validate contract output, migration diff, the complete test suite and actual
+read/write queries against restored DEV data. Upgrade Prisma CLI and runtime
+together using their individually published compatible versions. Apply no
+destructive migration or production change as part of this preflight.
