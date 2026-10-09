@@ -112,6 +112,8 @@ const metadata: Record<DbOperationLane, { kind: DbOperationKind; operation: DbOp
   "flight-intelligence.terminal-evidence.update": { kind: "WRITE", operation: "UPDATE" },
   "history.list.query": { kind: "READ", operation: "SELECT" },
   "history.flight-detail.query": { kind: "READ", operation: "SELECT" },
+  "flight-story.evidence.predictions.query": { kind: "READ", operation: "SELECT" },
+  "flight-story.evidence.landing.query": { kind: "READ", operation: "SELECT" },
   "history.aircraft-quick.query": { kind: "READ", operation: "SELECT" },
   "history.aircraft-detail.query": { kind: "READ", operation: "SELECT" },
   "predictive-readiness.observations.query": { kind: "READ", operation: "SELECT" },
