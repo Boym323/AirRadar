@@ -15,6 +15,76 @@ const MAX_OBSERVATIONS = 10_000;
 const HEARTBEAT_MS = 120_000;
 const MOVEMENT_DEDUP_DEGREES = 0.1;
 const MAX_PENDING_OBSERVATIONS = 2_048;
+const WRITE_ACK_TTL_MS = 2 * 60_000;
+const WRITE_ACK_MAX_KEYS = 1_024;
+
+// Process-local, bounded acknowledgement cache: only successfully completed
+// writes are memoized. Not a replacement for the database unique constraint,
+// which still provides correctness across processes/restarts.
+type DurableWriteMemo = {
+  confirmed: Map<string, number>;
+  inFlight: Map<string, Promise<void>>;
+  avoidedUpserts: number;
+};
+const globalWriteMemo = globalThis as typeof globalThis & { __airRadarNavigationWriteMemo?: DurableWriteMemo };
+const durableWriteMemo: DurableWriteMemo = globalWriteMemo.__airRadarNavigationWriteMemo ??= {
+  confirmed: new Map(), inFlight: new Map(), avoidedUpserts: 0,
+};
+
+async function persistAcknowledgedOnce(key: string, operation: () => Promise<unknown>): Promise<void> {
+  const now = Date.now();
+  const expiresAt = durableWriteMemo.confirmed.get(key);
+  if (expiresAt !== undefined && expiresAt > now) {
+    durableWriteMemo.avoidedUpserts += 1;
+    return;
+  }
+  if (expiresAt !== undefined) durableWriteMemo.confirmed.delete(key);
+
+  const inFlight = durableWriteMemo.inFlight.get(key);
+  if (inFlight) {
+    // A failed first attempt rejects all waiters; it is never acknowledged.
+    await inFlight;
+    durableWriteMemo.avoidedUpserts += 1;
+    return;
+  }
+  const write = (async () => {
+    await operation();
+    durableWriteMemo.confirmed.set(key, Date.now() + WRITE_ACK_TTL_MS);
+    while (durableWriteMemo.confirmed.size > WRITE_ACK_MAX_KEYS) {
+      const oldest = durableWriteMemo.confirmed.keys().next().value;
+      if (oldest === undefined) break;
+      durableWriteMemo.confirmed.delete(oldest);
+    }
+  })();
+  durableWriteMemo.inFlight.set(key, write);
+  try {
+    await write;
+  } finally {
+    if (durableWriteMemo.inFlight.get(key) === write) durableWriteMemo.inFlight.delete(key);
+  }
+}
+
+export function getNavigationWriteMemoDiagnostics(): {
+  scope: "process-local"; confirmedKeys: number; inFlight: number;
+  avoidedUpserts: number; ttlMs: number; maxKeys: number;
+} {
+  return {
+    scope: "process-local",
+    confirmedKeys: durableWriteMemo.confirmed.size,
+    inFlight: durableWriteMemo.inFlight.size,
+    avoidedUpserts: durableWriteMemo.avoidedUpserts,
+    ttlMs: WRITE_ACK_TTL_MS,
+    maxKeys: WRITE_ACK_MAX_KEYS,
+  };
+}
+
+/** Test-only reset. Never clears durable rows or changes DB state. */
+export function resetNavigationWriteMemoForTests(): void {
+  durableWriteMemo.confirmed.clear();
+  durableWriteMemo.inFlight.clear();
+  durableWriteMemo.avoidedUpserts = 0;
+}
+
 const collectionTimes = new Map<string, number>();
 const pendingObservations = new Map<string, NavigationIntegrityObservation>();
 let observationDrainActive = false;
@@ -98,12 +168,13 @@ export async function persistNavigationIntegrityObservation(observation: Navigat
   // immutable key on collision; never overwrite a previously stored position,
   // timestamp, classification, or provenance. PostgreSQL may still touch the
   // existing tuple, so do not count every successful upsert as a new insert.
-  await trackDbOperation("navigation.observation.create", () =>
-    schema.NavigationIntegrityObservation.upsert({
-      conflictOn: { dedupKey: key },
-      update: { dedupKey: key },
-      create: row,
-    }));
+  await persistAcknowledgedOnce(key, () =>
+    trackDbOperation("navigation.observation.create", () =>
+      schema.NavigationIntegrityObservation.upsert({
+        conflictOn: { dedupKey: key },
+        update: { dedupKey: key },
+        create: row,
+      })));
 }
 
 async function persistAnomaly(anomaly: NavigationIntegrityAnomaly): Promise<void> {
