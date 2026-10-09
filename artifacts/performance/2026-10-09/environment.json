@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "measuredAtUtc": "2026-10-09T10:31:57Z/2026-10-09T10:46:57Z",
+  "application": { "name": "AirRadar", "measuredDeploymentCommit": "e15e89a4", "nextVersion": "16.3.8", "deploymentInvocationIdRecorded": true, "note": "The checkout advanced from 7a906753 to e15e89a4 during the audit before artifacts were staged; the running standalone build was timestamped before the measurement." },
+  "runtime": { "node": "22.23.3", "postgresql": "17.10", "cpuCores": 4, "memoryTotalMiB": 10240, "memoryAvailableMiBAtStart": 2672.0 },
+  "storage": { "filesystemSizeBytes": 21474836480, "filesystemUsedBytes": 13864796160, "filesystemAvailableBytes": 7610040320 },
+  "service": { "name": "airradar.service", "mainPid": 228018, "workerPids": [], "restartCount": 0, "activeAtMeasurementStart": "2026-10-09T10:23:20Z", "processIdentity": "31273566", "aircraftCountAtInitialHealth": 90 },
+  "privacy": "Hostnames, IP addresses, credentials, environment values, logs and user identifiers omitted."
+}

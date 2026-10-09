@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "status": "partial",
+  "source": "One bounded public GET /api/stream observation; no synthetic client fan-out",
+  "sample": { "durationSeconds": 25, "snapshotEvents": 32, "bytesReceived": 19032916, "eventsPerSecond": 1.28, "bytesPerSecond": 761316.64 },
+  "activeClients": { "status": "unavailable", "reason": "No existing safe public metric exposed active SSE client count." },
+  "queueAndFanout": { "status": "unavailable", "reason": "No existing safe public metric exposed queue depth, rejected connections, changed-aircraft count or fan-out bytes." },
+  "interpretation": "This is a single-client delivery observation, not a production-wide traffic estimate. The connection was closed by the measurement timeout."
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "status": "complete-with-limitations",
+  "comparisons": [
+    { "metric": "process write_bytes", "currentMiBPerMin": { "min": 0.429, "average": 0.750, "max": 0.917 }, "historicalMiBPerMin": 70.763, "absoluteDifferenceAverageMiBPerMin": -70.013, "relativeDifferenceAverage": -0.9894, "confidence": "low", "classification": "risk signal only", "conditions": "3x5min 2026-10-09; historic 74.2 MB/min on 2026-09-29; traffic and metric/unit conditions are not identical" },
+    { "metric": "process wchar", "currentMiBPerMin": { "min": 4.511, "average": 5.717, "max": 8.014 }, "historicalMiBPerMin": null, "confidence": "not-rated", "classification": "unavailable historical comparator" },
+    { "metric": "transactions", "currentPerMin": 967.33, "historicalPerMin": 564.47, "absoluteDifferencePerMin": 402.86, "relativeDifference": 0.7135, "confidence": "low", "classification": "observation, not confirmed problem", "conditions": "15min current counters vs 30min 2026-09-29 audit" }
+  ],
+  "unitNote": "Historical 74.2 MB/min uses decimal MB; current reports use binary MiB/min."
+}

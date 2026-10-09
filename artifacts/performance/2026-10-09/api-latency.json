@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "status": "partial",
+  "endpoint": "/api/health",
+  "method": "GET",
+  "samplesCollected": 15,
+  "samplesRequiredForReport": 30,
+  "observedSeconds": [5.003132,1.888933,4.632144,5.000827,3.382558,0.575314,3.179415,0.240757,0.239784,0.236477,3.401076,0.196950,0.248588,0.188209],
+  "percentiles": { "status": "unavailable", "reason": "Sampling was stopped after repeated timeouts/slow responses; p50/p95/p99 would not be representative." },
+  "timeoutsObserved": true,
+  "note": "The sampler was terminated to avoid adding load. No latency conclusion is promoted to a finding."
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "findings": [
+    { "id": "P1-CPU-RSS", "priority": "P1", "title": "High sustained process CPU and rising RSS during short observation", "classification": "confirmed observation, cause unconfirmed", "evidence": "CPU 72.5–76.7%; RSS 956–1117 MiB; cgroup peak 1388.5 MiB; RSS rose during the 5min sample", "recommendation": "Add low-cardinality runtime telemetry for heap/RSS, GC pause and event-loop lag, then profile only in a controlled maintenance window." },
+    { "id": "P1-API-TIMEOUTS", "priority": "P1", "title": "Health endpoint showed repeated slow responses/timeouts in a bounded probe", "classification": "confirmed observation, not enough evidence for root cause", "evidence": "15 partial samples included two ~5s timeouts and several 3–4.6s responses", "recommendation": "Investigate event-loop saturation, upstream readiness and proxy timing with existing diagnostics before any optimization." },
+    { "id": "P2-DB-ROLLBACKS", "priority": "P2", "title": "Rollback counter increased substantially", "classification": "confirmed observation, cause unconfirmed", "evidence": "3859 rollback delta in 15min; pg_stat_statements unavailable", "recommendation": "Enable approved aggregated statement attribution in a future maintenance change; do not install extensions during this audit." },
+    { "id": "P2-DB-DEAD-TUPLES", "priority": "P2", "title": "Dead tuples are material in several high-write tables", "classification": "risk", "evidence": "flightPosition 614477, predictiveObservation 7617, receiverCoverageHourly 10500 dead tuples", "recommendation": "Review autovacuum thresholds and observed activity with DBA-owned metrics; no production setting change made." },
+    { "id": "P3-OBSERVABILITY", "priority": "P3", "title": "SSE/client and runtime diagnostics are not externally queryable", "classification": "confirmed observability gap", "evidence": "Active clients, queue depth, fan-out, event-loop and GC metrics unavailable", "recommendation": "Expose bounded sanitized diagnostics through the existing internal system-status boundary, preserving secret and coordinate redaction." }
+  ],
+  "noP0": "No critical degradation requiring measurement abort was observed; the audit did not restart or alter production services."
+}

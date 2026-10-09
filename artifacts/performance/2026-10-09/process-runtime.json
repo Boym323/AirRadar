@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "sampling": { "intervalSeconds": 10, "durationSeconds": 300, "source": "/proc and ps", "pid": 228018, "identityStable": true },
+  "cpuPercent": { "status": "measured", "min": 72.5, "average": 74.8, "max": 76.7, "percentileP50": 74.1, "percentileP95": 76.2, "percentileP99": 76.7, "note": "ps process CPU percentage; not host-wide CPU percentage" },
+  "rssMiB": { "status": "measured", "min": 956.2, "average": 1038.0, "max": 1117.0, "note": "Resident set sampled from ps; service cgroup MemoryPeak was 1388.5 MiB." },
+  "threads": { "min": 11, "average": 11, "max": 11 },
+  "openFileDescriptors": { "min": 36, "average": 39.6, "max": 47 },
+  "restarts": { "status": "measured", "countDuringWindow": 0, "systemdNRestartsAtEnd": 0 },
+  "eventLoopAndGc": { "status": "unavailable", "reason": "No safe existing public production metric was exposed; inspector/profiling was not enabled." }
+}

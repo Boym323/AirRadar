@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "pid": 228018,
+  "processIdentity": "31273566",
+  "source": "scripts/audit-process-io.mjs",
+  "unit": "MiB/min; MiB uses 1048576 bytes",
+  "windows": [
+    { "window": 1, "startedAtUtc": "2026-10-09T10:31:57Z", "endedAtUtc": "2026-10-09T10:36:57Z", "durationMinutes": 5.0005, "rcharMiBPerMin": 52.312, "wcharMiBPerMin": 8.014, "readBytesMiBPerMin": 2.113, "writeBytesMiBPerMin": 0.429, "cancelledWriteBytesMiBPerMin": 0, "sameProcessIdentity": true },
+    { "window": 2, "startedAtUtc": "2026-10-09T10:36:57Z", "endedAtUtc": "2026-10-09T10:41:57Z", "durationMinutes": 5.0013, "rcharMiBPerMin": 51.540, "wcharMiBPerMin": 4.511, "readBytesMiBPerMin": 0.143, "writeBytesMiBPerMin": 0.903, "cancelledWriteBytesMiBPerMin": 0, "sameProcessIdentity": true },
+    { "window": 3, "startedAtUtc": "2026-10-09T10:41:57Z", "endedAtUtc": "2026-10-09T10:46:57Z", "durationMinutes": 5.0017, "rcharMiBPerMin": 118.094, "wcharMiBPerMin": 4.626, "readBytesMiBPerMin": 0.125, "writeBytesMiBPerMin": 0.917, "cancelledWriteBytesMiBPerMin": 0, "sameProcessIdentity": true }
+  ],
+  "summary": { "writeBytesMiBPerMinMin": 0.429, "writeBytesMiBPerMinAvg": 0.750, "writeBytesMiBPerMinMax": 0.917, "wcharMiBPerMinMin": 4.511, "wcharMiBPerMinAvg": 5.717, "wcharMiBPerMinMax": 8.014 },
+  "historicalComparison": { "referenceDate": "2026-09-29", "referenceWriteRateMiBPerMin": 70.763, "referenceLabel": "74.2 MB/min converted using 1 MB = 1000000 bytes", "comparisonUsesSameMetric": false, "note": "Historical and current windows have different traffic and runtime conditions; current process write_bytes is approximately 98.9% lower, but this is not a causal or representative improvement claim." },
+  "physicalDiskStats": { "status": "unavailable", "reason": "No separate block-device accounting was collected; process write_bytes is not physical device I/O." }
+}

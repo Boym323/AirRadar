@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "window": { "startedAtUtc": "2026-10-09T10:31:57Z", "endedAtUtc": "2026-10-09T10:46:57Z", "durationMinutes": 15 },
+  "database": { "sizeBytesStart": 5778749107, "sizeBytesEnd": 5788120755, "sizeDeltaBytes": 9371648, "serverVersion": "17.10", "statementTimeoutMs": 5000 },
+  "transactions": { "commitsStart": 12164631, "commitsEnd": 12175282, "commitsDelta": 10651, "rollbacksStart": 672763, "rollbacksEnd": 676622, "rollbacksDelta": 3859, "transactionsDelta": 14510, "transactionsPerMinute": 967.33, "rollbackPerMinute": 257.27 },
+  "cache": { "cumulativeHitRatio": 0.9846, "intervalHitRatio": 0.9202, "blksReadDelta": 46747, "blksHitDelta": 539593 },
+  "connections": { "activeEnd": 1, "idleEnd": 10, "nullStateEnd": 6, "waitingLocksEnd": 0, "deadlocksDelta": 0 },
+  "temporary": { "tempFilesDelta": 0, "tempBytesDelta": 0 },
+  "wal": { "walBytesStart": 83174047770, "walBytesEnd": 83255013684, "walBytesDelta": 80965914, "walMiBPerMin": 5.151 },
+  "tables": [
+    { "table": "flight", "liveRowsEnd": 166196, "deadRowsEnd": 8979, "insertsPerMin": 5.33, "updatesPerMin": 3830.27 },
+    { "table": "flightPosition", "liveRowsEnd": 6044813, "deadRowsEnd": 614477, "insertsPerMin": 231.0 },
+    { "table": "predictiveObservation", "liveRowsEnd": 67151, "deadRowsEnd": 7617, "insertsPerMin": 221.73 },
+    { "table": "aircraftWeatherObservation", "liveRowsEnd": 1007799, "deadRowsEnd": 212, "insertsPerMin": 122.33 },
+    { "table": "receiverCoverageHourly", "liveRowsEnd": 137562, "deadRowsEnd": 10500, "updatesPerMin": 773.0 },
+    { "table": "aircraft", "liveRowsEnd": 10626, "deadRowsEnd": 1867, "updatesPerMin": 681.27 }
+  ],
+  "autovacuum": { "setting": "on", "activityDetail": "unavailable", "lastAutovacuumIsReportedPerTableAbove" : true },
+  "pgStatStatements": { "status": "unavailable", "reason": "Extension is not installed; it was not installed or enabled for this audit." },
+  "physicalIoTiming": { "status": "unavailable", "reason": "track_io_timing is off." }
+}
