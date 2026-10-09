@@ -2,14 +2,19 @@
 /** CI-only, isolated nonce-enabled /system browser smoke. Never contacts production. */
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium } from "playwright";
 
 const port = 42000 + process.pid % 10000;
+const stateDirectory=mkdtempSync(join(tmpdir(),"airradar-csp-smoke-"));
 const base = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath,
   ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)],
   {env: {...process.env,
     NODE_ENV:"production", AIRRADAR_STRICT_CSP_SYSTEM_ENABLED:"true",
+    AIRRADAR_RUNTIME_STATE_DIRECTORY:stateDirectory,
     DATABASE_URL:"", READSB_BASE_URL:"", ADSBDB_ENABLED:"false",
     ATC_SAMPLE_ENABLED:"false", AIRCRAFT_PHOTOS_ENABLED:"false",
     FLIGHTAWARE_API_KEY:"",
@@ -33,7 +38,9 @@ try {
   const a=await fetch(base+"/system",{headers:{"Cache-Control":"no-cache"}});
   const b=await fetch(base+"/system",{headers:{"Cache-Control":"no-cache"}});
   const getNonce=(response)=>{
-    const csp=response.headers.get("content-security-policy") ?? "";
+    const csp=typeof response.headers === "function"
+      ? (response.headers()["content-security-policy"] ?? "")
+      : (response.headers.get("content-security-policy") ?? "");
     const script=csp.match(/script-src [^;]+/)?.[0] ?? "";
     if(!csp.includes("script-src-attr 'none'") || script.includes("'unsafe-inline'"))
       throw new Error("Expected strict script-src and blocked inline handlers");
@@ -69,4 +76,5 @@ try {
   child.kill("SIGTERM");
   for(let i=0;i<20 && child.exitCode===null;i++)await delay(100);
   if(child.exitCode===null)child.kill("SIGKILL");
+  rmSync(stateDirectory,{recursive:true,force:true});
 }
