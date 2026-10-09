@@ -30,32 +30,46 @@ The write queue is already single-lane and coalesces pending keys. It does not
 remove the database race/identity mismatch after a row has been persisted, so
 serialization alone could not explain the failures. There is no blind retry.
 
-### Fix
+### Fix — verified against same-minute movement (P0 PR #675)
 
-`NavigationIntegrityObservation.create()` is replaced by an ORM-compatible
-idempotent `upsert()` on `{ dedupKey }`, with `update: {}` and the full row in
-`create`. A conflict is now a successful no-op: the first historical row is
-preserved and the duplicate does not rewrite evidence. DB failures still
-reject the operation, stay isolated by the existing write tail, and permit a
-later observation to recover.
+The original initial P0 patch used `upsert({ update: {} })` on the old
+minute-level `dedupKey`. Review identified that this masked unique conflicts
+but could **silently discard legitimate same-minute movement**. That version
+is superseded and must not be deployed.
 
-`classifyDbFailure()` now walks a bounded, cycle-safe set of structured ORM
-fields (`cause`, `meta`, `driverAdapterError`, `originalError`) and recognizes
-SQLSTATE/Prisma codes without storing SQL, parameters, dedup keys, sensitive
-values, or raw messages. Specific classes are timeout, constraint, conflict,
-connection, other, and unknown.
+The corrected P0 implementation uses a versioned deterministic `v2`
+identity including the observation timestamp, microdegree coordinates,
+altitude band, source, NIC/NAC values, and integrity classification.
+Meaningfully different observations with identical minute and timestamp
+now receive distinct dedup keys; identical retries retain the same key.
+Legacy stored keys are left unchanged, with possible one-time overlap
+after rollout.
+
+The write uses the documented PostgreSQL ORM operation
+`createAndCount([row], { onConflict: "skip", conflictOn: ["dedupKey"] })`
+instead of empty-update upsert. This atomically inserts new observations,
+skips exact duplicates without changing historical rows, and returns a
+count to distinguish inserted from skipped rows in diagnostics.
+
+`classifyDbFailure()` walks bounded, cycle-safe structured ORM error fields
+(`cause`, `meta`, `driverAdapterError`, `originalError`) and classifies
+SQLSTATE/Prisma codes without retaining SQL, parameters, keys, or messages.
 
 ### Regression coverage
 
-`tests/navigation-integrity-persistence.test.ts` covers:
+`tests/navigation-integrity-persistence.test.ts` now covers:
 
-- repeated identical dedup keys through the idempotent upsert;
-- nested timeout (`P2024`), unique constraint (`23505`), and ordinary DB
-  failure handling;
-- recovery after a failed write.
+- repeated identical keys via insert-or-skip, preserving the first row;
+- two significantly moved observations in the **same minute and same timestamp**;
+- changes of altitude band and integrity classification;
+- nested timeout, unique constraint, ordinary DB error and recovery.
 
-`tests/db-failure-classification.test.ts` covers nested adapter/cause codes and
-redaction behavior. Targeted result: **16 tests passed**.
+`tests/db-failure-classification.test.ts` covers nested adapter/cause
+codes and non-disclosure of error messages.
+
+The original P0 patch passed 16 targeted tests and TypeScript/ESLint.
+The corrected P0 tests and CI/CodeQL require independent verification of
+the updated PR head; do not reuse the original result.
 
 The DEV target was checked read-only before any possible integration write:
 
@@ -65,9 +79,9 @@ database=airradar_dev user=airradar_dev schema=public
 
 No DEV canary write was run in this turn; the repository has no existing
 Navigation Integrity integration harness that can safely report before/after
-lane counters. The unit harness proves the required reproducible outcome:
-duplicate attempts remain successful idempotent operations, while timeout and
-ordinary failures remain failures and do not poison the next write. A post-merge
+lane counters. The unit harness checks duplicate skip, meaningfully distinct same-minute inserts,
+error propagation, and recovery. Full DEV database-backed operation must still
+be verified before relying on the implementation in production. A post-merge
 DEV canary should record `attempts`, `successes`, `failures`, and constraint
 family counts before and after the change.
 
@@ -126,10 +140,11 @@ comparison links rather than published PRs.
 
 ## Production risks
 
-P0 changes the duplicate outcome from a failed write to an idempotent success;
-it does not alter the dedup key, retention, observation window, anomaly
-evaluation, or first-row historical values. The main risk is ORM contract
-compatibility, covered by typecheck and the upsert regression test.
+P0 changes dedup key generation to versioned v2 identity, preserving significant
+same-minute observations and skipping exact replays. Existing historical rows are
+not rewritten, but new v2 keys may overlap once with retained legacy observations.
+The main outstanding risk is database-backed adapter behavior, not addressed by
+mock-based unit tests alone. Typechecking and CI verify the generated type contract.
 
 P1 has no runtime behavior change. The remaining risk is operational: public
 health may still show burst latency until authenticated, time-correlated phase
@@ -138,8 +153,9 @@ telemetry is collected.
 ## Verification after deployment
 
 1. In DEV, replay a same-minute two-position observation with the same
-   aircraft/source/NIC/NAC-P/NAC-V and confirm one durable row, zero constraint
-   failures, and counters showing the second operation as a successful no-op.
+   aircraft/source/NIC/NAC-P/NAC-V and confirm **two** durable rows, zero constraint
+   failures, and separate v2 keys; replay an identical observation and confirm
+   zero newly inserted rows without rewriting the previous values.
 2. Inject only synthetic DEV timeout, ordinary DB, and recovery cases; confirm
    failure families are structured and no messages/SQL/parameters appear.
 3. In one production observation window, compare the lane's attempts,
