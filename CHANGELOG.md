@@ -17,6 +17,22 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.381] - 2026-10-09
+
+Changes since v1.0.380.
+
+**Features touched:** System Observability.
+
+### Added
+
+- T4.3 authenticated health-phase diagnostics (#661) (274b18b6)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(runtime): T4.3 authenticated health-phase diagnostics (#661) (274b18b6)
+
+</details>
 ## [1.0.380] - 2026-10-09
 
 Changes since v1.0.379.
