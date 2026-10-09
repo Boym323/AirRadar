@@ -39,6 +39,8 @@
     "prisma:migrate": "prisma migration plan --name init",
     "prisma:deploy": "prisma db migrate",
     "prisma:verify": "prisma db verify",
+    "prisma:upgrade:preflight": "node scripts/audit-prisma-rc-mapping.mjs",
+    "ops:audit:headers": "node scripts/audit-ops-headers.mjs",
     "airports:import": "JITI_TSCONFIG_PATHS=true jiti scripts/airports-import.ts",
     "airports:sync": "JITI_TSCONFIG_PATHS=true jiti scripts/airports-sync.ts",
     "atc:import": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-import.ts",
