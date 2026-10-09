@@ -577,6 +577,30 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             },
           ])),
         },
+        truthAccuracy: {
+          version: "truth-accuracy-v1", sourceAvailable: true, complete: true,
+          truth: {
+            ETA: { flights: 42, confirmed: 31, unscorable: 11, coverage: 31/42,
+              etaMaeSeconds: 145, etaP90Seconds: 280, exactRunwayAccuracy: null },
+            RUNWAY: { flights: 35, confirmed: 23, unscorable: 12, coverage: 23/35,
+              etaMaeSeconds: null, etaP90Seconds: null, exactRunwayAccuracy: 0.78 },
+          },
+          airports: [
+            { airport: "LKPR", capability: "ETA", state: "MEASURED",
+              cohort: { flights: 19, confirmed: 15, unscorable: 4, coverage: 15/19,
+                etaMaeSeconds: 128, etaP90Seconds: 290, exactRunwayAccuracy: null } },
+          ],
+          airportOverflow: 0,
+          phases: [],
+          confidence: [
+            { capability: "ETA", confidence: "HIGH", state: "MEASURED",
+              flights: 24, confirmed: 21, successRate: 0.81, successRule: "ETA_ABSOLUTE_ERROR_LE_5_MINUTES" },
+          ],
+          decision: "REVIEW_QUALITY",
+          reasons: ["RUNWAY_ACCURACY_BELOW_85_PERCENT"],
+          limitations: ["INDEPENDENT_LANDING_EVIDENCE_ONLY", "NO_APPROACH_RECALL",
+            "NO_ATC_CLEARANCE", "NO_AUTOMATIC_GRADUATION"],
+        },
         horizonQuality: {
           version: "predictive-horizon-quality-v1",
           minimumConfirmedFlights: 10, sourceAvailable: true, complete: true,

@@ -210,6 +210,8 @@ function predictiveCalibrationMargin(
 
 function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveReadinessReport; dictionary: LocaleDictionary }) {
   const truthCopy = truthAccuracyText(dictionary.locale);
+  // Old cached/browser fixture payloads may precede the E schema during an atomic rollout.
+  const truthAccuracy = report.truthAccuracy ?? null;
   const policies = (policy: PredictiveReadinessReport["configuredPolicy"]) =>
     (["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"] as const).map((key) => `${key} ${policy[key]}`).join(" · ");
   const capabilities = [
@@ -410,15 +412,16 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       })}
     </div>
     <p className="system-predictive-reasons">{dictionary.system.predictiveTrendDisclaimer}</p>
+    {truthAccuracy ? <>
     <div className="system-card-header" data-testid="truth-accuracy-e-heading">
       <div><h2>{truthCopy.heading}</h2><p className="system-card-subtitle">{truthCopy.subtitle}</p></div>
-      <UiStatusBadge variant={report.truthAccuracy.decision === "MONITOR" ? "neutral" : "warning"}>
-        {truthCopy.decisions[report.truthAccuracy.decision]}
+      <UiStatusBadge variant={truthAccuracy.decision === "MONITOR" ? "neutral" : "warning"}>
+        {truthCopy.decisions[truthAccuracy.decision]}
       </UiStatusBadge>
     </div>
     <div className="system-predictive-capabilities" data-testid="truth-accuracy-e">
       {(["ETA", "RUNWAY"] as const).map((capability) => {
-        const cohort = report.truthAccuracy.truth[capability];
+        const cohort = truthAccuracy.truth[capability];
         return <section key={capability} className="system-predictive-capability">
           <div className="system-predictive-capability-heading"><strong>{capability}</strong></div>
           <dl>
@@ -427,15 +430,15 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
             <Field label={truthCopy.coverage} value={formatPredictivePercent(cohort.coverage, dictionary)} />
             <Field label={capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
               value={capability === "ETA"
-                ? formatPredictiveError(report.truthAccuracy.decision === "MONITOR" || report.truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.etaMaeSeconds : null, dictionary)
-                : formatPredictivePercent(report.truthAccuracy.decision === "MONITOR" || report.truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.exactRunwayAccuracy : null, dictionary)} />
+                ? formatPredictiveError(truthAccuracy.decision === "MONITOR" || truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.etaMaeSeconds : null, dictionary)
+                : formatPredictivePercent(truthAccuracy.decision === "MONITOR" || truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.exactRunwayAccuracy : null, dictionary)} />
           </dl>
         </section>;
       })}
     </div>
     <div className="system-card-header"><div><h3>{truthCopy.airportHeading}</h3></div></div>
     <div className="system-predictive-capabilities" data-testid="truth-accuracy-airports">
-      {report.truthAccuracy.airports.map((row) => <section key={`${row.airport}-${row.capability}`} className="system-predictive-capability">
+      {truthAccuracy.airports.map((row) => <section key={`${row.airport}-${row.capability}`} className="system-predictive-capability">
         <div className="system-predictive-capability-heading"><strong>{row.airport} · {row.capability}</strong>
           <UiStatusBadge variant={row.state === "MEASURED" ? "neutral" : "warning"}>
             {row.state === "MEASURED" ? truthCopy.measured : row.state === "COLLECTION_INCOMPLETE" ? truthCopy.incomplete : truthCopy.insufficient}
@@ -448,11 +451,11 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
               : formatPredictivePercent(row.cohort.exactRunwayAccuracy, dictionary)} />
         </dl>
       </section>)}
-      {!report.truthAccuracy.airports.length && <p>{truthCopy.noTruth}</p>}
+      {!truthAccuracy.airports.length && <p>{truthCopy.noTruth}</p>}
     </div>
     <div className="system-card-header"><div><h3>{truthCopy.phaseHeading}</h3></div></div>
     <div className="system-predictive-capabilities" data-testid="truth-accuracy-phases">
-      {report.truthAccuracy.phases.map((row) => <section key={`${row.phase}-${row.capability}`} className="system-predictive-capability">
+      {truthAccuracy.phases.map((row) => <section key={`${row.phase}-${row.capability}`} className="system-predictive-capability">
         <strong>{row.phase} · {row.capability}</strong>
         <dl>
           <Field label={truthCopy.confirmed} value={formatNumber(row.cohort.confirmed, 0, dictionary.locale)} />
@@ -464,7 +467,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     </div>
     <div className="system-card-header"><div><h3>{truthCopy.confidenceHeading}</h3></div></div>
     <div className="system-predictive-capabilities" data-testid="truth-accuracy-confidence">
-      {report.truthAccuracy.confidence.map((row) => <section key={`${row.capability}-${row.confidence}`} className="system-predictive-capability">
+      {truthAccuracy.confidence.map((row) => <section key={`${row.capability}-${row.confidence}`} className="system-predictive-capability">
         <div className="system-predictive-capability-heading"><strong>{row.capability} · {row.confidence}</strong></div>
         <dl>
           <Field label={truthCopy.confirmed} value={formatNumber(row.confirmed, 0, dictionary.locale)} />
@@ -473,6 +476,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       </section>)}
     </div>
     <p className="system-predictive-reasons">{truthCopy.disclaimer}</p>
+    </> : null}
     <div className="system-card-header" data-testid="predictive-horizon-quality-heading">
       <div>
         <h2>{dictionary.system.predictiveHorizonTitle}</h2>
