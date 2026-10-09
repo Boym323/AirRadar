@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   getAircraftStateService: vi.fn(),
   isDatabaseConfigured: vi.fn(() => true),
   getPrisma: vi.fn(),
-  getAtcData: vi.fn(),
+  getAtcMetadata: vi.fn(),
   toPublicHealthResponse: vi.fn((_snapshot, database, _at, atc) => ({ status: "ok", database, atc })),
   measureRuntimeAsync: vi.fn((_name, _count, operation) => operation()),
   measureRuntime: vi.fn((_name, _count, operation) => operation()),
@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/server/rate-limit", () => ({ checkPublicRateLimit: mocks.checkPublicRateLimit, rateLimitResponse: mocks.rateLimitResponse }));
 vi.mock("@/lib/server/aircraft-state", () => ({ getAircraftStateService: mocks.getAircraftStateService }));
 vi.mock("@/lib/server/db", () => ({ isDatabaseConfigured: mocks.isDatabaseConfigured, getPrisma: mocks.getPrisma }));
-vi.mock("@/lib/server/providers", () => ({ getAtcData: mocks.getAtcData }));
+vi.mock("@/lib/server/providers", () => ({ getAtcMetadata: mocks.getAtcMetadata }));
 vi.mock("@/lib/server/public-health", () => ({ toPublicHealthResponse: mocks.toPublicHealthResponse }));
 vi.mock("@/lib/server/runtime-performance", () => ({ measureRuntimeAsync: mocks.measureRuntimeAsync, measureRuntime: mocks.measureRuntime }));
 
@@ -34,7 +34,7 @@ describe("health dependency deadlines", () => {
       getAlertStatus: vi.fn(() => ({ status: "disabled" })),
     });
     mocks.getPrisma.mockReturnValue({ orm: { public: { Aircraft: { limit: () => ({ all: async () => [] }) } } } });
-    mocks.getAtcData.mockResolvedValue({ metadata: { status: "ok" } });
+    mocks.getAtcMetadata.mockResolvedValue({ status: "configured" });
     mocks.toPublicHealthResponse.mockImplementation((_snapshot, database, _at, atc) => ({ status: "ok", database, atc }));
     mocks.measureRuntimeAsync.mockImplementation((_name, _count, operation) => operation());
     mocks.measureRuntime.mockImplementation((_name, _count, operation) => operation());
@@ -44,7 +44,7 @@ describe("health dependency deadlines", () => {
     const response = await GET(request());
     expect(response.status).toBe(200);
     expect((await response.json()).database.status).toBe("ok");
-    expect(mocks.measureRuntimeAsync.mock.calls.map((call) => call[0])).toEqual(["health.total", "health.ready", "health.database", "health.atc"]);
+    expect(mocks.measureRuntimeAsync.mock.calls.map((call) => call[0])).toEqual(["health.total", "health.ready", "health.event-loop", "health.database", "health.atc"]);
   });
 
   it("starts the database and ATC probes concurrently", async () => {
@@ -55,7 +55,7 @@ describe("health dependency deadlines", () => {
     let databaseCalls = 0;
     let atcCalls = 0;
     mocks.getPrisma.mockReturnValue({ orm: { public: { Aircraft: { limit: () => ({ all: async () => { databaseCalls += 1; await databaseStarted; } }) } } } });
-    mocks.getAtcData.mockImplementation(async () => { atcCalls += 1; await atcStarted; return { metadata: { status: "ok" } }; });
+    mocks.getAtcMetadata.mockImplementation(async () => { atcCalls += 1; await atcStarted; return { status: "configured" }; });
 
     const result = GET(request());
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -94,7 +94,7 @@ describe("health dependency deadlines", () => {
   it("falls back to unavailable ATC metadata on timeout", async () => {
     vi.useFakeTimers();
     try {
-      mocks.getAtcData.mockReturnValue(NEVER);
+      mocks.getAtcMetadata.mockReturnValue(NEVER);
       const result = GET(request());
       await vi.advanceTimersByTimeAsync(1001);
       const response = await result;

@@ -27,7 +27,7 @@ describe("authenticated runtime performance projection", () => {
     const body = await response.json();
     expect(body.phases["health.total"].calls).toBe(5);
     expect(body.phases["health.total"].samplesMs).toBeUndefined();
-    expect(Object.keys(body.phases)).toHaveLength(5);
+    expect(Object.keys(body.phases)).toHaveLength(9);
     expect(body.runtime.status).toBe("disabled");
   });
 });

@@ -4,6 +4,7 @@ import type { AtcSectorProvider } from "@/lib/server/provider";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { isAtcValidityValid } from "@/lib/server/atc-validity";
+import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 
 // DEMO DATA ONLY. These simplified polygons and frequencies are not current
 // Czech AIP data and must never be presented as guaranteed operational data.
@@ -197,6 +198,115 @@ function datasetMetadata(
     sectorCount: sectors.length,
     transmitterCount: transmitters.length,
   };
+}
+
+type AtcMetadataSectorRow = {
+  source: string;
+  sourceReference: string;
+  validFrom: Temporal.Instant | null;
+  validTo: Temporal.Instant | null;
+  lastVerifiedAt: Temporal.Instant;
+};
+
+type AtcMetadataTransmitterRow = {
+  source: string;
+  sourceReference: string;
+  validFrom: Temporal.Instant | null;
+  validTo: Temporal.Instant | null;
+  lastVerifiedAt: Temporal.Instant;
+  frequencyMhz: number;
+};
+
+function metadataSector(row: AtcMetadataSectorRow): AtcSector {
+  return {
+    id: "metadata",
+    name: "metadata",
+    atcCallsign: null,
+    service: null,
+    polygons: [],
+    lowerAltitudeFt: null,
+    upperAltitudeFt: null,
+    frequencies: [],
+    validFrom: row.validFrom?.toString() ?? null,
+    validTo: row.validTo?.toString() ?? null,
+    country: null,
+    source: row.source,
+    sourceReference: row.sourceReference,
+    lastVerifiedAt: row.lastVerifiedAt.toString(),
+    activationStatus: normalizeAtcActivationStatus("UNKNOWN"),
+  };
+}
+
+function metadataTransmitter(row: AtcMetadataTransmitterRow): AtcTransmitter {
+  return {
+    id: "metadata",
+    name: "metadata",
+    latitude: 0,
+    longitude: 0,
+    service: null,
+    frequencyMhz: row.frequencyMhz,
+    notes: null,
+    source: row.source,
+    sourceReference: row.sourceReference,
+    validFrom: row.validFrom?.toString() ?? null,
+    validTo: row.validTo?.toString() ?? null,
+    lastVerifiedAt: row.lastVerifiedAt.toString(),
+  };
+}
+
+function metadataFromRows(
+  sectorRows: AtcMetadataSectorRow[],
+  transmitterRows: AtcMetadataTransmitterRow[],
+): AtcDatasetMetadata {
+  const { sectors, transmitters } = measureRuntime("health.atc.data-transformation", 0, () => ({
+    sectors: sectorRows.filter((row) => isAtcValidityValid(row.validFrom?.toString() ?? null, row.validTo?.toString() ?? null)).map(metadataSector),
+    transmitters: transmitterRows
+      .filter((row) => isSupportedAtcFrequencyMhz(row.frequencyMhz))
+      .filter((row) => isAtcValidityValid(row.validFrom?.toString() ?? null, row.validTo?.toString() ?? null))
+      .map(metadataTransmitter),
+  }));
+  return measureRuntime("health.atc.metadata-assembly", 0, () => datasetMetadata(
+    sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters,
+  ));
+}
+
+const globalAtcMetadata = globalThis as typeof globalThis & {
+  __airRadarAtcMetadata?: { value: AtcDatasetMetadata; expiresAtMs: number };
+  __airRadarAtcMetadataFlight?: Promise<AtcDatasetMetadata | null>;
+};
+const ATC_METADATA_CACHE_MS = 30_000;
+
+/** Health-only projection: it deliberately never selects or parses polygon geometry. */
+export async function getStoredAtcMetadata(): Promise<AtcDatasetMetadata | null> {
+  const cached = globalAtcMetadata.__airRadarAtcMetadata;
+  if (cached && cached.expiresAtMs > Date.now()) return cached.value;
+  if (globalAtcMetadata.__airRadarAtcMetadataFlight) return globalAtcMetadata.__airRadarAtcMetadataFlight;
+
+  const flight = (async () => {
+    const database = getPrisma();
+    if (!database) return null;
+    try {
+      const [sectorRows, transmitterRows] = await measureRuntimeAsync("health.atc.db-query", 0, () => Promise.all([
+        trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcSector
+          .select("source", "sourceReference", "validFrom", "validTo", "lastVerifiedAt").limit(2000).all()),
+        trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcTransmitter
+          .select("source", "sourceReference", "validFrom", "validTo", "lastVerifiedAt", "frequencyMhz").limit(2000).all()),
+      ]));
+      const metadata = metadataFromRows(sectorRows, transmitterRows);
+      globalAtcMetadata.__airRadarAtcMetadata = { value: metadata, expiresAtMs: Date.now() + ATC_METADATA_CACHE_MS };
+      return metadata;
+    } catch (error) {
+      console.error("AirRadar stored ATC metadata unavailable", error);
+      return null;
+    }
+  })();
+  globalAtcMetadata.__airRadarAtcMetadataFlight = flight;
+  try { return await flight; } finally { delete globalAtcMetadata.__airRadarAtcMetadataFlight; }
+}
+
+export function resetAtcMetadataCacheForTests(): void {
+  delete globalAtcMetadata.__airRadarAtcMetadata;
+  delete globalAtcMetadata.__airRadarAtcMetadataFlight;
 }
 
 export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
