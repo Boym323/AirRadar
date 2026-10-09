@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "status": "partial",
+  "endpoint": "/api/health",
+  "windows": [
+    { "id": 1, "samplesPerPath": 10, "startedAtUtc": "2026-10-09T13:04:11Z", "endedAtUtc": "2026-10-09T13:05:20Z" },
+    { "id": 2, "samplesPerPath": 10, "startedAtUtc": "2026-10-09T13:05:48Z", "endedAtUtc": "2026-10-09T13:06:53Z" },
+    { "id": 3, "samplesPerPath": 10, "startedAtUtc": "2026-10-09T13:07:20Z", "endedAtUtc": "2026-10-09T13:08:24Z" }
+  ],
+  "observed": { "local": { "calls": 30, "http200": 30, "timeouts": 0, "errors": 0 }, "public": { "calls": 30, "http200": 30, "timeouts": 0, "errors": 0 } },
+  "phaseMetrics": {
+    "health.total": { "status": "not_retrievable", "reason": "Runtime performance store is process-local and no authenticated internal telemetry session was available." },
+    "health.ready": { "status": "not_retrievable" },
+    "health.snapshot": { "status": "not_retrievable" },
+    "health.database": { "status": "not_retrievable" },
+    "health.atc": { "status": "not_retrievable" }
+  },
+  "conclusion": "The phase-level production culprit cannot be proven from the public contract. The direct backend path is slow, but its internal phase split and event-loop wait are unavailable."
+}

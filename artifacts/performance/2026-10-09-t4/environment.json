@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "status": "complete_with_observability_limits",
+  "auditDate": "2026-10-09",
+  "production": {
+    "applicationVersion": "1.0.379",
+    "commit": "9012aae9",
+    "pr656Present": true,
+    "pr657Present": true,
+    "buildTimeUtc": "2026-10-09T12:52:10Z",
+    "service": "airradar.service",
+    "mainPid": 236403,
+    "startedAt": "2026-10-09T12:59:03Z",
+    "restartCount": 0,
+    "active": true,
+    "adsbIngest": "healthy",
+    "database": "healthy"
+  },
+  "checkout": { "commit": "9c189a96", "note": "Checkout is newer than the deployed standalone build; audit targets the running service." },
+  "diagnosticAccess": {
+    "publicHealth": "available",
+    "publicSystemStatus": "available_sanitized",
+    "internalRuntimeTelemetry": "unavailable_without_authenticated_watchlist_session",
+    "phaseMetrics": "not externally retrievable",
+    "pgStatStatements": "not installed; not changed",
+    "eventLoopLagAndGc": "not exposed; inspector/profiling not enabled"
+  },
+  "privacy": "No credentials, database URLs, internal addresses, client identifiers, or raw logs are included."
+}
