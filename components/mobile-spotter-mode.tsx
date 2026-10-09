@@ -22,12 +22,13 @@ import { rankUpcomingSky } from "@/lib/spotter-upcoming";
 import { SPOTTER_LOGBOOK_STORAGE_KEY, SPOTTER_LOGBOOK_VERSION, addSpotterLogbookEntry, createSpotterLogbookEntry, parseSpotterLogbook, serializeSpotterLogbook, spotterLogbookReplayHref, spotterLogbookStats, type SpotterLogbookState } from "@/lib/spotter-logbook";
 import type { SpotterSavedSpot } from "@/lib/server/spotter-saved-spots";
 import { buildSpotterShareCardSvg, spotterShareFilename } from "@/lib/spotter-share-card";
-import { observerFromGeolocation, observerGeometry, predictClosestApproach, type SpotterObserverPosition } from "@/lib/spotter-location";
+import { observerGeometry, predictClosestApproach } from "@/lib/spotter-location";
 import { evaluateVisualAcquisition, nearestMetarObservation } from "@/lib/spotter-visual-acquisition";
 import { lightGeometry, solarPosition } from "@/lib/spotter-sun-geometry";
 import { scorePhotoOpportunity } from "@/lib/spotter-photo-opportunity";
 import { buildSpotterBriefing } from "@/lib/spotter-briefing";
 import { buildMySkyFocus, selectMySkyFocus } from "@/lib/spotter-focus";
+import { useSpotterObserver } from "@/components/use-spotter-observer";
 import { MY_SKY_FAVORITES_CHANGED_EVENT, MY_SKY_FAVORITES_STORAGE_KEY, parseMySkyFavorites, serializeMySkyFavorites, toggleMySkyFavorite, type MySkyFavorites } from "@/lib/spotter-personalization";
 import { FollowJourneyButton } from "@/components/follow-journey-button";
 import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
@@ -35,7 +36,6 @@ import { browserConnectionHints, spotterRuntimeBudget, type SpotterRuntimeBudget
 import styles from "./mobile-spotter-mode.module.css";
 
 type SpotterDistanceOrigin = "receiver" | "observer";
-type ObserverState = "idle" | "requesting" | "ready" | "denied" | "unavailable" | "error";
 
 export function MobileSpotterMode() {
   const copy = t.spotter;
@@ -53,8 +53,6 @@ export function MobileSpotterMode() {
   const [selectedMySkyHex, setSelectedMySkyHex] = useState<string | null>(null);
   const [mySkyFavorites, setMySkyFavorites] = useState<MySkyFavorites>({ version: 1, icaoHexes: [] });
   const [favoriteStorageError, setFavoriteStorageError] = useState(false);
-  const [observer, setObserver] = useState<SpotterObserverPosition | null>(null);
-  const [observerState, setObserverState] = useState<ObserverState>("idle");
   const [historyTracks, setHistoryTracks] = useState<HistoricalAircraftTrack[]>([]);
   const [historyState, setHistoryState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [historyTruncated, setHistoryTruncated] = useState(false);
@@ -80,6 +78,7 @@ export function MobileSpotterMode() {
   const [prgSpottingState, setPrgSpottingState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [pageVisible, setPageVisible] = useState(true);
   const [runtimeBudget, setRuntimeBudget] = useState<SpotterRuntimeBudget>(() => spotterRuntimeBudget());
+  const { observer, observerState } = useSpotterObserver(pageVisible && distanceOrigin === "observer", runtimeBudget.enableHighAccuracyGeolocation);
 
   const onSnapshot = useCallback((next: PublicStateSnapshot) => setSnapshot(next), []);
   const onSelectedAircraftRemoved = useCallback(() => undefined, []);
@@ -183,32 +182,6 @@ export function MobileSpotterMode() {
       });
     return () => controller.abort();
   }, [pageVisible]);
-
-  useEffect(() => {
-    if (!pageVisible || distanceOrigin !== "observer") return;
-    if (!("geolocation" in navigator)) {
-      setObserver(null);
-      setObserverState("unavailable");
-      return;
-    }
-    setObserverState("requesting");
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        setObserver(observerFromGeolocation(position));
-        setObserverState("ready");
-      },
-      (error) => {
-        setObserver(null);
-        setObserverState(error.code === error.PERMISSION_DENIED ? "denied" : "error");
-      },
-      {
-        enableHighAccuracy: runtimeBudget.enableHighAccuracyGeolocation,
-        maximumAge: runtimeBudget.enableHighAccuracyGeolocation ? 15_000 : 60_000,
-        timeout: 10_000,
-      },
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [distanceOrigin, pageVisible, runtimeBudget.enableHighAccuracyGeolocation]);
 
   useEffect(() => {
     if (!pageVisible) return;
