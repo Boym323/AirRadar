@@ -17,6 +17,49 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.386] - 2026-10-09
+
+Changes since v1.0.385.
+
+**Features touched:** Navigation Integrity.
+
+### Fixed
+
+- Make navigation integrity persistence idempotent (8c4af185)
+- Preserve distinct same-minute observations with atomic insert-or-skip (1a8ea3dc)
+- Use rc9-compatible atomic upsert while retaining v2 observation identity (870716d1)
+
+### Performance
+
+- Document health latency evidence (17bfb55c)
+
+### Documentation
+
+- Reconcile report with corrected P0 same-minute persistence semantics (8ac4550d)
+- Record rc9 conflict-skip limitation and compatible P0 self-update (39972d8b)
+
+### Maintenance
+
+- Sync generated repository metadata (#676) (e7ae1344)
+- Verify duplicate skip, same-minute movement and state preservation (0d12b3fb)
+- Validate rc9 native upsert contract and same-minute history preservation (305418e9)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: make navigation integrity persistence idempotent (8c4af185)
+- perf: document health latency evidence (17bfb55c)
+- chore(metadata): sync generated repository metadata (#676) (e7ae1344)
+- fix(navigation): preserve distinct same-minute observations with atomic insert-or-skip (1a8ea3dc)
+- test(navigation): verify duplicate skip, same-minute movement and state preservation (0d12b3fb)
+- docs(t50): reconcile report with corrected P0 same-minute persistence semantics (8ac4550d)
+- fix(navigation): use rc9-compatible atomic upsert while retaining v2 observation identity (870716d1)
+- test(navigation): validate rc9 native upsert contract and same-minute history preservation (305418e9)
+- docs(t50): record rc9 conflict-skip limitation and compatible P0 self-update (39972d8b)
+- Merge pull request #675 from Boym323/fix/t50-navigation-persistence (41547ddc)
+- Merge pull request #674 from Boym323/perf/t50-health-latency (a1f63b1e)
+
+</details>
 ## [1.0.385] - 2026-10-09
 
 Changes since v1.0.384.
