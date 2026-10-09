@@ -17,7 +17,7 @@ MOVED=0
 SWAPPED=0
 
 usage() {
-  echo "Usage: sudo ./deploy/recover-previous-build.sh [--apply --acknowledge-schema-compatible --expected-active BUILD_ID --expected-previous BUILD_ID]"
+  echo "Usage: sudo bash deploy/recover-previous-build.sh [--apply --acknowledge-schema-compatible --expected-active BUILD_ID --expected-previous BUILD_ID]"
   echo "Default: read-only inspection. Explicit acknowledgement means an operator verified database/schema compatibility."
 }
 
