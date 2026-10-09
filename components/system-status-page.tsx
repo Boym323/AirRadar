@@ -13,6 +13,7 @@ import type {
 } from "@/lib/predictive-intelligence/graduation-calibration";
 import { useLocale } from "@/components/locale-provider";
 import { operationalHealthLabels } from "@/lib/i18n/operational-health";
+import { truthAccuracyText } from "@/lib/i18n/truth-accuracy-e";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 import { SystemRuntimeTimeline } from "@/components/system-runtime-timeline";
 
@@ -208,6 +209,7 @@ function predictiveCalibrationMargin(
 }
 
 function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveReadinessReport; dictionary: LocaleDictionary }) {
+  const truthCopy = truthAccuracyText(dictionary.locale);
   const policies = (policy: PredictiveReadinessReport["configuredPolicy"]) =>
     (["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"] as const).map((key) => `${key} ${policy[key]}`).join(" · ");
   const capabilities = [
@@ -408,6 +410,69 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       })}
     </div>
     <p className="system-predictive-reasons">{dictionary.system.predictiveTrendDisclaimer}</p>
+    <div className="system-card-header" data-testid="truth-accuracy-e-heading">
+      <div><h2>{truthCopy.heading}</h2><p className="system-card-subtitle">{truthCopy.subtitle}</p></div>
+      <UiStatusBadge variant={report.truthAccuracy.decision === "MONITOR" ? "neutral" : "warning"}>
+        {truthCopy.decisions[report.truthAccuracy.decision]}
+      </UiStatusBadge>
+    </div>
+    <div className="system-predictive-capabilities" data-testid="truth-accuracy-e">
+      {(["ETA", "RUNWAY"] as const).map((capability) => {
+        const cohort = report.truthAccuracy.truth[capability];
+        return <section key={capability} className="system-predictive-capability">
+          <div className="system-predictive-capability-heading"><strong>{capability}</strong></div>
+          <dl>
+            <Field label={truthCopy.flights} value={formatNumber(cohort.flights, 0, dictionary.locale)} />
+            <Field label={truthCopy.confirmed} value={formatNumber(cohort.confirmed, 0, dictionary.locale)} />
+            <Field label={truthCopy.coverage} value={formatPredictivePercent(cohort.coverage, dictionary)} />
+            <Field label={capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
+              value={capability === "ETA"
+                ? formatPredictiveError(report.truthAccuracy.decision === "MONITOR" || report.truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.etaMaeSeconds : null, dictionary)
+                : formatPredictivePercent(report.truthAccuracy.decision === "MONITOR" || report.truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.exactRunwayAccuracy : null, dictionary)} />
+          </dl>
+        </section>;
+      })}
+    </div>
+    <div className="system-card-header"><div><h3>{truthCopy.airportHeading}</h3></div></div>
+    <div className="system-predictive-capabilities" data-testid="truth-accuracy-airports">
+      {report.truthAccuracy.airports.map((row) => <section key={`${row.airport}-${row.capability}`} className="system-predictive-capability">
+        <div className="system-predictive-capability-heading"><strong>{row.airport} · {row.capability}</strong>
+          <UiStatusBadge variant={row.state === "MEASURED" ? "neutral" : "warning"}>
+            {row.state === "MEASURED" ? truthCopy.measured : row.state === "COLLECTION_INCOMPLETE" ? truthCopy.incomplete : truthCopy.insufficient}
+          </UiStatusBadge>
+        </div>
+        <dl>
+          <Field label={truthCopy.confirmed} value={formatNumber(row.cohort.confirmed, 0, dictionary.locale)} />
+          <Field label={row.capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
+            value={row.capability === "ETA" ? formatPredictiveError(row.cohort.etaMaeSeconds, dictionary)
+              : formatPredictivePercent(row.cohort.exactRunwayAccuracy, dictionary)} />
+        </dl>
+      </section>)}
+      {!report.truthAccuracy.airports.length && <p>{truthCopy.noTruth}</p>}
+    </div>
+    <div className="system-card-header"><div><h3>{truthCopy.phaseHeading}</h3></div></div>
+    <div className="system-predictive-capabilities" data-testid="truth-accuracy-phases">
+      {report.truthAccuracy.phases.map((row) => <section key={`${row.phase}-${row.capability}`} className="system-predictive-capability">
+        <strong>{row.phase} · {row.capability}</strong>
+        <dl>
+          <Field label={truthCopy.confirmed} value={formatNumber(row.cohort.confirmed, 0, dictionary.locale)} />
+          <Field label={row.capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
+            value={row.capability === "ETA" ? formatPredictiveError(row.cohort.etaMaeSeconds, dictionary)
+              : formatPredictivePercent(row.cohort.exactRunwayAccuracy, dictionary)} />
+        </dl>
+      </section>)}
+    </div>
+    <div className="system-card-header"><div><h3>{truthCopy.confidenceHeading}</h3></div></div>
+    <div className="system-predictive-capabilities" data-testid="truth-accuracy-confidence">
+      {report.truthAccuracy.confidence.map((row) => <section key={`${row.capability}-${row.confidence}`} className="system-predictive-capability">
+        <div className="system-predictive-capability-heading"><strong>{row.capability} · {row.confidence}</strong></div>
+        <dl>
+          <Field label={truthCopy.confirmed} value={formatNumber(row.confirmed, 0, dictionary.locale)} />
+          <Field label={truthCopy.confidenceRule} value={formatPredictivePercent(row.successRate, dictionary)} />
+        </dl>
+      </section>)}
+    </div>
+    <p className="system-predictive-reasons">{truthCopy.disclaimer}</p>
     <div className="system-card-header" data-testid="predictive-horizon-quality-heading">
       <div>
         <h2>{dictionary.system.predictiveHorizonTitle}</h2>
