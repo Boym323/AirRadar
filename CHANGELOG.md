@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.375] - 2026-10-09
+
+Changes since v1.0.374.
+
+### Performance
+
+- T1/T2 read-only process I/O sampling and optional regression budgets (#646) (7a906753)
+
+### Maintenance
+
+- Sync generated repository metadata (#644) (c3a9953a)
+- Sync generated repository metadata (#645) (1bba4986)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#644) (c3a9953a)
+- chore(metadata): sync generated repository metadata (#645) (1bba4986)
+- perf(audit): T1/T2 read-only process I/O sampling and optional regression budgets (#646) (7a906753)
+
+</details>
 ## [1.0.374] - 2026-10-09
 
 Changes since v1.0.373.
