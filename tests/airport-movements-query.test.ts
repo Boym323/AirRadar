@@ -29,16 +29,29 @@ class FakeQuery<T extends Row> {
       }),
     }) as Record<string, Record<string, (value: unknown) => boolean>>;
   }
-  where(predicate: (fields: Record<string, Record<string, (value: unknown) => boolean>>) => boolean): FakeQuery<T> {
-    const filtered = this.rows.filter((row) => predicate(this.fieldsFor(row)));
+  where(predicate: ((fields: Record<string, Record<string, (value: unknown) => boolean>>) => boolean) | Record<string, unknown>): FakeQuery<T> {
+    const filtered = this.rows.filter((row) => {
+      if (typeof predicate === "function") return predicate(this.fieldsFor(row));
+      return Object.entries(predicate).every(([field, expected]) => {
+        const actual = row[field];
+        if (expected && typeof expected === "object") {
+          const conditions = expected as Record<string, unknown>;
+          return Object.entries(conditions).every(([op, value]) =>
+            op === "in" ? Array.isArray(value) && value.includes(actual) :
+              op === "gte" ? comparable(actual) >= comparable(value) :
+                op === "lt" ? comparable(actual) < comparable(value) : false);
+        }
+        return actual === expected;
+      });
+    });
     return new FakeQuery(filtered);
   }
   include(): FakeQuery<T> { return this; }
   select(): FakeQuery<T> { return this; }
   orderBy(): FakeQuery<T> {
     const sorted = [...this.rows].sort((left, right) => {
-      const leftTime = comparable(left.recordedAt ?? left.startTime);
-      const rightTime = comparable(right.recordedAt ?? right.startTime);
+      const leftTime = comparable(left.recordedAt ?? left.occurredAt ?? left.startTime);
+      const rightTime = comparable(right.recordedAt ?? right.occurredAt ?? right.startTime);
       return rightTime - leftTime || Number(right.id ?? right.flightId ?? 0) - Number(left.id ?? left.flightId ?? 0);
     });
     return new FakeQuery(sorted);
@@ -80,6 +93,29 @@ describe("airport movement query bounds", () => {
     const result = await getAirportMovements(airport, infrastructure, { now: new Date("2026-09-12T12:00:00Z") });
     expect(result).toMatchObject({ complete: false, truncated: true, diagnostics: { flightsExamined: 250, positionsExamined: 251 } });
     expect(result.movements).toEqual([]);
+  });
+
+  it("filters canonical exception events by requested period and kind in the query", async () => {
+    const flight = {id: 1, callsign: "TEST1", registration: null,
+      aircraft: {icaoHex: "ABC001", registration: null}};
+    const positions = [{id: 1, flightId: 1, recordedAt: new Date("2026-09-12T10:00:00Z"),
+      lat: 50, lon: 14, altitude: 2_000, groundSpeed: 220, track: 180, verticalRate: -700}];
+    const events = [
+      {flightId: 1, type: "GO_AROUND", airportIcao: "LKPR", occurredAt: new Date("2026-09-12T11:50:00Z")},
+      {flightId: 1, type: "HOLDING", airportIcao: "LKPR", occurredAt: new Date("2026-09-09T11:00:00Z")},
+      {flightId: 1, type: "LANDING", airportIcao: "LKPR", occurredAt: new Date("2026-09-12T11:30:00Z")},
+      {flightId: 1, type: "GO_AROUND", airportIcao: "LKPR", occurredAt: new Date("2026-09-13T11:00:00Z")},
+    ];
+    vi.mocked(getPrisma).mockReturnValue({orm: {public: {
+      Flight: new FakeQuery([flight]), FlightPosition: new FakeQuery(positions),
+      FlightEvent: new FakeQuery(events),
+    }}} as never);
+    const result = await getAirportMovements(airport, infrastructure, {
+      period: "24h", now: new Date("2026-09-12T12:00:00Z"),
+    });
+    expect(result.eventEvidence?.map(item => item.movement)).toEqual(["GO_AROUND"]);
+    expect(result.eventEvidenceTruncated).toBe(false);
+    expect(result.complete).toBe(true);
   });
 
   it("applies all four geographic envelope limits before selecting flight IDs", async () => {

@@ -118,6 +118,7 @@ interface MovementDatabase {
 const FLIGHT_LIMIT = 250;
 const POSITION_QUERY_LIMIT = 50_000;
 const POSITION_PER_FLIGHT_LIMIT = 240;
+const EVENT_QUERY_LIMIT = 5_000;
 const MOVEMENT_ENVELOPE_KM = 45;
 const AIRPORT_RADIUS_KM = 22;
 const THRESHOLD_RADIUS_KM = 8;
@@ -376,11 +377,21 @@ export async function getAirportMovements(
     truncated ||= flights.length > FLIGHT_LIMIT;
     const candidateFlights = flights.slice(0, FLIGHT_LIMIT);
     const candidateFlightIdSet = new Set(candidateFlights.map((flight) => flight.id));
+    // Only approach-exception events inside the same requested time window
+    // are useful here. Avoid fetching unrelated lifetime FlightEvent history.
     const eventRows = database.orm.public.FlightEvent && candidateFlightIdSet.size > 0
-      ? await database.orm.public.FlightEvent.where({ flightId: { in: [...candidateFlightIdSet] } }).orderBy({ occurredAt: "desc" }).limit(POSITION_QUERY_LIMIT).all()
+      ? await database.orm.public.FlightEvent
+        .where({ flightId: { in: [...candidateFlightIdSet] } })
+        .where({ type: { in: ["GO_AROUND", "HOLDING"] } })
+        .where((event: { occurredAt: { gte(value: unknown): unknown } }) => event.occurredAt.gte(fromInstant))
+        .where((event: { occurredAt: { lt(value: unknown): unknown } }) => event.occurredAt.lt(toInstant))
+        .orderBy({ occurredAt: "desc" }).limit(EVENT_QUERY_LIMIT + 1).all()
       : [];
+    const eventRowsTruncated = eventRows.length > EVENT_QUERY_LIMIT;
+    truncated ||= eventRowsTruncated;
+    const boundedEventRows = eventRows.slice(0, EVENT_QUERY_LIMIT);
     const canonicalEventsByFlight = new Map<number, typeof eventRows>();
-    for (const event of eventRows) {
+    for (const event of boundedEventRows) {
       if (event.flightId === null) continue;
       const current = canonicalEventsByFlight.get(event.flightId) ?? [];
       current.push(event);
@@ -396,9 +407,9 @@ export async function getAirportMovements(
     // Reuse the already fetched canonical FlightEvent batch. These events are
     // evidence only and must not change movement counts or runway usage.
     const eventEvidence: AirportMovement[] = [];
-    let eventEvidenceTruncated = eventRows.length >= POSITION_QUERY_LIMIT;
+    let eventEvidenceTruncated = eventRowsTruncated;
     const flightsById = new Map(candidateFlights.map((flight) => [flight.id, flight]));
-    for (const event of eventRows) {
+    for (const event of boundedEventRows) {
       const flight = event.flightId === null ? null : flightsById.get(event.flightId);
       if (!flight || (event.type !== "GO_AROUND" && event.type !== "HOLDING")
         || (event.airportIcao !== null && event.airportIcao.toUpperCase() !== airport.icaoCode.toUpperCase())) continue;
