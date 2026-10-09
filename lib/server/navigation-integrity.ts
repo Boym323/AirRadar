@@ -58,12 +58,12 @@ function changedMeaningfully(previous: NavigationIntegrityObservation | undefine
   return Date.parse(current.observedAt) - Date.parse(previous.observedAt) >= HEARTBEAT_MS;
 }
 
-async function persistObservation(observation: NavigationIntegrityObservation): Promise<void> {
+export async function persistNavigationIntegrityObservation(observation: NavigationIntegrityObservation): Promise<void> {
   const database = getPrisma();
   if (!database) return;
   const key = dedupKey(observation);
   const schema = database.orm.public;
-  await trackDbOperation("navigation.observation.create", () => schema.NavigationIntegrityObservation.create({
+  const row = {
     dedupKey: key,
     aircraftHex: observation.aircraftHex,
     flightId: observation.flightId,
@@ -82,6 +82,13 @@ async function persistObservation(observation: NavigationIntegrityObservation): 
     quality: observation.quality,
     confidence: observation.confidence,
     provenanceJson: JSON.stringify(observation.provenance),
+  };
+  await trackDbOperation("navigation.observation.create", () => schema.NavigationIntegrityObservation.upsert({
+    // The unique key is the observation identity. An existing row is already
+    // the successful durable result; never rewrite historical evidence.
+    conflictOn: { dedupKey: key },
+    update: {},
+    create: row,
   }));
 }
 
@@ -155,7 +162,7 @@ function queueObservation(observation: NavigationIntegrityObservation): boolean 
           pendingObservations.delete(key);
           try {
             if (!getPrisma()) continue;
-            await persistObservation(item);
+            await persistNavigationIntegrityObservation(item);
             store.diagnostics.persisted += 1;
             store.diagnostics.lastPersistedAt = item.observedAt;
           } catch {

@@ -14,6 +14,13 @@ describe("sanitized database failure taxonomy", () => {
     expect(classifyDbFailure({ code: "SENSITIVE" })).toBe("unknown");
   });
 
+  it("finds structured codes inside ORM wrapper causes without inspecting messages", () => {
+    expect(classifyDbFailure({ code: "WRAPPER", cause: { code: "23505", constraint: "hidden" } })).toBe("constraint");
+    expect(classifyDbFailure({ meta: { driverAdapterError: { sqlState: "57014" } } })).toBe("timeout");
+    expect(classifyDbFailure({ originalError: { sqlstate: "08006" } })).toBe("connection");
+    expect(classifyDbFailure({ cause: { code: "40001" }, code: "P2024" })).toBe("timeout");
+  });
+
   it("counts failures and rethrows the same original error", async () => {
     const err = Object.assign(new Error("never persist my SQL"), { code: "23505" });
     const beforeTx = getDbTransactionFailureFamilies().constraint;
