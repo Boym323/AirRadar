@@ -232,7 +232,7 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.adsbdb.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
     expect(value.mapLayers.radar.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
     expect(value.mapLayers.wind.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
-    expect(JSON.stringify(value)).not.toContain("timeout");
+    expect(JSON.stringify(toPublicSystemStatus(value))).not.toContain("timeout");
   });
 
   it("exposes per-dataset SIGMET freshness and keeps partial degradation visible", () => {

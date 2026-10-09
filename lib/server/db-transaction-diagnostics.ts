@@ -1,4 +1,4 @@
-import { classifyDbFailure, type DbFailureFamily } from "@/lib/server/db-failure-classification";
+import { classifyDbFailure, DB_FAILURE_FAMILIES, type DbFailureFamily } from "@/lib/server/db-failure-classification";
 /**
  * Bounded, process-local attribution for AirRadar-owned explicit DB
  * transactions. This deliberately does not observe SQL or write diagnostics
@@ -17,7 +17,8 @@ export const DB_TRANSACTION_LANES = [
 ] as const;
 
 export type DbTransactionLane = (typeof DB_TRANSACTION_LANES)[number];
-type Bucket = { startedAtMs: number; attempts: number; commits: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number };
+type FailureFamilies = Record<DbFailureFamily, number>;
+type Bucket = { startedAtMs: number; attempts: number; commits: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; failureFamilies: FailureFamilies };
 type LaneState = { attempts: number; commits: number; failures: number; active: number; maxConcurrent: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; buckets: Bucket[] };
 type DbTransactionDiagnosticsStore = {
   startedAtMs: number;
@@ -27,6 +28,9 @@ type DbTransactionDiagnosticsStore = {
 
 const LANE_SET = new Set<string>(DB_TRANSACTION_LANES);
 const failureFamilies: Record<DbFailureFamily, number> = { timeout: 0, constraint: 0, conflict: 0, connection: 0, other: 0, unknown: 0 };
+function emptyFailureFamilies(): FailureFamilies {
+  return Object.fromEntries(DB_FAILURE_FAMILIES.map((family) => [family, 0])) as FailureFamilies;
+}
 const WINDOW_MS = 60 * 60_000;
 const BUCKET_MS = 60_000;
 const globalForDbTransactionDiagnostics = globalThis as typeof globalThis & {
@@ -56,7 +60,7 @@ function bucketFor(value: LaneState, now: number): Bucket {
   const started = Math.floor(now / BUCKET_MS) * BUCKET_MS;
   let bucket = value.buckets[value.buckets.length - 1];
   if (!bucket || bucket.startedAtMs !== started) {
-    bucket = { startedAtMs: started, attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 };
+    bucket = { startedAtMs: started, attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0, failureFamilies: emptyFailureFamilies() };
     value.buckets.push(bucket);
   }
   const cutoff = now - WINDOW_MS;
@@ -74,6 +78,7 @@ export interface DbTransactionDiagnosticsSnapshot {
   diagnosticsStoreId: string;
   startedAt: string;
   uptimeSeconds: number;
+  failureFamilies: Record<"5m" | "15m" | "60m", FailureFamilies>;
   lanes: Record<DbTransactionLane, {
     attempts: number; commits: number; failures: number; active: number; maxConcurrent: number;
     totalDurationMs: number; maxDurationMs: number; workUnits: number;
@@ -90,7 +95,8 @@ function window(value: LaneState, now: number, durationMs: number) {
     totalDurationMs: sum.totalDurationMs + item.totalDurationMs,
     maxDurationMs: Math.max(sum.maxDurationMs, item.maxDurationMs),
     workUnits: sum.workUnits + item.workUnits,
-  }), { attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 });
+    failureFamilies: Object.fromEntries(DB_FAILURE_FAMILIES.map((family) => [family, sum.failureFamilies[family] + item.failureFamilies[family]])) as FailureFamilies,
+  }), { attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0, failureFamilies: emptyFailureFamilies() });
 }
 
 export async function trackDbTransaction<T>(
@@ -102,6 +108,7 @@ export async function trackDbTransaction<T>(
   const value = state(lane);
   const started = Date.now();
   let committed = false;
+  let failureFamily: DbFailureFamily | null = null;
   value.attempts += 1;
   value.active += 1;
   value.maxConcurrent = Math.max(value.maxConcurrent, value.active);
@@ -111,7 +118,8 @@ export async function trackDbTransaction<T>(
     value.commits += 1;
     return result;
   } catch (error) {
-    failureFamilies[classifyDbFailure(error)] += 1;
+    failureFamily = classifyDbFailure(error);
+    failureFamilies[failureFamily] += 1;
     value.failures += 1;
     throw error;
   } finally {
@@ -130,6 +138,7 @@ export async function trackDbTransaction<T>(
       bucket.totalDurationMs += duration;
       bucket.maxDurationMs = Math.max(bucket.maxDurationMs, duration);
       bucket.workUnits += boundedWorkUnits;
+      if (failureFamily) bucket.failureFamilies[failureFamily] += 1;
     } catch {
       // Diagnostics are best effort and must never change DB behavior.
     }
@@ -148,12 +157,19 @@ export function getDbTransactionDiagnostics(now = Date.now()): DbTransactionDiag
       windows: { "5m": window(value, now, 5 * 60_000), "15m": window(value, now, 15 * 60_000), "60m": window(value, now, 60 * 60_000) },
     };
   }
+  const all = [...store.lanes.values()];
+  const aggregate = (durationMs: number): FailureFamilies => all.reduce((result, value) => {
+    const families = window(value, now, durationMs).failureFamilies;
+    for (const family of DB_FAILURE_FAMILIES) result[family] += families[family];
+    return result;
+  }, emptyFailureFamilies());
   return {
     scope: "process-local",
     processId: process.pid,
     diagnosticsStoreId: store.storeId,
     startedAt: new Date(store.startedAtMs).toISOString(),
     uptimeSeconds: Math.max(0, (now - store.startedAtMs) / 1000),
+    failureFamilies: { "5m": aggregate(5 * 60_000), "15m": aggregate(15 * 60_000), "60m": aggregate(60 * 60_000) },
     lanes: result,
   };
 }

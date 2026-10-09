@@ -1,4 +1,4 @@
-import { classifyDbFailure, type DbFailureFamily } from "@/lib/server/db-failure-classification";
+import { classifyDbFailure, DB_FAILURE_FAMILIES, type DbFailureFamily } from "@/lib/server/db-failure-classification";
 /** Best-effort attribution for standalone ORM calls (PostgreSQL autocommit candidates). */
 export const DB_OPERATION_LANES = [
   "navigation.observation.create",
@@ -38,11 +38,15 @@ export const DB_OPERATION_LANES = [
 export type DbOperationLane = (typeof DB_OPERATION_LANES)[number];
 export type DbOperationKind = "READ" | "WRITE";
 export type DbOperationType = "SELECT" | "INSERT" | "UPDATE" | "UPSERT" | "DELETE" | "OTHER";
-type Bucket = { startedAtMs: number; attempts: number; successes: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number };
+type FailureFamilies = Record<DbFailureFamily, number>;
+type Bucket = { startedAtMs: number; attempts: number; successes: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; failureFamilies: FailureFamilies };
 type LaneState = { attempts: number; successes: number; failures: number; active: number; maxConcurrent: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; buckets: Bucket[] };
 type Store = { startedAtMs: number; storeId: string; lanes: Map<DbOperationLane, LaneState> };
 
 const failureFamilies: Record<DbFailureFamily, number> = { timeout: 0, constraint: 0, conflict: 0, connection: 0, other: 0, unknown: 0 };
+function emptyFailureFamilies(): FailureFamilies {
+  return Object.fromEntries(DB_FAILURE_FAMILIES.map((family) => [family, 0])) as FailureFamilies;
+}
 const WINDOW_MS = 60 * 60_000;
 const BUCKET_MS = 60_000;
 const laneSet = new Set<string>(DB_OPERATION_LANES);
@@ -66,7 +70,7 @@ function bucket(state: LaneState, now: number): Bucket {
   const startedAtMs = Math.floor(now / BUCKET_MS) * BUCKET_MS;
   let value = state.buckets.at(-1);
   if (!value || value.startedAtMs !== startedAtMs) {
-    value = { startedAtMs, attempts: 0, successes: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 };
+    value = { startedAtMs, attempts: 0, successes: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0, failureFamilies: emptyFailureFamilies() };
     state.buckets.push(value);
   }
   while (state.buckets[0] && state.buckets[0].startedAtMs < now - WINDOW_MS) state.buckets.shift();
@@ -81,7 +85,8 @@ function sum(state: LaneState, now: number, durationMs: number) {
     totalDurationMs: result.totalDurationMs + item.totalDurationMs,
     maxDurationMs: Math.max(result.maxDurationMs, item.maxDurationMs),
     workUnits: result.workUnits + item.workUnits,
-  }), { attempts: 0, successes: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 });
+    failureFamilies: Object.fromEntries(DB_FAILURE_FAMILIES.map((family) => [family, result.failureFamilies[family] + item.failureFamilies[family]])) as FailureFamilies,
+  }), { attempts: 0, successes: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0, failureFamilies: emptyFailureFamilies() });
 }
 
 export interface DbOperationDiagnosticsSnapshot {
@@ -90,6 +95,7 @@ export interface DbOperationDiagnosticsSnapshot {
   diagnosticsStoreId: string;
   startedAt: string;
   uptimeSeconds: number;
+  failureFamilies: Record<"5m" | "15m" | "60m", FailureFamilies>;
   lanes: Record<DbOperationLane, { kind: DbOperationKind; operation: DbOperationType; autocommit: true; attempts: number; successes: number; failures: number; active: number; maxConcurrent: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; windows: Record<"5m" | "15m" | "60m", ReturnType<typeof sum>> }>;
 }
 
@@ -134,13 +140,14 @@ export async function trackDbOperation<T>(lane: DbOperationLane, operation: () =
   const started = Date.now();
   state.attempts += 1; state.active += 1; state.maxConcurrent = Math.max(state.maxConcurrent, state.active);
   let success = false;
+  let failureFamily: DbFailureFamily | null = null;
   try { const result = await operation(); success = true; state.successes += 1; return result; }
-  catch (error) { failureFamilies[classifyDbFailure(error)] += 1; state.failures += 1; throw error; }
+  catch (error) { failureFamily = classifyDbFailure(error); failureFamilies[failureFamily] += 1; state.failures += 1; throw error; }
   finally {
     try {
       const duration = Math.max(0, Date.now() - started); state.active = Math.max(0, state.active - 1);
       state.totalDurationMs += duration; state.maxDurationMs = Math.max(state.maxDurationMs, duration);
-      const current = bucket(state, Date.now()); current.attempts += 1; current.workUnits += Math.max(0, workUnits); current.totalDurationMs += duration; current.maxDurationMs = Math.max(current.maxDurationMs, duration); if (success) current.successes += 1; else current.failures += 1;
+      const current = bucket(state, Date.now()); current.attempts += 1; current.workUnits += Math.max(0, workUnits); current.totalDurationMs += duration; current.maxDurationMs = Math.max(current.maxDurationMs, duration); if (success) current.successes += 1; else { current.failures += 1; if (failureFamily) current.failureFamilies[failureFamily] += 1; }
     } catch { /* diagnostics cannot change application behavior */ }
   }
 }
@@ -151,7 +158,13 @@ export function getDbOperationDiagnostics(now = Date.now()): DbOperationDiagnost
     const state = getLane(lane); while (state.buckets[0] && state.buckets[0].startedAtMs < now - WINDOW_MS) state.buckets.shift();
     lanes[lane] = { ...metadata[lane], autocommit: true, attempts: state.attempts, successes: state.successes, failures: state.failures, active: state.active, maxConcurrent: state.maxConcurrent, totalDurationMs: state.totalDurationMs, maxDurationMs: state.maxDurationMs, workUnits: state.workUnits, windows: { "5m": sum(state, now, 5 * 60_000), "15m": sum(state, now, 15 * 60_000), "60m": sum(state, now, 60 * 60_000) } };
   }
-  return { scope: "process-local", processId: process.pid, diagnosticsStoreId: store.storeId, startedAt: new Date(store.startedAtMs).toISOString(), uptimeSeconds: Math.max(0, (now - store.startedAtMs) / 1000), lanes };
+  const all = [...store.lanes.values()];
+  const aggregate = (durationMs: number): FailureFamilies => all.reduce((result, value) => {
+    const windows = sum(value, now, durationMs).failureFamilies;
+    for (const family of DB_FAILURE_FAMILIES) result[family] += windows[family];
+    return result;
+  }, emptyFailureFamilies());
+  return { scope: "process-local", processId: process.pid, diagnosticsStoreId: store.storeId, startedAt: new Date(store.startedAtMs).toISOString(), uptimeSeconds: Math.max(0, (now - store.startedAtMs) / 1000), failureFamilies: { "5m": aggregate(5 * 60_000), "15m": aggregate(15 * 60_000), "60m": aggregate(60 * 60_000) }, lanes };
 }
 
 export function resetDbOperationDiagnosticsForTests(): void { store.lanes.clear(); }
