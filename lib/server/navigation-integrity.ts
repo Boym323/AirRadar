@@ -68,9 +68,9 @@ function changedMeaningfully(previous: NavigationIntegrityObservation | undefine
   return Date.parse(current.observedAt) - Date.parse(previous.observedAt) >= HEARTBEAT_MS;
 }
 
-export async function persistNavigationIntegrityObservation(observation: NavigationIntegrityObservation): Promise<boolean> {
+export async function persistNavigationIntegrityObservation(observation: NavigationIntegrityObservation): Promise<void> {
   const database = getPrisma();
-  if (!database) return false;
+  if (!database) return;
   const key = dedupKey(observation);
   const schema = database.orm.public;
   const row = {
@@ -93,14 +93,17 @@ export async function persistNavigationIntegrityObservation(observation: Navigat
     confidence: observation.confidence,
     provenanceJson: JSON.stringify(observation.provenance),
   };
-  // Atomic insert-or-skip. Unlike an empty-update upsert this cannot rewrite
-  // historical evidence or race a separate read-before-insert.
-  const inserted = await trackDbOperation("navigation.observation.create", () =>
-    schema.NavigationIntegrityObservation.createAndCount([row], {
-      onConflict: "skip",
-      conflictOn: ["dedupKey"],
+  // ORM 8.0.0-rc.9 has no insert-on-conflict-skip API (added in rc.12).
+  // A non-empty update uses native atomic upsert. Only reassign the same
+  // immutable key on collision; never overwrite a previously stored position,
+  // timestamp, classification, or provenance. PostgreSQL may still touch the
+  // existing tuple, so do not count every successful upsert as a new insert.
+  await trackDbOperation("navigation.observation.create", () =>
+    schema.NavigationIntegrityObservation.upsert({
+      conflictOn: { dedupKey: key },
+      update: { dedupKey: key },
+      create: row,
     }));
-  return inserted > 0;
 }
 
 async function persistAnomaly(anomaly: NavigationIntegrityAnomaly): Promise<void> {
@@ -173,13 +176,11 @@ function queueObservation(observation: NavigationIntegrityObservation): boolean 
           pendingObservations.delete(key);
           try {
             if (!getPrisma()) continue;
-            const inserted = await persistNavigationIntegrityObservation(item);
-            if (inserted) {
-              store.diagnostics.persisted += 1;
-              store.diagnostics.lastPersistedAt = item.observedAt;
-            } else {
-              store.diagnostics.deduplicated += 1;
-            }
+            await persistNavigationIntegrityObservation(item);
+            // A successful upsert confirms durable availability, but cannot
+            // distinguish an insert from a duplicate-key self-update.
+            store.diagnostics.persisted += 1;
+            store.diagnostics.lastPersistedAt = item.observedAt;
           } catch {
             // Retry on the next collection rather than memoizing a failed write.
             if (store.lastPersisted.get(item.aircraftHex) === item) store.lastPersisted.delete(item.aircraftHex);
