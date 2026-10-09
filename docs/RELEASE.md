@@ -244,8 +244,6 @@ a previous build is safe against a migrated database. A failed health gate does
 ```bash
 cd /var/www/airradar
 sudo bash deploy/recover-previous-build.sh
-# After independent confirmation that the previous build works with the
-# currently deployed DB schema, supply the two BUILD_ID values from preview:
 sudo bash deploy/recover-previous-build.sh --apply \\
   --acknowledge-schema-compatible \\
   --expected-active 'ACTIVE_BUILD_ID' --expected-previous 'PREVIOUS_BUILD_ID'
