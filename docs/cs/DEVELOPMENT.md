@@ -368,3 +368,51 @@ neresetujte ani znovu nevytvářejte produkční databázi bez konkrétního
 požadavku a revize. Změny databázového schématu vyžadují kontrakt i dopřednou
 migraci. Změny providerů nebo enrichmentu musí zachovat best-effort izolaci,
 omezené cache/concurrency a živou polling cestu.
+
+## Bezpečnostní CSP a kontrola aktualizace Prisma RC
+
+### Striktní nonce pro skripty na dynamické stránce systému
+
+Existující `/system` používá `force-dynamic`. Volitelný Next 16
+`proxy.ts` obsluhuje výhradně tuto stránku. Výchozí stav
+`AIRRADAR_STRICT_CSP_SYSTEM_ENABLED` je vypnuto. Ostatní stránky radaru
+zůstávají na stávající politice z `next.config.ts`. Pro ověření **jen na
+DEV** nastavte `AIRRADAR_STRICT_CSP_SYSTEM_ENABLED=true`, restartujte DEV a
+zkontrolujte prohlížeč, načítání JS/CSS, přechody mezi stránkami a panely
+systémových událostí. Každý HTTP požadavek dostane kryptograficky náhodný
+128bitový nonce, který musí shodně dorazit do Next request i response
+hlaviček. Režim zakazuje `unsafe-inline` pouze u **script-src**;
+style-src ještě potřebuje samostatnou migraci. Bez browserových a
+výkonnostních testů jej v produkci nepovolujte.
+
+Přímé čtení skutečných HTTP hlaviček na DEV:
+
+```bash
+npm run ops:audit:headers -- --origin http://127.0.0.1:3000 --require-hardened --require-nonce
+```
+
+Skript nic nezapisuje: kontroluje geolokaci povolenou jen pro vlastní web,
+omezení objektů/framů a unikátní nonce ve dvou požadavcích. Volba
+`--require-nonce` má smysl až po explicitním zapnutí DEV režimu. Navíc
+ověřte desktop a mobilní browser gate bez CSP chyb a zachování odezvy.
+Běžný radar zůstává staticky vykreslovaný.
+
+### Bezpečnostní brána aktualizace Prisma 8 RC
+
+Projekt používá starší přesně připnuté Prisma 8 RC. Novější RC mění implicitní
+jména SQL tabulek. Nesmí se naslepo změnit verze a spustit
+`prisma:deploy` proti produkci. Nejdříve spusťte kontrolu pouze pro čtení:
+
+```bash
+npm run prisma:upgrade:preflight -- --print-candidates
+# Pouze na obnovené DEV databázi PostgreSQL:
+psql "$DEV_DATABASE_URL" -Atqc "SELECT coalesce(json_agg(tablename ORDER BY tablename), '[]'::json) FROM pg_catalog.pg_tables WHERE schemaname='public';" > /tmp/airradar-dev-table-catalog.json
+npm run prisma:upgrade:preflight -- --catalog-json /tmp/airradar-dev-table-catalog.json --require-safe
+```
+
+Nenamapovaný model nebo chybějící katalog musí kontrolu
+`--require-safe` zastavit. Kandidátní historická jména nejsou důkazem;
+ověřte fyzické tabulky, připravte odpovídající `@@map` na samostatné větvi
+a otestujte emitovaný kontrakt, rozdíly migrací a dotazy se skutečnými
+obnovenými DEV daty. CLI a runtime aktualizujte v kompatibilní dvojici
+podle vydaných verzí. Bez destruktivního zásahu do produkční databáze.
