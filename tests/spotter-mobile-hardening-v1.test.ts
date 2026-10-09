@@ -9,6 +9,7 @@ import {
 describe("Spotter Mobile Hardening V1", () => {
   const component = readFileSync(new URL("../components/mobile-spotter-mode.tsx", import.meta.url), "utf8");
   const stream = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
+  const observerHook = readFileSync(new URL("../components/use-spotter-observer.ts", import.meta.url), "utf8");
 
   it("suspends the canonical aircraft stream while the page is hidden", () => {
     expect(component).toContain("document.visibilityState");
@@ -19,8 +20,9 @@ describe("Spotter Mobile Hardening V1", () => {
   });
 
   it("ties GPS, device orientation and background refreshes to page visibility", () => {
-    expect(component).toContain('if (!pageVisible || distanceOrigin !== "observer") return;');
-    expect(component).toContain("navigator.geolocation.clearWatch");
+    expect(component).toContain('useSpotterObserver(pageVisible && distanceOrigin === "observer"');
+    expect(observerHook).toContain("if (!enabled) return;");
+    expect(observerHook).toContain("navigator.geolocation.clearWatch");
     expect(component).toContain('if (!skyFinderEnabled || !pageVisible)');
     expect(component).toContain("runtimeBudget.prgRefreshMs");
     expect(component).toContain("runtimeBudget.metarRefreshMs");
