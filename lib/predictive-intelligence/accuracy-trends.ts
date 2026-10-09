@@ -22,6 +22,9 @@ export interface PredictiveTrendSample {
   scored: boolean;
   etaAbsoluteErrorSeconds?: number | null;
   runwayExactEnd?: boolean | null;
+  destinationIcao?: string | null;
+  flightPhase?: string | null;
+  predictionConfidence?: string | null;
 }
 
 export interface PredictiveTrendPeriod {

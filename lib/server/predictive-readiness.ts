@@ -21,6 +21,7 @@ import { buildPredictiveCaptureHealth, type PredictiveCaptureHealth } from "@/li
 import { buildPredictiveAccuracyTrends, type PredictiveAccuracyTrends, type PredictiveTrendSample } from "@/lib/predictive-intelligence/accuracy-trends";
 import { buildPredictiveHorizonQuality, type PredictiveHorizonQuality, type PredictiveHorizonObservation } from "@/lib/predictive-intelligence/horizon-quality";
 import { buildPredictiveEvidencePlan, type PredictiveEvidencePlan } from "@/lib/predictive-intelligence/evidence-plan";
+import { buildTruthAccuracyReport, type TruthAccuracyReport } from "@/lib/predictive-intelligence/truth-accuracy-e";
 import {
   PREDICTIVE_OUTCOME_TRUTH_VERSION,
   scoreRunwayChangeOutcome,
@@ -61,6 +62,8 @@ export interface PredictiveReadinessObservationRow {
   flightId: number | null;
   predictedAt: unknown;
   predictedLandingAt: unknown;
+  flightPhase?: string | null;
+  predictionConfidence?: string | null;
   destinationIcao?: string | null;
   predictedRunway: string | null;
   previousRunway: string | null;
@@ -139,6 +142,7 @@ export interface PredictiveReadinessReport {
   rollout: PredictivePublicRolloutReport;
   captureHealth: PredictiveCaptureHealth;
   accuracyTrends: PredictiveAccuracyTrends;
+  truthAccuracy: TruthAccuracyReport;
   horizonQuality: PredictiveHorizonQuality;
   evidencePlan: PredictiveEvidencePlan;
 }
@@ -432,6 +436,7 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
     ),
     captureHealth,
     accuracyTrends: buildPredictiveAccuracyTrends([], { now, sourceAvailable: false, complete: false }),
+    truthAccuracy: buildTruthAccuracyReport([], { sourceAvailable: false, complete: false }),
     horizonQuality: buildPredictiveHorizonQuality([], { sourceAvailable: false, complete: false }),
     evidencePlan: buildPredictiveEvidencePlan({
       sourceAvailable: false, complete: false, captureHealth,
@@ -629,6 +634,9 @@ export function buildPredictiveReadinessEvidence(
       predictedAtMs: epochMs(row.predictedAt),
       scored: etaScores[index]?.status === "SCORED",
       etaAbsoluteErrorSeconds: etaScores[index]?.absoluteErrorSeconds ?? null,
+      destinationIcao: row.destinationIcao ?? null,
+      flightPhase: row.flightPhase ?? null,
+      predictionConfidence: row.predictionConfidence ?? null,
     })),
     ...runwayRows.map((row, index) => ({
       capability: "RUNWAY" as const,
@@ -637,6 +645,9 @@ export function buildPredictiveReadinessEvidence(
       predictedAtMs: epochMs(row.predictedAt),
       scored: runwayScores[index]?.status === "SCORED",
       runwayExactEnd: runwayScores[index]?.exactEnd ?? null,
+      destinationIcao: row.destinationIcao ?? null,
+      flightPhase: row.flightPhase ?? null,
+      predictionConfidence: row.predictionConfidence ?? null,
     })),
   ];
   const horizonObservations: PredictiveHorizonObservation[] = etaRows.map((row, index) => {
@@ -760,6 +771,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
     ),
     captureHealth,
     accuracyTrends: buildPredictiveAccuracyTrends(trendSamples, { now, sourceAvailable: true, complete }),
+    truthAccuracy: buildTruthAccuracyReport(trendSamples, { sourceAvailable: true, complete }),
     horizonQuality: buildPredictiveHorizonQuality(horizonObservations, { sourceAvailable: true, complete }),
     evidencePlan: buildPredictiveEvidencePlan({
       sourceAvailable: true, complete, captureHealth,

@@ -19,6 +19,7 @@ import { MapTimeController, contextResolutionBucket } from "@/lib/map-time/contr
 import type { MapContextManifest } from "@/lib/server/map-context";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import { FlightProfile } from "@/components/flight-profile";
+import { FlightEvidenceE5Panel } from "@/components/flight-evidence-e5";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import {
   buildFlightStoryNarrative,
@@ -481,6 +482,7 @@ export function FlightDetailPage({ detail, initialAt }: { detail: HistoryFlightD
         {/* Legacy shape: <FlightDetailPanel detail={detail} />; initialAt extends it without changing the route. */}
         <FlightDetailPanel detail={detail} initialAt={initialAt} />
       </section>
+      <FlightEvidenceE5Panel flightId={flight.id} />
     </main>
   );
 }
