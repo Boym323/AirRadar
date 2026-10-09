@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "status": "not_attributed",
+  "process": { "pid": 236403, "identityStable": true, "serviceRestartCountDuringWindow": 0 },
+  "explicitTransactionDiagnostics": { "status": "unavailable", "reason": "Process-local diagnostics are only returned by authenticated admin system status/runtime telemetry." },
+  "autocommitDiagnostics": { "status": "unavailable", "reason": "Same access boundary; public projection removes attribution." },
+  "candidateLanesFromSource": [ "receiver.coverage", "receiver.advanced-stats", "receiver.daily-stats", "history.snapshot", "aircraft-metadata.catalog", "maintenance.airports-sync", "maintenance.atc-import", "operational-twin.calibration" ],
+  "interpretation": "The 4383 PostgreSQL rollbacks cannot be assigned to an application lane. Explicit transaction failures, autocommit failures, read-only transaction endings, timeout, constraint conflict, and other termination classes were not observable in this audit."
+}

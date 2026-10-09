@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "status": "complete_with_partial_runtime_window",
+  "databaseWindow": "2026-10-09T13:04:33Z/2026-10-09T13:19:35Z",
+  "nodeProcess": { "pid": 236403, "samples": 67, "sampledRuntime": "2026-10-09T13:08:34Z/2026-10-09T13:19:25Z", "identityStable": true, "restarts": 0 },
+  "cpuPercent": { "min": 66.9, "average": 72.32, "p50": 72.0, "p95": 76.5, "max": 76.9 },
+  "rssMiB": { "min": 1068.3, "average": 1363.8, "p50": 1453.5, "p95": 1531.1, "max": 1587.9 },
+  "threads": { "min": 11, "max": 11 },
+  "eventLoopLag": { "status": "unavailable" },
+  "gcPauses": { "status": "unavailable" },
+  "correlation": "Sustained CPU/RSS pressure is confirmed, but phase-level health latency cannot be correlated to CPU or DB timing without internal runtime samples aligned to each request."
+}

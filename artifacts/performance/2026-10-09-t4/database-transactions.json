@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "window": { "startedAtUtc": "2026-10-09T13:04:33.837Z", "endedAtUtc": "2026-10-09T13:19:35.920Z", "durationMinutes": 15.0347, "sameDatabaseAndProcess": true, "database": "airradar", "serverVersion": "17.10" },
+  "transactions": { "xactCommitDelta": 10516, "xactRollbackDelta": 4383, "transactionsDelta": 14899, "commitsPerMinute": 699.45, "rollbacksPerMinute": 291.53, "transactionsPerMinute": 990.97, "rollbackShare": 0.294181 },
+  "connections": { "start": { "active": 1, "idle": 5, "idleInTransaction": 5, "waitingLocks": 0 }, "end": { "active": 1, "idle": 10, "idleInTransaction": 0, "waitingLocks": 0 } },
+  "locks": { "startWaiting": 0, "endWaiting": 0, "deadlocksDelta": 0 },
+  "cacheAndTemp": { "blksReadDelta": 9506, "blksHitDelta": 586964, "tempFilesDelta": 0, "tempBytesDelta": 0 },
+  "limits": [ "pg_stat_statements was unavailable and was not installed.", "No maintenance, configuration change, migration, or write was performed." ]
+}

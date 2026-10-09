@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "status": "confirmed_rate_unconfirmed_cause",
+  "postgres": { "rollbackDelta": 4383, "rollbackPerMinute": 291.53, "rollbackShare": 0.294181, "deadlocksDelta": 0, "lockWaitsStart": 0, "lockWaitsEnd": 0 },
+  "tableDeltas": {
+    "flight": { "updates": 3163, "inserts": 60, "deadRowsDelta": 3102 },
+    "flightPosition": { "inserts": 3157, "deadRowsDelta": 0 },
+    "predictiveObservation": { "inserts": 3763, "deadRowsDelta": 32 },
+    "aircraftWeatherObservation": { "inserts": 1620, "deadRowsDelta": 0 },
+    "receiverCoverageHourly": { "updates": 1671, "inserts": 62, "deadRowsDelta": 1127 },
+    "aircraft": { "updates": 156, "inserts": 1, "deadRowsDelta": 4 }
+  },
+  "finding": "High rollback volume is confirmed, but no measured evidence proves which operation caused it. Table write activity is context, not rollback attribution."
+}

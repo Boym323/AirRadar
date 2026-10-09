@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "status": "complete_for_external_timing",
+  "samplesPerPath": 30,
+  "allResponses": "HTTP 200",
+  "localDirect": { "meanSeconds": 1.100907, "p50Seconds": 1.038757, "p95Seconds": 2.215091, "p99Seconds": 2.654474, "maxSeconds": 2.995187, "connectP95Seconds": 0.000140, "ttfbP95Seconds": 2.214908 },
+  "publicHttps": { "meanSeconds": 0.241034, "p50Seconds": 0.188858, "p95Seconds": 0.392275, "p99Seconds": 0.394699, "maxSeconds": 0.418176, "connectP95Seconds": 0.002321, "ttfbP95Seconds": 0.392165 },
+  "proxyOverhead": { "status": "not_positive_in_this_sample", "observation": "Public HTTPS was faster than direct backend access; reverse proxy is not supported as the dominant cause by this measurement." },
+  "caveat": "The paths were sampled sequentially and no internal phase instrumentation was available; this does not identify the slow health phase."
+}
