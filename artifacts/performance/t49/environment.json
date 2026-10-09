@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-09T16:45:23.387Z",
+  "production": {
+    "url": "https://airradar.pomykal.cz",
+    "version": "1.0.384",
+    "commit": "e985bf10",
+    "buildTime": "2026-10-09T16:01:30.000Z",
+    "channel": "production",
+    "nodeVersion": "v22.23.3",
+    "nextVersion": "16.3.8",
+    "environment": "production",
+    "timezone": "Europe/Prague",
+    "startedAt": "2026-10-09T16:08:38.515Z",
+    "uptimeSeconds": 2193.640981047,
+    "pid": 11223
+  },
+  "git": {
+    "head": "40108e97",
+    "branch": "main",
+    "t48Commit": "e985bf10",
+    "pr669Commit": "2db98247",
+    "pr671Commit": "e985bf10"
+  },
+  "service": {
+    "state": "active/running",
+    "pid": 11223,
+    "observedUptimeSeconds": 2193.640981047
+  },
+  "postgresql": {
+    "database": "airradar",
+    "statsResetStart": null,
+    "statsResetEnd": null
+  },
+  "adsb": {
+    "status": "ok",
+    "provider": "local-beast+json-failover",
+    "lastUpdate": "2026-10-09T16:45:21.811Z",
+    "aircraftCount": 77
+  },
+  "sse": {
+    "activeV1": 0,
+    "activeV2": 0,
+    "capacity": 128
+  }
+}

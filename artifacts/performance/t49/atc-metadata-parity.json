@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-09T16:45:23.387Z",
+  "metadataOnly": {
+    "status": "configured",
+    "source": "multiple sources",
+    "sourceReference": null,
+    "effectiveDate": null,
+    "lastVerifiedAt": "2026-10-09T02:37:46.145Z",
+    "sectorCount": 114,
+    "transmitterCount": 0
+  },
+  "fullDatasetMetadata": {
+    "status": "configured",
+    "source": "multiple sources",
+    "sourceReference": null,
+    "effectiveDate": null,
+    "lastVerifiedAt": "2026-10-09T02:37:46.145Z",
+    "sectorCount": 114,
+    "transmitterCount": 0
+  },
+  "fieldParity": {
+    "status": true,
+    "sectorCount": true,
+    "transmitterCount": true,
+    "source": true,
+    "sourceReference": true,
+    "effectiveDate": true,
+    "lastVerifiedAt": true
+  },
+  "fullDatasetShape": {
+    "sectorRows": 114,
+    "transmitterRows": 0
+  },
+  "validityAndFrequencyFiltering": "Both paths returned the same 114 valid sectors and 0 supported transmitters; no served-data discrepancy was observed. Metadata-only filtering is validity-aware and frequency-aware in source code; direct cache hit/miss counters are not exposed."
+}

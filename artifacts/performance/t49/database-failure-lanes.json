@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "window": {
+    "startedAt": "2026-10-09T16:29:37Z",
+    "endedAt": "2026-10-09T16:45:09Z",
+    "durationSeconds": 932
+  },
+  "process": {
+    "pid": 11223,
+    "storeId": "dbop-mv15tuek-ckr0nmyd",
+    "stable": true
+  },
+  "autocommit": {
+    "failureFamilies": {
+      "5m": {
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 555
+      },
+      "15m": {
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 1208
+      },
+      "60m": {
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 2770
+      }
+    },
+    "lanes": [
+      {
+        "lane": "navigation.observation.create",
+        "kind": "WRITE",
+        "operation": "INSERT",
+        "attempts": 4716,
+        "successes": 3508,
+        "failures": 1208,
+        "failureRatio": 0.2561,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 1208,
+        "averageDurationMs": 15.25,
+        "maxDurationMs": 2282
+      },
+      {
+        "lane": "navigation.anomaly.upsert",
+        "kind": "WRITE",
+        "operation": "UPSERT",
+        "attempts": 429,
+        "successes": 429,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 2.54,
+        "maxDurationMs": 199
+      },
+      {
+        "lane": "weather.observation.batch-insert",
+        "kind": "WRITE",
+        "operation": "INSERT",
+        "attempts": 170,
+        "successes": 170,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 1008.76,
+        "maxDurationMs": 2284
+      },
+      {
+        "lane": "aircraft-metadata.cache.lookup",
+        "kind": "READ",
+        "operation": "SELECT",
+        "attempts": 70,
+        "successes": 70,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 101.36,
+        "maxDurationMs": 522
+      },
+      {
+        "lane": "atc.dataset.load",
+        "kind": "READ",
+        "operation": "SELECT",
+        "attempts": 98,
+        "successes": 98,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 105.18,
+        "maxDurationMs": 3418
+      },
+      {
+        "lane": "system-status.db-health.query",
+        "kind": "READ",
+        "operation": "SELECT",
+        "attempts": 23,
+        "successes": 23,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 5.43,
+        "maxDurationMs": 21
+      },
+      {
+        "lane": "system-status.airport-count.query",
+        "kind": "READ",
+        "operation": "SELECT",
+        "attempts": 23,
+        "successes": 23,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 82.17,
+        "maxDurationMs": 97
+      },
+      {
+        "lane": "flight-intelligence.flight-link.query",
+        "kind": "READ",
+        "operation": "SELECT",
+        "attempts": 305,
+        "successes": 305,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 17.18,
+        "maxDurationMs": 141
+      },
+      {
+        "lane": "flight-intelligence.aircraft-link.query",
+        "kind": "READ",
+        "operation": "SELECT",
+        "attempts": 301,
+        "successes": 301,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 1018.7,
+        "maxDurationMs": 2407
+      },
+      {
+        "lane": "flight-intelligence.event.create",
+        "kind": "WRITE",
+        "operation": "INSERT",
+        "attempts": 301,
+        "successes": 301,
+        "failures": 0,
+        "failureRatio": 0,
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0,
+        "averageDurationMs": 7.7,
+        "maxDurationMs": 38
+      }
+    ]
+  },
+  "explicitTransactions": {
+    "failureFamilies": {
+      "5m": {
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0
+      },
+      "15m": {
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0
+      },
+      "60m": {
+        "timeout": 0,
+        "constraint": 0,
+        "conflict": 0,
+        "connection": 0,
+        "other": 0,
+        "unknown": 0
+      }
+    },
+    "nonzeroLanes": [
+      {
+        "lane": "history.snapshot",
+        "attempts": 2761,
+        "commits": 2761,
+        "failures": 0
+      },
+      {
+        "lane": "receiver.daily-stats",
+        "attempts": 26,
+        "commits": 26,
+        "failures": 0
+      },
+      {
+        "lane": "receiver.coverage",
+        "attempts": 7,
+        "commits": 7,
+        "failures": 0
+      },
+      {
+        "lane": "receiver.advanced-stats",
+        "attempts": 26,
+        "commits": 26,
+        "failures": 0
+      },
+      {
+        "lane": "operational-twin.calibration",
+        "attempts": 13,
+        "commits": 13,
+        "failures": 0
+      }
+    ]
+  },
+  "atcDatasetLoad": {
+    "attempts": 98,
+    "failures": 0,
+    "interpretation": "No failures in this window; call volume is process-wide and cannot be compared as a per-request ratio to historical measurements without a matched traffic baseline."
+  },
+  "attribution": "PARTIAL: application failure lanes are not PostgreSQL rollback counts; all observed failure families were unknown."
+}

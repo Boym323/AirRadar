@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "observedAt": {
+    "startedAt": "2026-10-09T16:25:36Z",
+    "endedAt": "2026-10-09T16:29:18Z"
+  },
+  "healthCalls": 60,
+  "cacheEvidence": {
+    "cacheTtlMs": 30000,
+    "healthAtcCalls": 60,
+    "dbQueryCalls": 7,
+    "dbQueryCallsPerHealthCall": 0.117,
+    "interpretation": "Repeated health requests did not issue one DB load per request; DB loads recurred at approximately the 30-second expiry. Direct hit/miss counters are not exposed, so no exact hit ratio is claimed.",
+    "singleFlight": "Production counters show one shared atc.dataset.load lane and no duplicate failure burst; concurrent cold-miss proof remains test-backed, not load-tested in production.",
+    "postFailureRecovery": "No atc.dataset.load failures occurred in the synchronized 15-minute window; subsequent requests remained successful."
+  },
+  "phases": {
+    "atc": {
+      "calls": 60,
+      "totalMs": 143.36,
+      "averageMs": 2.39
+    },
+    "dbQuery": {
+      "calls": 7,
+      "totalMs": 127.38,
+      "averageMs": 18.2
+    },
+    "dataTransformation": {
+      "calls": 7,
+      "totalMs": 9.2
+    },
+    "metadataAssembly": {
+      "calls": 7,
+      "totalMs": 2.69
+    }
+  }
+}

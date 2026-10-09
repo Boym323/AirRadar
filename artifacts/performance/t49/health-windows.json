@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "measurement": {
+    "baseUrl": "https://airradar.pomykal.cz",
+    "endpoint": "/api/health",
+    "requestCount": 60,
+    "frequency": "one request per second; three independent windows of 20",
+    "latencyDefinition": "public HTTPS curl time_total; internal phase values are process-local cumulative deltas",
+    "aggregatePublicHttps": {
+      "count": 60,
+      "averageMs": 2490.91,
+      "p50Ms": 1385.96,
+      "p95Ms": 6312.17,
+      "p99Ms": 6841.17,
+      "maxMs": 6841.17,
+      "timeouts": 0
+    },
+    "windows": [
+      {
+        "window": 1,
+        "startedAt": "2026-10-09T16:25:36Z",
+        "endedAt": "2026-10-09T16:26:44Z",
+        "requestCount": 20,
+        "statuses": [
+          200
+        ],
+        "publicHttps": {
+          "count": 20,
+          "averageMs": 2399.42,
+          "p50Ms": 46.47,
+          "p95Ms": 6493.97,
+          "p99Ms": 6841.17,
+          "maxMs": 6841.17,
+          "timeouts": 0
+        },
+        "internalPhaseDeltas": {
+          "health.total": {
+            "callsDelta": 20,
+            "totalMsDelta": 230.9,
+            "averageMs": 11.54,
+            "cumulativeP50Ms": 6.42,
+            "cumulativeP95Ms": 31.18,
+            "cumulativeP99Ms": 218.75,
+            "cumulativeMaxMs": 218.75
+          },
+          "health.ready": {
+            "callsDelta": 20,
+            "totalMsDelta": 0.67,
+            "averageMs": 0.03,
+            "cumulativeP50Ms": 0.03,
+            "cumulativeP95Ms": 0.11,
+            "cumulativeP99Ms": 92.84,
+            "cumulativeMaxMs": 92.84
+          },
+          "health.snapshot": {
+            "callsDelta": 20,
+            "totalMsDelta": 22.35,
+            "averageMs": 1.12,
+            "cumulativeP50Ms": 1.18,
+            "cumulativeP95Ms": 1.53,
+            "cumulativeP99Ms": 1.83,
+            "cumulativeMaxMs": 1.83
+          },
+          "health.database": {
+            "callsDelta": 20,
+            "totalMsDelta": 182.07,
+            "averageMs": 9.1,
+            "cumulativeP50Ms": 5.05,
+            "cumulativeP95Ms": 29.77,
+            "cumulativeP99Ms": 96.62,
+            "cumulativeMaxMs": 96.62
+          },
+          "health.atc": {
+            "callsDelta": 20,
+            "totalMsDelta": 55.71,
+            "averageMs": 2.79,
+            "cumulativeP50Ms": 0.07,
+            "cumulativeP95Ms": 26.54,
+            "cumulativeP99Ms": 123.06,
+            "cumulativeMaxMs": 123.06
+          },
+          "health.atc.db-query": {
+            "callsDelta": 3,
+            "totalMsDelta": 50.69,
+            "averageMs": 16.9,
+            "cumulativeP50Ms": 13.49,
+            "cumulativeP95Ms": 120.47,
+            "cumulativeP99Ms": 120.47,
+            "cumulativeMaxMs": 120.47
+          },
+          "health.atc.data-transformation": {
+            "callsDelta": 3,
+            "totalMsDelta": 2.43,
+            "averageMs": 0.81,
+            "cumulativeP50Ms": 0.82,
+            "cumulativeP95Ms": 1.74,
+            "cumulativeP99Ms": 1.74,
+            "cumulativeMaxMs": 1.74
+          },
+          "health.atc.metadata-assembly": {
+            "callsDelta": 3,
+            "totalMsDelta": 1.13,
+            "averageMs": 0.38,
+            "cumulativeP50Ms": 0.37,
+            "cumulativeP95Ms": 0.53,
+            "cumulativeP99Ms": 0.53,
+            "cumulativeMaxMs": 0.53
+          },
+          "health.event-loop": {
+            "callsDelta": 20,
+            "totalMsDelta": 7.43,
+            "averageMs": 0.37,
+            "cumulativeP50Ms": 0.33,
+            "cumulativeP95Ms": 0.76,
+            "cumulativeP99Ms": 3.78,
+            "cumulativeMaxMs": 3.78
+          }
+        }
+      },
+      {
+        "window": 2,
+        "startedAt": "2026-10-09T16:26:51Z",
+        "endedAt": "2026-10-09T16:28:00Z",
+        "requestCount": 20,
+        "statuses": [
+          200
+        ],
+        "publicHttps": {
+          "count": 20,
+          "averageMs": 2439.64,
+          "p50Ms": 1385.96,
+          "p95Ms": 5346.48,
+          "p99Ms": 6312.17,
+          "maxMs": 6312.17,
+          "timeouts": 0
+        },
+        "internalPhaseDeltas": {
+          "health.total": {
+            "callsDelta": 20,
+            "totalMsDelta": 235.18,
+            "averageMs": 11.76,
+            "cumulativeP50Ms": 5.43,
+            "cumulativeP95Ms": 34.82,
+            "cumulativeP99Ms": 218.75,
+            "cumulativeMaxMs": 218.75
+          },
+          "health.ready": {
+            "callsDelta": 20,
+            "totalMsDelta": 0.56,
+            "averageMs": 0.03,
+            "cumulativeP50Ms": 0.03,
+            "cumulativeP95Ms": 0.05,
+            "cumulativeP99Ms": 92.84,
+            "cumulativeMaxMs": 92.84
+          },
+          "health.snapshot": {
+            "callsDelta": 20,
+            "totalMsDelta": 26.47,
+            "averageMs": 1.32,
+            "cumulativeP50Ms": 1.17,
+            "cumulativeP95Ms": 1.53,
+            "cumulativeP99Ms": 4.72,
+            "cumulativeMaxMs": 4.72
+          },
+          "health.database": {
+            "callsDelta": 20,
+            "totalMsDelta": 180.42,
+            "averageMs": 9.02,
+            "cumulativeP50Ms": 4.3,
+            "cumulativeP95Ms": 29.77,
+            "cumulativeP99Ms": 96.62,
+            "cumulativeMaxMs": 96.62
+          },
+          "health.atc": {
+            "callsDelta": 20,
+            "totalMsDelta": 56.99,
+            "averageMs": 2.85,
+            "cumulativeP50Ms": 0.07,
+            "cumulativeP95Ms": 26.54,
+            "cumulativeP99Ms": 123.06,
+            "cumulativeMaxMs": 123.06
+          },
+          "health.atc.db-query": {
+            "callsDelta": 2,
+            "totalMsDelta": 49.69,
+            "averageMs": 24.85,
+            "cumulativeP50Ms": 21.11,
+            "cumulativeP95Ms": 120.47,
+            "cumulativeP99Ms": 120.47,
+            "cumulativeMaxMs": 120.47
+          },
+          "health.atc.data-transformation": {
+            "callsDelta": 2,
+            "totalMsDelta": 5.16,
+            "averageMs": 2.58,
+            "cumulativeP50Ms": 0.82,
+            "cumulativeP95Ms": 4.39,
+            "cumulativeP99Ms": 4.39,
+            "cumulativeMaxMs": 4.39
+          },
+          "health.atc.metadata-assembly": {
+            "callsDelta": 2,
+            "totalMsDelta": 0.79,
+            "averageMs": 0.4,
+            "cumulativeP50Ms": 0.37,
+            "cumulativeP95Ms": 0.53,
+            "cumulativeP99Ms": 0.53,
+            "cumulativeMaxMs": 0.53
+          },
+          "health.event-loop": {
+            "callsDelta": 20,
+            "totalMsDelta": 6.08,
+            "averageMs": 0.3,
+            "cumulativeP50Ms": 0.32,
+            "cumulativeP95Ms": 0.64,
+            "cumulativeP99Ms": 3.78,
+            "cumulativeMaxMs": 3.78
+          }
+        }
+      },
+      {
+        "window": 3,
+        "startedAt": "2026-10-09T16:28:05Z",
+        "endedAt": "2026-10-09T16:29:18Z",
+        "requestCount": 20,
+        "statuses": [
+          200
+        ],
+        "publicHttps": {
+          "count": 20,
+          "averageMs": 2633.67,
+          "p50Ms": 2796.4,
+          "p95Ms": 5514.96,
+          "p99Ms": 5955.31,
+          "maxMs": 5955.31,
+          "timeouts": 0
+        },
+        "internalPhaseDeltas": {
+          "health.total": {
+            "callsDelta": 20,
+            "totalMsDelta": 2619.85,
+            "averageMs": 130.99,
+            "cumulativeP50Ms": 6.42,
+            "cumulativeP95Ms": 40.52,
+            "cumulativeP99Ms": 2404.21,
+            "cumulativeMaxMs": 2404.21
+          },
+          "health.ready": {
+            "callsDelta": 20,
+            "totalMsDelta": 0.54,
+            "averageMs": 0.03,
+            "cumulativeP50Ms": 0.03,
+            "cumulativeP95Ms": 0.05,
+            "cumulativeP99Ms": 92.84,
+            "cumulativeMaxMs": 92.84
+          },
+          "health.snapshot": {
+            "callsDelta": 20,
+            "totalMsDelta": 24.07,
+            "averageMs": 1.2,
+            "cumulativeP50Ms": 1.16,
+            "cumulativeP95Ms": 1.62,
+            "cumulativeP99Ms": 4.72,
+            "cumulativeMaxMs": 4.72
+          },
+          "health.database": {
+            "callsDelta": 20,
+            "totalMsDelta": 2587.47,
+            "averageMs": 129.37,
+            "cumulativeP50Ms": 4.92,
+            "cumulativeP95Ms": 39.13,
+            "cumulativeP99Ms": 2402.8,
+            "cumulativeMaxMs": 2402.8
+          },
+          "health.atc": {
+            "callsDelta": 20,
+            "totalMsDelta": 30.66,
+            "averageMs": 1.53,
+            "cumulativeP50Ms": 0.07,
+            "cumulativeP95Ms": 26.03,
+            "cumulativeP99Ms": 123.06,
+            "cumulativeMaxMs": 123.06
+          },
+          "health.atc.db-query": {
+            "callsDelta": 2,
+            "totalMsDelta": 27,
+            "averageMs": 13.5,
+            "cumulativeP50Ms": 17.46,
+            "cumulativeP95Ms": 120.47,
+            "cumulativeP99Ms": 120.47,
+            "cumulativeMaxMs": 120.47
+          },
+          "health.atc.data-transformation": {
+            "callsDelta": 2,
+            "totalMsDelta": 1.61,
+            "averageMs": 0.81,
+            "cumulativeP50Ms": 0.82,
+            "cumulativeP95Ms": 4.39,
+            "cumulativeP99Ms": 4.39,
+            "cumulativeMaxMs": 4.39
+          },
+          "health.atc.metadata-assembly": {
+            "callsDelta": 2,
+            "totalMsDelta": 0.77,
+            "averageMs": 0.39,
+            "cumulativeP50Ms": 0.37,
+            "cumulativeP95Ms": 0.53,
+            "cumulativeP99Ms": 0.53,
+            "cumulativeMaxMs": 0.53
+          },
+          "health.event-loop": {
+            "callsDelta": 20,
+            "totalMsDelta": 10.72,
+            "averageMs": 0.54,
+            "cumulativeP50Ms": 0.32,
+            "cumulativeP95Ms": 0.88,
+            "cumulativeP99Ms": 3.78,
+            "cumulativeMaxMs": 3.78
+          }
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "Public HTTPS latency includes reverse-proxy/network queuing and is not backend-only latency.",
+    "Runtime phase percentile fields are cumulative process-local samples; they are not added across windows."
+  ]
+}

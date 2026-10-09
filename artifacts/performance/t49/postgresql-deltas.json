@@ -1,0 +1,29 @@
+{
+  "start": {
+    "recordedAt": "2026-10-09T16:29:37.709Z",
+    "current_database": "airradar",
+    "datname": "airradar",
+    "xact_commit": "12442210",
+    "xact_rollback": "764690",
+    "stats_reset": null
+  },
+  "end": {
+    "recordedAt": "2026-10-09T16:45:12.334Z",
+    "current_database": "airradar",
+    "datname": "airradar",
+    "xact_commit": "12452378",
+    "xact_rollback": "768506",
+    "stats_reset": null
+  },
+  "delta": {
+    "xactCommit": 10168,
+    "xactRollback": 3816
+  },
+  "statsResetStable": true,
+  "processIdStable": true,
+  "caveats": [
+    "pg_stat_database counters include all database activity, not just this Node process.",
+    "Application failure counts are not PostgreSQL rollback counts.",
+    "No stats_reset timestamp was available, so reset detection is limited to the observed null identity."
+  ]
+}
