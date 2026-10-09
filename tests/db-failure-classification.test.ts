@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { classifyDbFailure } from "@/lib/server/db-failure-classification";
-import { getDbOperationFailureFamilies, trackDbOperation } from "@/lib/server/db-operation-diagnostics";
-import { getDbTransactionFailureFamilies, trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
+import { getDbOperationDiagnostics, getDbOperationFailureFamilies, trackDbOperation } from "@/lib/server/db-operation-diagnostics";
+import { getDbTransactionDiagnostics, getDbTransactionFailureFamilies, trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 
 describe("sanitized database failure taxonomy", () => {
   it("conservatively classifies SQLSTATE and Prisma codes", () => {
@@ -22,6 +22,8 @@ describe("sanitized database failure taxonomy", () => {
     await expect(trackDbOperation("history.list.query", async () => { throw err; })).rejects.toBe(err);
     expect(getDbTransactionFailureFamilies().constraint).toBe(beforeTx + 1);
     expect(getDbOperationFailureFamilies().constraint).toBe(beforeOp + 1);
+    expect(getDbTransactionDiagnostics().failureFamilies["5m"].constraint).toBeGreaterThanOrEqual(1);
+    expect(getDbOperationDiagnostics().failureFamilies["5m"].constraint).toBeGreaterThanOrEqual(1);
     expect(JSON.stringify(getDbTransactionFailureFamilies())).not.toContain("SQL");
   });
 });
