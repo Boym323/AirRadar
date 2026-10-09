@@ -17,6 +17,28 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.374] - 2026-10-09
+
+Changes since v1.0.373.
+
+### Changed
+
+- Audit wave 2: explicit bounded predictive retention and fail-closed rate limiting (#638) (bee03b6c)
+- Audit wave 3: retain preceding standalone build and add gated manual recovery (#639) (bacdae51)
+- Audit wave 4: CSP event-handler hardening and pure predictive projections (#640) (8c0f4b4e)
+- Audit closeout: staged strict system CSP and Prisma RC table-parity verification (#641) (937af616)
+- Audit closeout: isolate Spotter browser geolocation lifecycle (#642) (eee8b986)
+
+<details>
+<summary>Technical commits</summary>
+
+- Audit wave 2: explicit bounded predictive retention and fail-closed rate limiting (#638) (bee03b6c)
+- Audit wave 3: retain preceding standalone build and add gated manual recovery (#639) (bacdae51)
+- Audit wave 4: CSP event-handler hardening and pure predictive projections (#640) (8c0f4b4e)
+- Audit closeout: staged strict system CSP and Prisma RC table-parity verification (#641) (937af616)
+- Audit closeout: isolate Spotter browser geolocation lifecycle (#642) (eee8b986)
+
+</details>
 ## [1.0.373] - 2026-10-09
 
 Changes since v1.0.372.
