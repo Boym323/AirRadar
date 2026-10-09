@@ -30,8 +30,14 @@ export class BoundedRateLimiter {
     let bucket = this.buckets.get(scope);
     if (!bucket || bucket.resetAt <= now) {
       if (!bucket && this.buckets.size >= this.maxEntries) {
-        const oldest = this.buckets.keys().next().value;
-        if (oldest !== undefined) this.buckets.delete(oldest);
+        // Do not evict an active client's bucket: rotating spoofed identities
+        // must not reset the request quota of previously admitted clients.
+        const earliest = Math.min(...[...this.buckets.values()].map((active) => active.resetAt));
+        return {
+          allowed: false, limit: policy.limit, remaining: 0,
+          retryAfterSeconds: Math.max(1, Math.ceil((earliest - now) / 1000)),
+          resetAt: earliest,
+        };
       }
       bucket = { ...policy, count: 0, resetAt: now + policy.windowMs };
       this.buckets.set(scope, bucket);
