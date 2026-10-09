@@ -62,6 +62,20 @@ describe("E1-E4 and E6 truth-first quality audit", () => {
     expect(report.airportOverflow).toBe(28);
     expect(report.airports.every(x => /^[A-Z0-9]{4}$/.test(x.airport))).toBe(true);
   });
+  it("never labels unavailable source as measured even with complete cached samples", () => {
+    const rows = Array.from({length: 25}, (_, index) => row(index, {etaAbsoluteErrorSeconds: 90}));
+    const unavailable = buildTruthAccuracyReport(rows, {sourceAvailable: false, complete: true});
+    expect(unavailable.decision).toBe("SOURCE_UNAVAILABLE");
+    expect(unavailable.truth.ETA.etaMaeSeconds).toBeNull();
+    expect(unavailable.airports[0]?.state).toBe("SOURCE_UNAVAILABLE");
+    expect(unavailable.phases[0]?.state).toBe("SOURCE_UNAVAILABLE");
+    expect(unavailable.confidence.find(x => x.capability === "ETA" && x.confidence === "HIGH"))
+      .toMatchObject({state: "SOURCE_UNAVAILABLE", successRate: null});
+    const incomplete = buildTruthAccuracyReport(rows, {sourceAvailable: true, complete: false});
+    expect(incomplete.truth.ETA.etaMaeSeconds).toBeNull();
+    expect(incomplete.phases[0]?.state).toBe("COLLECTION_INCOMPLETE");
+  });
+
   it("treats unavailable source as unavailable, never high-confidence accuracy", () => {
     const report = buildTruthAccuracyReport([row(1)], {sourceAvailable: false, complete: false});
     expect(report.decision).toBe("SOURCE_UNAVAILABLE");

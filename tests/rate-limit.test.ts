@@ -15,7 +15,8 @@ describe("bounded request limiter", () => {
     const limiter = new BoundedRateLimiter(2);
     limiter.consume("one", { limit: 1, windowMs: 1000 }, 0);
     limiter.consume("two", { limit: 1, windowMs: 1000 }, 0);
-    limiter.consume("three", { limit: 1, windowMs: 1000 }, 0);
+    const full = limiter.consume("three", { limit: 1, windowMs: 1000 }, 0);
+    expect(full).toMatchObject({ allowed: false, retryAfterSeconds: 1 });
     expect(limiter.size()).toBe(2);
     limiter.consume("fresh", { limit: 1, windowMs: 1000 }, 1000);
     expect(limiter.size()).toBe(1);
@@ -27,7 +28,7 @@ describe("bounded request limiter", () => {
     expect(getRateLimitClientKey(new Request("http://localhost", { headers: { "x-real-ip": "not-an-ip" } }))).toBe("anonymous");
   });
 
-  it("keeps client buckets isolated while retaining bounded eviction", () => {
+  it("keeps active client buckets isolated under identity churn without resetting their quota", () => {
     const limiter = new BoundedRateLimiter(2);
     const policy = { limit: 1, windowMs: 60_000 };
     const clientA = getRateLimitClientKey(new Request("http://localhost", { headers: { "x-real-ip": "192.0.2.10" } }));
@@ -36,7 +37,9 @@ describe("bounded request limiter", () => {
     expect(limiter.consume(`aircraft:${clientA}`, policy, 0).allowed).toBe(true);
     expect(limiter.consume(`aircraft:${clientA}`, policy, 1).allowed).toBe(false);
     expect(limiter.consume(`aircraft:${clientB}`, policy, 1).allowed).toBe(true);
-    limiter.consume("aircraft:192.0.2.12", policy, 1);
+    expect(limiter.consume("aircraft:192.0.2.12", policy, 1).allowed).toBe(false);
     expect(limiter.size()).toBe(2);
+    expect(limiter.consume(`aircraft:${clientA}`, policy, 2).allowed).toBe(false);
+    expect(limiter.consume(`aircraft:${clientB}`, policy, 60_001).allowed).toBe(true);
   });
 });

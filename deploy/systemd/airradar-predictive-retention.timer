@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily bounded prospective observation retention
+
+[Timer]
+OnCalendar=*-*-* 05:43:00
+RandomizedDelaySec=30m
+Persistent=true
+Unit=airradar-predictive-retention.service
+
+[Install]
+WantedBy=timers.target

@@ -573,3 +573,18 @@ persistence ani databázové čtení.
 Výsledek je pouze popisná evidence a nemůže měnit Navigation Integrity
 klasifikaci, canonical aircraft state, Track Fusion, predikce, historii ani
 alerts.
+
+Čisté projekce `predictivePhase`, `isAirportProximity` a
+`buildPredictiveShadowInput` byly přesunuty do
+`lib/server/aircraft-predictive-projection.ts`. Původní modul
+`aircraft-state.ts` je dál reexportuje kvůli kompatibilitě a zůstává
+jediným vlastníkem živého stavu. Přesun nepřidává další polling,
+SSE, zápisy ani požadavky na externí poskytovatele.
+
+CSP nově zakazuje inline HTML atributy obsluhy událostí pomocí
+`script-src-attr 'none'`. Pro současný staticky renderovaný Next bootstrap
+však stále zůstává `'unsafe-inline'`. Jeho odstranění vyžaduje samostatnou
+ověřenou migraci na nonce v Next 16 `proxy.ts`, dynamické renderování a
+browser/performance testy. Prisma 8 je stále v RC; upgrade obou přesně
+připnutých balíčků se smí provést až po ověření změn kontraktu a migrací
+na obnovené DEV databázi, nikoliv v rámci nesouvisejících funkcí.
