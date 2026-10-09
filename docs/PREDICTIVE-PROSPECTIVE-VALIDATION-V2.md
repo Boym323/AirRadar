@@ -78,8 +78,14 @@ runtime readiness to count instrumented observations and candidates.
 `npm run predictive:validate:prospective` writes reproducible JSON and
 Markdown reports to `artifacts/predictive-validation-prospective-v2.*`.
 Raw observations have a 90-day retention policy; aggregate reports are kept
-longer. Cleanup is not run automatically by the application and no production
-database cleanup is part of this implementation.
+longer. The live application does not perform cleanup. Operators can run
+`npm run predictive:retention` for a **read-only** bounded preview, then
+`npm run predictive:retention -- --apply` to apply deletion in bounded
+batches (default 1,000 rows, at most 10 batches per invocation). The optional
+`deploy/systemd/airradar-predictive-retention.timer` schedules this daily,
+but must be explicitly installed/enabled by an operator. This is not run
+implicitly by GitHub Actions, deployments, or normal app startup.
+Review database backups and capture/truth retention policies before activation.
 
 The DEV migration `20261003T0515_predictive_prospective_observations_v1` is
 forward-only and creates only the new `predictiveObservation` table. The

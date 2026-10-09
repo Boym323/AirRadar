@@ -79,9 +79,12 @@ prospective cíli. Chybějící evidence zůstává UNSCORABLE.
 
 `npm run predictive:validate:prospective` zapisuje reprodukovatelný JSON a
 Markdown do `artifacts/predictive-validation-prospective-v2.*`. Raw data mají
-navrženou retenci 90 dní; automatický cleanup ani produkční DB změna nejsou
-součástí implementace. Readiness je pouze evidence a graduation zůstává
-SHADOW.
+retenci 90 dní; živá aplikace cleanup nespouští. Nyní je dostupný
+samostatný údržbový příkaz `npm run predictive:retention` (jen náhled),
+resp. `npm run predictive:retention -- --apply` (omezené dávkové mazání).
+Volitelný denní systemd timer se musí zvlášť nainstalovat a povolit; CI,
+deploy ani startup jej automaticky nespustí. Před zapnutím ověřte zálohy a
+retenční požadavky. Readiness je pouze evidence a graduation zůstává SHADOW.
 
 Report je reprodukovatelný z uložených observations a nezávislé historie. Při
 nedostatku dat vrací `INSUFFICIENT_DATA`, nikoliv zavádějící nulovou chybu nebo
