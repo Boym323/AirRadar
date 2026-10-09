@@ -1,0 +1,22 @@
+[Unit]
+Description=Prune aged AirRadar prospective prediction observations (90 day policy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=airradar
+Group=airradar
+WorkingDirectory=/var/www/airradar
+EnvironmentFile=/var/www/airradar/.env
+ExecStart=/usr/bin/flock -n /var/lib/airradar/predictive-retention.lock /usr/bin/npm run predictive:retention -- --apply
+StateDirectory=airradar
+StateDirectoryMode=0750
+UMask=027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
