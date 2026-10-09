@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock("@/lib/server/db", () => ({ getPrisma: mocks.getPrisma }));
 
-import { getStoredAtcMetadata, resetAtcMetadataCacheForTests } from "@/lib/server/atc-data";
+import { getStoredAtcData, getStoredAtcMetadata, resetAtcMetadataCacheForTests } from "@/lib/server/atc-data";
 
 describe("ATC health metadata fast path", () => {
   beforeEach(() => {
@@ -43,5 +43,45 @@ describe("ATC health metadata fast path", () => {
     await getStoredAtcMetadata();
     expect(mocks.getPrisma).toHaveBeenCalledTimes(1);
     expect(selected).toHaveLength(2);
+  });
+
+  it("preserves the full dataset metadata for valid imported sectors and transmitters", async () => {
+    const sector = {
+      id: "CZ-TEST", name: "Test sector",
+      polygonJson: JSON.stringify([[[14, 50], [15, 50], [15, 51], [14, 50]]]),
+      lowerAltitudeFt: 0, upperAltitudeFt: 24500,
+      lowerAltitudeReference: "SFC", upperAltitudeReference: "FL",
+      atcCallsign: null, service: "APP", airspaceType: null, airspaceClass: null,
+      remarks: null, primaryFrequencyMhz: 118.1, alternateFrequenciesJson: "[]",
+      country: "CZ", source: "import", sourceReference: "test://atc",
+      validFrom: null, validTo: null, lastVerifiedAt: "2026-10-09T12:00:00.000Z",
+    };
+    const transmitter = {
+      id: "CZ-TX", name: "Test transmitter", latitude: 50, longitude: 14,
+      service: "APP", frequencyMhz: 118.1, notes: null,
+      source: "import", sourceReference: "test://atc",
+      validFrom: null, validTo: null, lastVerifiedAt: "2026-10-09T12:00:00.000Z",
+    };
+    const selected: string[][] = [];
+    const model = (records: unknown[]) => ({
+      limit: () => ({ all: async () => records }),
+      select: (...fields: string[]) => {
+        selected.push(fields);
+        return { limit: () => ({ all: async () =>
+          records.map((record) => Object.fromEntries(fields.map((field) =>
+            [field, (record as Record<string, unknown>)[field]]))) }) };
+      },
+    });
+    mocks.getPrisma.mockReturnValue({ orm: { public: {
+      AtcSector: model([sector]),
+      AtcTransmitter: model([transmitter]),
+    } } });
+
+    const full = await getStoredAtcData();
+    const fast = await getStoredAtcMetadata();
+    expect(full?.metadata).toEqual(fast);
+    expect(fast).toMatchObject({ status: "configured", sectorCount: 1, transmitterCount: 1 });
+    expect(selected).toHaveLength(2);
+    expect(selected.flat()).not.toContain("polygonJson");
   });
 });
