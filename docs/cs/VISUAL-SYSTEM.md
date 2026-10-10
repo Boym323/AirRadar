@@ -262,3 +262,15 @@ přednostně ukazuje souhrn, ATC, dostupný kontext trasy a provozní
 události; navigační integrita, SIGMET, pozorované počasí a vítr
 zůstávají v nativní přístupné rozbalovací sekci. Žádné datové zdroje
 ani pokročilé údaje se neodstraňují.
+
+### V5-B3: rychlé akce v detailu letu
+
+Souhrn vybraného letadla má napříč záložkami jeden řádek rychlých akcí:
+sledování letadla na mapě (skutečný existující map-follow stav),
+vycentrování, historie letu, nativní sdílení/kopie veřejné adresy,
+nastavení pravidel upozornění a úplný detail. Hvězdička zůstává
+samostatným zařazením ICAO do watchlistu, nikoliv nepravdivým
+přihlášením k push. Při chybějící poloze je sledování nedostupné.
+Sdílení využívá jen prohlížeč a veřejný odkaz na detail; bez oprávnění
+hlásí srozumitelný přístupný stav. Akce jsou viditelné bez přepínání
+na záložku Let, s alespoň 44px dotykovým cílem a překlady.

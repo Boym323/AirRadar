@@ -76,6 +76,8 @@ export interface AircraftRadarQuickDetailProps {
   onBack: () => void;
   onClose: () => void;
   onCenter: () => void;
+  following: boolean;
+  onToggleFollow: () => void;
   onToggleWatchlist: () => void;
   sectorTraffic?: Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; frequencies: Array<{ channel: string }> }>;
 }
@@ -563,15 +565,10 @@ function IntelligenceSection({ events }: { events: FlightIntelligenceEvent[] }) 
   </QuickSection>;
 }
 
-function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, historyHref, fullDetailHref, watchlisted, onToggleWatchlist, historyTrail }: {
+function AircraftOverview({ aircraft, emergency, emergencySquawk, historyTrail }: {
   aircraft: AircraftView;
   emergency: string | null;
   emergencySquawk: string | null;
-  onCenter: () => void;
-  historyHref: string;
-  fullDetailHref: string;
-  watchlisted: boolean;
-  onToggleWatchlist: () => void;
   historyTrail: QuickHistoryTrail | null;
 }) {
   const summary = trackingSummary(aircraft, historyTrail);
@@ -582,15 +579,9 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
     <section className="aircraft-quick-overview" aria-labelledby="aircraft-flight-overview-title">
       <div className="aircraft-quick-flight-heading">
         <h2 id="aircraft-flight-overview-title">{t.aircraft.detailSections.flight}</h2>
-        <span className="aircraft-quick-live-state"><span aria-hidden="true">●</span> {t.status.liveShort}</span>
+        <span className="aircraft-quick-live-state" data-freshness={aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds <= 60 ? "fresh" : "stale"}><span aria-hidden="true">●</span> {aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds <= 60 ? t.status.liveShort : t.intelligence.stale}</span>
       </div>
       {emergency || emergencySquawk ? <div className="aircraft-quick-status-row" role="status"><StatusBadge variant="danger">{emergency ?? `${t.aircraft.squawk} ${emergencySquawk}`}</StatusBadge></div> : null}
-      <nav className="aircraft-quick-actions" aria-label={t.aircraft.quickActions}>
-        <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
-        <button type="button" className={`aircraft-quick-action${watchlisted ? " active" : ""}`} aria-pressed={watchlisted} onClick={onToggleWatchlist}>{watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft}</button>
-        <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFlightHistory}</Link>
-        <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
-      </nav>
     </section>
     <QuickSection id="aircraft-quick-tracking-title" title={t.aircraft.liveTrackingTitle} className="aircraft-quick-tracking">
       {summary.length > 0 && <p className="aircraft-quick-tracking-summary">{summary.join(" · ")}</p>}
@@ -725,11 +716,14 @@ export function AircraftRadarQuickDetail({
   onBack,
   onClose,
   onCenter,
+  following,
+  onToggleFollow,
   onToggleWatchlist,
   sectorTraffic,
 }: AircraftRadarQuickDetailProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("flight");
   const [mobileExpanded, setMobileExpanded] = useState(false);
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "shared" | "unavailable">("idle");
   const metadata = aircraft.enrichment?.metadata;
   const registration: string | null = aircraft.registration ?? metadata?.registration ?? databaseAircraft?.registration ?? null;
   const headerType = metadata?.icaoTypeCode ?? aircraft.aircraftType ?? databaseAircraft?.aircraftType ?? null;
@@ -753,6 +747,23 @@ export function AircraftRadarQuickDetail({
   });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
   const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
+  async function shareAircraft(): Promise<void> {
+    const url = new URL(fullDetailHref, window.location.origin).toString();
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: aircraft.callsign || registration || aircraft.icaoHex, url });
+        setShareStatus("shared");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareStatus("copied");
+      } else {
+        setShareStatus("unavailable");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setShareStatus("unavailable");
+    }
+  }
   const operationalFocus = operationalTwin?.status === "available"
     && operationalTwin.aircraft.icaoHex.toUpperCase() === aircraft.icaoHex.toUpperCase()
     ? operationalTwin.operationalFocus ?? null
@@ -802,11 +813,20 @@ export function AircraftRadarQuickDetail({
           <span aria-hidden="true">{watchlisted ? "★" : "☆"}</span>
         </button>
       </div>
+      <nav className="aircraft-quick-actions aircraft-v5-quick-actions" aria-label={t.aircraft.quickActions} data-testid="aircraft-v5-quick-actions">
+        <button type="button" className={`aircraft-quick-action${following ? " active" : ""}`} onClick={onToggleFollow} disabled={aircraft.lat === null || aircraft.lon === null} aria-pressed={following} data-testid="aircraft-v5-follow">{following ? t.aircraftQuickV5.stopFollowing : t.aircraftQuickV5.followMap}</button>
+        <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
+        <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFlightHistory}</Link>
+        <button type="button" className="aircraft-quick-action" onClick={() => { void shareAircraft(); }} data-testid="aircraft-v5-share">{t.aircraftQuickV5.share}</button>
+        <Link className="aircraft-quick-action" href="/alerts" title={t.aircraftQuickV5.alertsHint}>{t.aircraftQuickV5.alerts}</Link>
+        <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
+      </nav>
+      <p className="aircraft-v5-share-status" role="status" aria-live="polite">{shareStatus === "copied" ? t.aircraftQuickV5.linkCopied : shareStatus === "shared" ? t.aircraftQuickV5.shared : shareStatus === "unavailable" ? t.aircraftQuickV5.shareUnavailable : ""}</p>
     </header>
 
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
-      <AircraftOverview aircraft={aircraft} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} watchlisted={watchlisted} onToggleWatchlist={onToggleWatchlist} historyTrail={historyTrail} />
+      <AircraftOverview aircraft={aircraft} emergency={emergency} emergencySquawk={emergencySquawk} historyTrail={historyTrail} />
       <RouteCorridorSection corridor={routeCorridor} conformance={routeConformance} />
       <FlightStateSection aircraft={aircraft} />
     </div>}

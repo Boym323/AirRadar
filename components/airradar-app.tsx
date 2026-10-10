@@ -3300,6 +3300,8 @@ export function AirRadarApp() {
             onBack={backToTraffic}
             onClose={closeRadarDrawer}
             onCenter={centerSelectedAircraft}
+            following={followSelected}
+            onToggleFollow={() => setFollowSelected((current) => !current)}
             onToggleWatchlist={() => {
               if (!selectedAircraft) return;
               setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex)
