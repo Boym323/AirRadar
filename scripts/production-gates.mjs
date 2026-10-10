@@ -1469,8 +1469,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.mockAviationEmbed) {
             const media = visualPage.getByTestId("airport-media-v6-h");
             if (await media.locator("iframe").count()) throw new Error("V6-H loaded third-party media before consent");
-            await media.getByRole("button", { name: /Přehrát zde|Play here/ }).click();
-            const frame = media.getByTestId("airport-media-embed").locator("iframe");
+            const permission = media.locator(".airport-v6-media-permission input");
+            const play = media.getByRole("button", { name: /Přehrát zde|Play here/ });
+            if (await play.isEnabled()) throw new Error("V6-H play button enabled before consent");
+            await permission.check();
+            await play.click();
+            const frame = media.getByTestId("airport-v6-authorized-player").locator("iframe");
             await frame.waitFor({ state: "visible", timeout: 15_000 });
             if (await frame.getAttribute("src") !== "https://www.youtube-nocookie.com/embed/AbCdEf123_9") {
               throw new Error("V6-H iframe escaped the official approved video endpoint");
@@ -1478,6 +1482,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             if (!await media.locator('a[href="https://www.youtube.com/live/AbCdEf123_9"]').count()) {
               throw new Error("V6-H lost the original publisher fallback link");
             }
+            await permission.uncheck();
+            await media.getByTestId("airport-v6-authorized-player").waitFor({ state: "detached", timeout: 5_000 });
           }
           if (target.v6Terrain) {
             const layers = visualPage.locator(".map-layers");
