@@ -14,8 +14,8 @@ function raw(minute = 0) {
       autocommitOperationAttribution: { processId: 1234, diagnosticsStoreId: "PRIVATE_STORE" },
       aircraftCount: 60, activeSseClients: 1,
       localTrailOverLimitAircraftCount: 0, networkTrailOverLimitAircraftCount: 0,
-      diagnostics: {
-        retentionAttribution: {
+      // Production /api/system/status puts retentionAttribution directly in runtime.
+      retentionAttribution: {
           scope: "process-local",
           aircraft: { local: member(20), network: member(40) },
           trails: { local: member(500), network: member(1000) },
@@ -26,7 +26,6 @@ function raw(minute = 0) {
             SECRET_ID: "SHOULD_NOT_LEAK",
           },
           snapshotCacheEntries: 2, listeners: 1, secret: "SHOULD_NOT_LEAK",
-        },
       },
     },
     secret: "SHOULD_NOT_LEAK",
@@ -91,8 +90,23 @@ describe("T5.7C 24-hour read-only soak", () => {
     status.detailLevel = "public";
     expect(() => projectT57SoakSample(status, metrics)).toThrow("t57_admin_telemetry_unavailable");
     status.detailLevel = "admin";
-    delete status.runtime.diagnostics.retentionAttribution;
+    delete status.runtime.retentionAttribution;
     expect(() => projectT57SoakSample(status, metrics)).toThrow("t57_admin_telemetry_unavailable");
+  });
+
+  it("rejects the old nested contract and accepts the flattened admin runtime contract", () => {
+    const { status, metrics } = raw(1);
+    const validRetention = status.runtime.retentionAttribution;
+    delete status.runtime.retentionAttribution;
+    status.runtime.diagnostics = { retentionAttribution: validRetention };
+    expect(() => projectT57SoakSample(status, metrics, at(1)))
+      .toThrow("t57_admin_telemetry_unavailable");
+    // Keep the legacy decoy: the valid source must be the actual API path.
+    status.runtime.retentionAttribution = validRetention;
+    const projection = projectT57SoakSample(status, metrics, at(1));
+    expect(projection.sample.retention.aircraft.network.count).toBe(40);
+    expect(projection.sample.retention.trails.network.points).toBe(1000);
+    expect(JSON.stringify(projection.sample)).not.toContain("SHOULD_NOT_LEAK");
   });
 
   it("emits completed minute windows once, and never includes unfinished windows", () => {

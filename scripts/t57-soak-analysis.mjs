@@ -46,7 +46,9 @@ function windows(items, type) {
 export function projectT57SoakSample(status, metrics, at = new Date().toISOString()) {
   const runtime = metrics?.runtime;
   const system = status?.runtime;
-  const retention = system?.diagnostics?.retentionAttribution;
+  // readSystemStatus() flattens readRuntimeDiagnostics() onto runtime.
+  // There is no runtime.diagnostics wrapper in the admin API response.
+  const retention = system?.retentionAttribution;
   const process = system?.autocommitOperationAttribution;
   if (status?.detailLevel !== "admin" || metrics?.schemaVersion !== 2 ||
       metrics?.scope !== "process-local" || runtime?.status !== "enabled" ||
