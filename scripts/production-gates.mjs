@@ -1896,6 +1896,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               // fails softly. The multi-viewport smoke opens many fresh radar
               // pages quickly, legitimately exhausting its request budget.
               || pathname === "/api/aircraft/communications/waypoints"
+              // RXW Hub metadata is optional, per-aircraft, and intentionally
+              // fail-soft in AircraftCommunications. Repeated viewport sessions
+              // may exhaust the shared anonymous aircraft rate-limit bucket.
+              || /^\/api\/aircraft\/[A-F0-9]{6}\/communications$/i.test(pathname)
               || /^\/api\/navigation-integrity\/aircraft\/[A-F0-9]{6}$/i.test(pathname)
               // Optional per-aircraft enrichment may reach the API rate limit
               // during the multi-viewport visual sweep. Layout and UI safety

@@ -291,7 +291,8 @@ on `map.isStyleLoaded()` alone: MapLibre can report false while optional remote
 raster/DEM tile managers are still loading, even when the vector basemap is
 visibly rendered. The gate still fails if the style never initializes or the
 vector map is blank. During the repeated browser viewport sweep, HTTP 429 from
-optional `/api/aircraft/communications/waypoints` RXW badge enrichment may be
+optional `/api/aircraft/communications/waypoints` RXW badge enrichment or
+`/api/aircraft/[hex]/communications` RXW metadata may be
 logged as expected throttling; unexpected API failures remain blocking.
 
 
