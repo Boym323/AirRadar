@@ -122,14 +122,17 @@ jobs:
       - name: V6 3D desktop/mobile browser gate
         if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || github.head_ref == 'feat/v6-d6-airframe-models' || github.head_ref == 'feat/v6-airframe-media-gpu-qa')
         env:
-          AIRRADAR_VISUAL_TARGETS: radar-v6-d-3d-terrain,radar-v6-d-3d-mobile,radar-v6-g-presentation
+          AIRRADAR_VISUAL_TARGETS: radar-v6-d-3d-terrain,radar-v6-d-3d-mobile,radar-v6-g-presentation,airport-v6-media-embed-desktop,airport-v6-media-embed-mobile
         run: npm run test:production:browser
       - name: Upload V6 3D visual evidence
         if: always() && github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || github.head_ref == 'feat/v6-d6-airframe-models' || github.head_ref == 'feat/v6-airframe-media-gpu-qa')
         uses: actions/upload-artifact@v7
         with:
           name: v6-3d-browser-${{ github.sha }}
-          path: artifacts/visual-smoke/radar-v6-*.png
+          path: |
+            artifacts/visual-smoke/radar-v6-*.png
+            artifacts/visual-smoke/radar-v6-*-gpu.json
+            artifacts/visual-smoke/airport-v6-media-embed-*.png
           if-no-files-found: ignore
           retention-days: 3
 
