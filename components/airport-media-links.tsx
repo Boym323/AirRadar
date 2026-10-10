@@ -2,13 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui-primitives";
-import { useLocale } from "@/components/locale-provider";
+import { t } from "@/lib/i18n";
 import { airportMediaCopy } from "@/lib/i18n/airport-media-v6-h";
 import { AIRPORT_MEDIA_MAX_LINKS, addAirportMediaLink, mediaAirportKey, parseAirportMediaLinks, sanitizeAirportMediaLink, type AirportMediaKind, type AirportMediaLink } from "@/lib/aviation-media-v6-h";
 
 export function AirportMediaLinks({ icao }: { icao: string }) {
-  const { locale } = useLocale();
-  const copy = airportMediaCopy(locale);
+  const copy = airportMediaCopy(t.locale);
   const key = mediaAirportKey(icao);
   const [links, setLinks] = useState<AirportMediaLink[]>([]);
   const [loaded, setLoaded] = useState(false);
