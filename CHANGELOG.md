@@ -17,6 +17,35 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.411] - 2026-10-10
+
+Changes since v1.0.410.
+
+**Features touched:** Navigation Integrity, Watchlist, Alerts & Fleet.
+
+### Added
+
+- Opt-in ACARS Hub communications integration (#742) (db687a41)
+- Integrate 3D radar beta, presentation, flight status, fleets and media (#740) (5bd312f1)
+
+### Changed
+
+- Route Enrichment V1: ADSB.lol batch fallback + úspora FlightAware (#741) (d57de066)
+
+### Maintenance
+
+- Sync generated repository metadata (#734) (ebde5445)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#734) (ebde5445)
+- Route Enrichment V1: ADSB.lol batch fallback + úspora FlightAware (#741) (d57de066)
+- feat(rxw): opt-in ACARS Hub communications integration (#742) (db687a41)
+- feat(v6): integrate 3D radar beta, presentation, flight status, fleets and media (#740) (5bd312f1)
+
+</details>
+
 ## [1.0.410] - 2026-10-10
 
 Changes since v1.0.409.
