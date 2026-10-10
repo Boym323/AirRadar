@@ -5,6 +5,9 @@ import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { STATISTICS_FLUSH_INTERVAL_MS } from "@/lib/server/statistics";
+import { MAX_PLAUSIBLE_GROUND_SPEED_KT, plausibleReceiverDistanceKm } from "@/lib/receiver-sanity";
+
+export { MAX_PLAUSIBLE_GROUND_SPEED_KT } from "@/lib/receiver-sanity";
 
 export const ALTITUDE_COVERAGE_BANDS = [
   { id: 0, minFt: 0, maxFt: 5_000 },
@@ -14,7 +17,6 @@ export const ALTITUDE_COVERAGE_BANDS = [
 ] as const;
 
 export const MIN_PLAUSIBLE_GROUND_SPEED_KT = 30;
-export const MAX_PLAUSIBLE_GROUND_SPEED_KT = 800;
 
 export interface ReceiverAltitudeCoverageRecord {
   azimuthBucket: number;
@@ -71,7 +73,7 @@ function validPositionedAircraft(aircraft: Aircraft): boolean {
   return aircraft.lat !== null && Number.isFinite(aircraft.lat) && aircraft.lat >= -90 && aircraft.lat <= 90
     && aircraft.lon !== null && Number.isFinite(aircraft.lon) && aircraft.lon >= -180 && aircraft.lon <= 180
     && !(aircraft.lat === 0 && aircraft.lon === 0)
-    && aircraft.distanceKm !== null && Number.isFinite(aircraft.distanceKm) && aircraft.distanceKm >= 0
+    && plausibleReceiverDistanceKm(aircraft.distanceKm) !== null
     && aircraft.bearing !== null && Number.isFinite(aircraft.bearing) && aircraft.bearing >= 0 && aircraft.bearing < 360;
 }
 
@@ -214,7 +216,8 @@ export class ReceiverAdvancedStatistics {
         this.receiverMessagesCount = finiteNonNegative(aggregate.receiverMessagesCount);
         this.receiverMessagesRawLast = finiteNonNegative(aggregate.receiverMessagesRawLast);
         const speed = finiteNonNegative(aggregate.maxGroundSpeedKt);
-        if (speed !== null && aggregate.maxGroundSpeedIcaoHex && aggregate.maxGroundSpeedAt) {
+        if (speed !== null && speed >= MIN_PLAUSIBLE_GROUND_SPEED_KT && speed <= MAX_PLAUSIBLE_GROUND_SPEED_KT
+          && aggregate.maxGroundSpeedIcaoHex && aggregate.maxGroundSpeedAt) {
           const recordedAt = aggregate.maxGroundSpeedAt instanceof Date
             ? aggregate.maxGroundSpeedAt.toISOString()
             : aggregate.maxGroundSpeedAt.toString();
@@ -230,7 +233,7 @@ export class ReceiverAdvancedStatistics {
       for (const row of altitudeRows) {
         if (!Number.isInteger(row.azimuthBucket) || row.azimuthBucket < 0 || row.azimuthBucket >= COVERAGE_BUCKET_COUNT) continue;
         if (!Number.isInteger(row.altitudeBand) || row.altitudeBand < 0 || row.altitudeBand >= ALTITUDE_COVERAGE_BANDS.length) continue;
-        const distance = finiteNonNegative(row.maxDistanceKm);
+        const distance = plausibleReceiverDistanceKm(row.maxDistanceKm);
         if (distance === null) continue;
         const key = coverageKey(row.azimuthBucket, row.altitudeBand);
         this.altitudeCoverage.set(key, { azimuthBucket: row.azimuthBucket, altitudeBand: row.altitudeBand, maxDistanceKm: distance });

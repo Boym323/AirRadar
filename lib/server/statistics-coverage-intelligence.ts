@@ -16,6 +16,7 @@ import {
   type CoverageIntelligenceResponse,
 } from "@/lib/statistics-coverage-intelligence";
 import type { ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence-v2";
+import { MAX_PLAUSIBLE_FLIGHT_ALTITUDE_FT } from "@/lib/receiver-sanity";
 
 function instantIso(value: Temporal.Instant | Date): string {
   return value instanceof Date ? value.toISOString() : value.toString();
@@ -144,6 +145,7 @@ export async function getCoverageIntelligence(
         .all(),
       boundedFlights()
         .where((flight) => flight.maxAltitude.gt(0))
+        .where((flight) => flight.maxAltitude.lte(MAX_PLAUSIBLE_FLIGHT_ALTITUDE_FT))
         .orderBy([(flight) => flight.maxAltitude.desc(), (flight) => flight.startTime.desc()])
         .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration"))
         .limit(1)

@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { getReceiverStatisticsRange } from "@/lib/server/statistics-range";
 import type { CurrentDayStatisticsSnapshot } from "@/lib/server/statistics-range";
+import { plausibleReceiverDistanceKm } from "@/lib/receiver-sanity";
 
 export { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES } from "@/lib/statistics-coverage";
 export const STATISTICS_FLUSH_INTERVAL_MS = 30_000;
@@ -323,10 +324,11 @@ export class ReceiverStatistics {
       this.accountAircraft(icaoHex, typeForAircraft(item), airlineForAircraft(item));
 
       if (!canCalculateCoverage || !validPosition(item)) continue;
-      const distanceKm = Number.isFinite(item.distanceKm) && (item.distanceKm ?? -1) >= 0
+      const calculatedDistanceKm = Number.isFinite(item.distanceKm) && (item.distanceKm ?? -1) >= 0
         ? item.distanceKm!
         : haversineDistanceKm(receiver.lat, receiver.lon, item.lat, item.lon);
-      if (!Number.isFinite(distanceKm) || distanceKm < 0) continue;
+      const distanceKm = plausibleReceiverDistanceKm(calculatedDistanceKm);
+      if (distanceKm === null) continue;
       const bearing = Number.isFinite(item.bearing) && item.bearing! >= 0 && item.bearing! < 360
         ? item.bearing!
         : initialBearing(receiver.lat, receiver.lon, item.lat, item.lon);
@@ -527,13 +529,14 @@ export class ReceiverStatistics {
     if (snapshot.date !== this.currentDate) return;
     this.uniqueAircraftCount = Math.max(this.uniqueAircraftCount, snapshot.uniqueAircraftCount);
     this.maxConcurrentAircraft = Math.max(this.maxConcurrentAircraft, snapshot.maxConcurrentAircraft);
-    if (snapshot.maxDistanceKm > this.maxDistanceKm) {
-      this.maxDistanceKm = snapshot.maxDistanceKm;
+    const persistedDistanceKm = plausibleReceiverDistanceKm(snapshot.maxDistanceKm);
+    if (persistedDistanceKm !== null && persistedDistanceKm > this.maxDistanceKm) {
+      this.maxDistanceKm = persistedDistanceKm;
       this.maxDistanceIcaoHex = snapshot.maxDistanceIcaoHex;
       this.maxDistanceBearing = snapshot.maxDistanceBearing;
       this.maxDistanceRegistration = snapshot.maxDistanceRegistration;
       this.maxDistanceAt = snapshot.maxDistanceAt;
-    } else if (snapshot.maxDistanceKm === this.maxDistanceKm && this.maxDistanceIcaoHex === snapshot.maxDistanceIcaoHex) {
+    } else if (persistedDistanceKm !== null && persistedDistanceKm === this.maxDistanceKm && this.maxDistanceIcaoHex === snapshot.maxDistanceIcaoHex) {
       this.maxDistanceBearing ??= snapshot.maxDistanceBearing;
       this.maxDistanceRegistration ??= snapshot.maxDistanceRegistration;
       this.maxDistanceAt ??= snapshot.maxDistanceAt;
@@ -563,8 +566,9 @@ export class ReceiverStatistics {
       this.incrementBreakdown(this.airlineCounts, record.airline);
     }
     for (const item of snapshot.coverage) {
-      if (item.azimuthBucket < 0 || item.azimuthBucket >= COVERAGE_BUCKET_COUNT || !Number.isFinite(item.maxDistanceKm) || item.maxDistanceKm < 0) continue;
-      this.coverage.set(item.azimuthBucket, Math.max(this.coverage.get(item.azimuthBucket) ?? 0, item.maxDistanceKm));
+      const distanceKm = plausibleReceiverDistanceKm(item.maxDistanceKm);
+      if (item.azimuthBucket < 0 || item.azimuthBucket >= COVERAGE_BUCKET_COUNT || distanceKm === null) continue;
+      this.coverage.set(item.azimuthBucket, Math.max(this.coverage.get(item.azimuthBucket) ?? 0, distanceKm));
     }
   }
 

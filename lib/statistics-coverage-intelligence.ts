@@ -1,5 +1,6 @@
 import { buildReceiverCoverageIntelligenceV1, type ReceiverCoverageIntelligenceV1 } from "@/lib/receiver-coverage-intelligence-v1";
 import { buildReceiverCoverageIntelligenceV2, type ReceiverCoverageHourlyEvidenceRow, type ReceiverCoverageIntelligenceV2 } from "@/lib/receiver-coverage-intelligence-v2";
+import { MAX_PLAUSIBLE_GROUND_SPEED_KT, plausibleReceiverDistanceKm } from "@/lib/receiver-sanity";
 
 export type CoverageIntelligenceRange = "7d" | "30d";
 
@@ -153,7 +154,8 @@ export function parseCoverageIntelligenceRange(value: string | null | undefined)
 }
 
 function finiteDistance(value: number): number | null {
-  return Number.isFinite(value) && value > 0 ? value : null;
+  const distance = plausibleReceiverDistanceKm(value);
+  return distance !== null && distance > 0 ? distance : null;
 }
 
 function finiteNonNegative(value: number | null): number | null {
@@ -289,7 +291,9 @@ export function aggregateCoverageIntelligence(options: {
     .filter((row) => finiteDistance(row.maxDistanceKm) !== null && row.maxDistanceIcaoHex && row.maxDistanceBearing !== null && Number.isFinite(row.maxDistanceBearing) && row.maxDistanceAt)
     .sort((a, b) => b.maxDistanceKm - a.maxDistanceKm || a.date.localeCompare(b.date))[0] ?? null;
   const fastest = [...options.statsRows]
-    .filter((row) => finiteDistance(row.maxGroundSpeedKt ?? 0) !== null && row.maxGroundSpeedIcaoHex && row.maxGroundSpeedAt)
+    .filter((row) => row.maxGroundSpeedKt !== null && Number.isFinite(row.maxGroundSpeedKt)
+      && row.maxGroundSpeedKt >= 30 && row.maxGroundSpeedKt <= MAX_PLAUSIBLE_GROUND_SPEED_KT
+      && row.maxGroundSpeedIcaoHex && row.maxGroundSpeedAt)
     .sort((a, b) => (b.maxGroundSpeedKt ?? 0) - (a.maxGroundSpeedKt ?? 0) || a.date.localeCompare(b.date))[0] ?? null;
   const messageRows = options.statsRows
     .map((row) => finiteNonNegative(row.receiverMessagesCount))

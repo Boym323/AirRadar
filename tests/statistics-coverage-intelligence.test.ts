@@ -159,6 +159,26 @@ describe("coverage intelligence", () => {
     });
   });
 
+  it("rejects implausible historical distance and speed records", () => {
+    const result = aggregateCoverageIntelligence({
+      ...baseOptions,
+      coverageRows: [{ date: "2026-09-10", azimuthBucket: 4, maxDistanceKm: 18_000 }],
+      statsRows: [statsRow({
+        maxDistanceKm: 18_000,
+        maxDistanceIcaoHex: "BAD001",
+        maxDistanceBearing: 40,
+        maxDistanceAt: "2026-09-10T12:00:00.000Z",
+        maxGroundSpeedKt: 799,
+        maxGroundSpeedIcaoHex: "BAD002",
+        maxGroundSpeedAt: "2026-09-10T12:00:00.000Z",
+      })],
+    });
+
+    expect(result.coverage.sectors[4]?.observedDays).toBe(0);
+    expect(result.records.farthestReception).toBeNull();
+    expect(result.records.fastestAircraft).toBeNull();
+  });
+
   it("selects range records without position samples", () => {
     const highestFlight = {
       flightId: 77,
