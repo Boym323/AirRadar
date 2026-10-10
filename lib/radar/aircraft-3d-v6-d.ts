@@ -59,18 +59,31 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
     out vec3 v_color;
     void main(){gl_Position=u_matrix*vec4(a_pos,1.0);v_color=a_color;}
   `);
-  const fragment = createShader(gl,gl.FRAGMENT_SHADER,`#version 300 es
-    precision highp float;
-    in vec3 v_color;
-    out vec4 fragColor;
-    void main(){fragColor=vec4(v_color,1.0);}
-  `);
-  const program=gl.createProgram();
-  if(!program)throw new Error("3D program unavailable");
-  gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);
-  gl.deleteShader(vertex);gl.deleteShader(fragment);
-  if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const msg=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw new Error(`3D program failed: ${msg}`);}
-  return program;
+  let fragment: WebGLShader | null = null;
+  let program: WebGLProgram | null = null;
+  try {
+    fragment = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+      precision highp float;
+      in vec3 v_color;
+      out vec4 fragColor;
+      void main(){fragColor=vec4(v_color,1.0);}
+    `);
+    program = gl.createProgram();
+    if (!program) throw new Error("3D program unavailable");
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(`3D program failed: ${gl.getProgramInfoLog(program)}`);
+    }
+    return program;
+  } catch (error) {
+    if (program) gl.deleteProgram(program);
+    throw error;
+  } finally {
+    gl.deleteShader(vertex);
+    if (fragment) gl.deleteShader(fragment);
+  }
 }
 
 const SHAPE = [
@@ -122,18 +135,33 @@ export class RadarAircraft3dRuntime {
   }
   setAircraft(aircraft: readonly AircraftView[], selectedHex: string | null, hidden = false): void {
     const candidates = hidden ? [] : selectRadarAircraft3d(aircraft,selectedHex);
-    this.vertexData = new Float32Array(aircraft3dVertices(candidates));
+    this.vertexData = aircraft3dVertices(candidates);
     this.dirty = true;
     this.map?.triggerRepaint();
   }
   private onAdd(map: import("maplibre-gl").Map, gl: WebGL2RenderingContext): void {
-    this.map=map;this.gl=gl;this.program=createProgram(gl);this.buffer=gl.createBuffer();this.vao=gl.createVertexArray();
-    if(!this.buffer||!this.vao)throw new Error("3D buffers unavailable");
-    gl.bindVertexArray(this.vao);gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);
-    const stride=FLOATS_PER_VERTEX*Float32Array.BYTES_PER_ELEMENT;
-    gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,stride,0);
-    gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,stride,3*Float32Array.BYTES_PER_ELEMENT);
-    gl.bindVertexArray(null);gl.bindBuffer(gl.ARRAY_BUFFER,null);
+    this.map = map;
+    this.gl = gl;
+    try {
+      this.program = createProgram(gl);
+      this.buffer = gl.createBuffer();
+      this.vao = gl.createVertexArray();
+      if (!this.buffer || !this.vao) throw new Error("3D buffers unavailable");
+      gl.bindVertexArray(this.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      const stride = FLOATS_PER_VERTEX * Float32Array.BYTES_PER_ELEMENT;
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 3 * Float32Array.BYTES_PER_ELEMENT);
+      this.dirty = true;
+      map.triggerRepaint();
+    } catch (error) {
+      // Failure of an optional WebGL layer must never break the live 2D radar.
+      console.warn("Optional V6-D aircraft 3D layer unavailable.", error);
+      this.dispose(gl);
+    } finally {
+      gl.bindVertexArray?.(null);
+      gl.bindBuffer?.(gl.ARRAY_BUFFER, null);
+    }
   }
   private render(gl: WebGL2RenderingContext, input: CustomRenderMethodInput): void {
     if(!this.program||!this.buffer||!this.vao||!this.vertexData.length) return;
@@ -149,7 +177,9 @@ export class RadarAircraft3dRuntime {
     if(this.vao)gl.deleteVertexArray(this.vao);
     if(this.buffer)gl.deleteBuffer(this.buffer);
     if(this.program)gl.deleteProgram(this.program);
-    this.vao=null;this.buffer=null;this.program=null;this.gl=null;this.map=null;this.matrixUniform=null;this.vertexData=new Float32Array(0);
+    this.vao=null;this.buffer=null;this.program=null;this.gl=null;this.map=null;this.matrixUniform=null;
+    // Keep last bounded CPU vertices for recovery after style or WebGL context restoration.
+    this.dirty = true;
   }
 }
 export function createRadarAircraft3dRuntime(): RadarAircraft3dRuntime {return new RadarAircraft3dRuntime();}
