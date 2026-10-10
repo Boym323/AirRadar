@@ -82,4 +82,24 @@ describe("V6-D 3D model selection and GPU budget",()=>{
     expect(model.every(Number.isFinite)).toBe(true);
     expect(airframeFaceCount("A320")).toBeLessThan(300);
   });
+  it("differentiates Airbus sharklets, Boeing winglets, nacelles and aircraft sizes", () => {
+    const a320 = resolveAirframeSpec("A320");
+    const a20n = resolveAirframeSpec("A20N");
+    const b738 = resolveAirframeSpec("B738");
+    const b77w = resolveAirframeSpec("B77W");
+    const b78x = resolveAirframeSpec("B78X");
+    const a388 = resolveAirframeSpec("A388");
+    expect(a20n.winglet).toBeGreaterThan(a320.winglet ?? 0);
+    expect(b738.wingSweep).not.toBe(a320.wingSweep);
+    expect(b77w.span).toBeGreaterThan(b738.span);
+    expect(b78x.length).toBeGreaterThan(resolveAirframeSpec("B789").length);
+    expect(airframeFaceCount("A388")).toBeGreaterThan(airframeFaceCount("A20N"));
+    // Geometry remains finite, cached and bounded: at most 12 airframes.
+    for(const code of ["A20N","A21N","B738","B38M","B39M","B77W","B78X","A388","C172","H145"]) {
+      expect(airframeFaceCount(code)).toBeLessThan(300);
+      expect(airframeFaceCount(code)).toBeGreaterThan(10);
+      expect(airframeModelFaces(code)).toBe(airframeModelFaces(code));
+    }
+  });
+
 });
