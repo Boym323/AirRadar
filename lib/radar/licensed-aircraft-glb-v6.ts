@@ -16,6 +16,10 @@ const ASSETS = {
   B787: "B787_nologo.glb",
 } as const;
 export type LicensedFamily = keyof typeof ASSETS;
+const DIMENSIONS: Record<LicensedFamily,{length:number;span:number}> = {
+  A320:{length:37.6,span:35.8}, A350:{length:66.8,span:64.8}, A380:{length:72.7,span:79.8},
+  B737:{length:39.5,span:35.8}, B787:{length:63,span:60.1},
+};
 export const MAX_GLB_BYTES = 1_500_000;
 export const MAX_GLB_FACES = 480;
 const models = new Map<LicensedFamily, readonly AirframeFace[]>();
@@ -83,7 +87,7 @@ function readAccessor(doc: GlbDoc, bin: DataView, at: number, expected: "VEC3"|"
   return result;
 }
 /** Decode embedded GLB triangles into a bounded local-metre mesh. No textures, scripts, extensions or external URIs. */
-export function decodeLicensedGlb(buffer: ArrayBuffer): readonly AirframeFace[] {
+export function decodeLicensedGlb(buffer: ArrayBuffer, family: LicensedFamily = "A320"): readonly AirframeFace[] {
   if(buffer.byteLength<28||buffer.byteLength>MAX_GLB_BYTES)throw Error("GLB size limit");
   const header=new DataView(buffer);
   if(header.getUint32(0,true)!==0x46546c67||header.getUint32(4,true)!==2||header.getUint32(8,true)!==buffer.byteLength)throw Error("Invalid GLB 2 header");
@@ -134,8 +138,10 @@ export function decodeLicensedGlb(buffer: ArrayBuffer): readonly AirframeFace[] 
   const span=max[spanAxis]!-min[spanAxis]!,length=max[forwardAxis]!-min[forwardAxis]!;
   if(!Number.isFinite(span)||!Number.isFinite(length)||span<=0||length<=0)throw Error("Degenerate GLB geometry");
   const cx=(min[spanAxis]!+max[spanAxis]!)/2,cy=(min[forwardAxis]!+max[forwardAxis]!)/2,cz=(min[1]!+max[1]!)/2;
-  const scale=36/Math.max(span,length);
-  const local=(p:Vec3):Vec3=>[(p[spanAxis]-cx)*scale,(p[forwardAxis]-cy)*scale,(p[1]-cz)*scale];
+  const physical=DIMENSIONS[family];
+  const spanScale=physical.span/span, lengthScale=physical.length/length;
+  const heightScale=Math.min(spanScale,lengthScale);
+  const local=(p:Vec3):Vec3=>[(p[spanAxis]-cx)*spanScale,(p[forwardAxis]-cy)*lengthScale,(p[1]-cz)*heightScale];
   const result:AirframeFace[]=[];
   const stride=Math.max(1,Math.ceil(raw.length/MAX_GLB_FACES));
   for(let i=0;i<raw.length;i+=stride){
@@ -158,7 +164,7 @@ export async function requestLicensedFaces(type: string | null | undefined, onRe
         const contentLength=Number(response.headers.get("content-length")||0);
         if(!response.ok||contentLength>MAX_GLB_BYTES)throw Error("GLB unavailable or oversized");
         const bytes=await response.arrayBuffer();
-        models.set(family,decodeLicensedGlb(bytes));
+        models.set(family,decodeLicensedGlb(bytes,family));
         onReady();
       }catch{
         failedAt.set(family,Date.now()); // offline/blocked asset: keep local model
