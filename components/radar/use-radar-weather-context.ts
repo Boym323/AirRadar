@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
+import type { WeatherRadarProduct } from "@/lib/server/weather-radar/types";
 
 export type RadarLayerDataStatus = "idle" | "loading" | "ready" | "stale" | "unavailable";
 
@@ -72,6 +73,10 @@ export function useRadarWeatherContext({
 
   useEffect(() => {
     const generation = ++radarGenerationRef.current;
+    if (radarPreviousProductRef.current !== radarProduct) {
+      radarPreviousProductRef.current = radarProduct;
+      radarWasEnabledRef.current = false;
+    }
     if (!showWeatherRadar) {
       radarWasEnabledRef.current = false;
       setRadarPlaying(false);

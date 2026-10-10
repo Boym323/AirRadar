@@ -1348,3 +1348,167 @@
 @media (max-width: 820px) {
   .aircraft-quick-header { position: relative; top: auto; }
 }
+
+
+/* Aircraft drawer polish: never overlay the tab content with a full-height
+ * sticky hero. Size action controls against the DRAWER, not the viewport.
+ * The radar drawer can be 350px wide even on a large desktop display. */
+.sidebar.drawer-aircraft .aircraft-quick-header {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  container: aircraft-drawer-header / inline-size;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header .aircraft-v5-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-2);
+  overflow: visible;
+  margin-top: var(--space-3);
+  padding-bottom: 0;
+}
+
+.sidebar.drawer-aircraft .aircraft-v5-quick-actions .aircraft-quick-action {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: var(--control-height-touch);
+  padding: var(--space-2);
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: manual;
+  line-height: var(--line-height-body);
+  text-align: center;
+}
+
+.sidebar.drawer-aircraft .aircraft-v5-quick-actions .aircraft-quick-action.primary {
+  grid-column: auto;
+}
+
+/* The parent panel may be only ~400px wide even on desktop. Do not switch to
+ * three action columns based on viewport size: Czech labels split mid-word.
+ * The single-column fallback is reserved for exceptionally narrow drawers. */
+@container aircraft-drawer-header (max-width: 270px) {
+  .aircraft-v5-quick-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Four live metrics cannot fit next to the watchlist control in a 400px drawer:
+ * keep the full altitude/speed/heading/V/S numbers in a stable two-by-two grid.
+ * This rule is drawer-specific; shared OGN/traffic cards are unchanged. */
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+  min-width: 0;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics > div {
+  min-width: 0;
+  padding-right: 0;
+  border-right: 0;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics > div:nth-child(odd) {
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics strong {
+  display: block;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics span {
+  display: block;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  white-space: normal;
+}
+
+/* All four sections remain visible at minimum drawer width. */
+.sidebar.drawer-aircraft .aircraft-quick-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow-x: visible;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-tabs button {
+  min-width: 0;
+  padding-inline: var(--space-1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: var(--line-height-tight);
+}
+
+.aircraft-quick-detail .aircraft-quick-detail-grid > .aircraft-quick-detail-value {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.aircraft-quick-detail .aircraft-quick-detail-value .detail-item-label,
+.aircraft-quick-detail .aircraft-quick-detail-value .detail-item-value {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.aircraft-quick-telemetry-more {
+  margin-top: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.aircraft-quick-telemetry-more > summary {
+  display: list-item;
+  cursor: pointer;
+  min-height: var(--control-height-touch);
+  padding: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.aircraft-quick-telemetry-more > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.aircraft-quick-telemetry-more[open] > summary {
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--accent);
+}
+
+.aircraft-quick-telemetry-stale,
+.aircraft-quick-telemetry-empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.aircraft-quick-telemetry-more > .aircraft-adsb-telemetry {
+  margin: 0;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 420px) {
+  .aircraft-quick-telemetry .aircraft-quick-detail-grid,
+  .aircraft-quick-data .aircraft-quick-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
