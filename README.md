@@ -285,6 +285,7 @@ polling. Configure them in the server-only `.env`; never use
 | Capability | Configuration | Default |
 | --- | --- | --- |
 | ADSBDB metadata/routes | `ADSBDB_ENABLED=true` | Disabled |
+| ADSB.lol routeset fallback | `ADSBLOL_ROUTE_ENABLED=true` | Disabled; batched POST, only if ADSBDB route is missing or implausible |
 | tar1090 aircraft catalog | `AIRCRAFT_METADATA_URL` when using a tar1090 root | Best effort, daily conditional sync |
 | FlightAware flight plans | `FLIGHTAWARE_API_KEY` | Disabled; commercial/possibly billable |
 | AviationWeather.gov METAR/TAF/SIGMET | No key; server-side AWC integration | Disabled; opt-in |
