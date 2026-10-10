@@ -40,3 +40,22 @@ describe("V6 CC-BY GLB asset parser",()=>{
     expect(()=>decodeLicensedGlb(new ArrayBuffer(40))).toThrow();
   });
 });
+
+
+describe("licensed GLB source integration (explicit CI gate)", () => {
+  const families = ["A320","A350","A380","B737","B787"] as const;
+  it.skipIf(process.env.RUN_LIVE_GLB_ASSET_AUDIT !== "1")("decodes all pinned CC BY assets", async () => {
+    const root = "https://raw.githubusercontent.com/amvlab/aircraft-models/91d835e8e851b2317fe79af291c9fed6153fd525/models/";
+    for (const family of families) {
+      const response = await fetch(`${root}${family}_nologo.glb`, { signal: AbortSignal.timeout(12_000) });
+      expect(response.ok, `${family} source status`).toBe(true);
+      expect(response.headers.get("access-control-allow-origin"), `${family} CORS`).toBe("*");
+      const bytes = await response.arrayBuffer();
+      expect(bytes.byteLength).toBeLessThanOrEqual(MAX_GLB_BYTES);
+      const faces = decodeLicensedGlb(bytes, family);
+      expect(faces.length, `${family} faces`).toBeGreaterThan(20);
+      expect(faces.length).toBeLessThanOrEqual(MAX_GLB_FACES);
+      expect(faces.every(face => face.slice(0,3).flat().every(Number.isFinite))).toBe(true);
+    }
+  }, 90_000);
+});
