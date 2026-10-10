@@ -5,6 +5,7 @@ import { defaultMapContextArchiveService } from "@/lib/server/map-context";
 import { stopRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
+import { getRxwHubService } from "@/lib/server/rxw-hub-service";
 
 export const SHUTDOWN_BUDGET_MS = 10_000;
 export type ShutdownState = "RUNNING" | "SHUTTING_DOWN" | "COMPLETE";
@@ -19,6 +20,7 @@ type Cleanup = {
   stopMapContext?: () => Promise<void>;
   stopTelemetry?: () => Promise<void>;
   stopAlertDelivery?: () => Promise<void>;
+  stopRxw?: () => Promise<void>;
 };
 
 export function createShutdownCoordinator(cleanup: Cleanup, budgetMs = SHUTDOWN_BUDGET_MS) {
@@ -73,6 +75,9 @@ export function createShutdownCoordinator(cleanup: Cleanup, budgetMs = SHUTDOWN_
         console.info("[shutdown] stopping alert delivery worker");
         await phase("alert delivery stop", cleanup.stopAlertDelivery, deadline);
       }
+      if (cleanup.stopRxw) {
+        await phase("RXW Hub stop", cleanup.stopRxw, deadline);
+      }
       console.info("[shutdown] closing statistics");
       await phase("statistics close", cleanup.closeStatistics, deadline);
       console.info("[shutdown] closing provider");
@@ -110,6 +115,7 @@ export function getShutdownCoordinator() {
     stopMapContext: () => defaultMapContextArchiveService.stop(),
     stopTelemetry: stopRuntimeTelemetry,
     stopAlertDelivery: () => getAlertDeliveryWorker().stop(),
+    stopRxw: async () => { getRxwHubService().stop(); },
     closeStatistics: () => getAircraftStateService().closeStatistics(),
     closeProvider: () => getAircraftStateService().closeProvider(),
     flushWeather: () => defaultAviationWeatherProvider.flushPersistence("graceful"),

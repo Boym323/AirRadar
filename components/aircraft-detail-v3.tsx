@@ -14,6 +14,7 @@ import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { PredictiveAircraftAdvisories } from "@/components/predictive-aircraft-advisories";
 import { AircraftWeatherFusion } from "@/components/aircraft-weather-fusion";
 import { AircraftOperationalTwin } from "@/components/aircraft-operational-twin";
+import { AircraftCommunications } from "@/components/aircraft-communications";
 import { FollowJourneyButton } from "@/components/follow-journey-button";
 import {
   AircraftAltitudeChart,
@@ -557,6 +558,8 @@ export function AircraftDetailV3({
         <div className={styles.lifetimeCard}><AircraftLifetimeStatsCard stats={detail?.lifetimeStats ?? null} /></div>
       </div>
     </section>
+
+    <AircraftCommunications icaoHex={icaoHex} />
 
     <div id="aircraft-receiver" className={styles.receiverSection}>
     <DataSources

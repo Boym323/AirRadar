@@ -1049,6 +1049,28 @@
         "evidence stamp",
         "source freshness"
       ]
+    },
+    {
+      "id": "rxw-aircraft-communications",
+      "name": "ACARS/VDL2 Communications (RXW Hub)",
+      "category": "aircraft / communications",
+      "status": "optional",
+      "introducedVersion": null,
+      "summary": "Optional RXW ACARS Hub metadata integration using one server-side Socket.IO client, bounded ICAO24-matched cache and a content-free communications panel. Disabled by default; requires provider authorization.",
+      "pages": [
+        "/aircraft/:hex"
+      ],
+      "apis": [
+        "/api/aircraft/:hex/communications"
+      ],
+      "changelogScopes": [
+        "rxw-acars"
+      ],
+      "changelogKeywords": [
+        "RXW Hub",
+        "ACARS communications",
+        "VDL2 communications"
+      ]
     }
   ]
 }
