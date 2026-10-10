@@ -46,7 +46,8 @@ describe("Visual System V5-C airport UX", () => {
     expect(markup).not.toContain("Scheduled ETA");
   });
   it("validates every view in browser smoke and captures mobile and analytics screenshots", () => {
-    for (const view of AIRPORT_V5_VIEWS) expect(gate).toContain(`switchAirportView("${view}")`);
+    for (const view of AIRPORT_V5_VIEWS.filter((value) => value !== "overview")) expect(gate).toContain(`switchAirportView("${view}")`);
+    expect(gate).toContain('switchAirportView(target.airportCaptureView ?? "overview")');
     expect(gate).toContain("airport-v5-overview-320");
     expect(gate).toContain("airport-v5-arrivals-mobile");
     expect(gate).toContain("airport-v5-analytics-desktop");
