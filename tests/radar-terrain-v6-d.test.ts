@@ -17,7 +17,7 @@ describe("V6-D1 optional terrain", () => {
   it("enables DEM without reloading map style", () => {
     const map = { getSource: vi.fn(() => undefined), addSource: vi.fn(), getTerrain: vi.fn(() => null), setTerrain: vi.fn(), getPitch: vi.fn(() => 0), easeTo: vi.fn(), setStyle: vi.fn() };
     setRadar3dTerrain(map as unknown as MapLibreMap, "3d");
-    expect(map.addSource).toHaveBeenCalledWith(RADAR_TERRAIN_SOURCE_ID, expect.objectContaining({ type: "raster-dem" }));
+    expect(map.addSource).toHaveBeenCalledWith(RADAR_TERRAIN_SOURCE_ID, expect.objectContaining({ type: "raster-dem", encoding: "terrarium", tileSize: 512 }));
     expect(map.setTerrain).toHaveBeenCalledWith({ source: RADAR_TERRAIN_SOURCE_ID, exaggeration: 1 });
     expect(map.easeTo).toHaveBeenCalledWith(expect.objectContaining({ pitch: 58 }));
     expect(map.setStyle).not.toHaveBeenCalled();
