@@ -218,7 +218,7 @@ export class EnrichmentService {
 
   /** Providers safe for continuous live-snapshot enrichment. */
   get hasProviders(): boolean {
-    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute);
+    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightRouteFallback);
   }
 
   get hasInitialMetadataProvider(): boolean {
@@ -301,7 +301,7 @@ export class EnrichmentService {
   needsEnrichment(aircraft: Aircraft, existing: AircraftEnrichment | undefined): boolean {
     return Boolean(
       (this.providers.aircraftMetadata && !existing?.metadata)
-      || (aircraft.callsign && this.providers.flightRoute && !existing?.route),
+      || (aircraft.callsign && (this.providers.flightRoute || this.providers.flightRouteFallback) && !existing?.route),
     );
   }
 
@@ -318,18 +318,41 @@ export class EnrichmentService {
             negativeTtlMs: ENRICHMENT_TTLS.metadataNegativeMs,
           })
         : Promise.resolve(null),
-      aircraft.callsign && this.providers.flightRoute
-        ? this.getAdsbDbCached("route", routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex), () => this.routeLimiter(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
-            ttlMs: ENRICHMENT_TTLS.routeMs,
-            negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
-          }).then((route) => route && routeMatchesAircraftPosition(aircraft, route) ? route : null)
-        : Promise.resolve(null),
+      aircraft.callsign ? this.resolveFreeRoute(aircraft, observedAt) : Promise.resolve(null),
     ]);
 
     const enrichment: AircraftEnrichment = {};
     if (metadata) enrichment.metadata = metadata;
     if (route) enrichment.route = route;
     return Object.keys(enrichment).length ? enrichment : null;
+  }
+
+  /** ADSBDB first; ADSB.lol only for missing, incomplete, or implausible routes. */
+  private async resolveFreeRoute(aircraft: Aircraft, observedAt: Date): Promise<FlightRoute | null> {
+    const callsign = aircraft.callsign;
+    if (!callsign) return null;
+    const key = routeCacheKey(callsign, observedAt, aircraft.icaoHex);
+    const primary = this.providers.flightRoute
+      ? await this.getAdsbDbCached("route", key, () => this.routeLimiter(() => this.providers.flightRoute!.getRoute(callsign, observedAt)), {
+          ttlMs: ENRICHMENT_TTLS.routeMs,
+          negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
+        })
+      : null;
+    if (primary?.origin && primary.destination && routeMatchesAircraftPosition(aircraft, primary)) return primary;
+    const fallback = this.providers.flightRouteFallback;
+    if (!fallback || aircraft.lat === null || aircraft.lon === null) return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
+    let resolved: FlightRoute | null = null;
+    try {
+      resolved = await this.cache.get(
+        "routeset:" + key,
+        () => this.routeLimiter(() => fallback.getRoute(callsign, observedAt, { lat: aircraft.lat, lon: aircraft.lon })),
+        { ttlMs: ENRICHMENT_TTLS.routeMs, negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs, cacheLoaderErrors: false },
+      );
+    } catch {
+      // Route service failures must not block live traffic or poison negative cache.
+    }
+    if (resolved?.origin && resolved.destination && routeMatchesAircraftPosition(aircraft, resolved)) return resolved;
+    return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
   }
 
   /** Paid provider lookup used only by explicit aircraft-detail requests. */
