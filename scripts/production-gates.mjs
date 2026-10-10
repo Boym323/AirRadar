@@ -1008,6 +1008,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-320", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false },
+        { name: "radar-mobile-320-credits", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false, openMapCredits: true },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
         { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
@@ -1019,6 +1020,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "airport-v5-arrivals-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
         { name: "airport-v5-departures-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "departures" },
         { name: "airport-v5-analytics-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
+        { name: "airport-v5-analytics-en-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics", locale: "en" },
         { name: "airport-v5-arrivals-320", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 320, height: 568 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
         { name: "airport-v5-overview-tablet", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 768, height: 1024 }, fullPage: true, mockAirportV3: true },
         { name: "airport-v5-overview-320", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 320, height: 568 }, fullPage: false, mockAirportV3: true },
@@ -1511,6 +1513,21 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 return false;
               }
             }, undefined, { timeout: 25_000 });
+          }
+          if (target.openMapCredits) {
+            const attribution = visualPage.locator(".radar-content .maplibregl-ctrl-attrib");
+            await attribution.waitFor({ state: "visible", timeout: 15_000 });
+            await attribution.locator(".maplibregl-ctrl-attrib-button").click();
+            await visualPage.locator(".radar-content .maplibregl-ctrl-attrib.maplibregl-compact-show")
+              .waitFor({ state: "visible", timeout: 5_000 });
+            const visibleCreditLinks = await attribution.locator(".maplibregl-ctrl-attrib-inner a:visible").count();
+            if (visibleCreditLinks < 1) {
+              throw new Error("V5-E expanded map credits must retain a visible source link");
+            }
+          }
+          if (target.name === "airport-v5-analytics-en-mobile") {
+            await visualPage.getByText("Aircraft movement analytics", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Runway usage", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
           }
           await visualPage.addStyleTag({
             content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
