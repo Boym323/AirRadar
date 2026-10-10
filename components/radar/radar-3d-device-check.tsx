@@ -19,8 +19,11 @@ export function Radar3dDeviceCheck() {
       const samples:number[]=[];
       if(gl && document.visibilityState==="visible"){
         let previous=performance.now();
+        // A total wall-clock deadline is essential: throttled browsers can
+        // deliver many RAF callbacks slightly below the per-frame timeout.
+        const deadline = previous + 4000;
         // Observe existing map frames; do not create a second render loop or canvas.
-        for(let i=0;i<61;i++){
+        for(let i=0;i<61 && performance.now()<deadline;i++){
           if (document.visibilityState !== "visible") break;
           // Backgrounded/throttled tabs may never receive another animation
           // frame. Bound each sample so manual device QA always returns a result.
@@ -35,7 +38,7 @@ export function Radar3dDeviceCheck() {
             const timeout = window.setTimeout(() => {
               window.cancelAnimationFrame(frame);
               finish(null);
-            }, 600);
+            }, Math.max(1, Math.min(600, deadline - performance.now())));
             const frame = window.requestAnimationFrame(time => finish(time));
           });
           if (now === null) break;
