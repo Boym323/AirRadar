@@ -587,6 +587,7 @@ export function AirRadarApp() {
   const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
   const [windLevel, setWindLevel] = useState<WindLevelHpa>(300);
+  const [windModel, setWindModel] = useState<"ICON-EU" | "ALADIN-CE">("ICON-EU");
   const [showAupUup, setShowAupUup] = useState(false);
   const {
     airspaceDataset,
@@ -627,6 +628,7 @@ export function AirRadarApp() {
     showMetar,
     showWind,
     windLevel,
+    windModel,
     onSigmetUnavailable: () => setShowSigmet(false),
   });
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
@@ -1138,6 +1140,7 @@ export function AirRadarApp() {
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
       setShowWind(window.localStorage.getItem("airradar-wind-layer") === "true");
+      if (window.localStorage.getItem("airradar-wind-model") === "ALADIN-CE") setWindModel("ALADIN-CE");
       const storedWindLevel = Number(window.localStorage.getItem("airradar-wind-level"));
       if (WIND_PRESSURE_LEVELS.includes(storedWindLevel as WindLevelHpa)) setWindLevel(storedWindLevel as WindLevelHpa);
       setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
@@ -1220,6 +1223,7 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-level", String(windLevel)); } catch { /* optional */ } }, [windLevel]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-wind-model", windModel); } catch { /* optional */ } }, [windModel]);
   useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
   useEffect(() => { try { window.localStorage.setItem("airradar-nav-data-layer", String(showNavData)); } catch { /* optional */ } }, [showNavData]);
   useEffect(() => {
@@ -3540,6 +3544,8 @@ export function AirRadarApp() {
                 showWind={showWind}
                 onShowWindChange={setShowWind}
                 windLevel={windLevel}
+                windModel={windModel}
+                onWindModelChange={(model) => { setWindModel(model); setWindValidAt(null); }}
                 windPressureLevels={WIND_PRESSURE_LEVELS}
                 onWindLevelChange={setWindLevel}
                 windValidAt={windValidAt}
