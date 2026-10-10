@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type RefObject } from "react";
 import type { ImageSource, Map as MapLibreMap } from "maplibre-gl";
-import { ECHOTOP_BOUNDS, type EchoTopCatalog } from "@/lib/server/weather-radar/echotop-provider";
+import type { EchoTopCatalog } from "@/lib/server/weather-radar/echotop-provider";
+const ECHOTOP_BOUNDS = { west: 11.267, south: 48.047, east: 19.624, north: 51.458 } as const;
 
 export type EchoTopStatus = "idle" | "loading" | "ready" | "stale" | "unavailable";
 const SOURCE_ID="chmi-echotop-image";
