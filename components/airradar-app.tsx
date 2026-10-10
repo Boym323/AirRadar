@@ -736,9 +736,23 @@ export function AirRadarApp() {
         map.easeTo({ center: [receiver.lon, receiver.lat], zoom: 7.4, duration: 900, essential: true });
       }
     };
+    // Keep exactly one pending scene rotation only while Presentation Mode is active.
+    // This is local camera choreography, never additional aircraft/network polling.
+    let rotationTimeout: number | null = null;
+    const schedule = () => {
+      if (disposed) return;
+      rotationTimeout = window.setTimeout(() => {
+        if (disposed) return;
+        rotate();
+        schedule();
+      }, 45_000);
+    };
     rotate();
-    const interval = window.setInterval(rotate, 45_000);
-    return () => { disposed = true; window.clearInterval(interval); };
+    schedule();
+    return () => {
+      disposed = true;
+      if (rotationTimeout !== null) window.clearTimeout(rotationTimeout);
+    };
   }, [mapReady, presentationMode, presentationPaused]);
 
   useEffect(() => {
