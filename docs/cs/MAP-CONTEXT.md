@@ -48,7 +48,7 @@ rozsah EPSG:3857 je 11,267°E–19,624°E a 48,047°N–51,458°N. Data se
 zveřejňují každých pět minut ve formátu ODIM HDF5:
 `https://opendata.chmi.cz/meteorology/weather/radar/composite/echotop/hdf5/`.
 
-Volitelný provider kontroluje přesný název souboru, čas, maximální velikost
+Volitelný provider vyhledá aktuální HDF soubor nejvýše osmi HEAD požadavky na známé pětiminutové názvy, místo stahování neomezeně rostoucího adresářového výpisu ČHMÚ. Kontroluje přesný název souboru, čas, maximální velikost
 8 MiB, signaturu HDF5, typ produktu a jednotky, gain/offset/nodata, projekci,
 rozlišení a zeměpisnou oblast. Teprve poté serverový převodník vytváří RGBA PNG.
 Cache katalogu a obrázků je omezená. Chybějící knihovny znamenají
