@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.390] - 2026-10-10
+
+Changes since v1.0.389.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Changed
+
+- Refactor code structure for improved readability and maintainability (b10d2452)
+
+### Documentation
+
+- Add T5.3 production performance results report (df312897)
+
+### Maintenance
+
+- Sync generated repository metadata (#682) (c444ab97)
+- Make seven-day public route fixture time-independent (#683) (33998f87)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#682) (c444ab97)
+- docs(performance): add T5.3 production performance results report (df312897)
+- Refactor code structure for improved readability and maintainability (b10d2452)
+- test(history): make seven-day public route fixture time-independent (#683) (33998f87)
+
+</details>
 ## [1.0.389] - 2026-10-09
 
 Changes since v1.0.388.
