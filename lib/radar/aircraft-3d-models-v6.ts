@@ -4,7 +4,8 @@
  */
 export type AirframeGroup = "single-prop" | "regional-jet" | "single-aisle" | "widebody" | "four-engine" | "helicopter" | "generic";
 type P = readonly [number, number, number];
-export type AirframeFace = readonly [P, P, P, number];
+export type AirframeMaterial = "body" | "wing" | "engine" | "glass" | "intake" | "rotor";
+export type AirframeFace = readonly [P, P, P, number, AirframeMaterial?];
 export interface AirframeSpec {
   group: AirframeGroup;
   length: number;
@@ -53,14 +54,14 @@ export function resolveAirframeSpec(type: string | null | undefined): AirframeSp
   const code=(type??"").trim().toUpperCase();
   return SPEC[code] ?? (code.startsWith("B73") ? SPEC.B738 : code.startsWith("A32") ? SPEC.A320 : DEFAULT);
 }
-const add=(faces: AirframeFace[],a:P,b:P,c:P,shade=1)=>faces.push([a,b,c,shade]);
-function tube(faces: AirframeFace[], x: number, yA: number, yB: number, z: number, r: number, shade=.67):void {
+const add=(faces: AirframeFace[],a:P,b:P,c:P,shade=1,material:AirframeMaterial="body")=>faces.push([a,b,c,shade,material]);
+function tube(faces: AirframeFace[], x: number, yA: number, yB: number, z: number, r: number, shade=.67,material:AirframeMaterial="body"):void {
   const sides=8;
   for(let i=0;i<sides;i++){
     const t=i*2*Math.PI/sides, n=(i+1)*2*Math.PI/sides;
     const a:P=[x+Math.cos(t)*r,yA,z+Math.sin(t)*r], b:P=[x+Math.cos(n)*r,yA,z+Math.sin(n)*r];
     const c:P=[x+Math.cos(t)*r,yB,z+Math.sin(t)*r], d:P=[x+Math.cos(n)*r,yB,z+Math.sin(n)*r];
-    add(faces,a,b,c,shade);add(faces,b,d,c,shade);
+    add(faces,a,b,c,shade,material);add(faces,b,d,c,shade,material);
   }
 }
 /** Low-polygon but genuinely three-dimensional meshes; silhouettes, nacelles,
@@ -75,14 +76,14 @@ function createModel(s: AirframeSpec): readonly AirframeFace[] {
     tube(faces, 0, -L*.48, -L*.12, 0, R*.16, .55);
     // Rotor blades have actual thickness and opposite surfaces.
     for (const axis of [-1,1]) {
-      add(faces, [axis*W*.47,0,R*1.6],[0,.28,R*1.6],[0,-.28,R*1.6],.8);
-      add(faces, [0,-W*.38,R*1.6],[.26,0,R*1.6],[-.26,0,R*1.6],.8);
+      add(faces, [axis*W*.47,0,R*1.6],[0,.28,R*1.6],[0,-.28,R*1.6],.8,"rotor");
+      add(faces, [0,-W*.38,R*1.6],[.26,0,R*1.6],[-.26,0,R*1.6],.8,"rotor");
     }
     add(faces,[-R*1.4,-L*.18,-R],[-R*1.4,L*.12,-R],[-R*1.4,L*.12,-R*.8],.48);
     add(faces,[ R*1.4,-L*.18,-R],[ R*1.4,L*.12,-R],[ R*1.4,L*.12,-R*.8],.48);
     // Colored transparent-looking cabin glazing.
     for(const side of [-1,1]){
-      add(faces,[side*R*.93, L*.06,R*.5],[side*R*.8,L*.17,R*.5],[side*R*.96,L*.17,-R*.05],.25);
+      add(faces,[side*R*.93, L*.06,R*.5],[side*R*.8,L*.17,R*.5],[side*R*.96,L*.17,-R*.05],.90,"glass");
     }
     return faces;
   }
@@ -112,27 +113,27 @@ function createModel(s: AirframeSpec): readonly AirframeFace[] {
     // Wing upper and lower surfaces have real thickness for pitched 3D cameras.
     const wing:P[]=[[root,rootFront,wingZ],[tip,tipFront,wingZ+dihedral],
       [tip,tipBack,wingZ+dihedral],[root,rootBack,wingZ]];
-    add(faces,wing[0]!,wing[1]!,wing[2]!, .97);
-    add(faces,wing[0]!,wing[2]!,wing[3]!, .90);
+    add(faces,wing[0]!,wing[1]!,wing[2]!, .97,"wing");
+    add(faces,wing[0]!,wing[2]!,wing[3]!, .90,"wing");
     const underside=wing.map(p=>[p[0],p[1],p[2]-thickness] as P);
-    add(faces,underside[2]!,underside[1]!,underside[0]!, .63);
-    add(faces,underside[3]!,underside[2]!,underside[0]!, .63);
-    add(faces,wing[1]!,underside[1]!,wing[2]!, .68);
-    add(faces,wing[2]!,underside[1]!,underside[2]!, .68);
+    add(faces,underside[2]!,underside[1]!,underside[0]!, .63,"wing");
+    add(faces,underside[3]!,underside[2]!,underside[0]!, .63,"wing");
+    add(faces,wing[1]!,underside[1]!,wing[2]!, .68,"wing");
+    add(faces,wing[2]!,underside[1]!,underside[2]!, .68,"wing");
     // Airbus sharklets, 737 split scimitars and blended widebody tips.
     if (s.winglet) {
       const tipZ=wingZ+dihedral,tipY=(tipFront+tipBack)/2;
-      add(faces,[tip,tipY-.65,tipZ],[tip,tipY+.65,tipZ],[tip+side*.35,tipY,tipZ+s.winglet],.92);
-      if(s.winglet>2.5) add(faces,[tip,tipY-.65,tipZ],[tip-side*.30,tipY,tipZ-s.winglet*.45],[tip,tipY+.65,tipZ],.73);
+      add(faces,[tip,tipY-.65,tipZ],[tip,tipY+.65,tipZ],[tip+side*.35,tipY,tipZ+s.winglet],.92,"wing");
+      if(s.winglet>2.5) add(faces,[tip,tipY-.65,tipZ],[tip-side*.30,tipY,tipZ-s.winglet*.45],[tip,tipY+.65,tipZ],.73,"wing");
     }
     const tailZ=s.tailStyle==="t" ? R*3.15 : R*.32;
     const tailX=side*W*.20, tailY=-L*.415;
-    add(faces,[side*R*.5,tailY+L*.025,tailZ],[tailX,tailY,tailZ+R*.12],[side*R*.5,tailY-L*.035,tailZ],.84);
-    add(faces,[side*R*.5,tailY-L*.035,tailZ],[tailX,tailY,tailZ+R*.12],[side*R*.5,tailY+L*.025,tailZ],.62);
+    add(faces,[side*R*.5,tailY+L*.025,tailZ],[tailX,tailY,tailZ+R*.12],[side*R*.5,tailY-L*.035,tailZ],.84,"wing");
+    add(faces,[side*R*.5,tailY-L*.035,tailZ],[tailX,tailY,tailZ+R*.12],[side*R*.5,tailY+L*.025,tailZ],.62,"wing");
   }
   // Vertical stabilizer, with a distinct T-tail profile for CRJs.
-  add(faces,[0,-L*.44,R*.35],[0,-L*.35,R*3.45],[0,-L*.50,R*.35],.73);
-  add(faces,[0,-L*.50,R*.35],[0,-L*.35,R*3.45],[0,-L*.44,R*.35],.55);
+  add(faces,[0,-L*.44,R*.35],[0,-L*.35,R*3.45],[0,-L*.50,R*.35],.73,"wing");
+  add(faces,[0,-L*.50,R*.35],[0,-L*.35,R*3.45],[0,-L*.44,R*.35],.55,"wing");
   if(s.engines===1){
     tube(faces,0,L*.36,L*.50,0,R*.35,.58);
     add(faces,[-W*.17,L*.505,.02],[W*.17,L*.505,.02],[0,L*.52,.17],.38);
@@ -143,27 +144,27 @@ function createModel(s: AirframeSpec): readonly AirframeFace[] {
       const y=s.enginePosition==="tail" ? -L*.34:-L*.075;
       const z=s.enginePosition==="tail"? R*.16 : -R*.95;
       const rr=(s.group==="widebody"||s.group==="four-engine" ? R*.45:R*.36);
-      tube(faces,x,y-L*.05,y+L*.065,z,rr,.62);
+      tube(faces,x,y-L*.05,y+L*.065,z,rr,.62,"engine");
       // Dark nacelle intake ring + fan hint, without animated assets.
       for(let i=0;i<8;i++){
         const a=i*Math.PI/4,b=(i+1)*Math.PI/4;
         add(faces,[x,y+L*.067,z],[x+Math.cos(a)*rr*.82,y+L*.067,z+Math.sin(a)*rr*.82],
-          [x+Math.cos(b)*rr*.82,y+L*.067,z+Math.sin(b)*rr*.82],.20);
+          [x+Math.cos(b)*rr*.82,y+L*.067,z+Math.sin(b)*rr*.82],.95,"intake");
       }
       // Pylon
-      add(faces,[x,y-L*.02,z+rr],[x,y+L*.04,z+rr],[x-side*.15,y,z+rr+R*.65],.66);
+      add(faces,[x,y-L*.02,z+rr],[x,y+L*.04,z+rr],[x-side*.15,y,z+rr+R*.65],.66,"engine");
     }
   }
   // Cockpit glazing and bounded rows of cabin windows improve silhouette readability.
   for(const side of [-1,1]){
     add(faces,[side*R*.47,L*.402,R*.44],[side*R*.82,L*.345,R*.48],
-      [side*R*.67,L*.405,R*.18],.20);
+      [side*R*.67,L*.405,R*.18],.90,"glass");
     if(s.group!=="single-prop"){
       const count=Math.min(18,Math.max(6,Math.floor(L/3.8)));
       for(let i=0;i<count;i++){
         const y=-L*.32+i*L*.63/Math.max(1,count-1);
         const x=side*R*.955,z=R*.32;
-        add(faces,[x,y,z],[x,y+.55,z],[x,y+.35,z+.25],.33);
+        add(faces,[x,y,z],[x,y+.55,z],[x,y+.35,z+.25],.90,"glass");
       }
     }
   }
