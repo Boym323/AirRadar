@@ -48,6 +48,14 @@ describe("Visual System V5-C airport UX", () => {
   it("validates every view in browser smoke and captures mobile and analytics screenshots", () => {
     for (const view of AIRPORT_V5_VIEWS.filter((value) => value !== "overview")) expect(gate).toContain(`switchAirportView("${view}")`);
     expect(gate).toContain('switchAirportView(target.airportCaptureView ?? "overview")');
+    const initialCheck = gate.indexOf('const initialRoot = target.airportCaptureView');
+    const viewSwitch = gate.indexOf('await switchAirportView(target.airportCaptureView ?? "overview")');
+    const postSwitchCheck = gate.indexOf('await targetRoot.waitFor({ state: "visible", timeout: 15_000 });', viewSwitch);
+    expect(initialCheck).toBeGreaterThan(-1);
+    expect(gate).toContain('visualPage.getByTestId("airport-v5-page")');
+    expect(gate).toContain('await initialRoot.waitFor({ state: "visible", timeout: 5_000 });');
+    expect(viewSwitch).toBeGreaterThan(initialCheck);
+    expect(postSwitchCheck).toBeGreaterThan(viewSwitch);
     expect(gate).toContain("airport-v5-overview-320");
     expect(gate).toContain("airport-v5-arrivals-mobile");
     expect(gate).toContain("airport-v5-analytics-desktop");

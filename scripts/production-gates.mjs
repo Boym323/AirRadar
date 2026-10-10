@@ -1181,15 +1181,21 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
           const targetRoot = visualPage.locator(target.selector);
+          // A tab-specific screenshot target is intentionally unmounted on
+          // initial navigation, because the airport opens on Overview. Wait
+          // for its always-present page shell first, then activate the target
+          // view and assert the actual screenshot selector below.
+          const initialRoot = target.airportCaptureView
+            ? visualPage.getByTestId("airport-v5-page")
+            : targetRoot;
           try {
-            await targetRoot.waitFor({ state: "visible", timeout: 5_000 });
+            await initialRoot.waitFor({ state: "visible", timeout: 5_000 });
           } catch {
-            // A fresh Next.js route can occasionally reach DOMContentLoaded
-            // before its shell is painted. Retry the real page load once while
-            // keeping the selector assertion strict.
+            // A fresh Next.js route can reach DOMContentLoaded before its shell
+            // is painted. Retain one retry, without relaxing visibility checks.
             console.warn(`[production-gates] visual smoke ${target.path} root was not visible after initial navigation; retrying page load`);
             await visualPage.reload({ waitUntil: "domcontentloaded" });
-            await targetRoot.waitFor({ state: "visible", timeout: 15_000 });
+            await initialRoot.waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.name.startsWith("my-sky-focus-")) {
             await visualPage.locator('[data-testid="my-sky-focus-v2"]').waitFor({ state: "visible", timeout: 15_000 });
@@ -1270,6 +1276,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.locator(".airport-map-card").waitFor({ state: "visible", timeout: 15_000 });
             await switchAirportView(target.airportCaptureView ?? "overview");
             await visualPage.locator('[data-product="airport-live-board-v8"]').waitFor({ state: "visible", timeout: 15_000 });
+            // Verify the final target only after selecting the view that mounts it.
+            await targetRoot.waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveReadiness) {
             await visualPage.locator('[data-testid="predictive-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
