@@ -143,7 +143,12 @@ describe("route visualization V2", () => {
     expect(radarSource).toContain("ROUTE_V2_REMAINING_LAYER_ID");
     expect(radarSource).toContain("ROUTE_V2_AIRPORT_SOURCE_ID");
     expect(radarSource).toContain('"line-color": "#7ea9bd"');
-    expect(radarSource).toContain("t.route.actualTrail");
+    // V5-E keeps real receiver trails distinct from indicative route models.
+    expect(radarSource).toContain('"selected-trail"');
+    expect(radarSource).toContain('data-testid="radar-v5-route-evidence"');
+    expect(radarSource).toContain("visualSystemV5EText(t.locale).routeObserved");
+    expect(radarSource).toContain("visualSystemV5EText(t.locale).routeEstimated");
+    expect(radarSource).toContain("visualSystemV5EText(t.locale).routeUncertainty");
     expect(quickDetailSource).toContain("aircraftAirportHref");
   });
 
