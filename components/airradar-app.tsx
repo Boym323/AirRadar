@@ -144,6 +144,7 @@ import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
 import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
+import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBasemapReadability } from "@/lib/map-style";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -625,6 +626,7 @@ export function AirRadarApp() {
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
   const [trafficOpen, setTrafficOpen] = useState(false);
+  const [mapFocus, setMapFocus] = useState(false);
   const trafficTriggerRef = useRef<HTMLButtonElement | null>(null);
   const drawerActionGenerationRef = useRef(0);
   const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
@@ -3002,6 +3004,15 @@ export function AirRadarApp() {
       : trafficOpen
         ? "traffic"
         : "closed";
+  useEffect(() => {
+    if (drawerState !== "closed" && mapFocus) setMapFocus(false);
+  }, [drawerState, mapFocus]);
+  useEffect(() => {
+    // A CSS grid width change needs one MapLibre resize, not a new map.
+    const frame = window.requestAnimationFrame(() => mapRef.current?.resize());
+    return () => window.cancelAnimationFrame(frame);
+  }, [mapFocus, drawerState]);
+
   useRadarDrawerInteractions({
     drawerState,
     trafficSource,
@@ -3059,7 +3070,7 @@ export function AirRadarApp() {
         </>
       } />
 
-      <div className="radar-workspace">
+      <div className="radar-workspace" data-map-focus={mapFocus && drawerState === "closed" ? "true" : "false"}>
         <RadarNavRail showAtc={showAtc} onShowAtcChange={setShowAtc} showAirports={showAirports} onShowAirportsChange={setShowAirports} />
         <section ref={radarContentRef} className="radar-content">
         <div className="map-panel">
@@ -3170,6 +3181,8 @@ export function AirRadarApp() {
               activeFilterCount={activeFilterCount}
               filtersDisabled={trafficSource === "ogn"}
               selectionOpen={drawerState === "aircraft" || drawerState === "ogn"}
+              mapFocus={mapFocus}
+              onToggleMapFocus={() => setMapFocus((value) => !value)}
               onToggleWeather={() => {
                 const enabled = !showWeatherRadar;
                 setShowWeatherRadar(enabled);
@@ -3216,7 +3229,14 @@ export function AirRadarApp() {
               {showMetar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.metar}</strong><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span></span>}
               {showNavigationIntegrity && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.navigationIntegrity}</strong><span><i className="legend-line planned" /> {t.layers.navigationIntegrityReduced}</span><small>{t.layers.navigationIntegrityDisclaimer}</small></span>}
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
-              {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
+              {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend radar-v5-route-evidence" data-testid="radar-v5-route-evidence">
+                <strong>{visualSystemV5EText(t.locale).routeEvidence}</strong>
+                <span><i className="legend-line actual" /> {visualSystemV5EText(t.locale).routeObserved}</span>
+                <span><i className="legend-line completed" /> {t.route.originToCurrent}</span>
+                <span><i className="legend-line remaining" /> {visualSystemV5EText(t.locale).routeEstimated}</span>
+                {routeIntelligenceActiveRef.current && <span><i className="legend-line current-route" /> {visualSystemV5EText(t.locale).routeCurrent}</span>}
+                <small>{visualSystemV5EText(t.locale).routeUncertainty}</small>
+              </span>}
               {selectedAircraftVisible && selectedOperationalTwin?.status === "available" && <span className="layer-legend" data-testid="operational-twin-map-legend"><strong>{t.operationalTwin.title}</strong><span><i className="legend-line remaining" /> {selectedOperationalTwin.corridor.mode === "ROUTE_AWARE" ? t.operationalTwin.routeAware : t.operationalTwin.kinematic}</span><small>± {formatNumber(selectedOperationalTwin.corridor.maxUncertaintyNm, 1)} NM · {selectedOperationalTwin.corridor.horizonMinutes} min</small></span>}
             </Panel> : null}
             {showAircraftWeather && <AircraftWeatherPanel

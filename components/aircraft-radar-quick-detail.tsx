@@ -43,6 +43,7 @@ import {
   t,
 } from "@/lib/i18n";
 import { trafficSourcePresentation } from "@/lib/radar/traffic-presentation";
+import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { stableAltitudeProfile } from "@/lib/radar/altitude-profile";
 
 interface QuickHistoryTrail {
@@ -730,6 +731,9 @@ export function AircraftRadarQuickDetail({
   const headerType = metadata?.icaoTypeCode ?? aircraft.aircraftType ?? databaseAircraft?.aircraftType ?? null;
   const route = aircraft.enrichment?.route;
   const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
+  const visual = visualSystemV5EText(t.locale);
+  const progress = routeCorridor?.progressPercent;
+  const hasProgress = typeof progress === "number" && Number.isFinite(progress) && progress >= 0 && progress <= 100;
   const operator: string | null = route?.airline || metadata?.operator || null;
   const emergency = aircraft.emergency && aircraft.emergency.toLowerCase() !== "none" ? aircraft.emergency : null;
   const emergencySquawk = aircraft.squawk && ["7500", "7600", "7700"].includes(aircraft.squawk) ? aircraft.squawk : null;
@@ -808,6 +812,11 @@ export function AircraftRadarQuickDetail({
             {phase && <strong>{phase}</strong>}
           </div>
           <RouteSection route={route} visible={hasRouteData} />
+          {routeCorridor && hasProgress && <div className="aircraft-v5-route-progress" data-testid="aircraft-v5-route-progress" title={t.routeCorridor.disclaimer}>
+            <div><strong>{visual.flightProgress}</strong><span>{formatNumber(progress, 0)} %</span></div>
+            <progress aria-label={visual.flightProgress} value={progress} max={100} />
+            <small>{t.routeCorridor.confidence}: {t.routeCorridor.confidenceValues[routeCorridor.confidence]}</small>
+          </div>}
           {!hasRouteData && <p className="aircraft-quick-route-state">{t.aircraft.noRouteData}</p>}
         </div>
         <button type="button" className={`aircraft-quick-watchlist ${watchlisted ? "active" : ""}`} aria-pressed={watchlisted} aria-label={watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft} onClick={onToggleWatchlist}>

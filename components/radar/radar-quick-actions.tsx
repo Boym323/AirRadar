@@ -2,6 +2,7 @@
 
 import { Button, UiIcon } from "@/components/ui-primitives";
 import { t } from "@/lib/i18n";
+import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { requestCommandPaletteOpen } from "@/lib/search/command-palette";
 import type { RadarWeatherViewState } from "@/lib/radar/weather-layer-presentation";
 
@@ -12,6 +13,8 @@ export interface RadarQuickActionsProps {
   activeFilterCount: number;
   filtersDisabled: boolean;
   selectionOpen: boolean;
+  mapFocus: boolean;
+  onToggleMapFocus: () => void;
   onToggleWeather: () => void;
   onToggleAtc: () => void;
   onOpenFilters: () => void;
@@ -19,9 +22,10 @@ export interface RadarQuickActionsProps {
 
 /** Immediate map actions; reuses the existing radar state and command palette. */
 export function RadarQuickActions({
-  weatherEnabled, weatherState, atcEnabled, activeFilterCount, filtersDisabled, selectionOpen,
-  onToggleWeather, onToggleAtc, onOpenFilters,
+  weatherEnabled, weatherState, atcEnabled, activeFilterCount, filtersDisabled, selectionOpen, mapFocus,
+  onToggleWeather, onToggleAtc, onOpenFilters, onToggleMapFocus,
 }: RadarQuickActionsProps) {
+  const visual = visualSystemV5EText(t.locale);
   const weatherStatusLabel = weatherState === "loading"
     ? t.radarQuickActions.weatherLoading
     : weatherState === "stale"
@@ -48,6 +52,9 @@ export function RadarQuickActions({
     </Button>
     <Button variant="ghost" size="compact" className="radar-quick-action" disabled={filtersDisabled} onClick={onOpenFilters} data-testid="radar-quick-filters" aria-label={activeFilterCount ? `${t.radarQuickActions.filters} · ${t.radarQuickActions.activeFilters(activeFilterCount)}` : t.radarQuickActions.filters}>
       <UiIcon name="layers" /><span>{t.radarQuickActions.filters}{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}</span>
+    </Button>
+    <Button variant="ghost" size="compact" className="radar-quick-action" data-testid="radar-quick-map-focus" aria-pressed={mapFocus} title={visual.focusMapHint} onClick={onToggleMapFocus}>
+      <UiIcon name="focus" /><span>{mapFocus ? visual.leaveFocusMap : visual.focusMap}</span>
     </Button>
   </div>;
 }

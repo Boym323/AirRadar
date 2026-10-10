@@ -345,3 +345,25 @@ Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
 - Produkční browser gate pořizuje navíc mobilní analytiku v angličtině
   a rozbalenou atribuci mapy na 320 px. Po vydání je stále nutná
   lidská kontrola finálních screenshotů.
+
+### V5-E2–E6: mapa na prvním místě, přehled letu, důvěryhodnost trasy a letiště
+
+- Přepínač **Jen mapa** dočasně rozšíří stávající MapLibre mapu; skryté
+  navigační a provozní panely se vrátí bez nové subscription nebo pollingu.
+  Výběr letadla režim automaticky ukončí. Filtry, vrstvy a povinná
+  atribuce zdrojů mapy zůstávají dostupné.
+- Hlavička detailu letadla ukazuje odhad procentuálního postupu po trase
+  **jen při dostupnosti platného údaje z existujícího Route Corridor
+  modelu**. Zahrnuje míru jistoty a zdrojové upozornění, nevyvozuje
+  oficiální čas příletu, gate ani letový status.
+- Legenda mapy odlišuje trasu skutečně zaznamenanou přijímačem od
+  modelovaných či veřejných segmentů včetně právě odhadovaného úseku.
+  Zachovávají se dosavadní MapLibre vrstvy a ADS-B/OGN zdroje.
+- Detail letiště má rychlý přechod na Mapu. V okolním provozu lze z
+  existujícího sdíleného controlleru vybrat všechna, přibližující se
+  nebo odlétající letadla a otevřít konkrétní letadlo na živém radaru
+  již podporovaným odkazem `/?aircraft=<ICAO>`. Není přidáno žádné
+  další SSE spojení letiště.
+- V5-E6 doplňuje regresní testy, desktopové a mobilní screenshoty
+  režimu Jen mapa, test přímého přechodu na letištní mapu a mobilní
+  snímek mapy na 390 px. Před vydáním zkontrolovat CI screenshoty.

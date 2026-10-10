@@ -225,9 +225,10 @@ export function IconButton({
 export function UiIcon({
   name,
 }: {
-  name: "close" | "back" | "play" | "pause" | "layers" | "search" | "aircraft" | "airport" | "waypoint" | "radar" | "flight" | "statistics" | "time" | "atc" | "system" | "home" | "more";
+  name: "focus" | "close" | "back" | "play" | "pause" | "layers" | "search" | "aircraft" | "airport" | "waypoint" | "radar" | "flight" | "statistics" | "time" | "atc" | "system" | "home" | "more";
 }) {
   const paths = {
+    focus: "M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6",
     close: "M6 6 18 18M18 6 6 18",
     back: "m11 5-7 7 7 7M4 12h16",
     play: "m8 5 10 7-10 7Z",
