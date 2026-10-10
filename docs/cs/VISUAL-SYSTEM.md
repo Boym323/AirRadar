@@ -402,3 +402,8 @@ Detail letadla už zobrazuje na vyžádání načtená data FlightAware (stav, p
 ### V6-D2–D5: omezené 3D siluety a sledovací kamera
 
 Volitelný 3D terén vykreslí nejvýše 12 jednoduchých prostorových siluet letadel ve skutečných zeměpisných souřadnicích a přibližné výšce. Použije čerstvá pozorování a přednostně geometrickou výšku; barometrická výška je méně přesná náhrada. Jde o **schematický 3D tvar**, nikoli ověřený model konkrétního typu ve formátu GLTF. V menu je volná kamera nebo volitelná kamera sledující vybrané letadlo s omezenou frekvencí pohybů. Vrstva WebGL2 vzniká pouze při zapnutém 3D a při návratu do 2D se odstraní. Počet objektů i geometrie jsou omezené, skrytá záložka se neanimuje. Plné realistické modely a pohled z kabiny vyžadují další GPU testy na skutečných zařízeních.
+
+
+### V6-D6: omezené modely podle konstrukčního typu
+
+Volitelná 3D vrstva používá lokálně vytvářené nízkopolygonové tvary s odlišnými rozměry trupu, rozpětím, polohou křídel, ocasními plochami a motory podle vybraných ICAO kódů (Airbus, Boeing, regionální letadla, všeobecné letectví a vrtulníky). Neznámý typ má obecný náhradní model. Jde o **vizuálně rozlišitelné přibližné tvary**, nikoli přesné licencované modely GLTF/CAD. Geometrie se sdílí podle konečného katalogu typů, nikoli podle identifikátorů letadel; limit zůstává 12 objektů, výchozí režim je 2D a nevznikají další síťové dotazy ani procesy. Pro fotorealistické zobrazení bude nutné ověření na skutečných GPU a mobilech.
