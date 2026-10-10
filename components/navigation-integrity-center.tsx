@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { t } from "@/lib/i18n";
+import { SpaceWeatherContextCard } from "@/components/space-weather-context";
 import type {
   NavigationIntegrityAnomaly,
   NavigationIntegrityAuditCategory,
@@ -390,6 +391,8 @@ export function NavigationIntegrityCenter() {
           <Button size="compact" onClick={() => setRevision((value) => value + 1)}>{copy.refresh}</Button>
         </div>}
       />
+
+      <SpaceWeatherContextCard />
 
       <Panel className={styles.filters}>
         <div className={styles.filterBlock}>

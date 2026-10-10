@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         // MapLibre needs a blob worker; allow only configured basemap, satellite and DEM tile origins.
         // Next.js production runtime currently needs inline bootstrap/style code.
-        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://tiles.maps.eox.at https://tiles.mapterhorn.com https://t.plnspttrs.net https://www.planespotters.net; connect-src 'self' data: https://tile.openstreetmap.org https://tiles.openfreemap.org https://tiles.maps.eox.at https://tiles.mapterhorn.com; worker-src 'self' blob:; child-src blob:; frame-src https://www.youtube-nocookie.com; font-src 'self' data:;" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://tiles.maps.eox.at https://tiles.mapterhorn.com https://t.plnspttrs.net https://www.planespotters.net; connect-src 'self' data: https://tile.openstreetmap.org https://tiles.openfreemap.org https://tiles.maps.eox.at https://tiles.mapterhorn.com https://raw.githubusercontent.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self' blob: https:; worker-src 'self' blob:; child-src blob:; font-src 'self' data:;" },
       ],
     }];
   },
