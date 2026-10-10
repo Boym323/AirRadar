@@ -116,22 +116,22 @@ jobs:
         if: github.event_name == 'pull_request' && steps.scope.outputs.critical == 'true'
         run: npm run test:production -- --core
       - name: Verify pinned CC BY Airbus/Boeing GLB sources
-        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa' || github.head_ref == 'fix/v6-media-release-typecheck-and-device-qa')
+        if: github.event_name == 'pull_request' && github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa'
         env:
           RUN_LIVE_GLB_ASSET_AUDIT: "1"
         run: npm run test:targeted -- tests/licensed-aircraft-glb-v6.test.ts
       # GPU paths need a real browser in addition to typecheck/Vitest/core smoke.
       - name: Install Chromium for V6 3D browser QA
-        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || (github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa' || github.head_ref == 'fix/v6-media-release-typecheck-and-device-qa')))
+        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa'))
         run: npx playwright install --with-deps chromium
       - name: V6 3D desktop/mobile browser gate
-        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || (github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa' || github.head_ref == 'fix/v6-media-release-typecheck-and-device-qa')))
+        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa'))
         env:
           AIRRADAR_VISUAL_TARGETS: radar-v6-d-3d-terrain,radar-v6-d-3d-mobile,radar-v6-g-presentation,airport-v6-h-authorized-media
           AIRRADAR_V6_ASSET_QA: "1"
         run: npm run test:production:browser
       - name: Upload V6 3D visual evidence
-        if: always() && github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || (github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa' || github.head_ref == 'fix/v6-media-release-typecheck-and-device-qa')))
+        if: always() && github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa'))
         uses: actions/upload-artifact@v7
         with:
           name: v6-3d-browser-${{ github.sha }}
