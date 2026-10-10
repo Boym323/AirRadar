@@ -61,7 +61,9 @@ export class PostgresRouteCache implements RouteCacheStore {
     fallback: T, query: (database: NonNullable<ReturnType<typeof getPrisma>>) => Promise<T>,
   ): Promise<T> {
     if (Date.now() < this.retryAfter || this.active >= 4) { this.stats.bypassed++; return fallback; }
-    const db = getPrisma();
+    let db: ReturnType<typeof getPrisma>;
+    try { db = getPrisma(); }
+    catch { this.stats.failures++; this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback; }
     if (!db) return fallback;
     this.active++;
     try { return await bounded(query(db)); }
