@@ -7,6 +7,7 @@ import type { DatasetState } from "@/components/use-dataset-query";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
+import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
 
 interface AtsRoutesSummary {
   available: boolean;
@@ -27,6 +28,8 @@ interface RadarFrameSummary {
 }
 
 interface RadarMapLayerMenuProps {
+  mapAppearance: RadarMapAppearance;
+  onMapAppearanceChange: (value: RadarMapAppearance) => void;
   showAircraft: boolean;
   onShowAircraftChange: (value: boolean) => void;
   showOgn: boolean;
@@ -101,6 +104,8 @@ function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countL
 }
 
 export function RadarMapLayerMenu({
+  mapAppearance,
+  onMapAppearanceChange,
   showAircraft,
   onShowAircraftChange,
   showOgn,
@@ -224,6 +229,14 @@ export function RadarMapLayerMenu({
       </div>
       <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.display}</span>
+        <label className="map-layer-mode" data-testid="map-appearance-v6"><span>{t.locale.startsWith("en") ? "Map background" : "Mapový podklad"}</span>
+          <select value={mapAppearance} onChange={(event) => onMapAppearanceChange(event.target.value as RadarMapAppearance)}>
+            <option value="dark">{t.locale.startsWith("en") ? "Dark" : "Tmavý"}</option>
+            <option value="light">{t.locale.startsWith("en") ? "Light" : "Světlý"}</option>
+            <option value="satellite">{t.locale.startsWith("en") ? "Satellite · 2020" : "Satelitní · 2020"}</option>
+          </select>
+        </label>
+        {mapAppearance === "satellite" && <small>{t.locale.startsWith("en") ? "2020 non-live satellite mosaic · EOxCloudless · personal non-commercial use" : "Historický satelitní podklad 2020 · EOxCloudless · pouze nekomerční použití"}</small>}
         {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => onShowRangeRingsChange(event.target.checked)} /> {t.layers.rangeRings}</label>}
         <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => onColorModeChange(event.target.value as AircraftColorMode)}>
           <option value="default">{t.layers.colorModes.default}</option>

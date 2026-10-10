@@ -390,3 +390,8 @@ as a substitute for an actual Playwright-rendered view.
 ## V6-A — live multi-aircraft view
 
 The live radar provides a **Multi-view** local-only picker for up to ten ICAO identities. Clicking an aircraft while enabled pins its identity and shows current telemetry alongside other selected aircraft. Dashed trails represent positions observed in the selected LOCAL/EXTENDED coverage, never inferred flight paths. Out-of-coverage pins remain explicitly unavailable and can be removed without mutating watchlists. This reuses the canonical SSE and MapLibre instance with no extra subscription.
+
+
+## V6-B — map appearance without changing radar runtime
+
+The live radar provides dark (existing OpenFreeMap), light (paint-only recoloring of the same OpenFreeMap base) and an opt-in historical satellite (EOxCloudless Sentinel 2020) display. The MapLibre instance, live markers, route/weather/ATC sources, map controls and SSE are not recreated. Native basemap layer IDs are captured before AirRadar layers are installed; light recoloring affects only those baseline paint properties. The satellite WMTS is added lazily under AirRadar map overlays and uses the provider-mandated visible credit. **2020 imagery is not real time and is free for non-commercial use only**. Do not enable this option in a commercial deployment without appropriate licensing. Preferences remain browser local.

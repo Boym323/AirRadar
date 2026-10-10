@@ -148,6 +148,7 @@ import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBasemapReadability } from "@/lib/map-style";
+import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
@@ -629,6 +630,8 @@ export function AirRadarApp() {
   const [mobileCompact, setMobileCompact] = useState(true);
   const [trafficOpen, setTrafficOpen] = useState(false);
   const [mapFocus, setMapFocus] = useState(false);
+  const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
+  const nativeBasemapLayerIdsRef = useRef<string[]>([]);
   const [multiAircraftMode, setMultiAircraftMode] = useState(false);
   const multiAircraftModeRef = useRef(false);
   const [multiAircraftHexes, setMultiAircraftHexes] = useState<string[]>([]);
@@ -671,6 +674,21 @@ export function AirRadarApp() {
   const [mapZoom, setMapZoom] = useState(7.4);
   const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  useEffect(() => {
+    try {
+      const persisted = window.localStorage.getItem("airradar-map-appearance-v6");
+      if (isRadarMapAppearance(persisted)) setMapAppearance(persisted);
+    } catch { /* Optional browser preference. */ }
+  }, []);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    applyRadarMapAppearance(map, nativeBasemapLayerIdsRef.current, mapAppearance);
+  }, [mapAppearance, mapReady]);
+  const chooseMapAppearance = (value: RadarMapAppearance) => {
+    setMapAppearance(value);
+    try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
+  };
   const operationalFocusMapCameraKeyRef = useRef<string | null>(null);
   const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
 
@@ -1430,6 +1448,7 @@ export function AirRadarApp() {
     // This keeps basemap availability from preventing the aircraft runtime
     // from becoming usable on a narrow/mobile viewport.
     map.once("style.load", () => {
+      nativeBasemapLayerIdsRef.current = (map.getStyle().layers ?? []).map((layer) => layer.id);
       if (mapDiagnostics) {
         window.__airradarMapStyleLoadedForDiagnostics = true;
         window.__airradarMapStyleLoadCountForDiagnostics = (window.__airradarMapStyleLoadCountForDiagnostics ?? 0) + 1;
@@ -3148,6 +3167,8 @@ export function AirRadarApp() {
               </MapControlGroup>
               <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
+                mapAppearance={mapAppearance}
+                onMapAppearanceChange={chooseMapAppearance}
                 showAircraft={showAircraft}
                 onShowAircraftChange={setShowAircraft}
                 showOgn={showOgn}
