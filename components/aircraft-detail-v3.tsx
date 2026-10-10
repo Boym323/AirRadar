@@ -449,7 +449,7 @@ export function AircraftDetailV3({
               {flightAwareLoading ? (t.locale.startsWith("cs") ? "Načítání…" : "Loading…") : (t.locale.startsWith("cs") ? "Načíst podrobnosti letu (FlightAware)" : "Load flight details (FlightAware)")}
             </button>
             {flightAwareError && <span role="status">{flightAwareError}</span>}
-          </div>
+          </div>}
           {hasRouteData && route && <div className="aircraft-route-endpoints">
             <RouteEndpoint code={route.origin} airport={route.originAirport} />
             <span className="aircraft-route-arrow" aria-hidden="true">↓</span>
