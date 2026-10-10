@@ -278,6 +278,17 @@ state through the canonical shutdown coordinator; a hard crash or SIGKILL may
 lose up to one checkpoint interval of re-fetchable ADSBDB enrichment. Negative
 entries and in-flight requests are never persisted.
 
+Route Cache V2 is an independently opt-in shared PostgreSQL **positive**
+read-through cache (`ROUTE_DB_CACHE_ENABLED=true`). Valid local-aircraft routes
+are served in order RAM → PostgreSQL → ADSBDB → batched ADSB.lol. Entries
+are identified by ICAO hex, callsign and UTC date and expire after six hours;
+all returned data is revalidated against the observed position. A missing or
+slow cache database never stops the local poller. This supplementary table
+is installed separately with `deploy/sql/route-enrichment-cache-v2.sql` before
+activation; it does not reuse the live `Flight`/`FlightPosition` schema or
+store FlightAware responses. Prisma migration and schema validation compatibility
+must be checked before installing the separately managed table.
+
 ## Browser and API boundary
 
 ### Map Context V1/V2
