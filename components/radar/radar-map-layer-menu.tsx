@@ -8,6 +8,7 @@ import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
+import type { Radar3dMode } from "@/lib/radar/terrain-v6-d";
 
 interface AtsRoutesSummary {
   available: boolean;
@@ -28,6 +29,11 @@ interface RadarFrameSummary {
 }
 
 interface RadarMapLayerMenuProps {
+  radar3dMode: Radar3dMode;
+  radar3dCamera: "free" | "follow";
+  radar3dCameraAvailable: boolean;
+  onRadar3dCameraChange: (mode: "free" | "follow") => void;
+  onRadar3dModeChange: (mode: Radar3dMode) => void;
   mapAppearance: RadarMapAppearance;
   onMapAppearanceChange: (value: RadarMapAppearance) => void;
   showAircraft: boolean;
@@ -104,6 +110,11 @@ function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countL
 }
 
 export function RadarMapLayerMenu({
+  radar3dMode,
+  radar3dCamera,
+  radar3dCameraAvailable,
+  onRadar3dCameraChange,
+  onRadar3dModeChange,
   mapAppearance,
   onMapAppearanceChange,
   showAircraft,
@@ -236,6 +247,19 @@ export function RadarMapLayerMenu({
             <option value="satellite">{t.locale.startsWith("en") ? "Satellite · 2020" : "Satelitní · 2020"}</option>
           </select>
         </label>
+        <label className="map-layer-mode" data-testid="radar-v6-d-terrain"><span>{t.locale.startsWith("en") ? "Map perspective" : "Perspektiva mapy"}</span>
+          <select value={radar3dMode} onChange={(event) => onRadar3dModeChange(event.target.value as Radar3dMode)}>
+            <option value="2d">2D</option>
+            <option value="3d">{t.locale.startsWith("en") ? "3D terrain (beta)" : "3D terén (beta)"}</option>
+          </select>
+        </label>
+        {radar3dMode === "3d" && <label className="map-layer-mode" data-testid="radar-v6-d-camera"><span>{t.locale.startsWith("en") ? "3D camera" : "3D kamera"}</span>
+          <select value={radar3dCamera} onChange={(event) => onRadar3dCameraChange(event.target.value as "free" | "follow")}>
+            <option value="free">{t.locale.startsWith("en") ? "Free / map" : "Volná / mapa"}</option>
+            <option value="follow" disabled={!radar3dCameraAvailable}>{t.locale.startsWith("en") ? "Follow selected aircraft" : "Sledovat vybrané letadlo"}</option>
+          </select>
+        </label>}
+        {radar3dMode === "3d" && <small>{t.locale.startsWith("en") ? "Elevation: Mapterhorn · DEM. Aircraft markers are map projections, not altitude-accurate 3D aircraft models." : "Výšková data: Mapterhorn · DEM. Ikony letadel jsou mapové značky, nikoli prostorové modely ve skutečné výšce."}</small>}
         {mapAppearance === "satellite" && <small>{t.locale.startsWith("en") ? "2020 non-live satellite mosaic · EOxCloudless · personal non-commercial use" : "Historický satelitní podklad 2020 · EOxCloudless · pouze nekomerční použití"}</small>}
         {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => onShowRangeRingsChange(event.target.checked)} /> {t.layers.rangeRings}</label>}
         <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => onColorModeChange(event.target.value as AircraftColorMode)}>

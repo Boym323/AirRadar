@@ -240,3 +240,8 @@ ověřuje release validation, desktop/mobilní browser gate a produkční nasaze
 přesného SHA. Žádná nová API cesta, poller, externí žádost, DB migrace,
 persistenční zápis, SSE ani automatické povolení PUBLIC predikcí. Zelené CI
 samo o sobě není důkazem skutečné provozní přesnosti.
+
+
+## V6-H: letecká média letišť (externí odkazy)
+
+Přehled letiště umožňuje lokální správu nejvýše šesti odkazů na stránky s kamerami či leteckým audiem pro každé ICAO. Uživatel zadává název a bezpečnou veřejnou HTTPS adresu; zdroj otevře až výslovným kliknutím do nového panelu s noopener/noreferrer. AirRadar automaticky nestahuje video, nevkládá iframe ani nepřehrává externí zvuk. Odkazy **neznamenají ověřenou dostupnost, oficiální licenci ani autorizované ATC vysílání**. Data zůstávají jen v localStorage, bez nových API, DB nebo streamů. Vkládání médií po prověření práv je případné další pokračování.

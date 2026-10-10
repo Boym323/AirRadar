@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { AircraftView, FlightPlan } from "@/lib/aircraft/types";
+import { assessFlightStatusEvidence } from "@/lib/aircraft/flight-status-evidence-v6-e";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -280,6 +281,7 @@ export function AircraftDetailV3({
   const [flightAwareError, setFlightAwareError] = useState<string | null>(null);
   const flightPlan = requestedFlightPlan ?? liveAircraft?.enrichment?.flightPlan ?? null;
   const flightAware = flightPlan?.flightAware ?? null;
+  const flightStatusEvidence = assessFlightStatusEvidence(flightPlan);
   const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
@@ -458,6 +460,7 @@ export function AircraftDetailV3({
           </div>}
 
           {flightAware && <FlightSection title={t.aircraft.flightStatusTitle}>
+            <p className="detail-disclaimer" data-testid="flight-status-evidence-v6-e">{t.locale.startsWith("cs") ? "Externí stav letu" : "External flight status"} · FlightAware AeroAPI · {flightStatusEvidence.state === "current" ? (t.locale.startsWith("cs") ? "načteno na vyžádání" : "on-demand snapshot") : flightStatusEvidence.state === "stale" ? (t.locale.startsWith("cs") ? "starší údaje — mohou být neaktuální" : "older snapshot — may be outdated") : (t.locale.startsWith("cs") ? "čas načtení neověřen" : "fetch time unverified")}{flightStatusEvidence.retrievedAt ? ` · ${formatTime(flightStatusEvidence.retrievedAt)}` : ""}. {t.locale.startsWith("cs") ? "Nejde o polohu z ADS-B; automatické placené obnovování je vypnuté." : "Not an ADS-B position; paid auto-refresh is disabled."}</p>
             <div className={`detail-grid ${styles.statusGrid}`}>
               {flightAware.identIata && <DetailValue label={t.aircraft.flightLabel}>{flightAware.identIata}</DetailValue>}
               {flightAware.identIcao && <DetailValue label={t.aircraft.icaoIdentLabel}>{flightAware.identIcao}</DetailValue>}
@@ -516,6 +519,7 @@ export function AircraftDetailV3({
             </div>
           </FlightSection>}
 
+          {!flightAware && <p className="detail-disclaimer" data-testid="flight-status-evidence-v6-e">{t.locale.startsWith("cs") ? "Oficiální plán a aktuální stav od externího poskytovatele nejsou dostupné. Údaje o poloze a případná trasa jsou samostatná pozorování / obohacení." : "External schedule and official flight status unavailable. Position and inferred route are independent observations/enrichment."}</p>}
           <div className="detail-disclaimer">{t.aircraft.routeDisclaimer}</div>
         </section>}
       </div>

@@ -54,3 +54,8 @@ lokální upozornění. Geozóny V1 jsou pouze kruhové; složité polygony, Web
 e-mail, SMS a prediktivní upozornění nejsou součástí této verze.
 
 Zpět na [anglickou dokumentaci](../ALERTS-FLEETS.md).
+
+
+## Fleet Explorer V2 (V6-F, první dodávka)
+
+Existující omezený seznam letadel z watchlistu zůstává jediným zdrojem dat. V6-F přidává vyhledávání v ICAO/registraci/provozovateli/volacím znaku/typu, filtr živá–offline, řazení a souhrn na základě maximálně 100 již načtených položek. Součet pozorování za 30 dní je součtem stávajících hodnot pro jednotlivá letadla, **nikoli** počtem unikátních letů. Nevzniká nový SQL dotaz, stream, API ani dotaz na externího poskytovatele. Analytika letišť a Airport Live Board už mají vlastní produkční implementace; neduplikujeme je.

@@ -6808,3 +6808,78 @@ button, input, select, textarea { color-scheme: dark; }
   .radar-quick-actions .radar-v5-map-focus-full { display: none; }
   .radar-quick-actions .radar-v5-map-focus-compact { display: inline; }
 }
+
+/* V6-G Presentation Mode: map remains the existing live MapLibre instance. */
+.radar-content:fullscreen { width: 100vw; height: 100vh; background: var(--background); }
+.radar-content[data-presentation-mode="true"] { grid-template-columns: minmax(0, 1fr); }
+.radar-content[data-presentation-mode="true"] > .sidebar { display: none; }
+.radar-content[data-presentation-mode="true"] .map-overlay-primary > :not([data-testid="radar-presentation-v6-g"]) { display: none; }
+.radar-content[data-presentation-mode="true"] .map-overlay-primary { justify-content: flex-start; }
+.radar-content[data-presentation-mode="true"] .map-overlay { right: 64px; }
+.radar-content[data-presentation-mode="true"] .radar-quick-actions,
+.radar-content[data-presentation-mode="true"] [data-testid="radar-multi-aircraft"] { display: none; }
+
+/* V6-F Fleet Explorer: compact summary/filter row reusing card tokens. */
+.fleet-v6-tools { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.fleet-v6-summary, .fleet-v6-filters { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+.fleet-v6-summary span { padding: var(--space-2); background: var(--surface-overlay); border-radius: var(--radius-md); }
+.fleet-v6-filters label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
+.fleet-v6-filters :is(input,select) { min-height: var(--control-height-touch); padding-inline: var(--space-2); color: var(--text-primary); background: var(--surface-overlay); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+
+/* V6-H: privacy-safe airport media links, loaded only by explicit user click. */
+.airport-v6-media { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.airport-v6-media p { margin: 0; color: var(--text-secondary); }
+.airport-v6-media ul { display: grid; gap: var(--space-2); padding: 0; margin: 0; list-style: none; }
+.airport-v6-media li { display: flex; gap: var(--space-2); justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.airport-v6-media form { display: flex; align-items: end; gap: var(--space-2); flex-wrap: wrap; }
+.airport-v6-media label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
+.airport-v6-media :is(input,select) { min-height: var(--control-height-touch); padding: var(--space-2); border: 1px solid var(--border-default); color: var(--text-primary); border-radius: var(--radius-md); background: var(--surface-overlay); }
+.airport-v6-media input[type="url"] { width: min(100%, 330px); }
+
+
+/* V6 mobile HUD: reserve a dedicated row for Presentation Mode so compact
+ * radar presets cannot overlap or intercept the primary Traffic button. */
+@media (max-width: 420px) {
+  .map-overlay-primary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto;
+    width: calc(100vw - 76px);
+    max-width: calc(100vw - 76px);
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .map-overlay-primary > .radar-presentation-controls {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .map-overlay-primary > .map-control-group-primary {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+    min-width: 0;
+  }
+  .map-overlay-primary > [data-testid="radar-presets-v1"] {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .map-overlay-primary > .map-layers {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+  }
+}
+
+
+/* At 821–900px the drawer needs the menu to open leftwards (default).
+ * From 901px up, the Layers menu opens rightwards to avoid negative viewport x. */
+@media (min-width: 901px) {
+  .map-overlay-primary > .map-layers > .map-layers-menu {
+    left: 0;
+    right: auto;
+    max-width: calc(100vw - 100px);
+  }
+}

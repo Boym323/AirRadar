@@ -149,6 +149,10 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBasemapReadability } from "@/lib/map-style";
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
+import { setRadar3dTerrain, type Radar3dMode } from "@/lib/radar/terrain-v6-d";
+import { createRadarAircraft3dRuntime, RADAR_AIRCRAFT_3D_LAYER_ID, type RadarAircraft3dRuntime } from "@/lib/radar/aircraft-3d-v6-d";
+import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
+import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
@@ -631,6 +635,16 @@ export function AirRadarApp() {
   const [trafficOpen, setTrafficOpen] = useState(false);
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
+  const [radar3dMode, setRadar3dMode] = useState<Radar3dMode>("2d");
+  const [radar3dCamera, setRadar3dCamera] = useState<"free" | "follow">("free");
+  const aircraft3dRuntimeRef = useRef<RadarAircraft3dRuntime | null>(null);
+  const radar3dFollowAtRef = useRef(0);
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [presentationPaused, setPresentationPaused] = useState(false);
+  const [presentationScene, setPresentationScene] = useState<string | null>(null);
+  const presentationLastHexRef = useRef<string | null>(null);
+  const presentationAircraftRef = useRef<AircraftView[]>([]);
+  presentationAircraftRef.current = snapshot.aircraft;
   const nativeBasemapLayerIdsRef = useRef<string[]>([]);
   const [multiAircraftMode, setMultiAircraftMode] = useState(false);
   const multiAircraftModeRef = useRef(false);
@@ -685,6 +699,129 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     applyRadarMapAppearance(map, nativeBasemapLayerIdsRef.current, mapAppearance);
   }, [mapAppearance, mapReady]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    // A new map style discards raster DEM sources and terrain; restore opt-in 3D after style.load.
+    const restoreTerrain = () => {
+      try {
+        setRadar3dTerrain(map, radar3dMode);
+      } catch (error) {
+        console.warn("Optional V6-D terrain unavailable; restoring flat map.", error);
+        setRadar3dMode("2d");
+        try { setRadar3dTerrain(map, "2d"); } catch { /* Style may be reloading. */ }
+      }
+    };
+    map.on("style.load", restoreTerrain);
+    restoreTerrain();
+    return () => { map.off("style.load", restoreTerrain); };
+  }, [mapReady, radar3dMode]);
+  useEffect(() => {
+    if (!presentationMode || !mapReady || presentationPaused) return;
+    const map = mapRef.current;
+    if (!map) return;
+    let disposed = false;
+    const rotate = () => {
+      if (disposed || document.hidden || !mapRef.current) return;
+      const next = pickPresentationAircraft(presentationAircraftRef.current, presentationLastHexRef.current);
+      if (next?.lat !== null && next?.lon !== null && next) {
+        presentationLastHexRef.current = next.icaoHex;
+        setPresentationScene(next.callsign || next.registration || next.icaoHex);
+        map.easeTo({ center: [next.lon, next.lat], zoom: 8, duration: 900, essential: true });
+      } else {
+        const receiver = receiverRef.current;
+        if (receiver.lat === null || receiver.lon === null) return;
+        presentationLastHexRef.current = null;
+        setPresentationScene(receiver.name);
+        map.easeTo({ center: [receiver.lon, receiver.lat], zoom: 7.4, duration: 900, essential: true });
+      }
+    };
+    rotate();
+    const interval = window.setInterval(rotate, 45_000);
+    return () => { disposed = true; window.clearInterval(interval); };
+  }, [mapReady, presentationMode, presentationPaused]);
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    const resize = () => mapRef.current?.resize();
+    const onFullscreen = () => {
+      if (!document.fullscreenElement) setPresentationMode(false);
+      window.requestAnimationFrame(resize);
+    };
+    document.addEventListener("fullscreenchange", onFullscreen);
+    window.requestAnimationFrame(resize);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreen);
+      window.requestAnimationFrame(resize);
+    };
+  }, [presentationMode]);
+
+  const togglePresentationMode = () => {
+    if (presentationMode) {
+      setPresentationMode(false);
+      setPresentationScene(null);
+      if (document.fullscreenElement === radarContentRef.current) void document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+    setMapFocus(true);
+    setFollowSelected(false);
+    setPresentationPaused(false);
+    setPresentationMode(true);
+    const element = radarContentRef.current;
+    if (element?.requestFullscreen) void element.requestFullscreen().catch(() => undefined);
+  };
+  // D2/D4/D5: a single opt-in, capped 3D mesh layer reuses the existing map.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || radar3dMode !== "3d") return;
+    const runtime = createRadarAircraft3dRuntime();
+    aircraft3dRuntimeRef.current = runtime;
+    const restoreAircraftLayer = () => {
+      if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) return;
+      try {
+        map.addLayer(runtime.layer);
+      } catch (error) {
+        // The map remains usable if a 3D custom layer cannot be attached.
+        console.warn("Optional V6-D aircraft layer could not be restored.", error);
+      }
+    };
+    map.on("style.load", restoreAircraftLayer);
+    restoreAircraftLayer();
+    return () => {
+      map.off("style.load", restoreAircraftLayer);
+      try {
+        if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) map.removeLayer(RADAR_AIRCRAFT_3D_LAYER_ID);
+      } catch { /* The map may already have been destroyed. */ }
+      if (aircraft3dRuntimeRef.current === runtime) aircraft3dRuntimeRef.current = null;
+    };
+  }, [mapReady, radar3dMode]);
+
+  useEffect(() => {
+    if (radar3dMode !== "3d" || !mapReady) return;
+    aircraft3dRuntimeRef.current?.setAircraft(snapshot.aircraft, selectedHex, document.hidden);
+  }, [mapReady, radar3dMode, selectedHex, snapshot.aircraft]);
+
+  // D3: follow camera is opt-in, separate from existing 2D single-aircraft follow.
+  useEffect(() => {
+    if (!mapReady || radar3dMode !== "3d" || radar3dCamera !== "follow" || !selectedHex || document.hidden) return;
+    const selected = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
+    if (!selected || selected.lat === null || selected.lon === null ||
+        selected.seenPosSeconds === null || selected.seenPosSeconds > 30 ||
+        !Number.isFinite(selected.lat) || !Number.isFinite(selected.lon)) return;
+    if (Date.now() - radar3dFollowAtRef.current < 2500) return;
+    radar3dFollowAtRef.current = Date.now();
+    const map = mapRef.current;
+    if (!map) return;
+    map.easeTo({
+      center: [selected.lon, selected.lat],
+      pitch: 65,
+      bearing: selected.track !== null && Number.isFinite(selected.track) ? selected.track : map.getBearing(),
+      zoom: Math.max(map.getZoom(), 9),
+      duration: prefersReducedMotion() ? 0 : 900,
+      essential: false,
+    });
+  }, [mapReady, radar3dMode, radar3dCamera, selectedHex, snapshot.aircraft]);
+
   const chooseMapAppearance = (value: RadarMapAppearance) => {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
@@ -3114,7 +3251,7 @@ export function AirRadarApp() {
   }
 
   return (
-    <main className="radar-shell">
+    <main className="radar-shell" data-presentation-mode={presentationMode ? "true" : undefined}>
       <AirRadarTopbar heading radarPage meta={
         <>
           <div className="topbar-ops-meta">
@@ -3137,7 +3274,7 @@ export function AirRadarApp() {
 
       <div className="radar-workspace" data-map-focus={mapFocus && drawerState === "closed" ? "true" : "false"}>
         <RadarNavRail showAtc={showAtc} onShowAtcChange={setShowAtc} showAirports={showAirports} onShowAirportsChange={setShowAirports} />
-        <section ref={radarContentRef} className="radar-content">
+        <section ref={radarContentRef} className="radar-content" data-presentation-mode={presentationMode ? "true" : undefined}>
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
@@ -3158,6 +3295,7 @@ export function AirRadarApp() {
                   </div>
                 </details>}
               </Panel>
+              <RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />
               <MapControlGroup className="map-control-group-primary">
               <RadarOperationsCenter />
               <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" aria-label={t.radar.trafficNearby} data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
@@ -3167,6 +3305,11 @@ export function AirRadarApp() {
               </MapControlGroup>
               <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
+                radar3dMode={radar3dMode}
+                radar3dCamera={radar3dCamera}
+                onRadar3dCameraChange={(mode) => { setRadar3dCamera(mode); if (mode === "follow") setFollowSelected(false); }}
+                radar3dCameraAvailable={Boolean(selectedHex)}
+                onRadar3dModeChange={setRadar3dMode}
                 mapAppearance={mapAppearance}
                 onMapAppearanceChange={chooseMapAppearance}
                 showAircraft={showAircraft}

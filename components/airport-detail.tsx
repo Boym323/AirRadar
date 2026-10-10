@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
+import { AirportMediaLinks } from "@/components/airport-media-links";
 import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
 import { AirportMovementAnalytics } from "@/components/airport-movement-analytics";
 import { AirportWeatherPanel } from "@/components/airport-weather";
@@ -182,6 +183,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
         <AirportMovementAnalytics airport={airport} />
       </div>}
 
+      {view === "overview" && <AirportMediaLinks icao={airport.icaoCode} />}
       {view === "overview" && <details className="airport-v5-reference" data-testid="airport-v5-reference">
         <summary>{t.airportV5.referenceDetails}</summary>
         <div className="airport-v5-reference-grid">

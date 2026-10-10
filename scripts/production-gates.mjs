@@ -1014,6 +1014,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-v6-multiview-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableV6Multi: true },
         { name: "radar-v6-light-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "light" },
         { name: "radar-v6-satellite-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "satellite" },
+        { name: "radar-v6-d-3d-terrain", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Terrain: true },
+        { name: "radar-v6-d-3d-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, v6Terrain: true },
+        { name: "radar-v6-g-presentation", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Presentation: true },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
         { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
@@ -1050,7 +1053,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       // Share one real, validated system snapshot across admin readiness captures.
       // Repeated upstream calls late in the visual sweep can hit the public rate limit.
       let systemStatusSnapshot = null;
-      for (const target of visualTargets) {
+      // PR 3D GPU validation may target a small explicit visual subset; releases always run all.
+      const requestedVisualTargets = (process.env.AIRRADAR_VISUAL_TARGETS ?? "")
+        .split(",").map((name) => name.trim()).filter(Boolean);
+      const unknownVisualTargets = requestedVisualTargets.filter((name) => !visualTargets.some((target) => target.name === name));
+      if (unknownVisualTargets.length) throw new Error(`Unknown visual targets: ${unknownVisualTargets.join(", ")}`);
+      for (const target of visualTargets.filter((item) => requestedVisualTargets.length === 0 || requestedVisualTargets.includes(item.name))) {
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
           if (target.locale) {
@@ -1436,6 +1444,22 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               throw new Error("V6-A Multi-view panel must remain interactive");
             }
           }
+          if (target.v6Presentation) {
+            const control = visualPage.getByTestId("radar-presentation-v6-g");
+            await control.getByRole("button", { name: /Presentation|Prezentace/i }).click();
+            await visualPage.waitForFunction(() => document.querySelector(".radar-content")?.getAttribute("data-presentation-mode") === "true");
+          }
+          if (target.v6Terrain) {
+            const layers = visualPage.locator(".map-layers");
+            // A native <details> interaction must not wait for unrelated SSE-driven navigation.
+            await layers.evaluate((element) => { element.open = true; });
+            await visualPage.getByTestId("radar-v6-d-terrain").locator("select").selectOption("3d");
+            await visualPage.waitForFunction(() => {
+              const map = window.__airradarMapForDiagnostics;
+              return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
+            }, null, { timeout: 15_000 });
+            await layers.evaluate((element) => { element.open = false; });
+          }
           if (target.v6Appearance) {
             const layers = visualPage.locator(".map-layers");
             await layers.locator("summary").click();
@@ -1546,18 +1570,35 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             if ("fonts" in document) await document.fonts.ready;
           });
           if (target.path.includes("mapDiagnostics=1")) {
-            await visualPage.waitForFunction((satelliteMode) => {
-              const map = window.__airradarMapForDiagnostics;
-              // Screenshot evidence is only useful once actual vector
-              // basemap features have been rendered. A map instance alone
-              // can still produce a featureless black visual baseline.
-              if (!map || (!satelliteMode && !map.isStyleLoaded())) return false;
-              try {
-                return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
-              } catch {
-                return false;
-              }
-            }, target.v6Appearance === "satellite", { timeout: 25_000 });
+            try {
+              await visualPage.waitForFunction((allowPendingRaster) => {
+                const map = window.__airradarMapForDiagnostics;
+                // A 3D terrain DEM may still be fetching after vector basemap
+                // features are rendered. Never mistake that for a blank map.
+                if (!map || (!allowPendingRaster && !map.isStyleLoaded())) return false;
+                try {
+                  return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
+                } catch {
+                  return false;
+                }
+              }, target.v6Appearance === "satellite" || target.v6Terrain === true, { timeout: 25_000 });
+            } catch (error) {
+              const evidence = await visualPage.evaluate(() => {
+                const map = window.__airradarMapForDiagnostics;
+                if (!map) return { mapReady: false };
+                let renderedVectorFeatures = 0;
+                try { renderedVectorFeatures = map.queryRenderedFeatures().filter((feature) => Boolean(feature.sourceLayer)).length; }
+                catch { /* A reloading style may temporarily reject feature queries. */ }
+                return {
+                  mapReady: true,
+                  styleLoaded: map.isStyleLoaded(),
+                  renderedVectorFeatures,
+                  terrain: Boolean(map.getTerrain()),
+                  pitch: map.getPitch(),
+                };
+              }).catch(() => ({ diagnosticsUnavailable: true }));
+              throw new Error(`Visual smoke ${target.name} missing basemap evidence: ${JSON.stringify(evidence)}; ${String(error)}`);
+            }
           }
           if (target.openMapCredits) {
             const attribution = visualPage.locator(".radar-content .maplibregl-ctrl-attrib");

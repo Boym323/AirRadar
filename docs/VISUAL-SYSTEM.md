@@ -400,3 +400,23 @@ The live radar provides dark (existing OpenFreeMap), light (paint-only recolorin
 ## V6-C — opt-in mobile camera AR
 
 The existing mobile Spotter Sky Finder now contains a browser-only rear-camera overlay. The user must first enable Sky Finder / orientation permission and then explicitly enable the camera. Fresh LOCAL ADS-B positions with usable observer elevation are projected into an approximate portrait field of view; off-screen, stale and sensor-unavailable targets are hidden rather than invented. Manual tilt calibration is session-local. Camera video is never uploaded, stored, recorded, or added to the aircraft stream; media tracks are stopped when closed, hidden or unmounted. Secure-context and permission failures leave the original Sky Finder intact. This approximate display is not aviation navigation equipment.
+
+
+### V6-D1: opt-in 3D terrain
+
+Radar appearance controls offer **2D (default)** and **3D terrain (beta)**. The existing MapLibre map is unchanged: the Mapterhorn raster DEM is loaded lazily only after opt-in. Switching off disables terrain and restores a flat pitch. Attribution remains visible. DEM requires an external tile provider; the default 2D radar stays independent. Aircraft glyphs are map-projected, **not yet 3D aircraft models at true altitude**. Verify the browser gate, GPU impact, and mobile layout before release.
+
+
+### V6-G: Presentation Mode (first delivery)
+
+A dedicated map control enters fullscreen on user action and keeps the existing live radar feed. The presentation cycles between **fresh, local, airborne receiver observations** every 45 seconds; when none are usable it returns to the configured public receiver viewpoint. It adds no stream, provider request, server polling, write path or autoplay when hidden. A pause button stops automatic camera rotation. Users can leave presentation at any time. This does not yet implement a TV playlist editor or externally shared presets.
+
+
+### V6-E: verified flight-status evidence
+
+Aircraft details already show on-demand FlightAware status, actual/estimated/scheduled flight phases, delays, gates and operational context when a paid, rate-limited provider lookup yields data. V6-E adds an explicit AeroAPI provenance/fetch-time banner and conservative freshness assessment (within 60 minutes versus older/unknown), and a clear unavailable state when no provider record exists. ADS-B positions and inferred routes are never relabeled as an airline schedule or official FIDS. No additional paid calls or background polling are introduced by this UI.
+
+
+### V6-D2–D5: bounded 3D airplane silhouettes and follow camera
+
+The optional 3D terrain mode can render up to 12 lightweight, geographic, altitude-anchored 3D airplane silhouettes. Meshes use confirmed positions, fresh observations and geometry altitude when available; barometric altitude is a less precise fallback. This is **not a verified type-specific GLTF model**; wing/fuselage shapes are schematic. In 3D mode the map menu also offers free camera or an optional selected-aircraft follow camera; the latter throttles movement to avoid constant animation. The extra WebGL2 custom layer is created only when 3D is enabled and is removed completely on return to 2D. No backend/stream queries or writes are added. The budget caps geometry/objects, skips offscreen playback and respects reduced-motion. True realistic GLTF fleet models, occlusion and camera-from-cockpit await separate physical-device GPU QA.
