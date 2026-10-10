@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import { aircraftAirportHref, aircraftFlightHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
+import { formatAircraftManufacturerModel } from "@/lib/aircraft/display-name";
 import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary, HistoryResponse } from "@/lib/server/history";
 import { formatAge, formatAltitude, formatDateTime, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
@@ -506,7 +507,7 @@ export function AircraftDetailV2({
           {detail?.logbook.isReturning && <div className="aircraft-logbook-badge returning" title={t.logbook.returningAircraftReason(detail.logbook.returningGapDays ?? 0)}>{t.logbook.returningAircraft}</div>}
         </div>
         <div className="aircraft-page-identity"><span>{icaoHex}</span>{registration && <span>{registration}</span>}{aircraftType && <span>{aircraftType}</span>}</div>
-        <div className="aircraft-page-subtitle">{[manufacturer, model].filter(Boolean).join(" ") || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
+        <div className="aircraft-page-subtitle">{formatAircraftManufacturerModel(manufacturer, model) || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
         {hasRouteData && route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
           <span>{route.originAirport?.iataCode || route.originAirport?.icaoCode || route.origin || t.common.emptyValue}</span>
           <span aria-hidden="true">→</span>
