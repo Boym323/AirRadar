@@ -6503,3 +6503,31 @@ button, input, select, textarea { color-scheme: dark; }
   .airport-v5-filters { grid-template-columns: minmax(0, 1fr); }
   .airport-v5-flights table { min-width: 540px; }
 }
+
+/* V5-C3/C4: operational views retain evidence and provenance, and are visually
+ * distinct from the glance/flight boards without adding another dashboard. */
+.airport-v5-section-intro {
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.airport-v5-section-intro h2 { margin: var(--space-2) 0; color: var(--text-primary); font-size: clamp(20px, 3vw, 28px); }
+.airport-v5-section-intro p { max-width: 68ch; margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm); line-height: var(--line-height-body); }
+.airport-v5-page .airport-v3-board { margin-top: 0; }
+.airport-v5-page .airport-v3-hero {
+  border-color: var(--border-accent);
+  background: linear-gradient(140deg, var(--surface-card), var(--surface-interactive));
+}
+.airport-v5-page .airport-v3-hero .airport-v3-metrics { gap: var(--space-2); }
+.airport-v5-page .airport-v3-hero .ui-metric-card { border-radius: var(--radius-md); }
+.airport-v5-page .airport-v3-hero h2 { font-size: clamp(20px, 3vw, 28px); }
+.airport-v5-page .airport-live-advanced { margin-top: 0; }
+.airport-v5-page .airport-live-advanced[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+@media (max-width: 600px) {
+  .airport-v5-page .airport-v3-heading { gap: var(--space-2); }
+  .airport-v5-page .airport-v3-hero { padding: var(--space-3); }
+  .airport-v5-page .airport-live-flow-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .airport-v5-page .airport-v3-grid { grid-template-columns: minmax(0,1fr); }
+}

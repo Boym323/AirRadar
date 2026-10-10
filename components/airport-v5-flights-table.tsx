@@ -9,15 +9,17 @@ import { formatDateTime, t } from "@/lib/i18n";
 
 type FlightBoardView = Extract<AirportOperationsView, "arrivals" | "departures">;
 
-const MOVEMENT_LABELS: Record<AirportMovementKind, keyof typeof t.airport> = {
-  APPROACH: "movementApproach",
-  LANDING: "movementLanding",
-  TAKEOFF: "movementTakeoff",
-  DEPARTURE: "movementDeparture",
-  GO_AROUND: "movementGoAround",
-  HOLDING: "movementHolding",
-  OVERFLIGHT: "movementOverflight",
-};
+function movementLabel(kind: AirportMovementKind): string {
+  return {
+    APPROACH: t.airport.movementApproach,
+    LANDING: t.airport.movementLanding,
+    TAKEOFF: t.airport.movementTakeoff,
+    DEPARTURE: t.airport.movementDeparture,
+    GO_AROUND: t.airport.movementGoAround,
+    HOLDING: t.airport.movementHolding,
+    OVERFLIGHT: t.airport.movementOverflight,
+  }[kind];
+}
 
 interface AirportFlightsTableProps {
   view: FlightBoardView;
@@ -60,7 +62,7 @@ export function AirportFlightsTable({ view, movements, loading, unavailable, inc
         <span>{t.airportV5.movementFilter}</span>
         <select value={kind} onChange={(event) => setKind(event.target.value as AirportMovementKind | "all")} data-testid="airport-v5-movement-filter">
           <option value="all">{t.airportV5.allMovements}</option>
-          {types.map((type) => <option value={type} key={type}>{t.airport[MOVEMENT_LABELS[type]]}</option>)}
+          {types.map((type) => <option value={type} key={type}>{movementLabel(type)}</option>)}
         </select>
       </label>
     </div>
@@ -79,7 +81,7 @@ export function AirportFlightsTable({ view, movements, loading, unavailable, inc
             <tbody>{rows.map((movement) => <tr key={`${movement.flightId}:${movement.movement}:${movement.observedAt}`}>
               <td><time dateTime={movement.observedAt}>{formatDateTime(movement.observedAt)}</time></td>
               <td><Link href={aircraftFlightHref(movement.flightId)}><strong>{movement.callsign || movement.registration || movement.icaoHex}</strong><small>{movement.registration || movement.icaoHex}</small></Link></td>
-              <td><span className="airport-v5-movement-pill" data-movement={movement.movement}>{t.airport[MOVEMENT_LABELS[movement.movement]]}</span></td>
+              <td><span className="airport-v5-movement-pill" data-movement={movement.movement}>{movementLabel(movement.movement)}</span></td>
               <td>{movement.runway?.designator ? `RWY ${movement.runway.designator}` : t.common.emptyValue}{movement.runway?.status === "probable" && <small>{t.airport.v3ReceiverInferred}</small>}</td>
               <td><span className={`airport-v3-confidence ${movement.confidence}`}>{movement.confidence === "high" ? t.airport.v3ConfidenceHigh : movement.confidence === "medium" ? t.airport.v3ConfidenceMedium : t.airport.v3ConfidenceLow}</span></td>
             </tr>)}</tbody>

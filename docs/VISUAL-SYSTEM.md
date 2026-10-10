@@ -302,3 +302,13 @@ scheduled arrival/departure or invented ETA. Missing and incomplete sources
 are explicitly disclosed; the table never invents delays, gate numbers,
 schedules, official flight status or route endpoints. The two lists share
 one airport controller and only render in their selected view.
+
+### V5-C3/C4: operations and analytics
+
+Operations has its own observed runway/timeline board, short-range flow
+signals, holding/go-around context and an explicit receiver-inference
+disclaimer. The default overview no longer repeats the complete flow pressure
+analytics. Analytics holds the existing V6-V9 and D2-D4 evidence, plus
+historical traffic and movements in a separate dedicated view. These models
+remain source-labeled and confidence-aware; switching views never creates a
+second airport operations controller.

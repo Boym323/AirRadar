@@ -415,7 +415,12 @@ export function AirportOperationsBoard({
 
     </>}
 
-    {(view === "overview" || view === "operations") && <>
+    {view === "operations" && <>
+    <header className="airport-v5-section-intro" data-testid="airport-v5-operations-heading">
+      <span className="ui-kicker">{t.airportV5.tabs.operations}</span>
+      <h2>{t.airport.liveBoardFlowTitle}</h2>
+      <p>{t.airportV5.operationsIntro}</p>
+    </header>
     <section className="airport-live-flow-pulse" data-testid="airport-live-board-flow-pulse" aria-labelledby="airport-live-flow-title">
       <div className="airport-live-flow-heading">
         <div><span className="ui-kicker">{t.airport.liveBoardFlowKicker}</span><h3 id="airport-live-flow-title">{t.airport.liveBoardFlowTitle}</h3></div>
@@ -493,7 +498,13 @@ export function AirportOperationsBoard({
       lastUpdated={operations?.generatedAt ?? null}
     />}
 
-    {view === "analytics" && <details className="airport-live-advanced" data-testid="airport-live-board-advanced" open>
+    {view === "analytics" && <>
+    <header className="airport-v5-section-intro" data-testid="airport-v5-analytics-heading">
+      <span className="ui-kicker">{t.airportV5.tabs.analytics}</span>
+      <h2>{t.airport.liveBoardAdvancedLabel}</h2>
+      <p>{t.airportV5.analyticsIntro}</p>
+    </header>
+    <details className="airport-live-advanced" data-testid="airport-live-board-advanced" open>
       <summary>
         <span><strong>{t.airport.liveBoardAdvancedLabel}</strong><small>{t.airport.liveBoardAdvancedHint}</small></span>
         <span className="airport-live-advanced-chevron" aria-hidden="true">⌄</span>
@@ -820,8 +831,7 @@ export function AirportOperationsBoard({
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV9Disclaimer}</p>
     </section> : null}
     </details>
-
-    }
+    </>}
 
     {view === "operations" && <div className="airport-v3-grid">
       <section className="airport-v3-panel airport-v3-runway" aria-labelledby="airport-v3-runway-title">

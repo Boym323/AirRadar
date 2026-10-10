@@ -294,3 +294,12 @@ dráze a odkaz do historie letu. Čas je **čas pozorování**, nikoliv letový
 řád či domyšlené ETA. Neúplná a chybějící data jsou označena; nevymýšlíme
 zpoždění, gate, oficiální stav letu ani neověřenou trasu. Obě tabulky
 využívají společný controller a vykreslí se jen na vlastní záložce.
+
+### V5-C3/C4: provoz a analýzy
+
+Provoz má vlastní přehled pozorovaného využití drah, časovou osu,
+krátkodobé indikátory příletového provozu, holding a go-around včetně
+upozornění, že jde o odhad přijímače. Úvodní Přehled již neopakuje
+celou rozšířenou analýzu tlaku provozu. Všechny modely V6–V9 a D2–D4,
+historické statistiky a pozorované pohyby jsou samostatně v Analýzách.
+Zachovává se informace o zdroji, míra jistoty a jediný controller.
