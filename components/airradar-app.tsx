@@ -74,7 +74,7 @@ import {
 } from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
-import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
+import { WEATHER_RADAR_BOUNDS, type WeatherRadarProduct } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
@@ -577,6 +577,7 @@ export function AirRadarApp() {
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  const [radarProduct, setRadarProduct] = useState<WeatherRadarProduct>("MAX_Z_MASKED");
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
   const [showWind, setShowWind] = useState(false);
@@ -624,6 +625,7 @@ export function AirRadarApp() {
   } = useRadarWeatherContext({
     loadSigmet: showSigmet || selectedHex !== null,
     showWeatherRadar,
+    radarProduct,
     showMetar,
     showWind,
     windLevel,
@@ -1134,6 +1136,7 @@ export function AirRadarApp() {
       setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
+      if (window.localStorage.getItem("airradar-weather-radar-product") === "PSEUDOCAPPI_2KM") setRadarProduct("PSEUDOCAPPI_2KM");
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
@@ -1216,6 +1219,7 @@ export function AirRadarApp() {
   }, [showOgn]);
 
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-layer", String(showWeatherRadar)); } catch { /* optional */ } }, [showWeatherRadar]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
@@ -3526,6 +3530,8 @@ export function AirRadarApp() {
                 showSigmet={showSigmet}
                 onShowSigmetChange={setShowSigmet}
                 showWeatherRadar={showWeatherRadar}
+                radarProduct={radarProduct}
+                onRadarProductChange={setRadarProduct}
                 onShowWeatherRadarChange={(value) => {
                   setShowWeatherRadar(value);
                   if (!value) setRadarPlaying(false);
