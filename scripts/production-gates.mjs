@@ -1571,17 +1571,21 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           });
           if (target.path.includes("mapDiagnostics=1")) {
             try {
-              await visualPage.waitForFunction((allowPendingRaster) => {
+              await visualPage.waitForFunction(() => {
                 const map = window.__airradarMapForDiagnostics;
-                // A 3D terrain DEM may still be fetching after vector basemap
-                // features are rendered. Never mistake that for a blank map.
-                if (!map || (!allowPendingRaster && !map.isStyleLoaded())) return false;
+                // isStyleLoaded() includes async source/tile managers. It can
+                // stay false while a fully painted vector basemap is visible
+                // (especially when a remote raster/DEM source is still loading).
+                // Require the actual style.load lifecycle AND rendered
+                // source-layer features: never accept a blank or uninitialized
+                // map merely because a CSS map container is visible.
+                if (!map || window.__airradarMapStyleLoadedForDiagnostics !== true) return false;
                 try {
                   return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
                 } catch {
                   return false;
                 }
-              }, target.v6Appearance === "satellite" || target.v6Terrain === true, { timeout: 25_000 });
+              }, undefined, { timeout: 25_000 });
             } catch (error) {
               const evidence = await visualPage.evaluate(() => {
                 const map = window.__airradarMapForDiagnostics;
@@ -1591,7 +1595,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 catch { /* A reloading style may temporarily reject feature queries. */ }
                 return {
                   mapReady: true,
+                  styleEventLoaded: window.__airradarMapStyleLoadedForDiagnostics === true,
                   styleLoaded: map.isStyleLoaded(),
+                  tilesLoaded: map.areTilesLoaded(),
                   renderedVectorFeatures,
                   terrain: Boolean(map.getTerrain()),
                   pitch: map.getPitch(),
@@ -1886,6 +1892,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const pathname = new URL(response.url()).pathname;
             const expectedRateLimitedApi =
               pathname === "/api/logbook/summary"
+              // The receiver-local RXW availability badge is optional and
+              // fails softly. The multi-viewport smoke opens many fresh radar
+              // pages quickly, legitimately exhausting its request budget.
+              || pathname === "/api/aircraft/communications/waypoints"
               || /^\/api\/navigation-integrity\/aircraft\/[A-F0-9]{6}$/i.test(pathname)
               // Optional per-aircraft enrichment may reach the API rate limit
               // during the multi-viewport visual sweep. Layout and UI safety

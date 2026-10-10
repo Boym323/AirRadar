@@ -285,6 +285,17 @@ checks when a browser is installed:
 npm run test:production:browser
 ```
 
+The radar visual browser gate requires the `style.load` lifecycle event and
+non-empty rendered vector source-layer features. Do not gate vector map evidence
+on `map.isStyleLoaded()` alone: MapLibre can report false while optional remote
+raster/DEM tile managers are still loading, even when the vector basemap is
+visibly rendered. The gate still fails if the style never initializes or the
+vector map is blank. During the repeated browser viewport sweep, HTTP 429 from
+optional `/api/aircraft/communications/waypoints` RXW badge enrichment may be
+logged as expected throttling; unexpected API failures remain blocking.
+
+
+
 Production gates also accept `--core`, `--browser`, and `--all` modes. Browser
 mode starts one built server and checks the full interaction contract on
 representative mobile/desktop widths, while all ten configured widths keep the
