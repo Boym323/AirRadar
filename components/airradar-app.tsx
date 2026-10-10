@@ -74,10 +74,12 @@ import {
 } from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
-import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
+import { WEATHER_RADAR_BOUNDS, type WeatherRadarProduct } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
+import type { SondeHubObservation, SondeHubSnapshot } from "@/lib/server/sondehub";
+import { createSondeHubGeoJSON } from "@/lib/sondehub/map";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
@@ -186,6 +188,11 @@ declare global {
     __airradarMapResizeCountForDiagnostics?: number;
     __airradarAircraftMarkersForDiagnostics?: Map<string, AircraftMarkerHandle>;
     __airradarWebglAircraftForDiagnostics?: AircraftWebglRuntime;
+    __airradarAircraft3dForDiagnostics?: {
+      syntheticActive: boolean;
+      injectSample: () => { vertexCount: number; gpuReady: boolean; contextLost: boolean | null };
+      read: () => { vertexCount: number; gpuReady: boolean; contextLost: boolean | null };
+    };
   }
 }
 
@@ -548,6 +555,9 @@ export function AirRadarApp() {
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
+  const [showSondes, setShowSondes] = useState(false);
+  const [sondes, setSondes] = useState<SondeHubObservation[]>([]);
+  const [sondesStatus, setSondesStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
   const ognLoadStartedRef = useRef(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
@@ -577,6 +587,7 @@ export function AirRadarApp() {
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  const [radarProduct, setRadarProduct] = useState<WeatherRadarProduct>("MAX_Z_MASKED");
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
   const [showWind, setShowWind] = useState(false);
@@ -624,6 +635,7 @@ export function AirRadarApp() {
   } = useRadarWeatherContext({
     loadSigmet: showSigmet || selectedHex !== null,
     showWeatherRadar,
+    radarProduct,
     showMetar,
     showWind,
     windLevel,
@@ -842,7 +854,39 @@ export function AirRadarApp() {
     };
     map.on("style.load", restoreAircraftLayer);
     restoreAircraftLayer();
+    // A deterministic local test fixture makes real GPU proof independent of live traffic.
+    // It is inaccessible in the normal radar and never changes SSE or persisted state.
+    const diagnosticFixture: NonNullable<Window["__airradarAircraft3dForDiagnostics"]> = {
+      syntheticActive: false,
+      injectSample: () => {
+        diagnosticFixture.syntheticActive = true;
+        const center = map.getCenter();
+        const types = ["A20N", "B77W", "A388", "C172", "H145"] as const;
+        const fixtures = types.map((aircraftType, index) => ({
+          icaoHex: `FA${String(index).padStart(4,"0")}`,
+          aircraftType,
+          lat: center.lat + (index - 2) * .0011,
+          lon: center.lng + ((index % 2) ? -.0011 : .0011),
+          altitude: 2500,
+          geomAltitude: 2500,
+          baroAltitude: 2500,
+          onGround: false,
+          seenPosSeconds: 0,
+          track: 45 + index * 50,
+          distanceKm: 1 + index,
+        } as AircraftView));
+        runtime.setAircraft(fixtures, null);
+        map.jumpTo({ zoom: Math.max(map.getZoom(), 15.5), pitch: 65 });
+        return runtime.diagnostics();
+      },
+      read: () => runtime.diagnostics(),
+    };
+    if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+      window.__airradarAircraft3dForDiagnostics = diagnosticFixture;
+    }
     return () => {
+      if (window.__airradarAircraft3dForDiagnostics === diagnosticFixture)
+        delete window.__airradarAircraft3dForDiagnostics;
       map.off("style.load", restoreAircraftLayer);
       try {
         if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) map.removeLayer(RADAR_AIRCRAFT_3D_LAYER_ID);
@@ -853,6 +897,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (radar3dMode !== "3d" || !mapReady) return;
+    if (window.__airradarAircraft3dForDiagnostics?.syntheticActive) return;
     aircraft3dRuntimeRef.current?.setAircraft(snapshot.aircraft, selectedHex, document.hidden);
   }, [mapReady, radar3dMode, selectedHex, snapshot.aircraft]);
 
@@ -1133,7 +1178,9 @@ export function AirRadarApp() {
       if (storedSource === "all" || storedSource === "local" || storedSource === "network" || storedSource === "overlap") setMapFilters((current) => ({ ...current, source: storedSource }));
       setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
+      setShowSondes(window.localStorage.getItem("airradar-sondehub-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
+      if (window.localStorage.getItem("airradar-weather-radar-product") === "PSEUDOCAPPI_2KM") setRadarProduct("PSEUDOCAPPI_2KM");
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
@@ -1152,6 +1199,30 @@ export function AirRadarApp() {
       .then((data) => { if (data?.alerts) setServerAlertsEnabled(data.alerts.enabled); })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!showSondes) { setSondesStatus("idle"); return; }
+    const abort = new AbortController();
+    let active = true;
+    setSondesStatus("loading");
+    void fetch("/api/sondes", { cache: "no-store", signal: abort.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("sonde snapshot unavailable");
+        return response.json() as Promise<SondeHubSnapshot & { enabled?: boolean }>;
+      })
+      .then((data) => {
+        if (!active) return;
+        if (!data.enabled || !data.available || !Array.isArray(data.observations)) {
+          setSondes([]);
+          setSondesStatus("unavailable");
+          return;
+        }
+        setSondes(data.observations.slice(0, 300));
+        setSondesStatus(data.stale ? "stale" : "ready");
+      })
+      .catch(() => { if (active && !abort.signal.aborted) setSondesStatus("unavailable"); });
+    return () => { active = false; abort.abort(); };
+  }, [showSondes]);
 
   useEffect(() => {
     if (!showOgn) {
@@ -1215,7 +1286,94 @@ export function AirRadarApp() {
     try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
   }, [showOgn]);
 
+  useEffect(() => { try { window.localStorage.setItem("airradar-sondehub-layer", String(showSondes)); } catch { /* optional */ } }, [showSondes]);
+
+  // SondeHub is a self-contained optional map source, never part of the ADS-B SSE.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const circleId = "sondehub-sondes-circle";
+    const labelId = "sondehub-sondes-label";
+    const sourceId = "sondehub-sondes";
+    const install = () => {
+      if (!map.isStyleLoaded()) return;
+      if (!map.getSource(sourceId)) map.addSource(sourceId, {
+        type: "geojson",
+        data: createSondeHubGeoJSON([]),
+        attribution: '<a href="https://sondehub.org/" target="_blank" rel="noopener noreferrer">SondeHub contributors · CC BY-SA 2.0</a>',
+      });
+      if (!map.getLayer(circleId)) map.addLayer({
+        id: circleId,
+        type: "circle",
+        source: sourceId,
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": "#d9a5f8",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4, 10, 6],
+          "circle-stroke-color": "#1a1233",
+          "circle-stroke-width": 1.7,
+          "circle-opacity": 0.9,
+        },
+      });
+      if (!map.getLayer(labelId)) map.addLayer({
+        id: labelId,
+        type: "symbol",
+        source: sourceId,
+        minzoom: 8,
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "serial"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 10,
+          "text-offset": [0, 1.25],
+          "text-allow-overlap": false,
+        },
+        paint: { "text-color": "#e8caf8", "text-halo-color": "#141425", "text-halo-width": 1.2 },
+      });
+      (map.getSource(sourceId) as GeoJSONSource | undefined)?.setData(
+        createSondeHubGeoJSON(showSondes && sondesStatus !== "unavailable" ? sondes : []),
+      );
+      for (const layer of [circleId, labelId]) {
+        if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility",
+          showSondes && sondesStatus !== "unavailable" ? "visible" : "none");
+      }
+    };
+    const onClick = (event: MapLayerMouseEvent) => {
+      const props = event.features?.[0]?.properties;
+      if (!props) return;
+      const card = document.createElement("div");
+      card.className = "map-popup";
+      const title = document.createElement("strong");
+      title.textContent = (t.locale.startsWith("cs") ? "Meteorologická sonda " : "Weather balloon ") + String(props.serial ?? "");
+      card.append(title);
+      for (const [label, value] of [
+        [t.locale.startsWith("cs") ? "Výška" : "Altitude", String(props.altitudeM) + " m"],
+        [t.locale.startsWith("cs") ? "Stoupání" : "Ascent", props.ascentMs == null ? "—" : String(props.ascentMs) + " m/s"],
+        [t.locale.startsWith("cs") ? "Poslední pozorování" : "Observed", formatDateTime(String(props.observedAt ?? ""), t)],
+      ]) {
+        const row = document.createElement("span");
+        row.textContent = label + ": " + value;
+        card.append(row);
+      }
+      const credit = document.createElement("a");
+      credit.href = "https://sondehub.org/";
+      credit.target = "_blank";
+      credit.rel = "noopener noreferrer";
+      credit.textContent = "SondeHub · CC BY-SA 2.0";
+      card.append(credit);
+      new maplibregl.Popup({ closeButton: true, maxWidth: "300px" }).setLngLat(event.lngLat).setDOMContent(card).addTo(map);
+    };
+    map.on("style.load", install);
+    map.on("click", circleId, onClick);
+    install();
+    return () => {
+      map.off("style.load", install);
+      map.off("click", circleId, onClick);
+    };
+  }, [mapReady, showSondes, sondes, sondesStatus]);
+
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-layer", String(showWeatherRadar)); } catch { /* optional */ } }, [showWeatherRadar]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
@@ -3492,6 +3650,10 @@ export function AirRadarApp() {
                 onShowAircraftChange={setShowAircraft}
                 showOgn={showOgn}
                 onShowOgnChange={setShowOgn}
+                showSondes={showSondes}
+                onShowSondesChange={setShowSondes}
+                sondesCount={sondes.length}
+                sondesStatus={sondesStatus}
                 showAirports={showAirports}
                 onShowAirportsChange={setShowAirports}
                 showSignificantAirports={showSignificantAirports}
@@ -3526,6 +3688,8 @@ export function AirRadarApp() {
                 showSigmet={showSigmet}
                 onShowSigmetChange={setShowSigmet}
                 showWeatherRadar={showWeatherRadar}
+                radarProduct={radarProduct}
+                onRadarProductChange={setRadarProduct}
                 onShowWeatherRadarChange={(value) => {
                   setShowWeatherRadar(value);
                   if (!value) setRadarPlaying(false);

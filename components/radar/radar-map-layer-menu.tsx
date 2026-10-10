@@ -9,6 +9,7 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
 import type { Radar3dMode } from "@/lib/radar/terrain-v6-d";
+import type { WeatherRadarProduct } from "@/lib/server/weather-radar/types";
 
 interface AtsRoutesSummary {
   available: boolean;
@@ -40,6 +41,10 @@ interface RadarMapLayerMenuProps {
   onShowAircraftChange: (value: boolean) => void;
   showOgn: boolean;
   onShowOgnChange: (value: boolean) => void;
+  showSondes: boolean;
+  onShowSondesChange: (value: boolean) => void;
+  sondesCount: number;
+  sondesStatus: "idle" | "loading" | "ready" | "stale" | "unavailable";
   showAirports: boolean;
   onShowAirportsChange: (value: boolean) => void;
   showSignificantAirports: boolean;
@@ -72,6 +77,8 @@ interface RadarMapLayerMenuProps {
   onShowSigmetChange: (value: boolean) => void;
   showWeatherRadar: boolean;
   onShowWeatherRadarChange: (value: boolean) => void;
+  radarProduct: WeatherRadarProduct;
+  onRadarProductChange: (product: WeatherRadarProduct) => void;
   radarOpacity: number;
   onRadarOpacityChange: (value: number) => void;
   selectedRadarFrame: RadarFrameSummary | null;
@@ -121,6 +128,10 @@ export function RadarMapLayerMenu({
   onShowAircraftChange,
   showOgn,
   onShowOgnChange,
+  showSondes,
+  onShowSondesChange,
+  sondesCount,
+  sondesStatus,
   showAirports,
   onShowAirportsChange,
   showSignificantAirports,
@@ -153,6 +164,8 @@ export function RadarMapLayerMenu({
   onShowSigmetChange,
   showWeatherRadar,
   onShowWeatherRadarChange,
+  radarProduct,
+  onRadarProductChange,
   radarOpacity,
   onRadarOpacityChange,
   selectedRadarFrame,
@@ -189,6 +202,8 @@ export function RadarMapLayerMenu({
         <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
         <label><input type="checkbox" checked={showAircraft} onChange={(event) => onShowAircraftChange(event.target.checked)} /> {t.layers.aircraft}</label>
         <label><input type="checkbox" checked={showOgn} onChange={(event) => onShowOgnChange(event.target.checked)} /> {t.layers.ogn}</label>
+        <label data-testid="map-layer-sondes"><input type="checkbox" checked={showSondes} onChange={(event) => onShowSondesChange(event.target.checked)} /> {t.locale.startsWith("cs") ? "Meteorologické sondy" : "Weather balloons"}{showSondes && sondesCount > 0 ? ` · ${formatNumber(sondesCount)}` : ""}</label>
+        {showSondes && <small className="map-layer-sublevel">{sondesStatus === "unavailable" ? (t.locale.startsWith("cs") ? "SondeHub není dostupný nebo povolený" : "SondeHub unavailable or not enabled") : sondesStatus === "loading" ? t.common.loading : t.locale.startsWith("cs") ? `SondeHub · ${sondesStatus === "stale" ? "starší snímek" : "časově označený snímek"} · CC BY-SA 2.0` : `SondeHub · ${sondesStatus === "stale" ? "stale snapshot" : "timestamped snapshot"} · CC BY-SA 2.0`}</small>}
       </div>
       <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.aviation}</span>
@@ -216,6 +231,7 @@ export function RadarMapLayerMenu({
         <span className="map-layer-group-title">{t.layers.groups.weather}</span>
         <label data-testid="map-layer-weather-radar"><input type="checkbox" checked={showWeatherRadar} onChange={(event) => onShowWeatherRadarChange(event.target.checked)} /> {t.layers.weatherRadar}</label>
         {showWeatherRadar && <div className="map-layer-sublevel weather-radar-controls">
+          <label className="map-layer-mode"><span>{t.locale.startsWith("cs") ? "Radarový produkt" : "Radar product"}</span><select value={radarProduct} onChange={(event) => onRadarProductChange(event.target.value as WeatherRadarProduct)}><option value="MAX_Z_MASKED">MAX_Z · {t.locale.startsWith("cs") ? "maximální odrazivost" : "maximum reflectivity"}</option><option value="PSEUDOCAPPI_2KM">PseudoCAPPI · 2 km</option></select></label>
           <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => onRadarOpacityChange(Number(event.target.value))} /></label>
           <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
         </div>}
