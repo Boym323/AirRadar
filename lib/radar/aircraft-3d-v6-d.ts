@@ -134,6 +134,12 @@ export class RadarAircraft3dRuntime {
     this.layer={id:RADAR_AIRCRAFT_3D_LAYER_ID,type:"custom",renderingMode:"3d",
       onAdd:(map,gl)=>this.onAdd(map,gl),render:(gl,input)=>this.render(gl,input),onRemove:(_map,gl)=>this.dispose(gl)};
   }
+  /** Read-only test evidence; never exported to the API or persisted. */
+  diagnostics(): { vertexCount: number; gpuReady: boolean; contextLost: boolean | null } {
+    return { vertexCount: this.vertexData.length / FLOATS_PER_VERTEX,
+      gpuReady: Boolean(this.program && this.buffer && this.vao),
+      contextLost: this.gl ? this.gl.isContextLost() : null };
+  }
   setAircraft(aircraft: readonly AircraftView[], selectedHex: string | null, hidden = false): void {
     const candidates = hidden ? [] : selectRadarAircraft3d(aircraft,selectedHex);
     this.vertexData = aircraft3dVertices(candidates);
