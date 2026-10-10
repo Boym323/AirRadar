@@ -241,3 +241,12 @@ animaci, takže stará data nevypadají jako aktuální počasí. Uložená volb
 výběr snímků, cache a 60sekundová obnova zůstávají beze změny; žádný nový
 provider nepřibyl. Při nedostupnosti se zobrazuje přeložené upozornění.
 Etapy A2 a A3 musejí před vydáním projít browser testem a kontrolou snímků.
+
+### V5-A produkční kontrola: odložené přihlášení k Intelligence
+
+Responzivní browser test odhalil reálnou neefektivitu: Operations Center
+i při zavřeném panelu připojoval intelligence SSE a načítal
+`/api/intelligence/events?limit=12` při každém zobrazení radaru.
+Nyní navazuje spojení až při otevření panelu a při zavření zachovává
+původní úklid spojení. Snižuje to skrytou zátěž i tlak na veřejný
+limit požadavků. Chyby 429 se v browser testu nezamlčují ani neignorují.

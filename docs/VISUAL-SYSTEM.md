@@ -245,3 +245,14 @@ layer preference, frame selection, cache and 60-second polling are preserved,
 without any new provider. An unavailable layer displays localized feedback.
 Both A2 and A3 must pass the production browser gate and human screenshot
 review before a release.
+
+### V5-A release gate: lazy Operations Center intelligence
+
+The responsive browser gate exposed a real background request inefficiency:
+Operations Center mounted an intelligence SSE subscription and one
+`/api/intelligence/events?limit=12` fetch for every closed radar view.
+It now subscribes only while the Operations Center is open, retaining the
+existing stream and cleanup behavior. This reduces hidden background work,
+prevents needless pressure on the public intelligence API rate limit and
+preserves strict browser console/HTTP error validation; no 429 responses
+are suppressed or ignored in test assertions.

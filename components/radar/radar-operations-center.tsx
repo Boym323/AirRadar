@@ -107,9 +107,12 @@ function dispatchRegionalMapFocus(detail: RegionalAttentionMapFocusEventDetail):
 }
 
 export function RadarOperationsCenter() {
-  const intelligenceEvents = useIntelligenceStream();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  // The map renders this component even when its panel is closed. Do not
+  // open an intelligence SSE connection or consume a public API quota until
+  // the user actually requests the Operations Center.
+  const intelligenceEvents = useIntelligenceStream(open);
   const [now, setNow] = useState(() => Date.now());
   const [alerts, setAlerts] = useState<AlertHistoryEntry[]>([]);
   const [logbook, setLogbook] = useState<LogbookSummaryResponse | null>(null);
