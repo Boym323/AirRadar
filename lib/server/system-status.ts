@@ -1037,6 +1037,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
         providerCacheEntries: serviceDiagnostics.enrichment.providerCacheEntries,
         providerCacheLimit: serviceDiagnostics.enrichment.providerCacheLimit,
         coverageAnalytics: serviceDiagnostics.coverageAnalytics,
+        retentionAttribution: serviceDiagnostics.retentionAttribution,
       } : undefined,
     },
   });

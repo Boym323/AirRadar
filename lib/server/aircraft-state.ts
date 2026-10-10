@@ -62,6 +62,7 @@ import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, 
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
+import { getMemoryRetentionDiagnostics, type MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -514,6 +515,7 @@ export class AircraftStateService {
     regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
     operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
+    retentionAttribution: MemoryRetentionDiagnostics;
   } {
     let localTrailPointCount = 0, localTrailMaxPointsPerAircraft = 0;
     let localTrailAtLimitAircraftCount = 0, localTrailOverLimitAircraftCount = 0;
@@ -580,6 +582,21 @@ export class AircraftStateService {
       regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
       operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
       runtimePerformance: getRuntimePerformanceDiagnostics(),
+      retentionAttribution: getMemoryRetentionDiagnostics({
+        localAircraft: this.localAircraft,
+        networkAircraft: this.networkAircraft,
+        localStaleAfterMs: getAircraftStaleAfterMs(),
+        networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+        networkTrailMaxAgeMs: getNetworkTrailMaxAgeMs(),
+        sourcePreferences: this.sourcePreferences,
+        sourcePreferenceMissingSince: this.sourcePreferenceMissingSince,
+        lastHistorySample: this.lastHistorySample,
+        predictiveEvaluatedAt: this.predictiveEvaluatedAt,
+        atcResolutionKeys: this.atcResolutionKeys,
+        atcShadowPredictionKeys: this.atcShadowPredictionKeys,
+        snapshotCacheEntries: this.snapshotCache.size,
+        listeners: this.listeners.size,
+      }),
     };
   }
 
