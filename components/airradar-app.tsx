@@ -104,6 +104,7 @@ import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { useSondeHubMapLayer } from "@/components/radar/use-sondehub-map-layer";
+import { useEchoTopMapLayer } from "@/components/radar/use-echo-top-map-layer";
 import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
 import { RadarMultiAircraft } from "@/components/radar/radar-multi-aircraft";
 import { addMultiAircraft, removeMultiAircraft, MULTI_AIRCRAFT_LIMIT } from "@/lib/radar/multi-aircraft";
@@ -584,6 +585,7 @@ export function AirRadarApp() {
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  const [showEchoTop, setShowEchoTop] = useState(false);
   const [radarProduct, setRadarProduct] = useState<"MAX_Z_MASKED" | "PSEUDOCAPPI_2KM">("MAX_Z_MASKED");
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
@@ -714,6 +716,7 @@ export function AirRadarApp() {
   const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const sondeStatus = useSondeHubMapLayer(mapRef, mapReady, showSondes);
+  const echoTopStatus = useEchoTopMapLayer(mapRef, mapReady, showEchoTop);
   // Native details[name] keeps Presets and Layers mutually exclusive.
   // Dismiss the active map menu outside the HUD and restore focus on Escape.
   useEffect(() => {
@@ -1184,6 +1187,7 @@ export function AirRadarApp() {
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
       setShowSondes(window.localStorage.getItem("airradar-sondehub-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
+      setShowEchoTop(window.localStorage.getItem("airradar-echo-top-layer") === "true");
       const savedRadarProduct = window.localStorage.getItem("airradar-weather-radar-product");
       if (savedRadarProduct === "MAX_Z_MASKED" || savedRadarProduct === "PSEUDOCAPPI_2KM") setRadarProduct(savedRadarProduct);
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
@@ -1270,6 +1274,7 @@ export function AirRadarApp() {
 
   useEffect(() => { try { window.localStorage.setItem("airradar-sondehub-layer", String(showSondes)); } catch { /* optional */ } }, [showSondes]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-layer", String(showWeatherRadar)); } catch { /* optional */ } }, [showWeatherRadar]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-echo-top-layer", String(showEchoTop)); } catch { /* optional */ } }, [showEchoTop]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
@@ -3587,6 +3592,9 @@ export function AirRadarApp() {
                 showSigmet={showSigmet}
                 onShowSigmetChange={setShowSigmet}
                 showWeatherRadar={showWeatherRadar}
+                showEchoTop={showEchoTop}
+                onShowEchoTopChange={setShowEchoTop}
+                echoTopStatus={echoTopStatus}
                 radarProduct={radarProduct}
                 onRadarProductChange={(product) => { setRadarProduct(product); setRadarPlaying(false); }}
                 onShowWeatherRadarChange={(value) => {

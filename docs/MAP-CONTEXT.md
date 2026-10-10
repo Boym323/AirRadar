@@ -41,6 +41,27 @@ distinguishes maximum reflectivity from reflectivity at 2 km above sea level.
 This is NOT the Echo Top product: ČHMÚ distributes Echo Top as HDF5, which
 requires a separate decoding/conversion pipeline. No extra poller is added.
 
+## Echo Top HDF5 (optional)
+
+ČHMÚ Echo Top (`ETOP`/`HGHT`) measures the maximum height of radar echo
+reflectivity >=4 dBZ in **metres AMSL**; it is not cloud-top height or a
+certified flight hazard product. The official Mercator EPSG:3857 extent is
+11.267°E–19.624°E, 48.047°N–51.458°N. Data are published every five minutes
+as ODIM HDF5 at `https://opendata.chmi.cz/meteorology/weather/radar/composite/echotop/hdf5/`.
+
+The optional provider discovers only the recent five-minute HDF files via up to eight allowlisted HEAD probes, avoiding ČHMÚ's growing oldest-first directory index. It validates the published timestamped filename,
+8 MiB HDF signature, strict ODIM product/quantity, gain/offset/no-data,
+projection, raster bounds and coordinates before a sandboxed converter returns
+an RGBA PNG. Both catalog and image caches are bounded. Failures never alter
+MAX_Z/PseudoCAPPI, ADS-B/OGN/SSE or weather fusion. Missing dependencies
+produce an unavailable state instead of a synthetic image.
+
+Install `python3-h5py` and `python3-numpy` in the runtime container, then
+validate a real ČHMÚ HDF file before setting `CHMI_ECHOTOP_ENABLED=true`.
+This additional service is OFF by default and requires ČHMÚ CC BY 4.0
+attribution. The generated PNG is a visualization only, not raw quantitative
+HGHT export.
+
 ## METAR map
 
 The METAR layer reuses `AviationWeatherProvider` and the official Aviation

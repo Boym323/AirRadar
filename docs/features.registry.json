@@ -248,7 +248,7 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion.",
+      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. Optional HGHT Echo Top HDF5 overlay is available only after secure local conversion prerequisites pass.",
       "pages": [
         "/weather"
       ],
@@ -271,7 +271,9 @@
         "/api/weather/wind",
         "/api/weather/aircraft/observations",
         "/api/weather/aircraft/profile",
-        "/api/admin/weather/diagnostics"
+        "/api/admin/weather/diagnostics",
+        "/api/weather/radar/echotop/frames",
+        "/api/weather/radar/echotop/frame/:id"
       ],
       "changelogScopes": [
         "weather",

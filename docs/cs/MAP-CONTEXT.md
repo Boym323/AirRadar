@@ -39,6 +39,28 @@ Přepínač rozlišuje maximální odrazivost a odrazivost ve 2 km nad mořem.
 **Nejde o Echo Top**, který ČHMÚ zveřejňuje v HDF5 a který potřebuje
 samostatný dekodér či převod. Žádný další poller nevzniká.
 
+## Echo Top HDF5 (volitelně)
+
+Radarový produkt ČHMÚ Echo Top (`ETOP`/`HGHT`) představuje maximální výšku
+radarového echa s odrazivostí >=4 dBZ **v metrech nad mořem**. Nejde o výšku
+vrcholu oblačnosti ani certifikované varování pro letecký provoz. Oficiální
+rozsah EPSG:3857 je 11,267°E–19,624°E a 48,047°N–51,458°N. Data se
+zveřejňují každých pět minut ve formátu ODIM HDF5:
+`https://opendata.chmi.cz/meteorology/weather/radar/composite/echotop/hdf5/`.
+
+Volitelný provider vyhledá aktuální HDF soubor nejvýše osmi HEAD požadavky na známé pětiminutové názvy, místo stahování neomezeně rostoucího adresářového výpisu ČHMÚ. Kontroluje přesný název souboru, čas, maximální velikost
+8 MiB, signaturu HDF5, typ produktu a jednotky, gain/offset/nodata, projekci,
+rozlišení a zeměpisnou oblast. Teprve poté serverový převodník vytváří RGBA PNG.
+Cache katalogu a obrázků je omezená. Chybějící knihovny znamenají
+`unavailable`, nikoli vymyšlený obraz. Při chybě se nemění MAX_Z/PseudoCAPPI,
+ADS-B/OGN/SSE ani Weather Fusion.
+
+Do produkčního kontejneru je nutné doinstalovat `python3-h5py` a
+`python3-numpy`, ověřit jeden skutečný HDF soubor a teprve potom nastavit
+`CHMI_ECHOTOP_ENABLED=true`. Standardně je vrstva vypnutá, při zobrazení
+platí atribuce ČHMÚ CC BY 4.0. PNG slouží jen k vizualizaci, nikoli jako
+export původních hodnot HGHT.
+
 ## Mapa METAR
 
 METAR vrstva znovu používá `AviationWeatherProvider` a oficiální JSON API
