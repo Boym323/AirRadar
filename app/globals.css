@@ -6872,3 +6872,14 @@ button, input, select, textarea { color-scheme: dark; }
     justify-self: end;
   }
 }
+
+
+/* Desktop V6 HUD can place the Layers trigger near the map's left edge.
+ * Opening the menu to the right prevents the menu from leaving the viewport. */
+@media (min-width: 821px) and (max-width: 1500px) {
+  .map-overlay-primary > .map-layers > .map-layers-menu {
+    left: 0;
+    right: auto;
+    max-width: calc(100vw - 100px);
+  }
+}
