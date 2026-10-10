@@ -1015,6 +1015,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-v6-light-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "light" },
         { name: "radar-v6-satellite-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "satellite" },
         { name: "radar-v6-d-3d-terrain", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Terrain: true },
+        { name: "radar-v6-g-presentation", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Presentation: true },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
         { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
@@ -1436,6 +1437,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             if (!await panel.locator("button").count()) {
               throw new Error("V6-A Multi-view panel must remain interactive");
             }
+          }
+          if (target.v6Presentation) {
+            const control = visualPage.getByTestId("radar-presentation-v6-g");
+            await control.getByRole("button", { name: /Presentation|Prezentace/i }).click();
+            await visualPage.waitForFunction(() => document.querySelector(".radar-content")?.getAttribute("data-presentation-mode") === "true");
           }
           if (target.v6Terrain) {
             await visualPage.getByTestId("radar-v6-d-terrain").locator("select").selectOption("3d");

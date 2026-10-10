@@ -387,3 +387,8 @@ Dosavadní mobilní Sky Finder obsahuje volitelné překrytí živého obrazu za
 ### V6-D1: volitelný 3D terén
 
 Mapa nabízí **2D (výchozí)** a **3D terén (beta)**. Stávající mapa MapLibre zůstává zachována; výšková data Mapterhorn (DEM) se načítají až po výslovném zapnutí. Vypnutí obnoví plochý pohled bez výměny mapového stylu. Zdroj je uveden v atribuci. Nedostupnost externího DEM nesmí ovlivnit výchozí radar. Ikony letadel jsou zatím mapové značky, **nikoli 3D modely ve skutečné výšce**. Před nasazením ověřit desktop, mobil a výkon GPU.
+
+
+### V6-G: prezentační režim (první verze)
+
+Ovládací prvek přepne radar na celou obrazovku, ale používá stávající živý stream. Každých 45 sekund se vystřídá pohled na **čerstvě pozorované lokální letadlo ve vzduchu**; nejsou-li dostupná, kamera se vrátí na polohu přijímače. Režim nepřidává další stream, externí dotazy, polling ani zápisy. Uživatel může střídání pozastavit a režim kdykoli ukončit. Editor TV playlistů a sdílené presety nejsou součástí první verze.

@@ -6808,3 +6808,13 @@ button, input, select, textarea { color-scheme: dark; }
   .radar-quick-actions .radar-v5-map-focus-full { display: none; }
   .radar-quick-actions .radar-v5-map-focus-compact { display: inline; }
 }
+
+/* V6-G Presentation Mode: map remains the existing live MapLibre instance. */
+.radar-content:fullscreen { width: 100vw; height: 100vh; background: var(--background); }
+.radar-content[data-presentation-mode="true"] { grid-template-columns: minmax(0, 1fr); }
+.radar-content[data-presentation-mode="true"] > .sidebar { display: none; }
+.radar-content[data-presentation-mode="true"] .map-overlay-primary > :not([data-testid="radar-presentation-v6-g"]) { display: none; }
+.radar-content[data-presentation-mode="true"] .map-overlay-primary { justify-content: flex-start; }
+.radar-content[data-presentation-mode="true"] .map-overlay { right: 64px; }
+.radar-content[data-presentation-mode="true"] .radar-quick-actions,
+.radar-content[data-presentation-mode="true"] [data-testid="radar-multi-aircraft"] { display: none; }

@@ -405,3 +405,8 @@ The existing mobile Spotter Sky Finder now contains a browser-only rear-camera o
 ### V6-D1: opt-in 3D terrain
 
 Radar appearance controls offer **2D (default)** and **3D terrain (beta)**. The existing MapLibre map is unchanged: the Mapterhorn raster DEM is loaded lazily only after opt-in. Switching off disables terrain and restores a flat pitch. Attribution remains visible. DEM requires an external tile provider; the default 2D radar stays independent. Aircraft glyphs are map-projected, **not yet 3D aircraft models at true altitude**. Verify the browser gate, GPU impact, and mobile layout before release.
+
+
+### V6-G: Presentation Mode (first delivery)
+
+A dedicated map control enters fullscreen on user action and keeps the existing live radar feed. The presentation cycles between **fresh, local, airborne receiver observations** every 45 seconds; when none are usable it returns to the configured public receiver viewpoint. It adds no stream, provider request, server polling, write path or autoplay when hidden. A pause button stops automatic camera rotation. Users can leave presentation at any time. This does not yet implement a TV playlist editor or externally shared presets.
