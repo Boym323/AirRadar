@@ -156,7 +156,7 @@ export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {
   // secret is provisioned before the feature is intentionally enabled.
   const flightAwareApiKey = getUsableFlightAwareApiKey();
   if (isFlightAwareEnabled() && flightAwareApiKey) {
-    registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey, { maxCostUsdPerDay: getFlightAwareMaxCostUsdPerDay(), maxCostUsdPerMonth: getFlightAwareMaxCostUsdPerMonth() });
+    registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey, { maxCostUsdPerDay: getFlightAwareMaxCostUsdPerDay(), maxCostUsdPerMonth: getFlightAwareMaxCostUsdPerMonth(), includeRouteFallback: process.env.FLIGHTAWARE_ROUTE_FALLBACK_ENABLED?.trim().toLowerCase() === "true" });
   }
   const persistence = adsbDb && options.persistAdsbDb !== false && isAdsbDbPersistenceEnabled()
     ? new AdsbDbPersistence({
