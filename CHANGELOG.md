@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.402] - 2026-10-10
+
+Changes since v1.0.401.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Visual System V5-A1 rychlé akce nad mapou (#708) (86e3df66)
+
+### Maintenance
+
+- Sync generated repository metadata (#706) (38af350a)
+- Sync generated repository metadata (#707) (532ec227)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#706) (38af350a)
+- chore(metadata): sync generated repository metadata (#707) (532ec227)
+- feat(radar): Visual System V5-A1 rychlé akce nad mapou (#708) (86e3df66)
+
+</details>
 ## [1.0.401] - 2026-10-10
 
 Changes since v1.0.400.
