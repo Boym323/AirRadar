@@ -342,6 +342,16 @@ interface OgnMarkerHandle extends AircraftLabelCollisionHandle {
 // OpenFreeMap keeps the basemap open and no-key while providing a dark vector
 // hierarchy that remains usable when the public OSM raster host is unavailable.
 
+/** MapLibre 6 initializes compact credits expanded. Start narrow radar maps
+ * collapsed, without removing mandatory credit links or the native summary. */
+function collapseNarrowRadarAttribution(map: maplibregl.Map): void {
+  if (!window.matchMedia("(max-width: 420px)").matches) return;
+  const credits = map.getContainer().querySelector<HTMLElement>("details.maplibregl-ctrl-attrib.maplibregl-compact");
+  if (!credits) return;
+  credits.removeAttribute("open");
+  credits.classList.remove("maplibregl-compact-show");
+}
+
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
 }
@@ -1318,6 +1328,12 @@ export function AirRadarApp() {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
     const attributionControl = new maplibregl.AttributionControl({ compact: true, customAttribution: airRadarMapAttributions(false) });
     map.addControl(attributionControl, "bottom-right");
+    collapseNarrowRadarAttribution(map);
+    const attributionBreakpoint = window.matchMedia("(max-width: 420px)");
+    const onAttributionBreakpoint = (event: MediaQueryListEvent) => {
+      if (event.matches) collapseNarrowRadarAttribution(map);
+    };
+    attributionBreakpoint.addEventListener("change", onAttributionBreakpoint);
     attributionControlRef.current = attributionControl;
     mapRef.current = map;
     const mapDiagnostics = new URLSearchParams(window.location.search).get("mapDiagnostics") === "1";
@@ -2070,6 +2086,7 @@ export function AirRadarApp() {
       liveTrails.clear();
       performanceDiagnosticsDisposed = true;
       performanceDiagnostics?.stop();
+      attributionBreakpoint.removeEventListener("change", onAttributionBreakpoint);
       map.remove();
       attributionControlRef.current = null;
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
@@ -2095,6 +2112,7 @@ export function AirRadarApp() {
     });
     map.removeControl(previous);
     map.addControl(next, "bottom-right");
+    collapseNarrowRadarAttribution(map);
     attributionControlRef.current = next;
   }, [networkEnabled]);
 
