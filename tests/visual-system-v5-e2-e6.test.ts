@@ -14,6 +14,11 @@ const gate = read("scripts/production-gates.mjs");
 describe("Visual System V5-E2–E6", () => {
   it("uses true map focus without a duplicate map instance or traffic request", () => {
     expect(quick).toContain('data-testid="radar-quick-map-focus"');
+    expect(quick).toContain('aria-label={mapFocus ? visual.leaveFocusMap : visual.focusMap}');
+    expect(quick).toContain('className="radar-v5-map-focus-compact"');
+    expect(css).toContain(".radar-quick-actions .radar-v5-map-focus-compact { display: inline; }");
+    expect(visualSystemV5EText("cs").leaveFocusMapCompact).toBe("Panely");
+    expect(visualSystemV5EText("en").leaveFocusMapCompact).toBe("Panels");
     expect(quick).toContain("aria-pressed={mapFocus}");
     expect(quick).toContain("onClick={onToggleMapFocus}");
     expect(radar).toContain('data-map-focus={mapFocus && drawerState === "closed" ? "true" : "false"}');
