@@ -89,6 +89,7 @@ describe("V6-D 3D model selection and GPU budget",()=>{
     const b77w = resolveAirframeSpec("B77W");
     const b78x = resolveAirframeSpec("B78X");
     const a388 = resolveAirframeSpec("A388");
+    expect(a388.engines).toBe(4);
     expect(a20n.winglet).toBeGreaterThan(a320.winglet ?? 0);
     expect(b738.wingSweep).not.toBe(a320.wingSweep);
     expect(b77w.span).toBeGreaterThan(b738.span);
