@@ -104,6 +104,8 @@ import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
+import { RadarMultiAircraft } from "@/components/radar/radar-multi-aircraft";
+import { addMultiAircraft, removeMultiAircraft, MULTI_AIRCRAFT_LIMIT } from "@/lib/radar/multi-aircraft";
 import { radarWeatherPresentation } from "@/lib/radar/weather-layer-presentation";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
@@ -627,6 +629,9 @@ export function AirRadarApp() {
   const [mobileCompact, setMobileCompact] = useState(true);
   const [trafficOpen, setTrafficOpen] = useState(false);
   const [mapFocus, setMapFocus] = useState(false);
+  const [multiAircraftMode, setMultiAircraftMode] = useState(false);
+  const multiAircraftModeRef = useRef(false);
+  const [multiAircraftHexes, setMultiAircraftHexes] = useState<string[]>([]);
   const trafficTriggerRef = useRef<HTMLButtonElement | null>(null);
   const drawerActionGenerationRef = useRef(0);
   const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
@@ -1107,6 +1112,7 @@ export function AirRadarApp() {
   }, []);
 
   const selectAircraft = useCallback((hex: string) => {
+    if (multiAircraftModeRef.current) setMultiAircraftHexes((current) => addMultiAircraft(current, hex));
     drawerActionGenerationRef.current += 1;
     selectedHexRef.current = hex;
     setTrafficSource("adsb");
@@ -1125,6 +1131,30 @@ export function AirRadarApp() {
     const aircraft = snapshot.aircraft.find((item) => item.icaoHex.toUpperCase() === aircraftFocus);
     if (aircraft && selectedHex !== aircraft.icaoHex) selectAircraft(aircraft.icaoHex);
   }, [aircraftFocus, selectAircraft, selectedHex, snapshot.aircraft]);
+
+  const toggleMultiAircraft = useCallback(() => {
+    setMultiAircraftMode((active) => {
+      multiAircraftModeRef.current = !active;
+      if (!active) setMultiAircraftHexes((current) => selectedHexRef.current ? addMultiAircraft(current, selectedHexRef.current) : current);
+      return !active;
+    });
+  }, []);
+  const clearMultiAircraft = useCallback(() => {
+    multiAircraftModeRef.current = false;
+    setMultiAircraftMode(false);
+    setMultiAircraftHexes([]);
+  }, []);
+  const focusMultiAircraft = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const points = multiAircraftHexes.flatMap((hex) => {
+      const aircraft = liveAircraftByHexRef.current.get(hex);
+      return aircraft?.lon !== null && aircraft?.lat !== null && aircraft?.lon !== undefined && aircraft?.lat !== undefined
+        && Number.isFinite(aircraft.lon) && Number.isFinite(aircraft.lat) ? [[aircraft.lon, aircraft.lat] as [number, number]] : [];
+    });
+    if (points.length === 1) map.easeTo({ center: points[0], duration: prefersReducedMotion() ? 0 : 450 });
+    if (points.length > 1) map.fitBounds(points.reduce((bounds, point) => bounds.extend(point), new maplibregl.LngLatBounds(points[0], points[0])), { padding: 90, maxZoom: 11, duration: prefersReducedMotion() ? 0 : 450 });
+  }, [liveAircraftByHexRef, multiAircraftHexes]);
 
   const selectOgn = useCallback((id: string) => {
     drawerActionGenerationRef.current += 1;
@@ -1489,6 +1519,8 @@ export function AirRadarApp() {
       };
       map.on("click", "ats-routes-line", openAtsSegment); map.on("click", "ats-routes-cdr", openAtsSegment); map.on("click", "ats-routes-selected", openAtsSegment);
       for (const layer of ["ats-routes-line", "ats-routes-cdr", "ats-routes-selected"] as const) { map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; }); }
+      map.addSource("multi-aircraft-trails", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({ id: "multi-aircraft-trail-lines", type: "line", source: "multi-aircraft-trails", paint: { "line-color": AIRRADAR_MAP_THEME.accent, "line-opacity": 0.76, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 8, 2, 13, 2.8], "line-dasharray": [3, 2] } });
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": AIRRADAR_MAP_THEME.selected, "line-opacity": 0.86, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.4, 13, 3.2] } });
       map.addSource("selected-trail-live-tail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -2338,7 +2370,9 @@ export function AirRadarApp() {
       && aircraft.lon !== null
       && Number.isFinite(aircraft.lat)
       && Number.isFinite(aircraft.lon);
+    const multiAircraftSet = new Set(multiAircraftMode ? multiAircraftHexes : []);
     const isHtmlSpecialAircraft = (aircraft: AircraftView) => aircraft.icaoHex === selectedHex
+      || multiAircraftSet.has(aircraft.icaoHex)
       || isLiveAircraftWatchlisted(aircraft)
       || Boolean(aircraft.emergency);
     const liveSpecialAircraft = liveFilteredAircraft.filter((aircraft) => isPositionedAircraft(aircraft) && isHtmlSpecialAircraft(aircraft));
@@ -2445,6 +2479,7 @@ export function AirRadarApp() {
       // values as render-owned when they cross the animation helper boundary.
       aircraftMotionRuntimeRef.current?.upsert({ ...aircraft }, handle);
       const selectedState = aircraft.icaoHex === selectedHex;
+      handle.root.dataset.multiPinned = multiAircraftSet.has(aircraft.icaoHex) ? "true" : "false";
       const reportedTrueHeading = aircraftReportedTrueHeading(aircraft);
       const renderedHeading = aircraftMotionRuntimeRef.current?.renderedHeading(
         aircraft.icaoHex,
@@ -2488,6 +2523,17 @@ export function AirRadarApp() {
       labelCollisionSchedulerRef.current?.();
     }
 
+    const multiSource = map.getSource("multi-aircraft-trails") as GeoJSONSource | undefined;
+    if (multiSource && multiAircraftMode) {
+      multiSource.setData({ type: "FeatureCollection", features: multiAircraftHexes.flatMap((hex) => {
+        if (hex === selectedHex || !liveFilteredAircraftByHex.has(hex)) return [];
+        const points = liveTrailsRef.current.get(hex) ?? EMPTY_TRAIL;
+        const safe = boundTrailPoints(points, Date.now());
+        return safe.length > 1 ? [{ type: "Feature" as const, properties: { icaoHex: hex }, geometry: { type: "LineString" as const, coordinates: safe.map((point) => [point.lon, point.lat]) } }] : [];
+      }) });
+    } else if (multiSource) {
+      multiSource.setData({ type: "FeatureCollection", features: [] });
+    }
     const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
     if (trailSource && selectedTrailSourceRef.current !== selectedTrailForMap) {
@@ -2527,7 +2573,7 @@ export function AirRadarApp() {
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
       labelCollisionSchedulerRef.current?.();
     }
-  }, [colorMode, currentRadarPadding, distanceFilter, isLiveAircraftWatchlisted, liveAircraftByHexRef, liveSnapshotRef, liveTrailsRef, mapFilters, mapReady, mapZoom, pendingAircraftChangesRef, search, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, selectedHex, selectAircraft, watchlistOnly]);
+  }, [colorMode, currentRadarPadding, distanceFilter, isLiveAircraftWatchlisted, liveAircraftByHexRef, liveSnapshotRef, liveTrailsRef, mapFilters, mapReady, mapZoom, multiAircraftHexes, multiAircraftMode, pendingAircraftChangesRef, search, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, selectedHex, selectAircraft, watchlistOnly]);
 
   useEffect(() => {
     aircraftMapSyncRef.current = syncAircraftMap;
@@ -3190,6 +3236,17 @@ export function AirRadarApp() {
               }}
               onToggleAtc={() => setShowAtc((current) => !current)}
               onOpenFilters={() => openTrafficDrawer("filters")}
+            />
+            <RadarMultiAircraft
+              active={multiAircraftMode}
+              hexes={multiAircraftHexes}
+              aircraft={snapshot.aircraft}
+              limit={MULTI_AIRCRAFT_LIMIT}
+              onToggle={toggleMultiAircraft}
+              onRemove={(hex) => setMultiAircraftHexes((current) => removeMultiAircraft(current, hex))}
+              onClear={clearMultiAircraft}
+              onSelect={selectAircraft}
+              onFit={focusMultiAircraft}
             />
             {activeOperationalFocusItem ? (
               <RadarOperationalFocusCard

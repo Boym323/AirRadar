@@ -367,3 +367,8 @@ Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
 - V5-E6 doplňuje regresní testy, desktopové a mobilní screenshoty
   režimu Jen mapa, test přímého přechodu na letištní mapu a mobilní
   snímek mapy na 390 px. Před vydáním zkontrolovat CI screenshoty.
+
+
+## V6-A — sledování více letadel
+
+Přepínač **Více letadel** na živém radaru přidává lokální výběr až deseti ICAO identit. Kliknutí na letadlo při zapnutém režimu připne jeho ICAO a nad mapou zobrazí jeho aktuální telemetrii, i když už je vybráno jiné letadlo. Přerušované čáry zobrazují přijaté stopy ze zvoleného zdroje LOCAL/EXTENDED, nikoli modelovaná trasa. Při ztrátě signálu zůstává karta označená jako mimo pokrytí; režim lze ukončit bez změny filtru či serverových watchlistů. Využívá existující stream a MapLibre, nepřidává nové SSE spojení.
