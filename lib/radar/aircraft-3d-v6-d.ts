@@ -98,8 +98,17 @@ export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[]): 
     const angle=aircraft.heading*Math.PI/180;
     const forwardEast=Math.sin(angle), forwardNorth=Math.cos(angle);
     const rightEast=Math.cos(angle), rightNorth=-Math.sin(angle);
-    const color=aircraft.approximateAltitude ? [1,0.76,0.35] : [0.30,0.93,0.80];
-    for(const [a,b,c,shade] of airframeModelFaces(aircraft.aircraftType)){
+    for(const [a,b,c,shade,material] of airframeModelFaces(aircraft.aircraftType)){
+      // Distinct materials are needed for a readable aircraft, not an all-cyan silhouette.
+      const base = material === "glass" ? [0.14,0.24,0.35] :
+        material === "intake" ? [0.09,0.12,0.16] :
+        material === "engine" ? [0.68,0.74,0.78] :
+        material === "rotor" ? [0.32,0.40,0.46] :
+        material === "wing" ? [0.79,0.84,0.87] : [0.93,0.95,0.97];
+      // Amber-tinted structure signals approximate barometric altitude;
+      // cockpit windows and dark engine intakes remain recognizable.
+      const color = aircraft.approximateAltitude && material !== "glass" && material !== "intake"
+        ? [Math.min(1,base[0]*.9+.1),base[1]*.81,base[2]*.61] : base;
       for(const [right,forward,up] of [a,b,c]){
         points.push(location.x+(right*rightEast+forward*forwardEast)*metre,
           location.y-(right*rightNorth+forward*forwardNorth)*metre,
