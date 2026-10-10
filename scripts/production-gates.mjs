@@ -986,6 +986,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
+        { name: "airport-v5-operations-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "operations" },
+        { name: "airport-v5-weather-desktop", path: "/airports/LKPR", selector: ".airport-weather-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "weather" },
+        { name: "airport-v5-map-desktop", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map" },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -1014,6 +1017,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-live-board-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
         { name: "airport-v5-arrivals-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
+        { name: "airport-v5-departures-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "departures" },
+        { name: "airport-v5-analytics-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
+        { name: "airport-v5-arrivals-320", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 320, height: 568 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
+        { name: "airport-v5-overview-tablet", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 768, height: 1024 }, fullPage: true, mockAirportV3: true },
         { name: "airport-v5-overview-320", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 320, height: 568 }, fullPage: false, mockAirportV3: true },
         { name: "predictive-readiness-mobile", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 390, height: 844 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -1275,7 +1282,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await switchAirportView("map");
             await visualPage.locator(".airport-map-card").waitFor({ state: "visible", timeout: 15_000 });
             await switchAirportView(target.airportCaptureView ?? "overview");
-            await visualPage.locator('[data-product="airport-live-board-v8"]').waitFor({ state: "visible", timeout: 15_000 });
+            // Weather and map intentionally unmount the shared operations board.
+            if (!["weather", "map"].includes(target.airportCaptureView)) {
+              await visualPage.locator('[data-product="airport-live-board-v8"]').waitFor({ state: "visible", timeout: 15_000 });
+            }
             // Verify the final target only after selecting the view that mounts it.
             await targetRoot.waitFor({ state: "visible", timeout: 15_000 });
           }
