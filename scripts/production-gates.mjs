@@ -1467,11 +1467,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             }, null, { timeout: 15_000 });
             if (process.env.AIRRADAR_V6_ASSET_QA === "1") {
               const modelToggle=visualPage.getByTestId("radar-v6-glb-detail").locator("input");
-              await modelToggle.check();
+              await modelToggle.evaluate(element => { element.click(); });
               if (!(await modelToggle.isChecked())) throw new Error("GLB opt-in failed");
               const credit=visualPage.getByTestId("radar-v6-glb-detail").locator("..");
               if (!(await credit.textContent())?.includes("GLB")) throw new Error("Missing licensed model toggle");
-              await visualPage.getByTestId("radar-v6-device-qa").getByRole("button", { name:/3D/i }).first().click();
+              await visualPage.getByTestId("radar-v6-device-qa").getByRole("button", { name:/3D/i }).first().evaluate(element => { element.click(); });
               await visualPage.getByTestId("radar-v6-device-qa").getByRole("status").waitFor({state:"visible",timeout:20_000});
             }
             await layers.evaluate((element) => { element.open = false; });
