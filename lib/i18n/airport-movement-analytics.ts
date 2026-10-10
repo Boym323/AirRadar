@@ -8,7 +8,7 @@ export const airportMovementAnalyticsCopy = {
     total: "Celkem",
     peak: "Nejvytíženější hodina UTC",
     movementsUnit: "pozorovaných pohybů",
-    goArounds: "Nezdařená přiblížení",
+    goArounds: "Přerušená přiblížení",
     holding: "Vyčkávání",
     runwayUsage: "Využití vzletových a přistávacích drah",
     trafficTrend: "Provoz podle hodin UTC",
