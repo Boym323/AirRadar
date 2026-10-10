@@ -3,6 +3,8 @@ export const visualSystemV5E = {
   cs: {
     focusMap: "Jen mapa",
     leaveFocusMap: "Zobrazit panely",
+    focusMapCompact: "Mapa",
+    leaveFocusMapCompact: "Panely",
     focusMapHint: "Dočasně zvětšit mapu bez skrytí dat nebo změny filtrů",
     airportNearbyAll: "Vše",
     airportNearbyArrivals: "Přibližující se",
@@ -19,6 +21,8 @@ export const visualSystemV5E = {
   en: {
     focusMap: "Map focus",
     leaveFocusMap: "Show panels",
+    focusMapCompact: "Map",
+    leaveFocusMapCompact: "Panels",
     focusMapHint: "Expand the map temporarily without changing filters or data",
     airportNearbyAll: "All",
     airportNearbyArrivals: "Approaching",

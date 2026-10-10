@@ -53,8 +53,8 @@ export function RadarQuickActions({
     <Button variant="ghost" size="compact" className="radar-quick-action" disabled={filtersDisabled} onClick={onOpenFilters} data-testid="radar-quick-filters" aria-label={activeFilterCount ? `${t.radarQuickActions.filters} · ${t.radarQuickActions.activeFilters(activeFilterCount)}` : t.radarQuickActions.filters}>
       <UiIcon name="layers" /><span>{t.radarQuickActions.filters}{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}</span>
     </Button>
-    <Button variant="ghost" size="compact" className="radar-quick-action" data-testid="radar-quick-map-focus" aria-pressed={mapFocus} title={visual.focusMapHint} onClick={onToggleMapFocus}>
-      <UiIcon name="focus" /><span>{mapFocus ? visual.leaveFocusMap : visual.focusMap}</span>
+    <Button variant="ghost" size="compact" className="radar-quick-action" data-testid="radar-quick-map-focus" aria-pressed={mapFocus} aria-label={mapFocus ? visual.leaveFocusMap : visual.focusMap} title={visual.focusMapHint} onClick={onToggleMapFocus}>
+      <UiIcon name="focus" /><span aria-hidden="true" className="radar-v5-map-focus-full">{mapFocus ? visual.leaveFocusMap : visual.focusMap}</span><span aria-hidden="true" className="radar-v5-map-focus-compact">{mapFocus ? visual.leaveFocusMapCompact : visual.focusMapCompact}</span>
     </Button>
   </div>;
 }

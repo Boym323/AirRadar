@@ -6801,3 +6801,10 @@ button, input, select, textarea { color-scheme: dark; }
   .airport-v5-radar-link { min-height: var(--control-height); display: inline-flex; align-items: center; }
   .airport-v5-header-actions > button { min-height: var(--control-height-touch); }
 }
+
+/* V5-E narrow control: short visible action, full accessible name. */
+.radar-quick-actions .radar-v5-map-focus-compact { display: none; }
+@media (max-width: 420px) {
+  .radar-quick-actions .radar-v5-map-focus-full { display: none; }
+  .radar-quick-actions .radar-v5-map-focus-compact { display: inline; }
+}
