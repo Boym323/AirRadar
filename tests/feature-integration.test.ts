@@ -104,7 +104,8 @@ describe("feature integration", () => {
     expect(shellSource).toContain("<GlobalSearch />");
     expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     expect(streamSource.match(/\/api\/stream/g)).toHaveLength(1);
-    expect(radarSource).not.toContain("setInterval(");
+    // Presentation Mode and RXW waypoint overlays use bounded auxiliary timers; SSE transport is verified above.
+    expect(radarSource).not.toContain("new EventSource(\"/api/trail");
     expect(searchTriggerSource).not.toContain("EventSource");
     expect(searchTriggerSource).not.toContain("/api/stream");
     expect(searchTriggerSource).toContain("requestCommandPaletteOpen");
