@@ -21,7 +21,7 @@ const DIMENSIONS: Record<LicensedFamily,{length:number;span:number}> = {
   B737:{length:39.5,span:35.8}, B787:{length:63,span:60.1},
 };
 export const MAX_GLB_BYTES = 1_500_000;
-export const MAX_GLB_FACES = 480;
+export const MAX_GLB_FACES = 1600;
 const models = new Map<LicensedFamily, readonly AirframeFace[]>();
 const inflight = new Map<LicensedFamily, Promise<void>>();
 const failedAt = new Map<LicensedFamily, number>();
