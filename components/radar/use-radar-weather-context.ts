@@ -75,10 +75,6 @@ export function useRadarWeatherContext({
 
   useEffect(() => {
     const generation = ++radarGenerationRef.current;
-    if (radarPreviousProductRef.current !== radarProduct) {
-      radarPreviousProductRef.current = radarProduct;
-      radarWasEnabledRef.current = false;
-    }
     if (!showWeatherRadar) {
       radarWasEnabledRef.current = false;
       setRadarPlaying(false);
