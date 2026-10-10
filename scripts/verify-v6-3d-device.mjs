@@ -80,6 +80,7 @@ try {
     map.on("render", onRender);
     map.triggerRepaint();
   }));
+  mkdirSync(output, { recursive: true });
   await page.screenshot({ path: resolve(output, "3d-active.png"), animations: "disabled" });
   await layers.evaluate((el) => { el.open = true; });
   await page.getByTestId("radar-v6-d-terrain").locator("select").selectOption("2d");
