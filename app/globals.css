@@ -6883,3 +6883,12 @@ button, input, select, textarea { color-scheme: dark; }
     max-width: calc(100vw - 100px);
   }
 }
+
+
+/* V6-H2: media playback only after explicit consent; never crowd mobile columns. */
+.airport-v6-media .airport-v6-media-permission { display: flex; flex-wrap: nowrap; gap: var(--space-2); align-items: flex-start; }
+.airport-v6-media-permission input[type="checkbox"] { flex: 0 0 auto; min-height: unset; margin-top: .2rem; }
+.airport-v6-media .airport-v6-media-item { min-width: 0; }
+.airport-v6-media-item > span { min-width: 0; overflow-wrap: anywhere; }
+.airport-v6-media-item .airport-v6-player { flex: 0 0 100%; min-width: 0; display: grid; gap: var(--space-2); }
+.airport-v6-player :is(iframe, video, audio) { display: block; max-width: 100%; border-radius: var(--radius-md); }
