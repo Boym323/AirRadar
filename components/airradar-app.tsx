@@ -701,6 +701,34 @@ export function AirRadarApp() {
   const [mapZoom, setMapZoom] = useState(7.4);
   const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  // Map popovers must not remain over the air picture after an outside tap.
+  // Native named <details> keeps Presets and Layers mutually exclusive.
+  useEffect(() => {
+    const openMenus = () => radarContentRef.current?.querySelectorAll<HTMLDetailsElement>(
+      '.map-overlay-primary details[name="radar-map-menus"][open]',
+    ) ?? [];
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      for (const menu of openMenus()) {
+        if (!menu.contains(event.target)) menu.open = false;
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const menus = openMenus();
+      if (!menus.length) return;
+      const first = menus[0];
+      for (const menu of menus) menu.open = false;
+      first?.querySelector<HTMLElement>("summary")?.focus();
+      event.preventDefault();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
   useEffect(() => {
     try {
       const persisted = window.localStorage.getItem("airradar-map-appearance-v6");

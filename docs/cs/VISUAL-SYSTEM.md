@@ -420,3 +420,16 @@ vypnuté a on-demand služby nejsou považované za incident. Běžné štítky
 displejích se diagnostika přeskupí do jednoho sloupce.
 Regresní test `tests/system-status-visual-polish-v4.test.ts` a desktopové/
 mobilní vizuální testy jsou podmínkou nasazení.
+
+## Vizuální doladění radarových nabídek a detailu letadla (2026-10-10)
+
+Presety a Vrstvy mapy používají jednu skupinu nativních `details`, takže
+nelze otevřít obě nabídky současně. Kliknutí mimo panel nebo Escape nabídku
+zavře; Escape vrací fokus na jeho přepínač. Obsah nabídek má omezenou výšku
+s posouváním. Při otevřeném detailu letadla se kompaktní ovládání sledování
+letu řadí pod horní ovladače mapy a nepřekrývá je. V desktopovém panelu je
+všech šest akcí viditelných v mřížce 3×2 namísto oříznutého vodorovného
+seznamu, mobilní ovládání zůstává dotykové. Mění se pouze vzhled a chování
+nabídek, nikoli data mapy, SSE, kamera ani pravidla FlightAware.
+Regresní test: `tests/radar-overlay-visual-polish-v1.test.ts`.
+Před produkčním nasazením ověřit desktopové a mobilní browser testy i snímky.
