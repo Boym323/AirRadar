@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.405] - 2026-10-10
+
+Changes since v1.0.404.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Visual System V5-C — přehled, přílety/odlety, provoz a analýzy (#716) (ec6420f7)
+
+### Fixed
+
+- Await airport tab activation before visual capture (#717) (f118ffd0)
+
+### Maintenance
+
+- Sync generated repository metadata (#715) (f0c79f92)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#715) (f0c79f92)
+- feat(airport): Visual System V5-C — přehled, přílety/odlety, provoz a analýzy (#716) (ec6420f7)
+- fix(test): await airport tab activation before visual capture (#717) (f118ffd0)
+
+</details>
 ## [1.0.404] - 2026-10-10
 
 Changes since v1.0.403.
