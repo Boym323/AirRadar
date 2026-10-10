@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.404] - 2026-10-10
+
+Changes since v1.0.403.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Visual System V5-B — flight glance, context a rychlé akce (#714) (cefba309)
+
+### Maintenance
+
+- Sync generated repository metadata (#713) (978050a7)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#713) (978050a7)
+- feat(aircraft): Visual System V5-B — flight glance, context a rychlé akce (#714) (cefba309)
+
+</details>
 ## [1.0.403] - 2026-10-10
 
 Changes since v1.0.402.
