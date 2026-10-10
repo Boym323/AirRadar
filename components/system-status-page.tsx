@@ -16,6 +16,7 @@ import { operationalHealthLabels } from "@/lib/i18n/operational-health";
 import { truthAccuracyText } from "@/lib/i18n/truth-accuracy-e";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 import { SystemRuntimeTimeline } from "@/components/system-runtime-timeline";
+import { RouteEnrichmentPanel } from "@/components/route-enrichment-panel";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -911,6 +912,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.statisticsPersistence} value={<StatusBadge status={data.database.statistics.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.lastSuccessfulWrite} value={formatDateTime(data.database.statistics.lastSuccessfulWrite, dictionary)} />
       </Card>
+
+      {detailed && data.routeEnrichment && <RouteEnrichmentPanel metrics={data.routeEnrichment} dictionary={dictionary} />}
 
       <Card title={dictionary.system.statistics} status={data.statistics.status} dictionary={dictionary}>
         <Field label={dictionary.system.uniqueToday} value={formatNumber(data.statistics.uniqueAircraftToday, 0, dictionary.locale)} />
