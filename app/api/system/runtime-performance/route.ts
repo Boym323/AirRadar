@@ -25,6 +25,7 @@ export async function GET(request: Request): Promise<Response> {
     return [name, item ? {
       calls: item.calls, avgMs: item.avgMs, maxMs: item.maxMs,
       p50Ms: item.p50Ms, p95Ms: item.p95Ms, p99Ms: item.p99Ms,
+      cpuMs: item.cpuMs, waitMs: item.waitMs, windows: item.windows,
     } : null];
   }));
   const hotPaths = Object.entries(metrics)
@@ -37,6 +38,9 @@ export async function GET(request: Request): Promise<Response> {
       maxMs: item.maxMs,
       p95Ms: item.p95Ms,
       p99Ms: item.p99Ms,
+      cpuMs: item.cpuMs,
+      waitMs: item.waitMs,
+      windows: item.windows,
       processedAircraft: item.processedAircraft,
     }))
     .sort((left, right) => right.totalMs - left.totalMs)
@@ -56,6 +60,7 @@ export async function GET(request: Request): Promise<Response> {
       cpuIntervalPercent: runtime.cpuIntervalPercent,
       eventLoopLagP50Ms: runtime.eventLoopLagP50Ms,
       eventLoopLagP95Ms: runtime.eventLoopLagP95Ms, eventLoopLagP99Ms: runtime.eventLoopLagP99Ms,
+      eventLoopLagWindows: runtime.eventLoopLagWindows,
       gcSampleCount: runtime.gcSampleCount, gcCount: runtime.gcCount, gcTotalPauseMs: runtime.gcTotalPauseMs,
       gcMaxPauseMs: runtime.gcMaxPauseMs,
       gcAveragePauseMs: runtime.gcAveragePauseMs,
