@@ -17,6 +17,37 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.412] - 2026-10-10
+
+Changes since v1.0.411.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Added
+
+- H1/FPN waypoint parser and FP aircraft indicators (#750) (21852d40)
+
+### Fixed
+
+- Allow configured EOX satellite and Mapterhorn terrain tile origins (#752) (f49a229f)
+
+### Maintenance
+
+- Sync generated repository metadata (#753) (7738b54b)
+- Allow bounded V6 and RXW overlay timers while retaining SSE/trail invariants (b9d4c0b7)
+- Allow bounded V6 and RXW overlay timers while retaining SSE/trail invariants (1d2a3b08)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(v6): allow configured EOX satellite and Mapterhorn terrain tile origins (#752) (f49a229f)
+- feat(rxw): H1/FPN waypoint parser and FP aircraft indicators (#750) (21852d40)
+- chore(metadata): sync generated repository metadata (#753) (7738b54b)
+- test: allow bounded V6 and RXW overlay timers while retaining SSE/trail invariants (b9d4c0b7)
+- test: allow bounded V6 and RXW overlay timers while retaining SSE/trail invariants (1d2a3b08)
+- Merge pull request #754 from Boym323/fix/v6-integration-stream-polling-test-contract (78659165)
+
+</details>
 ## [1.0.411] - 2026-10-10
 
 Changes since v1.0.410.
