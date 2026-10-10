@@ -78,8 +78,6 @@ import { WEATHER_RADAR_BOUNDS, type WeatherRadarProduct } from "@/lib/server/wea
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
-import type { SondeHubObservation, SondeHubSnapshot } from "@/lib/server/sondehub";
-import { createSondeHubGeoJSON } from "@/lib/sondehub/map";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
@@ -1181,30 +1179,6 @@ export function AirRadarApp() {
       .then((data) => { if (data?.alerts) setServerAlertsEnabled(data.alerts.enabled); })
       .catch(() => undefined);
   }, []);
-
-  useEffect(() => {
-    if (!showSondes) { setSondesStatus("idle"); return; }
-    const abort = new AbortController();
-    let active = true;
-    setSondesStatus("loading");
-    void fetch("/api/sondes", { cache: "no-store", signal: abort.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("sonde snapshot unavailable");
-        return response.json() as Promise<SondeHubSnapshot & { enabled?: boolean }>;
-      })
-      .then((data) => {
-        if (!active) return;
-        if (!data.enabled || !data.available || !Array.isArray(data.observations)) {
-          setSondes([]);
-          setSondesStatus("unavailable");
-          return;
-        }
-        setSondes(data.observations.slice(0, 300));
-        setSondesStatus(data.stale ? "stale" : "ready");
-      })
-      .catch(() => { if (active && !abort.signal.aborted) setSondesStatus("unavailable"); });
-    return () => { active = false; abort.abort(); };
-  }, [showSondes]);
 
   useEffect(() => {
     if (!showOgn) {
