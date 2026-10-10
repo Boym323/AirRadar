@@ -285,3 +285,12 @@ pozorované pohyby a počasí; referenční infrastruktura je v rozbalovací sek
 Mapu, podrobné počasí a historické analýzy načítáme jen v příslušném
 pohledu. Jde o pozorování či odvození z přijímače, ne oficiální zpoždění,
 gate nebo veřejný letový řád.
+
+### V5-C2: přílety a odlety
+
+Samostatné tabulky používají jen existující omezený přehled pozorovaných
+pohybů. Podporují hledání, filtr typu pohybu, míru jistoty, informace o
+dráze a odkaz do historie letu. Čas je **čas pozorování**, nikoliv letový
+řád či domyšlené ETA. Neúplná a chybějící data jsou označena; nevymýšlíme
+zpoždění, gate, oficiální stav letu ani neověřenou trasu. Obě tabulky
+využívají společný controller a vykreslí se jen na vlastní záložce.

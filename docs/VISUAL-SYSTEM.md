@@ -292,3 +292,13 @@ metrics, weather and live traffic; reference infrastructure remains in a native
 disclosure. Map, weather, background airport analytics and the airport nearby
 panel mount only in their selected view. Operational quantities are receiver-
 observed/inferred: no provider-sourced gates, official delays or fake schedules.
+
+### V5-C2: arrivals and departures
+
+These dedicated tables use the existing bounded airport movement snapshots
+only, with search, observed-movement filters, confidence, runway evidence and
+links to flight histories. The time column is **observation time**, not a
+scheduled arrival/departure or invented ETA. Missing and incomplete sources
+are explicitly disclosed; the table never invents delays, gate numbers,
+schedules, official flight status or route endpoints. The two lists share
+one airport controller and only render in their selected view.
