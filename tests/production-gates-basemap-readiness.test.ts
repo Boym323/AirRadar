@@ -29,7 +29,7 @@ describe("production browser gate basemap evidence", () => {
   it("tolerates 429 only for the optional RXW availability endpoint in the browser sweep", () => {
     const browserSweep = gate.slice(gate.indexOf("const runResponsiveSweep"));
     expect(browserSweep).toContain('pathname === "/api/aircraft/communications/waypoints"');
-    expect(browserSweep).toContain("/api\\/aircraft\\/[A-F0-9]{6}\\/communications$/i.test(pathname)");
+    expect(browserSweep).toContain("/^\\/api\\/aircraft\\/[A-F0-9]{6}\\/communications$/i.test(pathname)");
     expect(browserSweep).toContain("expectedRateLimitedApiErrors += 1");
     expect(browserSweep).toContain("browserErrors.push(");
     expect(radar).toContain('fetch("/api/aircraft/communications/waypoints", { cache: "no-store" })');
