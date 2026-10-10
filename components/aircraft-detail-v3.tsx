@@ -298,7 +298,7 @@ export function AircraftDetailV3({
     setFlightAwareError(null);
   }, [icaoHex, liveAircraft?.callsign]);
 
-  const loadFlightAware = useCallback(async () => {
+  const loadFlightAware = async () => {
     if (!liveAircraft?.callsign || flightAwareLoading) return;
     setFlightAwareLoading(true);
     setFlightAwareError(null);
@@ -313,7 +313,7 @@ export function AircraftDetailV3({
     } finally {
       setFlightAwareLoading(false);
     }
-  }, [icaoHex, liveAircraft?.callsign, flightAwareLoading]);
+  };
 
   useEffect(() => {
     if (icaoHex === t.common.emptyValue) return;
