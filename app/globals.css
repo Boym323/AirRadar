@@ -6835,3 +6835,40 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-v6-media label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
 .airport-v6-media :is(input,select) { min-height: var(--control-height-touch); padding: var(--space-2); border: 1px solid var(--border-default); color: var(--text-primary); border-radius: var(--radius-md); background: var(--surface-overlay); }
 .airport-v6-media input[type="url"] { width: min(100%, 330px); }
+
+
+/* V6 mobile HUD: reserve a dedicated row for Presentation Mode so compact
+ * radar presets cannot overlap or intercept the primary Traffic button. */
+@media (max-width: 420px) {
+  .map-overlay-primary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto;
+    width: calc(100vw - 76px);
+    max-width: calc(100vw - 76px);
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .map-overlay-primary > .radar-presentation-controls {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .map-overlay-primary > .map-control-group-primary {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+    min-width: 0;
+  }
+  .map-overlay-primary > [data-testid="radar-presets-v1"] {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .map-overlay-primary > .map-layers {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+  }
+}
