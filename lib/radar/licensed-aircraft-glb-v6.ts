@@ -171,6 +171,6 @@ export async function requestLicensedFaces(type: string | null | undefined, onRe
       }finally{clearTimeout(timeout);inflight.delete(family);}
     })();
     inflight.set(family,promise);
-  }else{await promise; if(models.has(family))onReady();return;}
+  }else{await promise;return;}
   await promise;
 }
