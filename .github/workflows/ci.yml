@@ -116,15 +116,15 @@ jobs:
         run: npm run test:production -- --core
       # GPU paths need a real browser in addition to typecheck/Vitest/core smoke.
       - name: Install Chromium for V6 3D browser QA
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget'
+        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || github.head_ref == 'feat/v6-d6-airframe-models')
         run: npx playwright install --with-deps chromium
       - name: V6 3D desktop/mobile browser gate
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget'
+        if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || github.head_ref == 'feat/v6-d6-airframe-models')
         env:
           AIRRADAR_VISUAL_TARGETS: radar-v6-d-3d-terrain,radar-v6-d-3d-mobile,radar-v6-g-presentation
         run: npm run test:production:browser
       - name: Upload V6 3D visual evidence
-        if: always() && github.event_name == 'pull_request' && github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget'
+        if: always() && github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || github.head_ref == 'feat/v6-d6-airframe-models')
         uses: actions/upload-artifact@v7
         with:
           name: v6-3d-browser-${{ github.sha }}
@@ -400,10 +400,30 @@ jobs:
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
-          sudo -n /var/www/airradar/deploy/release.sh \
-            --branch main \
-            --automated \
-            --commit "${GITHUB_SHA}"
+          # A manual release may briefly hold the release flock; never remove or bypass it.
+          # Retry only that explicit contention, not validation/rollback failures.
+          for attempt in 1 2 3 4 5; do
+            output="$(mktemp)"
+            if sudo -n /var/www/airradar/deploy/release.sh \
+                --branch main \
+                --automated \
+                --commit "${GITHUB_SHA}" >"${output}" 2>&1; then
+              cat -- "${output}"
+              rm -f -- "${output}"
+              exit 0
+            else
+              result=$?
+            fi
+            cat -- "${output}"
+            if grep -Fq 'Another AirRadar release is already running.' "${output}" && (( attempt < 5 )); then
+              rm -f -- "${output}"
+              echo "::warning::Another AirRadar release holds the lock (attempt ${attempt}/5); retrying after 30 seconds."
+              sleep 30
+            else
+              rm -f -- "${output}"
+              exit "${result}"
+            fi
+          done
 
       - name: Remove legacy validated-SHA bootstrap tag
         if: always() && steps.legacy-bootstrap-tag.outputs.tag != ''
