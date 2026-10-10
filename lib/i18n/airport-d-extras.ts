@@ -1,6 +1,9 @@
 /** Small dedicated bilingual copy for read-only Airport Intelligence stages D2-D4. */
 export const airportDExtras = {
   cs: {
+    evidenceDetails: "Doplňující provozní evidence D2–D4",
+    evidenceHint: "Změny drah, průběh přiblížení a související signály",
+    evidenceUnavailable: "Pro tyto modely zatím není dostatek průkazných dat.",
     contextHeading: "Provozní kontext letiště",
     contextSignals: {
       RUNWAY_TRANSITION_OBSERVED: "Pozorovaná změna používané dráhy",
@@ -35,6 +38,9 @@ export const airportDExtras = {
     runwayDisclaimer: "Jde o porovnání pozorovaných pohybů a pouze veřejných predikcí, nikoliv potvrzenou volbu dráhy nebo pokyn ATC.",
   },
   en: {
+    evidenceDetails: "Additional operational evidence D2–D4",
+    evidenceHint: "Runway changes, approach evolution and contextual signals",
+    evidenceUnavailable: "Insufficient reliable evidence for these models yet.",
     contextHeading: "Airport operating context",
     contextSignals: {
       RUNWAY_TRANSITION_OBSERVED: "Observed runway traffic transition",
