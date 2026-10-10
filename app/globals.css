@@ -7096,3 +7096,23 @@ button, input, select, textarea { color-scheme: dark; }
     transition: none;
   }
 }
+
+
+/* Status emphasis belongs to the overview and actual incidents, not every
+ * routine green "OK" in a long diagnostic list. */
+.system-overview-anchor .system-health-summary .system-health-state {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.system-section .system-card-header .system-status-badge:not(.degraded):not(.offline) {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+.system-section .system-card-header .system-status-badge.degraded,
+.system-section .system-card-header .system-status-badge.offline {
+  font-weight: 750;
+}
