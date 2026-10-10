@@ -9,6 +9,7 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
   return {
     ...publicStatus,
     predictiveValidation: undefined,
+    routeEnrichment: undefined,
     detailLevel: "public",
     application: {
       ...status.application,
