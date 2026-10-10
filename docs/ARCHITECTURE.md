@@ -301,9 +301,16 @@ only the newest pending snapshot for a slow connection. Selected aircraft use
 an explicit quick/full boundary: the live radar drawer calls
 `/api/aircraft/[hex]?mode=quick`, which returns only durable identity and locally
 available metadata/route context and never invokes the paid FlightAware plan
-provider. The dedicated `/aircraft/[hex]` page retains the full detail path and
-its on-demand FlightAware enrichment. Route context needed by the map remains
-in the compact live snapshot.
+provider. The dedicated `/aircraft/[hex]` page renders free route and history context
+without automatically calling FlightAware. A deliberate **Load flight details**
+action fetches `/api/aircraft/[hex]?mode=flightaware` (paid, cached and budget
+limited); `mode=full` is also free of paid calls. The optional independent
+`ADSBLOL_ROUTE_ENABLED` provider sends bounded/coalesced batched POSTs to
+ADSB.lol `/api/0/routeset` only when the ADSBDB route is absent/incomplete or
+fails the local route-position check. Provider `plausible` and the existing
+100 km corridor validation both apply, with separate 6-hour/10-minute
+positive/negative caches. Route context needed by the map remains in the
+compact live snapshot.
 `coverage=local|extended` is accepted by the live aircraft, selected-aircraft,
 and SSE endpoints. The default is `local`; `extended` includes validated,
 fresh ADSB.lol observations and publishes provider status, source provenance,
