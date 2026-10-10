@@ -738,6 +738,8 @@ export const cs = {
     weatherRadar: "Radar počasí",
     metar: "METAR",
     windAloft: "Vítr ve výšce",
+    windModelSelection: "Model větru",
+    aladinModelNote: "ČHMÚ ALADIN Central Europe 2 km · volitelná předpověď; nenahrazuje ICON-EU v analýzách ani Digital Twinu.",
     navigationIntegrity: "Integrita navigace",
     navigationIntegrityReduced: "Snížená",
     navigationIntegrityDisclaimer: "Vychází z telemetrie integrity ADS-B; nejde o oficiální sledování GNSS.",

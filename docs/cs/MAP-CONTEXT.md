@@ -58,6 +58,13 @@ bodů a používá 30minutovou cache modelového snapshotu se stale-if-error. V�
 je označen `ICON-EU / Model forecast` s model run a valid time, pokud je
 transport poskytuje. Má vlastní selector valid-time a nesdílí radar timeline.
 
+Volitelné `ALADIN-CE` používá Open-Meteo `v1/forecast` s
+`models=chmi_aladin_central_europe_2km`, shodné tlakové hladiny, jednotky uzlů,
+UTC a vlastní omezenou cache. Volba modelu je explicitní v mapě. Historický
+archiv větru, Weather Fusion a Digital Twin zůstávají na kanonickém ICON-EU.
+Model ALADIN CZ 1 km **neposkytuje** výškové hladiny potřebné pro tuto vrstvu.
+Pro komerční využití je nutné ověřit podmínky hostovaného API Open-Meteo.
+
 ## AUP/UUP
 
 Mapa znovu používá existující českou pipeline AUP/UUP na
