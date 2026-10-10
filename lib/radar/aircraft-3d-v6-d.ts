@@ -126,6 +126,7 @@ export class RadarAircraft3dRuntime {
   private candidates: Aircraft3dCandidate[] = [];
   private generation = 0;
   setLicensedModels(enabled: boolean): void {
+    if (this.licensedEnabled === enabled) return;
     this.licensedEnabled = enabled;
     this.generation++;
     this.updateMesh();
