@@ -153,8 +153,9 @@ export function routeCacheKey(callsign: string, observedAt: Date, icaoHex?: stri
   return `flight-route:${aircraftIdentity}${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
 }
 
-export function flightPlanCacheKey(callsign: string, observedAt: Date): string {
-  return `flight-plan:${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
+export function flightPlanCacheKey(callsign: string, observedAt: Date, icaoHex?: string): string {
+  const identity = icaoHex ? `${normalizeHex(icaoHex)}:` : "";
+  return `flight-plan:${identity}${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
 }
 
 interface FlightPlanProviderDiagnostics {
@@ -338,7 +339,7 @@ export class EnrichmentService {
           negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
         })
       : null;
-    if (primary?.origin && primary.destination && routeMatchesAircraftPosition(aircraft, primary)) return primary;
+    if (primary?.origin && primary.destination && primary.originAirport && primary.destinationAirport && routeMatchesAircraftPosition(aircraft, primary)) return primary;
     const fallback = this.providers.flightRouteFallback;
     if (!fallback || aircraft.lat === null || aircraft.lon === null) return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
     let resolved: FlightRoute | null = null;
@@ -364,7 +365,7 @@ export class EnrichmentService {
     const callsign = aircraft.callsign?.trim();
     if (!provider || !callsign) return null;
 
-    const key = flightPlanCacheKey(callsign, observedAt);
+    const key = flightPlanCacheKey(callsign, observedAt, aircraft.icaoHex);
     if (this.cache.hasFreshOrPending(key)) this.flightPlanCacheHits += 1;
 
     try {
