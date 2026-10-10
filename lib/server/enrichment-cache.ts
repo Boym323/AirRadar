@@ -264,6 +264,7 @@ export class EnrichmentService {
       persistence: AdsbDbPersistenceDiagnostics;
       hits: { memory: number; persistent: number; live: number; staleFallback: number };
     };
+    persistentRouteCache: { enabled: boolean };
     flightPlan: {
       enabled: boolean;
       cacheHits: number;
@@ -368,7 +369,6 @@ export class EnrichmentService {
     // External calls run only after both in-memory and durable cache misses.
     const callsign = aircraft.callsign;
     if (!callsign) return null;
-    const key = routeCacheKey(callsign, observedAt, aircraft.icaoHex);
     const primary = this.providers.flightRoute
       ? await this.getAdsbDbCached("route", key, () => this.routeLimiter(() => this.providers.flightRoute!.getRoute(callsign, observedAt)), {
           ttlMs: ENRICHMENT_TTLS.routeMs,
