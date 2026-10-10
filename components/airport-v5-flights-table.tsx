@@ -79,11 +79,11 @@ export function AirportFlightsTable({ view, movements, loading, unavailable, inc
               <th scope="col">{t.airportV5.evidence}</th>
             </tr></thead>
             <tbody>{rows.map((movement) => <tr key={`${movement.flightId}:${movement.movement}:${movement.observedAt}`}>
-              <td><time dateTime={movement.observedAt}>{formatDateTime(movement.observedAt)}</time></td>
-              <td><Link href={aircraftFlightHref(movement.flightId)}><strong>{movement.callsign || movement.registration || movement.icaoHex}</strong><small>{movement.registration || movement.icaoHex}</small></Link></td>
-              <td><span className="airport-v5-movement-pill" data-movement={movement.movement}>{movementLabel(movement.movement)}</span></td>
-              <td>{movement.runway?.designator ? `RWY ${movement.runway.designator}` : t.common.emptyValue}{movement.runway?.status === "probable" && <small>{t.airport.v3ReceiverInferred}</small>}</td>
-              <td><span className={`airport-v3-confidence ${movement.confidence}`}>{movement.confidence === "high" ? t.airport.v3ConfidenceHigh : movement.confidence === "medium" ? t.airport.v3ConfidenceMedium : t.airport.v3ConfidenceLow}</span></td>
+              <td data-mobile-label={t.airportV5.timeObserved}><time dateTime={movement.observedAt}>{formatDateTime(movement.observedAt)}</time></td>
+              <td data-mobile-label={t.airportV5.flight}><Link href={aircraftFlightHref(movement.flightId)}><strong>{movement.callsign || movement.registration || movement.icaoHex}</strong><small>{movement.registration || movement.icaoHex}</small></Link></td>
+              <td data-mobile-label={t.airportV5.movement}><span className="airport-v5-movement-pill" data-movement={movement.movement}>{movementLabel(movement.movement)}</span></td>
+              <td data-mobile-label={t.airportV5.runway}>{movement.runway?.designator ? `RWY ${movement.runway.designator}` : t.common.emptyValue}{movement.runway?.status === "probable" && <small>{t.airport.v3ReceiverInferred}</small>}</td>
+              <td data-mobile-label={t.airportV5.evidence}><span className={`airport-v3-confidence ${movement.confidence}`}>{movement.confidence === "high" ? t.airport.v3ConfidenceHigh : movement.confidence === "medium" ? t.airport.v3ConfidenceMedium : t.airport.v3ConfidenceLow}</span></td>
             </tr>)}</tbody>
           </table></div>}
     {incomplete && <p className="airport-v3-disclaimer" role="status">{t.airport.v3Incomplete} · {t.airportV5.incompleteData}</p>}
