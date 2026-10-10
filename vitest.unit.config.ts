@@ -22,7 +22,7 @@ const integrationSuites = [
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts", "tests/t53-navigation-production-sampler.test.mjs"],
+    include: ["tests/**/*.test.ts", "tests/t53-navigation-production-sampler.test.mjs", "tests/t55-runtime-analysis.test.mjs"],
     exclude: ["tests/scale/**", ...integrationSuites],
     // Two workers are the fastest stable setting on the supported low-CPU dev host.
     maxWorkers: 2,
