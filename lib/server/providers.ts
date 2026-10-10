@@ -9,6 +9,7 @@ import { ENRICHMENT_TTLS } from "@/lib/server/enrichment-cache";
 import { AdsbDbPersistence } from "@/lib/server/adsbdb-persistence";
 import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AdsbLolRouteProvider } from "@/lib/server/adsblol-route-provider";
+import { PostgresRouteCache } from "@/lib/server/route-postgres-cache";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
@@ -170,7 +171,10 @@ export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {
       checkpointIntervalMs: getAdsbDbCacheCheckpointMs(),
     })
     : undefined;
-  return new EnrichmentService(registry, undefined, persistence);
+  const routeStore = process.env.ROUTE_DB_CACHE_ENABLED?.trim().toLowerCase() === "true"
+    ? new PostgresRouteCache()
+    : undefined;
+  return new EnrichmentService(registry, undefined, persistence, routeStore);
 }
 
 const globalForOnDemandEnrichment = globalThis as unknown as {
