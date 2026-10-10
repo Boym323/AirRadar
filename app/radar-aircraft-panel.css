@@ -1350,35 +1350,6 @@
 }
 
 
-/* Radar visual polish: show all six aircraft actions in the desktop drawer,
- * without the clipped horizontal rail seen at 400–460px drawer widths. */
-@media (min-width: 821px) {
-  .sidebar.drawer-aircraft .aircraft-quick-header .aircraft-v5-quick-actions {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: stretch;
-    gap: var(--space-2);
-    overflow: visible;
-    padding-bottom: 0;
-  }
-
-  .sidebar.drawer-aircraft .aircraft-v5-quick-actions .aircraft-quick-action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    width: 100%;
-    max-width: none;
-    min-height: var(--control-height-touch);
-    padding: var(--space-2);
-    text-align: center;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    line-height: 1.3;
-  }
-}
-
-
 /* Aircraft drawer polish: never overlay the tab content with a full-height
  * sticky hero. Size action controls against the DRAWER, not the viewport.
  * The radar drawer can be 350px wide even on a large desktop display. */
