@@ -407,3 +407,16 @@ Volitelný 3D terén vykreslí nejvýše 12 jednoduchých prostorových siluet l
 ### V6-D6: omezené modely podle konstrukčního typu
 
 Volitelná 3D vrstva používá lokálně vytvářené nízkopolygonové tvary s odlišnými rozměry trupu, rozpětím, polohou křídel, ocasními plochami a motory podle vybraných ICAO kódů (Airbus, Boeing, regionální letadla, všeobecné letectví a vrtulníky). Neznámý typ má obecný náhradní model. Jde o **vizuálně rozlišitelné přibližné tvary**, nikoli přesné licencované modely GLTF/CAD. Geometrie se sdílí podle konečného katalogu typů, nikoli podle identifikátorů letadel; limit zůstává 12 objektů, výchozí režim je 2D a nevznikají další síťové dotazy ani procesy. Pro fotorealistické zobrazení bude nutné ověření na skutečných GPU a mobilech.
+
+
+## Stav systému V4: jasná hierarchie diagnostiky (2026-10-10)
+
+Stránka `/system` seskupuje existující karty do sekcí Aplikace a výkon,
+Příjem a sledování, Databáze a trasy a Služby a datové zdroje bez změny
+API ani toku přijímače/SSE. Rychlá navigace umožňuje skákat mezi sekcemi.
+Pruh upozornění se zobrazuje pouze při stavu `degraded`/`offline`;
+vypnuté a on-demand služby nejsou považované za incident. Běžné štítky
+„OK“ jsou méně výrazné, hlavní stav zůstává v horním přehledu. Na úzkých
+displejích se diagnostika přeskupí do jednoho sloupce.
+Regresní test `tests/system-status-visual-polish-v4.test.ts` a desktopové/
+mobilní vizuální testy jsou podmínkou nasazení.
