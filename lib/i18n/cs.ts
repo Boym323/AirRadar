@@ -22,6 +22,14 @@ export const cs = {
     geofenceSaved: "Geozóna uložena",
     geofenceFailed: "Geozónu se nepodařilo uložit",
   },
+  radarQuickActions: {
+    title: "Rychlé ovládání mapy",
+    search: "Najít let",
+    weather: "Počasí",
+    atc: "ATC",
+    filters: "Filtry",
+    activeFilters: (count: number) => `${count} aktivních filtrů`,
+  },
   uiExtras: {
     localObservation: "Poslední místní pozorování",
     networkObservation: "Poslední síťové pozorování",

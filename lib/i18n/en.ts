@@ -24,6 +24,14 @@ export const en = {
     geofenceSaved: "Geofence saved",
     geofenceFailed: "Geofence could not be saved",
   },
+  radarQuickActions: {
+    title: "Quick map actions",
+    search: "Find flight",
+    weather: "Weather",
+    atc: "ATC",
+    filters: "Filters",
+    activeFilters: (count: number) => `${count} active filters`,
+  },
   uiExtras: {
     localObservation: "Last LOCAL observation",
     networkObservation: "Last NETWORK observation",

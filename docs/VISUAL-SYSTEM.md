@@ -188,3 +188,36 @@ changed merely to complete a visual cleanup.
 - Regression tests guard typography tokens, mobile collapsed/expanded
   behavior, map semantics and disclosure order. Production browser screenshots
   must still be manually reviewed after CI; no image-diff baseline is implied.
+
+## Visual System V5: progressive tracker-style information architecture
+
+V5 draws on established map-first flight-tracker interaction principles without
+copying another product's branding, artwork, trade dress or proprietary data.
+It reuses existing AirRadar APIs and UI rather than implementing parallel
+search, aircraft state, weather fetches or ATC polling.
+
+- **V5-A1 (first PR):** direct map search/weather/ATC/filter shortcuts, backed
+  by existing state; accessible pressed/disabled states; hidden beneath an open
+  aircraft drawer on mobile so the map keeps its breathing room.
+- **V5-A2:** consolidate topbar and map HUD hierarchy at 320, 390, 820 and
+  1280+ px; no repeated counters or extra always-visible controls.
+- **V5-A3:** map weather quick-state/legend and saved preference; unavailable
+  weather must show provenance and never appear as a valid current radar frame.
+- **V5-B1:** aircraft glance with identity, aircraft type, registration, route
+  only when grounded, and four primary metrics; no fake ETA or airport.
+- **V5-B2:** progressively reveal aircraft history, situation, data quality and
+  weather; preserve existing operational intelligence and watchlist actions.
+- **V5-C1:** airport summary with observed movements, weather/runway context
+  and clear availability/uncertainty; no unsupported delay or gate claims.
+- **V5-C2:** tabs for overview, arrivals, departures, operations, weather, map,
+  analyses; preserve V6-V9 and D2-D4 behind an advanced tab.
+- **V5-D:** mobile peek/expanded/complete drawer states, keyboard/screen reader
+  controls, safe-area handling, fixed navigation, and 320 px compatibility.
+- **V5-E:** consolidate semantic CSS tokens, verify visual debt and language
+  parity, review CI screenshots manually and perform post-deploy public
+  static-asset/console smoke tests.
+
+Each PR must pass lint/typecheck, Vitest, visual:check and the relevant desktop
+and mobile browser gates. Avoid performance regressions, unnecessary polling,
+new data providers and unsupported aviation certainty claims. No production
+release is implied by merging a design planning PR.

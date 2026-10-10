@@ -184,3 +184,36 @@ kvůli dokončení vizuálního úklidu.
 - Regresní testy hlídají tokeny, stav panelu, sémantiku mapy a pořadí informací.
   Nové produkční screenshoty stále vyžadují ruční kontrolu; pixel-diff
   baseline zatím není součástí automatické kontroly.
+
+## Visual System V5: postupné rozhraní inspirované flight trackery
+
+V5 vychází z principů mapového ovládání zavedených flight trackerů, ale
+nekopíruje jejich branding, grafiku, specifický layout ani proprietární data.
+Používá existující API a stav AirRadaru bez dalšího vyhledávání, pollingu
+počasí či duplicitních ATC zdrojů.
+
+- **V5-A1 (první PR):** přímé zkratky na mapě pro vyhledávání, počasí, ATC
+  a filtry; přístupné aktivní/neaktivní stavy; při otevřeném detailu letadla
+  se na mobilu skryjí, aby zachovaly prostor mapě.
+- **V5-A2:** zjednodušit horní lištu a mapový HUD na šířkách 320, 390, 820
+  a 1280+ px; odstranit duplicitní počitadla a trvale viditelné ovladače.
+- **V5-A3:** rychlý přepínač meteorologické vrstvy, legenda a uložená volba;
+  nedostupná data nesmějí působit jako aktuálně platný radarový snímek.
+- **V5-B1:** stručný detail letadla: identita, typ, registrace, ověřená trasa
+  a čtyři hlavní metriky. Bez domyšlených ETA a letišť.
+- **V5-B2:** postupně odkrývat historii, situaci, kvalitu dat a počasí;
+  zachovat existující provozní analýzy a watchlist.
+- **V5-C1:** přehled letiště s pozorovanými pohyby, počasím a kontextem drah,
+  jasně označenou nejistotou. Nedomýšlet si zpoždění ani gate.
+- **V5-C2:** záložky Přehled, Přílety, Odlety, Provoz, Počasí, Mapa,
+  Analýzy; zachovat V6-V9 a D2-D4 v pokročilé záložce.
+- **V5-D:** mobilní stavy krátký/střední/úplný detail, přístupnost klávesnicí
+  a čtečkou, safe area, fixní navigace a šířka 320 px.
+- **V5-E:** sjednotit CSS tokeny, prověřit vizuální dluh a překlady,
+  ručně zkontrolovat CI screenshoty a po nasazení ověřit veřejné statické
+  soubory a konzoli prohlížeče.
+
+Každé PR musí projít lint/typecheck, Vitest, visual:check a příslušnými
+desktopovými a mobilními browser testy. Bez výkonových regresí, zbytečného
+pollingu, nových providerů a nepodložených tvrzení o leteckém provozu.
+Sloučení designového PR samo o sobě nenařizuje produkční nasazení.
