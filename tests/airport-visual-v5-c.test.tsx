@@ -12,12 +12,17 @@ describe("Visual System V5-C airport UX", () => {
   const detail = read("components/airport-detail.tsx");
   const board = read("components/airport-operations-board.tsx");
   const gate = read("scripts/production-gates.mjs");
+  const css = read("app/globals.css");
+  const flightBoard = read("components/airport-v5-flights-table.tsx");
   it("keeps seven accessible views and one shared airport controller", () => {
     expect(AIRPORT_V5_VIEWS).toEqual(["overview", "arrivals", "departures", "operations", "weather", "map", "analytics"]);
     expect(detail).toContain('role="tablist"');
     expect(detail).toContain('role="tabpanel"');
     expect(detail).toContain('aria-selected={view === item}');
     expect(detail).toContain("onTabKeyDown(event, item)");
+    expect(detail).toContain("tabsRef = useRef<HTMLElement>(null)");
+    expect(detail).toContain("tabs.scrollTo({ left:");
+    expect(detail).toContain("data-has-more={tabsHaveMore");
     expect(detail).toContain("useAirportOperationsController(airport.icaoCode, predictiveHexes)");
     expect(detail.match(/useAirportOperationsController\(/g)?.length).toBe(1);
     expect(detail).toContain('<AirportOperationsBoard airport={airport}');
@@ -42,6 +47,7 @@ describe("Visual System V5-C airport UX", () => {
     expect(markup).toContain("CSA123");
     expect(markup).toContain("RWY 24");
     expect(markup).toContain("airport-v5-flights-table");
+    expect(markup).toContain("data-mobile-label=");
     expect(markup).not.toContain("gate=");
     expect(markup).not.toContain("Scheduled ETA");
   });
@@ -60,4 +66,32 @@ describe("Visual System V5-C airport UX", () => {
     expect(gate).toContain("airport-v5-arrivals-mobile");
     expect(gate).toContain("airport-v5-analytics-desktop");
   });
+  it("keeps D4 prose full-width and renders semantic mobile flight cards without cloning rows", () => {
+    expect(board).toContain('className="airport-live-flight-list airport-d4-signals"');
+    expect(board).toContain('data-testid="airport-v5-evidence-details"');
+    expect(board).toContain('airportDCopy.evidenceUnavailable');
+    expect(css).toContain(".airport-v5-evidence-details > summary");
+    expect(css).toContain(".airport-d4-signals > li");
+    expect(css).toContain('grid-template-areas: "flight movement" "time time" "runway evidence"');
+    expect(css).toContain(".airport-v5-flights td::before");
+    for (const field of ["timeObserved", "flight", "movement", "runway", "evidence"]) {
+      expect(flightBoard).toContain("data-mobile-label={t.airportV5." + field + "}");
+    }
+    expect(detail).toContain('className="airport-v5-tabs-rail"');
+    expect(css).toContain('.airport-v5-tabs-rail[data-has-more="true"]::after');
+    expect(css).toContain('.airport-v5-page .ui-page-header-main { display: contents; }');
+  });
+  it("captures all seven views and regression widths in the release visual gate", () => {
+    for (const target of [
+      "airport-live-board-desktop", "airport-v5-arrivals-mobile",
+      "airport-v5-departures-mobile", "airport-v5-operations-desktop",
+      "airport-v5-weather-desktop", "airport-v5-map-desktop",
+      "airport-v5-analytics-desktop", "airport-v5-arrivals-320",
+      "airport-v5-overview-tablet",
+    ]) expect(gate).toContain('name: "' + target + '"');
+    expect(gate).toContain('if (!["weather", "map"].includes(target.airportCaptureView))');
+    expect(gate).toContain('advanced.getByTestId("airport-v5-evidence-details")');
+    expect(gate).toContain('await evidence.locator("summary").click()');
+  });
+
 });

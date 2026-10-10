@@ -311,3 +311,19 @@ filtrování pozorovaných příletů/odletů, provoz drah a pokročilou analyti
 načtení mapy a počasí a vrací se na požadovaný snímek. Ukládá přehled na
 desktopu, mobilu 390 a 320 px, mobilní přílety a desktopovou analytiku.
 Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
+
+### V5-C dokončení vzhledu po auditu v1.0.405
+
+- Dlouhé textové signály modelu D4 již nepřebírají třísloupcové
+  rozložení seznamu letů, ale využívají dostupnou šířku karty.
+- Pod 600 px se pozorované přílety a odlety zobrazují jako označené
+  karty s původními odkazy a daty v jediném sémantickém HTML table.
+  Hlavička letiště a akce jsou kompaktní i na 320–390 px.
+- Aktivní záložka se automaticky posune do zorného pole a postranní
+  indikace upozorňuje na další záložky.
+- D2–D4 zůstávají přístupné v samostatné rozbalovací části; při absenci
+  průkazných dat se zobrazí jednotná přeložená zpráva.
+- CI pořizuje letištní snímky všech sedmi záložek na kombinaci šířek
+  320, 390, 768 a 1366 px. Browser test rozbalí evidence, ověří je
+  a před snímkem analytiky je znovu sbalí. Úspěšný CI neznamená
+  automaticky hotovou lidskou kontrolu snímků.

@@ -6531,3 +6531,154 @@ button, input, select, textarea { color-scheme: dark; }
   .airport-v5-page .airport-live-flow-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .airport-v5-page .airport-v3-grid { grid-template-columns: minmax(0,1fr); }
 }
+
+/* V5-C polish: a D4 signal is prose, never a three-column flight row. */
+.airport-d4-signals > li {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: var(--line-height-body);
+}
+
+/* The gradient only appears while further airport tabs are off-screen. */
+.airport-v5-tabs-rail { position: relative; min-width: 0; }
+.airport-v5-tabs-rail[data-has-more="true"]::after {
+  content: "›";
+  position: absolute;
+  inset-inline-end: 1px;
+  top: 1px;
+  bottom: calc(var(--space-4) + 1px);
+  width: 32px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: var(--text-primary);
+  background: linear-gradient(to right, transparent, var(--surface-interactive));
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.airport-v5-flights-heading > div { min-width: 0; }
+.airport-v5-flights-heading p {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  /* Keep navigation and the favourite action on one row on narrow devices. */
+  .airport-v5-page { padding-top: var(--space-3); }
+  .airport-v5-page .ui-page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .airport-v5-page .ui-page-header-main { display: contents; }
+  .airport-v5-page .ui-page-header-back { grid-column: 1; grid-row: 1; margin: 0; }
+  .airport-v5-page .ui-page-header-main > .ui-kicker { grid-column: 1 / -1; grid-row: 2; }
+  .airport-v5-page .ui-page-header h1 {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    max-width: 100%;
+    margin: 0;
+    font-size: clamp(20px, 6.5vw, 27px);
+    line-height: 1.18;
+  }
+  .airport-v5-page .ui-page-header p {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    margin: 0;
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
+  }
+  .airport-v5-page .ui-page-header-actions { grid-column: 2; grid-row: 1; }
+  .airport-v5-page .ui-page-header-actions .button-secondary {
+    min-height: var(--control-height-touch);
+    padding-inline: var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+  .airport-v5-tabs { margin-bottom: var(--space-3); }
+
+  /* Desktop remains a table. Each mobile TR becomes one readable flight card
+   * while retaining table headers and only a single set of flight links. */
+  .airport-v5-table-scroll { overflow-x: visible; }
+  .airport-v5-flights table { display: block; min-width: 0; width: 100%; }
+  .airport-v5-flights thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+  .airport-v5-flights tbody { display: grid; gap: var(--space-3); }
+  .airport-v5-flights tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    grid-template-areas: "flight movement" "time time" "runway evidence";
+    align-items: center;
+    gap: var(--space-3) var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-interactive);
+  }
+  .airport-v5-flights td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .airport-v5-flights td::before {
+    content: attr(data-mobile-label);
+    color: var(--text-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: 650;
+  }
+  .airport-v5-flights td:nth-child(1) { grid-area: time; }
+  .airport-v5-flights td:nth-child(2) { grid-area: flight; }
+  .airport-v5-flights td:nth-child(2)::before { display: none; }
+  .airport-v5-flights td:nth-child(2) a { min-width: 0; overflow-wrap: anywhere; }
+  .airport-v5-flights td:nth-child(3) { grid-area: movement; justify-self: end; }
+  .airport-v5-flights td:nth-child(4) { grid-area: runway; }
+  .airport-v5-flights td:nth-child(5) { grid-area: evidence; justify-self: end; align-items: flex-end; }
+  .airport-v5-flights .airport-v5-movement-pill {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* V5-C Polish 3: preserve all evidence but disclose low-priority models on demand. */
+.airport-v5-evidence-details {
+  margin: var(--space-3);
+  padding: 0;
+  min-width: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-interactive);
+}
+.airport-v5-evidence-details > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height-touch);
+  cursor: pointer;
+  padding: var(--space-3);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.airport-v5-evidence-details > summary span { display: grid; gap: var(--space-1); min-width: 0; }
+.airport-v5-evidence-details > summary small { color: var(--text-muted); font-size: var(--font-size-xs); }
+.airport-v5-evidence-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.airport-v5-evidence-details[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+.airport-v5-evidence-details > section { margin: var(--space-3); }
+.airport-v5-evidence-empty { padding-inline: var(--space-3); }
+@media (max-width: 600px) {
+  .airport-v5-evidence-details { margin: var(--space-2); }
+  .airport-v5-evidence-details > section { margin: var(--space-2); }
+}

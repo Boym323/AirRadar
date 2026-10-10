@@ -735,6 +735,10 @@ export function AirportOperationsBoard({
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV8Disclaimer}</p>
     </section>
 
+    <details className="airport-v5-evidence-details" data-testid="airport-v5-evidence-details">
+      <summary><span><strong>{airportDCopy.evidenceDetails}</strong><small>{airportDCopy.evidenceHint}</small></span></summary>
+      {runwayEvidenceD2.state === "UNKNOWN" && !approachEvidenceD3.items.length && !airportContextD4.signals.length
+        ? <p className="airport-v3-empty airport-v5-evidence-empty" role="status">{airportDCopy.evidenceUnavailable}</p> : null}
     <section className="airport-live-flow-pressure" data-testid="airport-d2-runway-evidence" aria-label={airportDCopy.runwayHeading}>
       <div className="airport-live-flow-heading">
         <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D2</span><h3>{airportDCopy.runwayHeading}</h3></div>
@@ -771,12 +775,13 @@ export function AirportOperationsBoard({
       <div className="airport-live-flow-heading">
         <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D4</span><h3>{airportDCopy.contextHeading}</h3></div>
       </div>
-      {airportContextD4.signals.length ? <ul className="airport-live-flight-list">
+      {airportContextD4.signals.length ? <ul className="airport-live-flight-list airport-d4-signals">
         {airportContextD4.signals.map((signal) => <li key={signal}>{airportDCopy.contextSignals[signal]}</li>)}
       </ul> : <p className="airport-v3-empty">{airportDCopy.noContext}</p>}
       <p><Link href="/airspace">{airportDCopy.contextAtcLink} ↗</Link></p>
       <p className="airport-v3-disclaimer">{airportDCopy.contextDisclaimer}</p>
     </section>
+    </details>
 
     {terminalDemandHorizon ? <section
       className="airport-live-flow-pressure airport-live-terminal-horizon-v9"
