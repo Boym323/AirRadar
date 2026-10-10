@@ -990,7 +990,7 @@ export function AirRadarApp() {
     let busy = false;
     const draw = () => {
       const source = mapRef.current?.getSource(RXW_FPN_BADGE_SOURCE) as GeoJSONSource | undefined;
-      if (source) source.setData(createRxwFpnBadges(liveAircraftByHexRef.current, rxwFpnAvailabilityRef.current));
+      if (source) source.setData(createRxwFpnBadges(liveAircraftByHexRef.current, showAircraft ? rxwFpnAvailabilityRef.current : []));
     };
     const refresh = () => {
       if (busy) return;
@@ -1022,7 +1022,7 @@ export function AirRadarApp() {
       clearInterval(geometryTimer);
       rxwFpnAvailabilityRef.current = [];
     };
-  }, [mapReady, liveAircraftByHexRef]);
+  }, [mapReady, liveAircraftByHexRef, showAircraft]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -2248,6 +2248,15 @@ export function AirRadarApp() {
 
       // Dashed, reported (unverified) H1/FPN route of the selected aircraft.
       // We draw only adjacent georeferenced fixes, never guessed straight lines.
+
+      for (const badgeLayer of [RXW_FPN_BADGE_CIRCLE, RXW_FPN_BADGE_LABEL]) {
+        map.on("click", badgeLayer, (event: MapLayerMouseEvent) => {
+          const hex = event.features?.[0]?.properties?.icaoHex;
+          if (typeof hex === "string") selectAircraft(hex);
+        });
+        map.on("mouseenter", badgeLayer, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", badgeLayer, () => { map.getCanvas().style.cursor = ""; });
+      }
       map.addSource(RXW_FPN_ROUTE_SOURCE, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: RXW_FPN_ROUTE_LINE, type: "line", source: RXW_FPN_ROUTE_SOURCE,

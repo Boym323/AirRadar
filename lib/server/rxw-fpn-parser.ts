@@ -90,7 +90,9 @@ export function parseRxwH1Fpn(text: unknown, acarsFlight: unknown): ParseResult 
   const waypoints: RxwWaypoint[] = [];
   let pendingAirway: string | null = null;
   let gap = false;
-  for (const segment of candidates) {
+  for (const [segmentIndex, segment] of candidates.entries()) {
+    // Repeated F fields may be unrelated procedure legs; never join them.
+    if (segmentIndex > 0) { gap = true; pendingAirway = null; }
     for (const part of segment.value.split(".")) {
       if (!part) continue;
       if (airway(part)) {
