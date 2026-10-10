@@ -34,6 +34,21 @@ minutes, and persisted opacity (20–100%, default 65%). V2 archives validated
 frames under a persistent bounded file directory and resolves the newest frame
 at or before Global Map Time.
 
+The radar layer now offers a second **PseudoCAPPI 2 km** product via the published
+ČHMÚ PNG catalogue at
+`https://opendata.chmi.cz/meteorology/weather/radar/composite/pseudocappi2km/png/`.
+The selector preserves the existing MAX_Z default; catalog and frame APIs
+accept only `MAX_Z_MASKED` or `PSEUDOCAPPI_2KM` and keep separate provider
+caches, URL construction and strict `z_cappi020` filename checks.
+The selector state is browser-local; historical Map Context continues to use
+its existing MAX_Z archive until a separate product-aware archive is introduced.
+
+**Echo Top is not a PNG** in this dataset. ČHMÚ publishes it as ODIM HDF5 at
+`https://opendata.chmi.cz/meteorology/weather/radar/composite/echotop/hdf5/`.
+It must not be displayed with the PNG image overlay or interpreted as cloud
+top altitude until a bounded, validated HDF5 conversion and units/projection
+pipeline exists.
+
 ## METAR map
 
 The METAR layer reuses `AviationWeatherProvider` and the official Aviation

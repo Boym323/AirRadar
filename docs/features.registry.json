@@ -1076,6 +1076,28 @@
       ]
     },
     {
+      "id": "sondehub-sondes",
+      "name": "SondeHub Meteorological Sondes",
+      "category": "weather / traffic",
+      "status": "optional",
+      "introducedVersion": null,
+      "summary": "Operator-enabled receiver-centered SondeHub radiosonde snapshot layer with bounded caching, provenance and isolated map markers; no background REST polling or ADS-B ingestion.",
+      "pages": [
+        "/"
+      ],
+      "apis": [
+        "/api/sondes"
+      ],
+      "changelogScopes": [
+        "sondehub"
+      ],
+      "changelogKeywords": [
+        "SondeHub sondes",
+        "meteorological sonde",
+        "weather balloon"
+      ]
+    },
+    {
       "id": "space-weather-context",
       "name": "NOAA Space Weather Context",
       "category": "navigation / weather",
