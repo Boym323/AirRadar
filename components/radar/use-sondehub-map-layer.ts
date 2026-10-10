@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
-import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type MapLayerMouseEvent } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
 import type { FeatureCollection, Point, LineString } from "geojson";
 import { t, formatDateTime } from "@/lib/i18n";
 import type { SondeDetail, SondePoint, SondeSnapshot } from "@/lib/server/sondehub-provider";
