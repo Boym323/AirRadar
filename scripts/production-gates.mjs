@@ -1458,7 +1458,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const map = window.__airradarMapForDiagnostics;
               return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
             }, null, { timeout: 15_000 });
-            await layers.locator("summary").click();
+            await layers.evaluate((element) => { element.open = false; });
           }
           if (target.v6Appearance) {
             const layers = visualPage.locator(".map-layers");
