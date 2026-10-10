@@ -1,6 +1,6 @@
 import { getAircraftDetail, getAircraftQuickDetail, HistoryDatabaseUnavailableError, normalizeAircraftHistoryRange } from "@/lib/server/history";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
-import { enrichAircraftDetailView } from "@/lib/server/aircraft-detail-enrichment";
+import { getOnDemandEnrichmentService } from "@/lib/server/providers";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import { parseCoverage } from "@/lib/server/coverage";
@@ -31,7 +31,7 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   try {
     const searchParams = new URL(request.url).searchParams;
     const mode = searchParams.get("mode");
-    if (mode !== null && mode !== "quick" && mode !== "full") {
+    if (mode !== null && mode !== "quick" && mode !== "full" && mode !== "flightaware") {
       return Response.json({ error: "Invalid aircraft detail mode" }, { status: 400, headers: noStoreHeaders() });
     }
     const range = normalizeAircraftHistoryRange(searchParams.get("range"));
@@ -39,17 +39,22 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
     const stateService = getAircraftStateService();
     const liveAircraft = stateService.getAircraft(icaoHex, coverage);
 
+    // Explicit request only: never bill AeroAPI for quick/full detail or SSR.
+    if (mode === "flightaware") {
+      const service = getOnDemandEnrichmentService();
+      if (!service.hasFlightPlanProvider) return Response.json({ flightPlan: null }, { status: 503, headers: noStoreHeaders() });
+      const flightPlan = liveAircraft ? await service.getFlightPlanOnDemand(liveAircraft, new Date()) : null;
+      return Response.json({ flightPlan }, { headers: noStoreHeaders() });
+    }
+
     if (mode === "quick") {
       const quickDetail = await getAircraftQuickDetail(icaoHex, liveAircraft);
       const navigationIntegrity = getNavigationIntegrityService().getAircraft(icaoHex);
       return Response.json({ ...quickDetail, ...(navigationIntegrity.latest || navigationIntegrity.regionalContext.anomaly ? { navigationIntegrity } : {}) }, { headers: noStoreHeaders() });
     }
 
-    const [detail, enrichedAircraft] = await Promise.all([
-      getAircraftDetail(icaoHex, { historyRange: range }),
-      enrichAircraftDetailView(liveAircraft, new Date()),
-    ]);
-    const liveEnrichment = enrichedAircraft?.enrichment;
+    const detail = await getAircraftDetail(icaoHex, { historyRange: range });
+    const liveEnrichment = liveAircraft?.enrichment;
 
     const navigationIntegrity = getNavigationIntegrityService().getAircraft(icaoHex);
     return Response.json({ ...detail, ...(liveEnrichment ? { liveEnrichment } : {}), ...(navigationIntegrity.latest || navigationIntegrity.regionalContext.anomaly ? { navigationIntegrity } : {}) }, { headers: noStoreHeaders() });
