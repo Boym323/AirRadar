@@ -1445,11 +1445,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.waitForFunction(() => document.querySelector(".radar-content")?.getAttribute("data-presentation-mode") === "true");
           }
           if (target.v6Terrain) {
+            const layers = visualPage.locator(".map-layers");
+            await layers.locator("summary").click();
             await visualPage.getByTestId("radar-v6-d-terrain").locator("select").selectOption("3d");
             await visualPage.waitForFunction(() => {
               const map = window.__airradarMapForDiagnostics;
               return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
             }, null, { timeout: 15_000 });
+            await layers.locator("summary").click();
           }
           if (target.v6Appearance) {
             const layers = visualPage.locator(".map-layers");
