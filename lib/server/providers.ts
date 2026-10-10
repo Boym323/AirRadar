@@ -8,6 +8,7 @@ import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { ENRICHMENT_TTLS } from "@/lib/server/enrichment-cache";
 import { AdsbDbPersistence } from "@/lib/server/adsbdb-persistence";
 import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
+import { AdsbLolRouteProvider } from "@/lib/server/adsblol-route-provider";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
@@ -143,6 +144,11 @@ export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {
     registry.flightRoute = adsbDb;
   } else if (tar1090Db) {
     registry.aircraftMetadata = tar1090Db;
+  }
+
+  // Independent opt-in: enabling ADSB.lol live coverage never enables route calls.
+  if (process.env.ADSBLOL_ROUTE_ENABLED?.trim().toLowerCase() === "true") {
+    registry.flightRouteFallback = new AdsbLolRouteProvider();
   }
 
   // A paid FlightAware provider is deliberately double opt-in: a usable key
