@@ -287,6 +287,18 @@ prohlížeč nainstalovaný:
 npm run test:production:browser
 ```
 
+Vizuální browser gate radaru vyžaduje událost životního cyklu `style.load` a
+skutečně vykreslené vektorové prvky mapy. Samotné `map.isStyleLoaded()` není
+vhodnou podmínkou: MapLibre může hlásit false při načítání volitelných
+vzdálených rastrových/DEM dlaždic, přestože vektorová mapa je už vidět.
+Test nadále selže, pokud se styl neinicializuje nebo je mapa prázdná.
+Při opakovaných browser testech různých šířek může pomocné RXW obohacení
+`/api/aircraft/communications/waypoints` nebo doplňková metadata
+`/api/aircraft/[hex]/communications` vrátit očekávané HTTP 429;
+neočekávané API chyby zůstávají blokující.
+
+
+
 Produkční brány také přijímají režimy `--core`, `--browser` a `--all`.
 Browser režim spustí jeden sestavený server a ověří kompletní interakční
 kontrakt na reprezentativních mobilních a desktopových šířkách, zatímco všech

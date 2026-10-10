@@ -135,7 +135,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: v6-3d-browser-${{ github.sha }}
-          path: artifacts/visual-smoke/radar-v6-*.png
+          path: |
+            artifacts/visual-smoke/radar-v6-*.png
+            artifacts/visual-smoke/radar-v6-*-gpu.json
+            artifacts/visual-smoke/airport-v6-media-embed-*.png
           if-no-files-found: ignore
           retention-days: 3
 

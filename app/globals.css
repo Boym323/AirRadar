@@ -6835,6 +6835,10 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-v6-media label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
 .airport-v6-media :is(input,select) { min-height: var(--control-height-touch); padding: var(--space-2); border: 1px solid var(--border-default); color: var(--text-primary); border-radius: var(--radius-md); background: var(--surface-overlay); }
 .airport-v6-media input[type="url"] { width: min(100%, 330px); }
+.airport-v6-media .airport-media-entry { min-width: 0; }
+.airport-v6-media .airport-media-embed { flex: 1 0 100%; min-width: 0; display: grid; gap: var(--space-2); }
+.airport-v6-media .airport-media-embed iframe { display: block; width: 100%; max-width: 780px; aspect-ratio: 16 / 9; min-height: 200px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: #0b1016; }
+.airport-v6-media .airport-media-embed small { display: block; color: var(--text-secondary); }
 
 
 /* V6 mobile HUD: reserve a dedicated row for Presentation Mode so compact
