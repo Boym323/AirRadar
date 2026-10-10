@@ -190,41 +190,41 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
       });
 
       for (const item of snapshot.aircraft) {
-        const existing = await schema.ReceiverDailyAircraft
-          .where({ date: snapshot.date, icaoHex: item.icaoHex })
-          .first();
-        if (existing) {
-          await schema.ReceiverDailyAircraft.where({ date: snapshot.date, icaoHex: item.icaoHex }).update({
-            aircraftType: item.aircraftType,
-            airline: item.airline,
-            updatedAt,
+        const table = schema.ReceiverDailyAircraft as typeof schema.ReceiverDailyAircraft & {
+          upsert?: (input: Record<string, unknown>) => Promise<unknown>;
+        };
+        if (typeof table.upsert === "function") await table.upsert({
+          conflictOn: { date: snapshot.date, icaoHex: item.icaoHex },
+          update: { aircraftType: item.aircraftType, airline: item.airline, updatedAt },
+          create: { date: snapshot.date, icaoHex: item.icaoHex, aircraftType: item.aircraftType, airline: item.airline, updatedAt },
+        });
+        else {
+          const existing = await schema.ReceiverDailyAircraft.where({ date: snapshot.date, icaoHex: item.icaoHex }).first();
+          if (existing) await schema.ReceiverDailyAircraft.where({ date: snapshot.date, icaoHex: item.icaoHex }).update({
+            aircraftType: item.aircraftType, airline: item.airline, updatedAt,
           });
-        } else {
-          await schema.ReceiverDailyAircraft.create({
-            date: snapshot.date,
-            icaoHex: item.icaoHex,
-            aircraftType: item.aircraftType,
-            airline: item.airline,
-            updatedAt,
+          else await schema.ReceiverDailyAircraft.create({
+            date: snapshot.date, icaoHex: item.icaoHex, aircraftType: item.aircraftType, airline: item.airline, updatedAt,
           });
         }
       }
 
       for (const item of snapshot.coverage) {
-        const existing = await schema.ReceiverDailyCoverage
-          .where({ date: snapshot.date, azimuthBucket: item.azimuthBucket })
-          .first();
-        if (existing) {
-          await schema.ReceiverDailyCoverage.where({ date: snapshot.date, azimuthBucket: item.azimuthBucket }).update({
-            maxDistanceKm: item.maxDistanceKm,
-            updatedAt,
+        const table = schema.ReceiverDailyCoverage as typeof schema.ReceiverDailyCoverage & {
+          upsert?: (input: Record<string, unknown>) => Promise<unknown>;
+        };
+        if (typeof table.upsert === "function") await table.upsert({
+          conflictOn: { date: snapshot.date, azimuthBucket: item.azimuthBucket },
+          update: { maxDistanceKm: item.maxDistanceKm, updatedAt },
+          create: { date: snapshot.date, azimuthBucket: item.azimuthBucket, maxDistanceKm: item.maxDistanceKm, updatedAt },
+        });
+        else {
+          const existing = await schema.ReceiverDailyCoverage.where({ date: snapshot.date, azimuthBucket: item.azimuthBucket }).first();
+          if (existing) await schema.ReceiverDailyCoverage.where({ date: snapshot.date, azimuthBucket: item.azimuthBucket }).update({
+            maxDistanceKm: item.maxDistanceKm, updatedAt,
           });
-        } else {
-          await schema.ReceiverDailyCoverage.create({
-            date: snapshot.date,
-            azimuthBucket: item.azimuthBucket,
-            maxDistanceKm: item.maxDistanceKm,
-            updatedAt,
+          else await schema.ReceiverDailyCoverage.create({
+            date: snapshot.date, azimuthBucket: item.azimuthBucket, maxDistanceKm: item.maxDistanceKm, updatedAt,
           });
         }
       }

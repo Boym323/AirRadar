@@ -254,6 +254,21 @@ const aircraftPersistenceDiagnostics = {
   attempts: 0, executed: 0, skippedUnchanged: 0,
 };
 
+/** Bounded hot state avoids repeating history reads on every sampled position. */
+const HISTORY_RUNTIME_CACHE_MAX_ENTRIES = 10_000;
+const durableFlightPresence = new Map<number, boolean>();
+const latestFlightPositions = new Map<number, { recordedAtMs: number; lat: number; lon: number } | null>();
+
+function rememberBounded<T>(cache: Map<number, T>, key: number, value: T): void {
+  cache.delete(key);
+  cache.set(key, value);
+  while (cache.size > HISTORY_RUNTIME_CACHE_MAX_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
+
 export function getAircraftPersistenceDiagnostics() {
   return { ...aircraftPersistenceDiagnostics };
 }
@@ -1179,12 +1194,16 @@ export async function recordAircraftSnapshot(
       // A first-ever alert must be based on a durable Flight, not on a
       // process-local Aircraft row. The optional capability check keeps the
       // narrow fake persistence adapters used by tests backwards compatible.
-      const priorFlightsQuery = schema.Flight.where({ aircraftId: dbAircraft.id }) as unknown as {
-        limit?: (value: number) => { all(): Promise<unknown[]> };
-      };
-      const priorFlights = typeof priorFlightsQuery.limit === "function"
-        ? await statement(() => priorFlightsQuery.limit!(1).all())
-        : null;
+      let priorFlights: unknown[] | null = null;
+      if (!durableFlightPresence.has(dbAircraft.id)) {
+        const priorFlightsQuery = schema.Flight.where({ aircraftId: dbAircraft.id }) as unknown as {
+          limit?: (value: number) => { all(): Promise<unknown[]> };
+        };
+        priorFlights = typeof priorFlightsQuery.limit === "function"
+          ? await statement(() => priorFlightsQuery.limit!(1).all())
+          : null;
+        if (priorFlights !== null) rememberBounded(durableFlightPresence, dbAircraft.id, priorFlights.length > 0);
+      }
       let flight = await statement(() => schema.Flight
         .where({ aircraftId: dbAircraft!.id })
         .where({ endTime: null })
@@ -1201,13 +1220,20 @@ export async function recordAircraftSnapshot(
       // alone cannot catch a valid-looking CPR position hundreds of km away.
       if (flight && !callsignChanged && !continuityBroken) {
         const currentFlight = flight;
-        const previousPosition = await statement(() => schema.FlightPosition
-          .where({ flightId: currentFlight.id })
-          .orderBy((position) => position.recordedAt.desc())
-          .first());
-        if (previousPosition && effectiveRecordedAt.getTime() > timestampAsDate(previousPosition.recordedAt).getTime()
+        let previousPosition = latestFlightPositions.get(currentFlight.id);
+        if (previousPosition === undefined) {
+          const persistedPosition = await statement(() => schema.FlightPosition
+            .where({ flightId: currentFlight.id })
+            .orderBy((position) => position.recordedAt.desc())
+            .first());
+          previousPosition = persistedPosition
+            ? { recordedAtMs: timestampAsDate(persistedPosition.recordedAt).getTime(), lat: persistedPosition.lat, lon: persistedPosition.lon }
+            : null;
+          rememberBounded(latestFlightPositions, currentFlight.id, previousPosition);
+        }
+        if (previousPosition && effectiveRecordedAt.getTime() > previousPosition.recordedAtMs
           && !isPlausibleTransition(
-            { recordedAt: timestampAsIso(previousPosition.recordedAt), lat: previousPosition.lat, lon: previousPosition.lon },
+            { recordedAt: new Date(previousPosition.recordedAtMs).toISOString(), lat: previousPosition.lat, lon: previousPosition.lon },
             { recordedAt: effectiveRecordedAt.toISOString(), lat: latitude, lon: longitude },
           )) {
           return false;
@@ -1241,6 +1267,7 @@ export async function recordAircraftSnapshot(
           startTime: recordedAtInstant,
           lastSeenAt: recordedAtInstant,
         }));
+        rememberBounded(latestFlightPositions, flight.id, null);
       } else {
         const currentFlight = flight;
         const route = item.enrichment?.route;
@@ -1281,6 +1308,10 @@ export async function recordAircraftSnapshot(
         ...(track === undefined ? {} : { track }),
         ...(verticalRate === undefined ? {} : { verticalRate }),
       }));
+      rememberBounded(latestFlightPositions, persistedFlight.id, {
+        recordedAtMs: effectiveRecordedAt.getTime(), lat: latitude, lon: longitude,
+      });
+      rememberBounded(durableFlightPresence, dbAircraft.id, true);
       const altitudeDecision = item.altitudeDecision;
       const anomalyType = altitudeDecision?.anomaly ?? null;
       if (anomalyType && altitudeDecision && shouldPersistAltitudeAnomaly(item.icaoHex, anomalyType, recordedAt.getTime())) {
