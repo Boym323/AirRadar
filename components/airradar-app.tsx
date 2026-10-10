@@ -105,6 +105,7 @@ import { AirRadarTopbar, MobileBottomNav, RadarNavRail, UtcClock } from "@/compo
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
+import { useSondeHubMapLayer } from "@/components/radar/use-sondehub-map-layer";
 import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
 import { RadarMultiAircraft } from "@/components/radar/radar-multi-aircraft";
 import { addMultiAircraft, removeMultiAircraft, MULTI_AIRCRAFT_LIMIT } from "@/lib/radar/multi-aircraft";
@@ -556,8 +557,6 @@ export function AirRadarApp() {
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
   const [showSondes, setShowSondes] = useState(false);
-  const [sondes, setSondes] = useState<SondeHubObservation[]>([]);
-  const [sondesStatus, setSondesStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
   const ognLoadStartedRef = useRef(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
@@ -587,7 +586,7 @@ export function AirRadarApp() {
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
-  const [radarProduct, setRadarProduct] = useState<WeatherRadarProduct>("MAX_Z_MASKED");
+  const [radarProduct, setRadarProduct] = useState<"MAX_Z_MASKED" | "PSEUDOCAPPI_2KM">("MAX_Z_MASKED");
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
   const [showWind, setShowWind] = useState(false);
@@ -662,6 +661,7 @@ export function AirRadarApp() {
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
   const [radar3dMode, setRadar3dMode] = useState<Radar3dMode>("2d");
+  const [radar3dLicensedModels, setRadar3dLicensedModels] = useState(false);
   const [radar3dCamera, setRadar3dCamera] = useState<"free" | "follow">("free");
   const aircraft3dRuntimeRef = useRef<RadarAircraft3dRuntime | null>(null);
   const radar3dFollowAtRef = useRef(0);
@@ -715,34 +715,7 @@ export function AirRadarApp() {
   const [mapZoom, setMapZoom] = useState(7.4);
   const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
-  // Map popovers must not remain over the air picture after an outside tap.
-  // Native named <details> keeps Presets and Layers mutually exclusive.
-  useEffect(() => {
-    const openMenus = () => radarContentRef.current?.querySelectorAll<HTMLDetailsElement>(
-      '.map-overlay-primary details[name="radar-map-menus"][open]',
-    ) ?? [];
-    const onPointerDown = (event: PointerEvent) => {
-      if (!(event.target instanceof Node)) return;
-      for (const menu of openMenus()) {
-        if (!menu.contains(event.target)) menu.open = false;
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      const menus = openMenus();
-      if (!menus.length) return;
-      const first = menus[0];
-      for (const menu of menus) menu.open = false;
-      first?.querySelector<HTMLElement>("summary")?.focus();
-      event.preventDefault();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
+  const sondeStatus = useSondeHubMapLayer(mapRef, mapReady, showSondes);
   useEffect(() => {
     try {
       const persisted = window.localStorage.getItem("airradar-map-appearance-v6");
@@ -844,6 +817,7 @@ export function AirRadarApp() {
     const map = mapRef.current;
     if (!mapReady || !map || radar3dMode !== "3d") return;
     const runtime = createRadarAircraft3dRuntime();
+    runtime.setLicensedModels(radar3dLicensedModels);
     aircraft3dRuntimeRef.current = runtime;
     const restoreAircraftLayer = () => {
       if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) return;
@@ -899,7 +873,11 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (radar3dMode !== "3d" || !mapReady) return;
-    if (window.__airradarAircraft3dForDiagnostics?.syntheticActive) return;
+    aircraft3dRuntimeRef.current?.setLicensedModels(radar3dLicensedModels);
+  }, [radar3dLicensedModels, radar3dMode, mapReady]);
+
+  useEffect(() => {
+    if (radar3dMode !== "3d" || !mapReady) return;
     aircraft3dRuntimeRef.current?.setAircraft(snapshot.aircraft, selectedHex, document.hidden);
   }, [mapReady, radar3dMode, selectedHex, snapshot.aircraft]);
 
@@ -1182,7 +1160,8 @@ export function AirRadarApp() {
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
       setShowSondes(window.localStorage.getItem("airradar-sondehub-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
-      if (window.localStorage.getItem("airradar-weather-radar-product") === "PSEUDOCAPPI_2KM") setRadarProduct("PSEUDOCAPPI_2KM");
+      const savedRadarProduct = window.localStorage.getItem("airradar-weather-radar-product");
+      if (savedRadarProduct === "MAX_Z_MASKED" || savedRadarProduct === "PSEUDOCAPPI_2KM") setRadarProduct(savedRadarProduct);
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
@@ -1290,91 +1269,6 @@ export function AirRadarApp() {
   }, [showOgn]);
 
   useEffect(() => { try { window.localStorage.setItem("airradar-sondehub-layer", String(showSondes)); } catch { /* optional */ } }, [showSondes]);
-
-  // SondeHub is a self-contained optional map source, never part of the ADS-B SSE.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const circleId = "sondehub-sondes-circle";
-    const labelId = "sondehub-sondes-label";
-    const sourceId = "sondehub-sondes";
-    const install = () => {
-      if (!map.isStyleLoaded()) return;
-      if (!map.getSource(sourceId)) map.addSource(sourceId, {
-        type: "geojson",
-        data: createSondeHubGeoJSON([]),
-        attribution: '<a href="https://sondehub.org/" target="_blank" rel="noopener noreferrer">SondeHub contributors · CC BY-SA 2.0</a>',
-      });
-      if (!map.getLayer(circleId)) map.addLayer({
-        id: circleId,
-        type: "circle",
-        source: sourceId,
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": "#d9a5f8",
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4, 10, 6],
-          "circle-stroke-color": "#1a1233",
-          "circle-stroke-width": 1.7,
-          "circle-opacity": 0.9,
-        },
-      });
-      if (!map.getLayer(labelId)) map.addLayer({
-        id: labelId,
-        type: "symbol",
-        source: sourceId,
-        minzoom: 8,
-        layout: {
-          visibility: "none",
-          "text-field": ["get", "serial"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 10,
-          "text-offset": [0, 1.25],
-          "text-allow-overlap": false,
-        },
-        paint: { "text-color": "#e8caf8", "text-halo-color": "#141425", "text-halo-width": 1.2 },
-      });
-      (map.getSource(sourceId) as GeoJSONSource | undefined)?.setData(
-        createSondeHubGeoJSON(showSondes && sondesStatus !== "unavailable" ? sondes : []),
-      );
-      for (const layer of [circleId, labelId]) {
-        if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility",
-          showSondes && sondesStatus !== "unavailable" ? "visible" : "none");
-      }
-    };
-    const onClick = (event: MapLayerMouseEvent) => {
-      const props = event.features?.[0]?.properties;
-      if (!props) return;
-      const card = document.createElement("div");
-      card.className = "map-popup";
-      const title = document.createElement("strong");
-      title.textContent = (t.locale.startsWith("cs") ? "Meteorologická sonda " : "Weather balloon ") + String(props.serial ?? "");
-      card.append(title);
-      for (const [label, value] of [
-        [t.locale.startsWith("cs") ? "Výška" : "Altitude", String(props.altitudeM) + " m"],
-        [t.locale.startsWith("cs") ? "Stoupání" : "Ascent", props.ascentMs == null ? "—" : String(props.ascentMs) + " m/s"],
-        [t.locale.startsWith("cs") ? "Poslední pozorování" : "Observed", formatDateTime(String(props.observedAt ?? ""), t)],
-      ]) {
-        const row = document.createElement("span");
-        row.textContent = label + ": " + value;
-        card.append(row);
-      }
-      const credit = document.createElement("a");
-      credit.href = "https://sondehub.org/";
-      credit.target = "_blank";
-      credit.rel = "noopener noreferrer";
-      credit.textContent = "SondeHub · CC BY-SA 2.0";
-      card.append(credit);
-      new maplibregl.Popup({ closeButton: true, maxWidth: "300px" }).setLngLat(event.lngLat).setDOMContent(card).addTo(map);
-    };
-    map.on("style.load", install);
-    map.on("click", circleId, onClick);
-    install();
-    return () => {
-      map.off("style.load", install);
-      map.off("click", circleId, onClick);
-    };
-  }, [mapReady, showSondes, sondes, sondesStatus]);
-
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-layer", String(showWeatherRadar)); } catch { /* optional */ } }, [showWeatherRadar]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
@@ -3644,6 +3538,8 @@ export function AirRadarApp() {
               <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
                 radar3dMode={radar3dMode}
+                radar3dLicensedModels={radar3dLicensedModels}
+                onRadar3dLicensedModelsChange={setRadar3dLicensedModels}
                 radar3dCamera={radar3dCamera}
                 onRadar3dCameraChange={(mode) => { setRadar3dCamera(mode); if (mode === "follow") setFollowSelected(false); }}
                 radar3dCameraAvailable={Boolean(selectedHex)}
@@ -3656,8 +3552,7 @@ export function AirRadarApp() {
                 onShowOgnChange={setShowOgn}
                 showSondes={showSondes}
                 onShowSondesChange={setShowSondes}
-                sondesCount={sondes.length}
-                sondesStatus={sondesStatus}
+                sondeStatus={sondeStatus}
                 showAirports={showAirports}
                 onShowAirportsChange={setShowAirports}
                 showSignificantAirports={showSignificantAirports}
@@ -3693,7 +3588,7 @@ export function AirRadarApp() {
                 onShowSigmetChange={setShowSigmet}
                 showWeatherRadar={showWeatherRadar}
                 radarProduct={radarProduct}
-                onRadarProductChange={setRadarProduct}
+                onRadarProductChange={(product) => { setRadarProduct(product); setRadarPlaying(false); }}
                 onShowWeatherRadarChange={(value) => {
                   setShowWeatherRadar(value);
                   if (!value) setRadarPlaying(false);
