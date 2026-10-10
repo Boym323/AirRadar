@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addAirportMediaLink, mediaAirportKey, parseAirportMediaLinks, resolveAirportMediaEmbed, sanitizeAirportMediaLink } from "@/lib/aviation-media-v6-h";
-const a = { kind: "camera", title: "Airport camera", url: "https://example.com/camera" };
+const a = { kind: "camera", title: "Airport camera", url: "https://example.com/camera" } as const;
 describe("V6-H browser-only external media links", () => {
   it("validates airport key", () => { expect(mediaAirportKey("lkpr")).toBe("airradar-v6-h-media:LKPR"); expect(mediaAirportKey("bad")).toBeNull(); });
   it("accepts only public HTTPS without credentials or fragments", () => {
