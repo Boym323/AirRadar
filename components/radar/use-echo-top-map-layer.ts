@@ -33,7 +33,6 @@ export function useEchoTopMapLayer(
       if(!map.getSource(SOURCE_ID)){
         map.addSource(SOURCE_ID,{
           type:"image",url:latest,coordinates:COORDINATES,
-          attribution:'<a href="https://opendata.chmi.cz/" target="_blank" rel="noopener noreferrer">ČHMÚ · CC BY 4.0</a>'
         });
       }else if(previousUrl!==latest){
         (map.getSource(SOURCE_ID) as ImageSource).updateImage({url:latest,coordinates:COORDINATES});
