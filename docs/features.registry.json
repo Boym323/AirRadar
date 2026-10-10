@@ -1074,6 +1074,28 @@
         "FPN waypoints",
         "RXW route plan"
       ]
+    },
+    {
+      "id": "space-weather-context",
+      "name": "NOAA Space Weather Context",
+      "category": "navigation / weather",
+      "status": "optional",
+      "introducedVersion": null,
+      "summary": "Operator-enabled on-demand NOAA global planetary Kp context in Navigation Integrity with bounded RAM cache and explicit non-GNSS-evidence disclaimer.",
+      "pages": [
+        "/navigation-integrity"
+      ],
+      "apis": [
+        "/api/navigation-integrity/space-weather"
+      ],
+      "changelogScopes": [
+        "space-weather"
+      ],
+      "changelogKeywords": [
+        "NOAA Space Weather",
+        "geomagnetic Kp",
+        "planetary K index"
+      ]
     }
   ]
 }
