@@ -18,7 +18,7 @@ export function NavigationIntegritySpaceWeather() {
     return () => controller.abort();
   }, []);
 
-  if (snapshot?.enabled === false) return null;
+  if (loading || snapshot?.enabled !== true) return null;
   const cs = t.locale.startsWith("cs");
   const words = cs ? {
     title: "Kosmické počasí · NOAA",
