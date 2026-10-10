@@ -122,7 +122,7 @@ export class RadarAircraft3dRuntime {
   }
   setAircraft(aircraft: readonly AircraftView[], selectedHex: string | null, hidden = false): void {
     const candidates = hidden ? [] : selectRadarAircraft3d(aircraft,selectedHex);
-    this.vertexData = aircraft3dVertices(candidates);
+    this.vertexData = new Float32Array(aircraft3dVertices(candidates));
     this.dirty = true;
     this.map?.triggerRepaint();
   }
