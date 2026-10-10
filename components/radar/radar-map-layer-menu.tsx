@@ -77,6 +77,9 @@ interface RadarMapLayerMenuProps {
   showSigmet: boolean;
   onShowSigmetChange: (value: boolean) => void;
   showWeatherRadar: boolean;
+  showEchoTop: boolean;
+  onShowEchoTopChange: (value: boolean) => void;
+  echoTopStatus: "idle" | "loading" | "ready" | "stale" | "unavailable";
   onShowWeatherRadarChange: (value: boolean) => void;
   radarProduct: "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM";
   onRadarProductChange: (value: "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM") => void;
@@ -167,6 +170,9 @@ export function RadarMapLayerMenu({
   showSigmet,
   onShowSigmetChange,
   showWeatherRadar,
+  showEchoTop,
+  onShowEchoTopChange,
+  echoTopStatus,
   onShowWeatherRadarChange,
   radarProduct,
   onRadarProductChange,
@@ -242,6 +248,8 @@ export function RadarMapLayerMenu({
           <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => onRadarOpacityChange(Number(event.target.value))} /></label>
           <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
         </div>}
+        <label data-testid="map-layer-echo-top"><input type="checkbox" checked={showEchoTop} onChange={(event) => onShowEchoTopChange(event.target.checked)} /> {t.locale.startsWith("cs") ? "Výška radarových odrazů (Echo Top)" : "Radar echo top height"}</label>
+        {showEchoTop && <div className="map-layer-sublevel"><small>ČHMÚ · 4 dBZ · m AMSL · {echoTopStatus === "loading" ? t.common.loading : echoTopStatus === "unavailable" ? t.layers.radarUnavailable : echoTopStatus === "stale" ? t.layers.radarStale : t.locale.startsWith("cs") ? "Aktuální radarový snímek" : "Latest radar frame"}<br />{t.locale.startsWith("cs") ? "Výška detekovaného radarového echa, nikoli vrchol oblačnosti." : "Height of detected radar echo, not a cloud-top measurement."}</small></div>}
         <label data-testid="map-layer-metar"><input type="checkbox" checked={showMetar} onChange={(event) => onShowMetarChange(event.target.checked)} /> {t.layers.metar}</label>
         <label data-testid="map-layer-wind"><input type="checkbox" checked={showWind} onChange={(event) => onShowWindChange(event.target.checked)} /> {t.layers.windAloft}</label>
         <label data-testid="map-layer-aircraft-weather"><input type="checkbox" checked={showAircraftWeather} onChange={(event) => onShowAircraftWeatherChange(event.target.checked)} /> {t.locale.startsWith("cs") ? "Počasí z letadel" : "Aircraft Weather"}</label>
