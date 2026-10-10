@@ -80,6 +80,18 @@ and aircraft color legends only appear when their corresponding mode is active,
 and are hidden on small screens when they would compete with the map or bottom
 navigation.
 
+## System status V4: operator-first diagnostic hierarchy (2026-10-10)
+
+The `/system` diagnostics page groups existing cards into Application & Performance,
+Reception & Tracking, Database & Routes, and Services & Data Sources without
+altering API ownership or receiver/SSE behavior. A compact in-page anchor bar
+avoids long unstructured scrolling. An attention rail shows only genuine
+`degraded`/`offline` subsystems; disabled/on-demand states remain neutral.
+Routine green card badges are muted while the top overview retains the main
+system health signal. Group grids collapse to one column on narrow screens.
+Regressions are guarded in `tests/system-status-visual-polish-v4.test.ts` and
+must pass desktop/mobile browser visual smoke before release.
+
 ## Visual debt budget
 
 Run:
