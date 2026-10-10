@@ -27,6 +27,7 @@ import {
   parseNavigationIntegrityInvestigation,
 } from "@/lib/investigation-links";
 import styles from "./navigation-integrity-center.module.css";
+import { NavigationIntegritySpaceWeather } from "@/components/navigation-integrity-space-weather";
 
 type WindowRange = "5m" | "15m" | "30m" | "60m";
 type SourceFilter = "ALL" | "LOCAL" | "NETWORK";
@@ -453,6 +454,8 @@ export function NavigationIntegrityCenter() {
         <MetricCard value={localActive} label={copy.localAnomalies} />
         <MetricCard value={networkActive} label={copy.networkAnomalies} />
       </MetricStrip>
+
+      <NavigationIntegritySpaceWeather />
 
       <Panel className={styles.section}>
         <SectionHeader title={copy.currentTitle} description={copy.currentDescription} />
