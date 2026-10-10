@@ -12,6 +12,10 @@ describe("system status module boundaries", () => {
     expect(systemSource).not.toContain("function toAdminSystemStatus");
     expect(projectionSource).toContain("function toPublicSystemStatus");
     expect(projectionSource).toContain("processRssBytes: 0");
+    expect(projectionSource).toContain("localTrailMaxPointsPerAircraft: null");
+    expect(projectionSource).toContain("networkTrailMaxPointsPerAircraft: null");
+    expect(projectionSource).toContain("localTrailOverLimitAircraftCount: null");
+    expect(projectionSource).toContain("networkTrailOverLimitAircraftCount: null");
     expect(projectionSource).toContain('host: "hidden"');
   });
 
