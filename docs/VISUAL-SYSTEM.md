@@ -389,7 +389,7 @@ as a substitute for an actual Playwright-rendered view.
 
 ## V6-A — live multi-aircraft view
 
-The live radar provides a **Multi-view** local-only picker for up to ten ICAO identities. Clicking an aircraft while enabled pins its identity and shows current telemetry alongside other selected aircraft. Dashed trails represent receiver-observed points only, never inferred flight paths. Out-of-coverage pins remain explicitly unavailable and can be removed without mutating watchlists. This reuses the canonical SSE and MapLibre instance with no extra subscription.
+The live radar provides a **Multi-view** local-only picker for up to ten ICAO identities. Clicking an aircraft while enabled pins its identity and shows current telemetry alongside other selected aircraft. Dashed trails represent positions observed in the selected LOCAL/EXTENDED coverage, never inferred flight paths. Out-of-coverage pins remain explicitly unavailable and can be removed without mutating watchlists. This reuses the canonical SSE and MapLibre instance with no extra subscription.
 
 
 ## V6-B — map appearance without changing radar runtime

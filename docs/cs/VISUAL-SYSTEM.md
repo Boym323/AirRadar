@@ -371,7 +371,7 @@ Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
 
 ## V6-A — sledování více letadel
 
-Přepínač **Více letadel** na živém radaru přidává lokální výběr až deseti ICAO identit. Kliknutí na letadlo při zapnutém režimu připne jeho ICAO a nad mapou zobrazí jeho aktuální telemetrii, i když už je vybráno jiné letadlo. Přerušované čáry jsou pouze reálně zachycené stopy, nikoli modelovaná trasa. Při ztrátě signálu zůstává karta označená jako mimo pokrytí; režim lze ukončit bez změny filtru či serverových watchlistů. Využívá existující stream a MapLibre, nepřidává nové SSE spojení.
+Přepínač **Více letadel** na živém radaru přidává lokální výběr až deseti ICAO identit. Kliknutí na letadlo při zapnutém režimu připne jeho ICAO a nad mapou zobrazí jeho aktuální telemetrii, i když už je vybráno jiné letadlo. Přerušované čáry zobrazují přijaté stopy ze zvoleného zdroje LOCAL/EXTENDED, nikoli modelovaná trasa. Při ztrátě signálu zůstává karta označená jako mimo pokrytí; režim lze ukončit bez změny filtru či serverových watchlistů. Využívá existující stream a MapLibre, nepřidává nové SSE spojení.
 
 
 ## V6-B — mapové podklady bez přestavění radaru
