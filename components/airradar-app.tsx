@@ -103,6 +103,7 @@ import { AirRadarTopbar, MobileBottomNav, RadarNavRail, UtcClock } from "@/compo
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
+import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
@@ -3143,6 +3144,20 @@ export function AirRadarApp() {
                 onColorModeChange={setColorMode}
               />
             </div>
+            <RadarQuickActions
+              weatherEnabled={showWeatherRadar}
+              atcEnabled={showAtc}
+              activeFilterCount={activeFilterCount}
+              filtersDisabled={trafficSource === "ogn"}
+              selectionOpen={drawerState === "aircraft" || drawerState === "ogn"}
+              onToggleWeather={() => {
+                const enabled = !showWeatherRadar;
+                setShowWeatherRadar(enabled);
+                if (!enabled) setRadarPlaying(false);
+              }}
+              onToggleAtc={() => setShowAtc((current) => !current)}
+              onOpenFilters={() => openTrafficDrawer("filters")}
+            />
             {activeOperationalFocusItem ? (
               <RadarOperationalFocusCard
                 item={activeOperationalFocusItem}
