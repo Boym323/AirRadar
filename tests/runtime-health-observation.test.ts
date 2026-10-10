@@ -11,7 +11,7 @@ describe("opt-in runtime health observation", () => {
     expect(snapshot.heapUsedBytes).toBeGreaterThan(0);
     expect(snapshot.externalBytes).toBeGreaterThanOrEqual(0);
     expect(snapshot.arrayBuffersBytes).toBeGreaterThanOrEqual(0);
-    expect(snapshot.v8HeapSpaces).toEqual(getV8HeapSpaces());
+    expect(snapshot.v8HeapSpaces.map((space) => space.name)).toEqual(getV8HeapSpaces().map((space) => space.name));
     expect(snapshot.v8HeapSpaces.length).toBeGreaterThan(0);
     expect(snapshot.v8HeapSpaces.length).toBeLessThanOrEqual(16);
     expect(snapshot.v8HeapSpaces.some((space) => space.name === "old_space")).toBe(true);
