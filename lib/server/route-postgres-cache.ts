@@ -1,5 +1,6 @@
 import type { FlightRoute } from "@/lib/aircraft/types";
 import { getPrisma } from "@/lib/server/db";
+import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 
 /** Optional read-through PostgreSQL cache. Apply deploy/sql/route-enrichment-cache-v2.sql first. */
 export interface RouteCacheStore {
@@ -54,35 +55,52 @@ export class PostgresRouteCache implements RouteCacheStore {
   private retryAfter = 0;
   private active = 0;
   private lastCleanup = 0;
+  private lastCountAttempt = 0;
   private readonly stats = { hits: 0, misses: 0, writes: 0, failures: 0, bypassed: 0 };
   getDiagnostics() { return { ...this.stats, active: this.active, retryAfter: this.retryAfter }; }
 
   private async run<T>(
     fallback: T, query: (database: NonNullable<ReturnType<typeof getPrisma>>) => Promise<T>,
   ): Promise<T> {
-    if (Date.now() < this.retryAfter || this.active >= 4) { this.stats.bypassed++; return fallback; }
+    if (Date.now() < this.retryAfter || this.active >= 4) { this.stats.bypassed++; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
     let db: ReturnType<typeof getPrisma>;
     try { db = getPrisma(); }
-    catch { this.stats.failures++; this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback; }
-    if (!db) return fallback;
+    catch { this.stats.failures++; getRouteEnrichmentTelemetry().record("dbError"); this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback; }
+    if (!db) { getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
     this.active++;
-    try { return await bounded(query(db)); }
-    catch { this.stats.failures++; this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback; }
+    const started = Date.now();
+    try {
+      const value = await bounded(query(db));
+      getRouteEnrichmentTelemetry().recordDbLatency(Date.now() - started);
+      return value;
+    }
+    catch {
+      this.stats.failures++;
+      getRouteEnrichmentTelemetry().record("dbError");
+      this.retryAfter = Date.now() + FAILURE_BACKOFF_MS;
+      return fallback;
+    }
     finally { this.active--; }
   }
 
   async get(key: string): Promise<FlightRoute | null> {
     if (!KEY.test(key)) return null;
+    let queried = false;
     const raw = await this.run<string | null>(null, async (db) => {
       const rows = await db.runtime().query(db.raw.sql`
         SELECT "routeJson" FROM "public"."routeEnrichmentCache"
         WHERE "cacheKey" = ${key} AND "expiresAtMs" > ${BigInt(Date.now())}
         LIMIT 1
       `.returnsRow({ routeJson: "pg/text@1" }).build());
+      queried = true;
       return rows[0]?.routeJson ?? null;
     });
     const route = raw ? decodeCachedRoute(raw, key) : null;
-    if (route) this.stats.hits++; else this.stats.misses++;
+    if (queried) {
+      if (route) { this.stats.hits++; getRouteEnrichmentTelemetry().record("dbHit"); }
+      else { this.stats.misses++; getRouteEnrichmentTelemetry().record("dbMiss"); }
+      this.refreshCount();
+    }
     return route;
   }
 
@@ -108,7 +126,26 @@ export class PostgresRouteCache implements RouteCacheStore {
     });
     if (!wrote) return;
     this.stats.writes++;
+    getRouteEnrichmentTelemetry().record("dbWrite");
+    this.refreshCount();
     if (now - this.lastCleanup >= 60 * 60_000) { this.lastCleanup = now; void this.prune(); }
+  }
+
+  /** Database count is sampled at most once per five minutes, not per status/SSE request. */
+  private refreshCount(): void {
+    const now = Date.now();
+    if (now - this.lastCountAttempt < 5 * 60_000) return;
+    this.lastCountAttempt = now;
+    void this.run<number | null>(null, async (db) => {
+      const rows = await db.runtime().query(db.raw.sql`
+        SELECT COUNT(*)::integer AS "entries"
+        FROM "public"."routeEnrichmentCache"
+        WHERE "expiresAtMs" > ${BigInt(Date.now())}
+      `.returnsRow({ entries: "pg/int4@1" }).build());
+      return rows[0]?.entries ?? null;
+    }).then((count) => {
+      if (count !== null) getRouteEnrichmentTelemetry().setValidEntries(count);
+    });
   }
 
   private async prune(): Promise<void> {

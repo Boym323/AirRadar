@@ -5,6 +5,7 @@ import type { HistoryPersistenceStatus } from "@/lib/server/history";
 import type { AviationWeatherDiagnostics, SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
 import type { AviationWeatherPersistenceDiagnostics } from "@/lib/server/aviation-weather-persistence";
 import type { AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
+import type { RouteEnrichmentSnapshot } from "@/lib/server/route-enrichment-telemetry";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import type { RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
@@ -108,6 +109,7 @@ export interface SystemStatusResponse {
     linesPerSecond?: number;
     stale?: boolean;
   };
+  routeEnrichment?: RouteEnrichmentSnapshot;
   adsbdb: {
     status: SystemStatus;
     diagnostic: DiagnosticState;
@@ -475,6 +477,7 @@ export interface SystemStatusBuildInput {
   mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
   localAdsb?: Record<string, unknown>;
+  routeEnrichment?: RouteEnrichmentSnapshot;
   adsbdb?: {
     providerStatus: "online" | "degraded" | "offline" | "unknown";
     lastSuccessAt: string | null;

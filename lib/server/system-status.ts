@@ -712,6 +712,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     ...(input.localAdsb ? { localAdsb: input.localAdsb } : {}),
     adsbLol: adsbLolResponse(input.adsbLol),
     adsbdb: adsbDb,
+    ...(input.routeEnrichment ? { routeEnrichment: input.routeEnrichment } : {}),
     ogn: ognResponse(input.ogn),
     database: {
       status: input.database.status,
@@ -1011,6 +1012,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       ...(serviceDiagnostics?.regionalAttentionGraduation ? { regionalAttentionGraduation: serviceDiagnostics.regionalAttentionGraduation } : {}),
     },
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
+    routeEnrichment: serviceDiagnostics?.enrichment.routeMetrics,
     ogn: ognService.getDiagnostics(),
     runtime: {
       diagnostics: serviceDiagnostics ? {

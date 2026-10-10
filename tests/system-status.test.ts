@@ -4,6 +4,7 @@ import type { NetworkProviderDiagnostics, StateSnapshot } from "@/lib/aircraft/t
 import type { AtcDataResponse } from "@/lib/atc/types";
 import { getTranslations } from "@/lib/i18n";
 import { buildSystemStatus, mapAircraftWeatherDiagnosticsToSystemStatusInput, toPublicSystemStatus } from "@/lib/server/system-status";
+import { RouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 import type { AircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 
 const checkedAt = new Date("2026-09-08T12:00:00.000Z");
@@ -100,6 +101,18 @@ function aircraftWeatherDiagnostics(overrides: Partial<AircraftWeatherDiagnostic
 }
 
 describe("SYSTEM / RECEIVER STATUS V1", () => {
+  it("limits route-enrichment metrics to administrator system status", () => {
+    const telemetry = new RouteEnrichmentTelemetry(null, () => checkedAt.getTime());
+    telemetry.record("dbHit", 5);
+    telemetry.record("adsblolBatch", 2);
+    const full = build({ routeEnrichment: telemetry.getSnapshot() });
+    expect(full.routeEnrichment?.totals.dbHit).toBe(5);
+    expect(full.routeEnrichment?.totals.adsblolBatch).toBe(2);
+    const publicStatus = toPublicSystemStatus(full);
+    expect(publicStatus.routeEnrichment).toBeUndefined();
+    expect(JSON.stringify(publicStatus)).not.toContain('"routeEnrichment"');
+  });
+
   it("builds a healthy bounded status DTO from current runtime data", () => {
     const value = build();
     expect(value.status).toBe("ok");
