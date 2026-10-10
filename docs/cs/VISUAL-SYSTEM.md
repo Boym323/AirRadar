@@ -421,6 +421,19 @@ displejích se diagnostika přeskupí do jednoho sloupce.
 Regresní test `tests/system-status-visual-polish-v4.test.ts` a desktopové/
 mobilní vizuální testy jsou podmínkou nasazení.
 
+## Vizuální doladění radarových nabídek a detailu letadla (2026-10-10)
+
+Presety a Vrstvy mapy používají jednu skupinu nativních `details`, takže
+nelze otevřít obě nabídky současně. Kliknutí mimo panel nebo Escape nabídku
+zavře; Escape vrací fokus na jeho přepínač. Obsah nabídek má omezenou výšku
+s posouváním. Při otevřeném detailu letadla se kompaktní ovládání sledování
+letu řadí pod horní ovladače mapy a nepřekrývá je. V desktopovém panelu je
+všech šest akcí viditelných v mřížce 3×2 namísto oříznutého vodorovného
+seznamu, mobilní ovládání zůstává dotykové. Mění se pouze vzhled a chování
+nabídek, nikoli data mapy, SSE, kamera ani pravidla FlightAware.
+Regresní test: `tests/radar-overlay-visual-polish-v1.test.ts`.
+Před produkčním nasazením ověřit desktopové a mobilní browser testy i snímky.
+
 ### V6-D8 – detailní modely a ověření GPU
 Základní 3D terén i ohraničená vrstva až 12 lokálně zachycených letadel zůstává dostupná offline jako jednoduchá vektorová geometrie. Volitelné **Detailní modely letadel (online GLB)** jsou vypnuté ve výchozím stavu; načítají se pouze po uživatelském zapnutí 3D a tohoto přepínače. Používají veřejnou sadu [amvlab/aircraft-models](https://github.com/amvlab/aircraft-models) (bez firemních log), autor **amvlab**, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), normalizovanou do souřadnic a fyzických rozměrů pro AirRadar. Podporované rodiny: A320, A350, A380, B737 a B787. Ostatní typy, chyby dekódování, síťové výpadky nebo nekompatibilní GPU pokračují původními typově odstupňovanými low-poly siluetami. Zdroj assetů je připnut na konkrétní upstream commit; max 1,5 MB/soubor, 5 000 trojúhelníků na detailní model, nejvýše dvě detailní letadla a 12 letadel celkem, žádný nový SSE/serverový dotaz.
 Přepínač 3D poskytuje **Ověřit 3D na tomto zařízení** a export JSON důkazu: WebGL2, identita rendereru (pokud ji prohlížeč zveřejní), limit textur a vzorkovaná cadence requestAnimationFrame. Jde o měření prohlížeče a orientační snímkové odezvy, nikoli o certifikovaný benchmark GPU. Uživatel musí fyzicky ověřit alespoň desktopovou diskrétní/integr. GPU, iOS Safari a Android Chrome, ověřit 2D návrat při selhání WebGL, přepínání stylu, skutečně používané modely, výdrž a teplotu zařízení. Chromium CI test běží softwarově a fyzický telefon nenahrazuje.

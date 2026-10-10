@@ -438,6 +438,22 @@ The optional 3D terrain mode can render up to 12 lightweight, geographic, altitu
 
 The optional 3D custom layer now uses bounded, locally generated airframe geometry with recognizably different fuselage lengths, spans, wing placements, fins and engine placements for selected ICAO aircraft types (Airbus, Boeing, regional aircraft, general aviation and helicopters). Unknown types retain an explicitly generic fallback; observations and positions are never invented. Dimensions are approximate visual profiles, **not manufacturer-approved, type-faithful GLTF or CAD models**. Geometry is cached by a finite static catalog (not aircraft IDs), the limit stays at 12 objects, 2D remains the default and there are no new network requests or background processes. Physical GPU and mobile testing remains required before claiming photorealism.
 
+## Radar popover / selected-aircraft visual polish (2026-10-10)
+
+The desktop radar keeps both native map menu triggers but places Presets and
+Layers in the same named `details` group, so only one can obscure the air
+picture at a time. Outside pointer interaction or Escape dismisses an open
+menu, with Escape restoring focus to its summary. Both panels are
+height-bounded and scrollable. With the selected-aircraft drawer open, the
+compact flight-follow control enters the map HUD's natural vertical flow,
+without covering map buttons. At desktop drawer widths all six aircraft
+quick actions wrap into a visible 3×2 grid, replacing the clipped horizontal
+strip; mobile retains its touch-oriented behavior. These changes have no effect
+on MapLibre source data, trajectories, SSE, map camera, or the on-demand
+FlightAware policy. Regression: `tests/radar-overlay-visual-polish-v1.test.ts`.
+Verify the desktop and mobile visual browser gate and inspect screenshots prior
+to production deployment.
+
 ### V6-D8 – licensed aircraft detail and physical GPU QA
 The radar keeps its built-in bounded 3D low-poly geometry (up to 12 aircraft). Optional online **GLB detailed aircraft** mode is off by default and requires explicit 3D + model opt-in. Models: A320, A350, A380, B737, B787 from [amvlab/aircraft-models](https://github.com/amvlab/aircraft-models), © amvlab [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified by normalization to AirRadar coordinates and family lengths/spans. The URL is pinned to a source commit; max 1.5 MB per GLB and 5,000 triangles per detailed model, at most two detailed airframes, no new SSE/server polling. Unknown types and failed assets keep the existing local models.
 The **Check 3D on this device** control exports browser WebGL2, renderer, texture and requestAnimationFrame cadence evidence. This is not GPU certification: test real Windows/macOS graphics, iOS Safari, Android Chrome for performance, battery, thermal effects, map-style changes and WebGL failure recovery. CI Chromium GPU may be software-rendered.
