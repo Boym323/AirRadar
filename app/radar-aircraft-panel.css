@@ -1425,6 +1425,23 @@
   }
 }
 
+/* All four sections remain visible at minimum drawer width. */
+.sidebar.drawer-aircraft .aircraft-quick-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow-x: visible;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-tabs button {
+  min-width: 0;
+  padding-inline: var(--space-1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: var(--line-height-tight);
+}
+
 .aircraft-quick-detail .aircraft-quick-detail-grid > .aircraft-quick-detail-value {
   min-width: 0;
   max-width: 100%;
