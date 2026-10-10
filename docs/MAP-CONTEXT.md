@@ -34,6 +34,13 @@ minutes, and persisted opacity (20–100%, default 65%). V2 archives validated
 frames under a persistent bounded file directory and resolves the newest frame
 at or before Global Map Time.
 
+Optional PseudoCAPPI_2km reuses the same strict bounded PNG pipeline with its
+own catalog and frame cache. Pass `?product=PSEUDOCAPPI_2KM` on the frames
+and image endpoints; omitting it retains MAX-Z behavior. The map selector
+distinguishes maximum reflectivity from reflectivity at 2 km above sea level.
+This is NOT the Echo Top product: ČHMÚ distributes Echo Top as HDF5, which
+requires a separate decoding/conversion pipeline. No extra poller is added.
+
 ## METAR map
 
 The METAR layer reuses `AviationWeatherProvider` and the official Aviation

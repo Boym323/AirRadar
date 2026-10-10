@@ -32,6 +32,13 @@ persistovanou opacity (20–100 %, výchozí 65 %). V2 archivuje validované fra
 do persistentního omezeného adresáře a řeší nejnovější frame v nebo před
 Global Map Time.
 
+Volitelný PseudoCAPPI_2km používá stejnou omezenou PNG pipeline a vlastní
+cache snímků i katalogu. Parametr `?product=PSEUDOCAPPI_2KM` na katalogovém
+i snímkovém API vybírá nový produkt. Výchozí MAX-Z zůstává beze změny.
+Přepínač rozlišuje maximální odrazivost a odrazivost ve 2 km nad mořem.
+**Nejde o Echo Top**, který ČHMÚ zveřejňuje v HDF5 a který potřebuje
+samostatný dekodér či převod. Žádný další poller nevzniká.
+
 ## Mapa METAR
 
 METAR vrstva znovu používá `AviationWeatherProvider` a oficiální JSON API
