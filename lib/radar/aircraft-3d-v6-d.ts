@@ -1,5 +1,6 @@
 import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput } from "maplibre-gl";
 import type { AircraftView } from "@/lib/aircraft/types";
+import { airframeModelFaces } from "@/lib/radar/aircraft-3d-models-v6";
 
 export const RADAR_AIRCRAFT_3D_LAYER_ID = "radar-v6-d-aircraft-3d";
 export const RADAR_AIRCRAFT_3D_LIMIT = 12;
@@ -15,6 +16,7 @@ export interface Aircraft3dCandidate {
   distanceKm: number;
   approximateAltitude: boolean;
   scale: number;
+  aircraftType: string;
 }
 
 export function selectRadarAircraft3d(aircraft: readonly AircraftView[], selectedHex: string | null, limit = RADAR_AIRCRAFT_3D_LIMIT): Aircraft3dCandidate[] {
@@ -32,7 +34,8 @@ export function selectRadarAircraft3d(aircraft: readonly AircraftView[], selecte
       heading: Number.isFinite(item.track) && item.track !== null ? item.track : 0,
       distanceKm: item.distanceKm ?? Infinity,
       approximateAltitude: item.geomAltitude === null || !Number.isFinite(item.geomAltitude),
-      scale: /^(A38|B74|B77)/.test(type) ? 1.8 : /^(C1|P28|DR4)/.test(type) ? 0.6 : 1,
+      scale: 1, // Dimensions now come from the family mesh; do not double-scale large aircraft.
+      aircraftType: type,
     }];
   }).sort((a,b) => (a.icaoHex === selectedHex ? -1 : b.icaoHex === selectedHex ? 1 : 0) || a.distanceKm-b.distanceKm || a.icaoHex.localeCompare(b.icaoHex)).slice(0,bounded);
 }
@@ -86,18 +89,7 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
   }
 }
 
-const SHAPE = [
-  // Fuselage
-  [0,23,2, -3,-16,0, 3,-16,0],
-  // Left/right wings
-  [-3,3,0, -25,-5,0, -3,-5,0],
-  [3,3,0, 3,-5,0, 25,-5,0],
-  // Stabilizers
-  [-2,-13,0, -9,-20,0, -2,-18,0],
-  [2,-13,0, 2,-18,0, 9,-20,0],
-] as const;
-
-/** A schematic airplane in local metres oriented to ADS-B true track, not a type-correct 3D asset. */
+/** Finite, type-profiled low-poly airframes oriented to ADS-B true track, not CAD/GLTF models. */
 export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[]): Float32Array<ArrayBuffer> {
   const points: number[]=[];
   for(const aircraft of candidates.slice(0,RADAR_AIRCRAFT_3D_LIMIT)){
@@ -107,12 +99,12 @@ export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[]): 
     const forwardEast=Math.sin(angle), forwardNorth=Math.cos(angle);
     const rightEast=Math.cos(angle), rightNorth=-Math.sin(angle);
     const color=aircraft.approximateAltitude ? [1,0.76,0.35] : [0.30,0.93,0.80];
-    for(const face of SHAPE){
-      for(let i=0;i<face.length;i+=3){
-        const right=face[i]!, forward=face[i+1]!,up=face[i+2]!;
+    for(const [a,b,c,shade] of airframeModelFaces(aircraft.aircraftType)){
+      for(const [right,forward,up] of [a,b,c]){
         points.push(location.x+(right*rightEast+forward*forwardEast)*metre,
           location.y-(right*rightNorth+forward*forwardNorth)*metre,
-          location.z+up*metre,...color);
+          location.z+up*metre,
+          color[0]*shade,color[1]*shade,color[2]*shade);
       }
     }
   }
