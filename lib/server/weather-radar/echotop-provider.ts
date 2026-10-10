@@ -111,7 +111,7 @@ function runPython(args:string[],input:Uint8Array|null,limit=MAX_PNG_BYTES,timeo
 }
 export async function probeEchoTopConverter():Promise<boolean>{
   try {
-    await runPython(["-c","import h5py,numpy"],null,1024,5_000);
+    await runPython(["-c","import h5py,numpy;print(1)"],null,1024,5_000);
     return true;
   }catch{return false;}
 }
