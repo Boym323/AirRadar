@@ -63,3 +63,35 @@
   font-size: clamp(17px, 3vw, 23px);
 }
 .routeAirports span { color: var(--text-muted); }
+
+.fpnPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-accent-soft);
+}
+.fpnPanel h3 { margin: 0; font-size: var(--font-size-md); }
+.fpnPanel p { margin: 5px 0 0; color: var(--text-muted); }
+.waypointList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.waypoint {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-glass);
+  font-size: var(--font-size-xs);
+}
+.waypointIndex, .waypointVia, .waypointCoords { color: var(--text-muted); }

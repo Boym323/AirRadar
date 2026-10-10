@@ -1,8 +1,11 @@
-import type { RxwCommunication, RxwReportedRoute, RxwRouteEvidence } from "@/lib/aircraft/rxw-communications";
+import type { RxwCommunication, RxwReportedRoute, RxwRouteEvidence, RxwWaypointPlan, RxwWaypointAvailability } from "@/lib/aircraft/rxw-communications";
+import { parseRxwH1Fpn } from "@/lib/server/rxw-fpn-parser";
 
 /** Never retain raw message text, decoded ACARS/CPDLC content or operational conversations. */
 export const RXW_MESSAGE_TTL_MS = 2 * 60 * 60_000;
 export const RXW_ROUTE_HINT_TTL_MS = 45 * 60_000;
+export const RXW_WAYPOINT_PLAN_TTL_MS = 45 * 60_000;
+export const RXW_MAX_WAYPOINT_PLANS = 256;
 export const RXW_MAX_AIRCRAFT = 512;
 export const RXW_MAX_MESSAGES_PER_AIRCRAFT = 20;
 export const RXW_MAX_SEEN_UIDS = 12_000;
@@ -126,6 +129,7 @@ export function selectRxwRouteEvidence(
 export class RxwHubMessageStore {
   private readonly aircraft = new Map<string, RxwCommunication[]>();
   private readonly seen = new Map<string, number>();
+  private readonly waypointPlans = new Map<string, RxwWaypointPlan>();
   private accepted = 0;
 
   ingest(input: unknown, now = Date.now()): boolean {
@@ -152,6 +156,41 @@ export class RxwHubMessageStore {
       if (oldest === undefined) break;
       this.aircraft.delete(oldest);
     }
+    // Transiently decode only allowlisted H1/FPN format; the body never reaches
+    // the public aircraft model, in-memory message cache, database or logs.
+    if (process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true") {
+      const raw = input !== null && typeof input === "object" && !Array.isArray(input)
+        ? input as Record<string, unknown> : null;
+      if (raw?.label === "H1") {
+        const parsed = parseRxwH1Fpn(raw.text, raw.flight);
+        if (parsed) {
+          const seenAt = Date.parse(message.timestamp);
+          const previousPlan = this.waypointPlans.get(message.icaoHex);
+          if (!previousPlan || Date.parse(previousPlan.observedAt) <= seenAt) {
+            if (parsed.status === "inactive") {
+              // A route-inactive report must not keep an older 'RP' badge alive.
+              if (previousPlan?.flight === parsed.flight) this.waypointPlans.delete(message.icaoHex);
+            } else if (seenAt >= now - RXW_WAYPOINT_PLAN_TTL_MS && seenAt <= now) {
+              const plan: RxwWaypointPlan = {
+                ...parsed,
+                icaoHex: message.icaoHex,
+                observedAt: message.timestamp,
+                stationId: message.stationId,
+                source: "rxw-acarshub",
+                confidence: "reported",
+              };
+              this.waypointPlans.delete(message.icaoHex);
+              this.waypointPlans.set(message.icaoHex, plan);
+              while (this.waypointPlans.size > RXW_MAX_WAYPOINT_PLANS) {
+                const oldest = this.waypointPlans.keys().next().value;
+                if (!oldest) break;
+                this.waypointPlans.delete(oldest);
+              }
+            }
+          }
+        }
+      }
+    }
     this.accepted += 1;
     return true;
   }
@@ -171,13 +210,40 @@ export class RxwHubMessageStore {
     return selectRxwRouteEvidence(this.list(icaoHex, now), icaoHex, callsign, now);
   }
 
-  stats(): { aircraft: number; accepted: number; uids: number } {
-    return { aircraft: this.aircraft.size, accepted: this.accepted, uids: this.seen.size };
+  /** Keep the plan identity bound to its current flight; never infer by ICAO alone. */
+  waypointPlanForFlight(icaoHex: string, callsign: string | null, now = Date.now()): RxwWaypointPlan | null {
+    const flight = rxwFlightIdentifier(callsign);
+    const plan = this.waypointPlans.get(icaoHex);
+    if (!flight || !plan || plan.flight !== flight || plan.status !== "planned") return null;
+    if (Date.parse(plan.observedAt) > now || Date.parse(plan.observedAt) < now - RXW_WAYPOINT_PLAN_TTL_MS) {
+      if (Date.parse(plan.observedAt) < now - RXW_WAYPOINT_PLAN_TTL_MS) this.waypointPlans.delete(icaoHex);
+      return null;
+    }
+    return { ...plan, waypoints: plan.waypoints.map((point) => ({ ...point })) };
+  }
+
+  /** Bounded, non-sensitive summary for radar indicators, not raw message text. */
+  waypointAvailability(now = Date.now()): RxwWaypointAvailability[] {
+    const available: RxwWaypointAvailability[] = [];
+    for (const [hex, plan] of this.waypointPlans) {
+      const timestamp = Date.parse(plan.observedAt);
+      if (timestamp < now - RXW_WAYPOINT_PLAN_TTL_MS) {
+        this.waypointPlans.delete(hex);
+      } else if (timestamp <= now && plan.status === "planned") {
+        available.push({ icaoHex: hex, flight: plan.flight, waypointCount: plan.waypoints.length });
+      }
+    }
+    return available;
+  }
+
+  stats(): { aircraft: number; accepted: number; uids: number; plans: number } {
+    return { aircraft: this.aircraft.size, accepted: this.accepted, uids: this.seen.size, plans: this.waypointPlans.size };
   }
 
   clear(): void {
     this.aircraft.clear();
     this.seen.clear();
+    this.waypointPlans.clear();
     this.accepted = 0;
   }
 }
