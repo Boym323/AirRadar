@@ -696,7 +696,6 @@ export function SystemStatusPage() {
 
     <div className="system-toolbar">
       <div className="system-toolbar-status">
-        {data && <StatusBadge status={data.status} dictionary={dictionary} />}
         {data && <span>{dictionary.system.checkedAt}: {formatDateTime(data.checkedAt, dictionary)}</span>}
         <span className={`system-live-indicator ${streamConnected ? "connected" : "reconnecting"}`} aria-live="polite">
           <span aria-hidden="true">●</span> {streamConnected ? dictionary.system.realtime : dictionary.system.reconnecting}
