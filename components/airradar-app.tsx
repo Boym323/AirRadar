@@ -78,7 +78,6 @@ import { WEATHER_RADAR_BOUNDS, type WeatherRadarProduct } from "@/lib/server/wea
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
-import type { SondeHubObservation, SondeHubSnapshot } from "@/lib/server/sondehub";
 import { createSondeHubGeoJSON } from "@/lib/sondehub/map";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
