@@ -78,7 +78,6 @@ import { WEATHER_RADAR_BOUNDS, type WeatherRadarProduct } from "@/lib/server/wea
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
-import { createSondeHubGeoJSON } from "@/lib/sondehub/map";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
