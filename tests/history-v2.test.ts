@@ -271,9 +271,16 @@ describe("flight history v2", () => {
   });
 
   it("exposes destination filtering through the public history route", async () => {
+    // This route intentionally uses the real clock. Keep the fixture inside
+    // the rolling seven-day window so the test cannot expire as CI dates move.
+    const now = Date.now();
+    const recentFlightAt = new Date(now - 24 * 60 * 60_000).toISOString();
+    const otherFlightAt = new Date(now - 25 * 60 * 60_000).toISOString();
+    const expiredFlightAt = new Date(now - 9 * 24 * 60 * 60_000).toISOString();
     const flights = [
-      { ...flight(1, "2026-10-03T10:00:00Z", "TO-PRG"), destination: "LKPR" },
-      { ...flight(2, "2026-10-03T09:00:00Z", "TO-VIE", 2), destination: "LOWW" },
+      { ...flight(1, recentFlightAt, "TO-PRG"), destination: "LKPR" },
+      { ...flight(2, otherFlightAt, "TO-VIE", 2), destination: "LOWW" },
+      { ...flight(3, expiredFlightAt, "EXPIRED-PRG"), destination: "LKPR" },
     ];
     vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights }) as never);
 
