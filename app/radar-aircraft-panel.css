@@ -1463,6 +1463,14 @@
   color: var(--accent);
 }
 
+.aircraft-quick-telemetry-stale,
+.aircraft-quick-telemetry-empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
 .aircraft-quick-telemetry-more > .aircraft-adsb-telemetry {
   margin: 0;
   min-width: 0;
