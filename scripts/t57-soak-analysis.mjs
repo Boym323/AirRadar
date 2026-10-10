@@ -64,6 +64,12 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
   if (Object.values(auxiliaryMaps).some((value) => value === null)) {
     throw new Error("t57_auxiliary_map_telemetry_unavailable");
   }
+  if ([runtime.rssBytes, runtime.heapUsedBytes, system.aircraftCount,
+      system.activeSseClients, system.localTrailOverLimitAircraftCount,
+      system.networkTrailOverLimitAircraftCount, retention.snapshotCacheEntries,
+      retention.listeners].some((value) => safe(value) === null)) {
+    throw new Error("t57_required_diagnostic_missing");
+  }
   const metricPaths = Array.isArray(metrics.hotPaths) ? metrics.hotPaths : [];
   const hotPaths = metricPaths.slice(0, 12).flatMap((p) => {
     const name = p?.name;
@@ -165,8 +171,9 @@ export function analyzeT57Soak(records) {
     return g?.observedAtMs && g.observedAtMs >= Date.parse(first.at) +
       header.warmupSeconds * 1000 ? [[g.observedAtMs, g]] : [];
   })).values()].sort((a, b) => a.observedAtMs - b.observedAtMs);
-  const gcTrend = (key) => gcBaselines.length < 2 ? null : rounded(
-    (gcBaselines.at(-1)[key] - gcBaselines[0][key]) / MiB);
+  const gcTrend = (key) => gcBaselines.length < 2 ||
+    safe(gcBaselines.at(-1)?.[key]) === null || safe(gcBaselines[0]?.[key]) === null
+    ? null : rounded((gcBaselines.at(-1)[key] - gcBaselines[0][key]) / MiB);
   const loopWindows = [...new Map(steady.flatMap((r) => r.eventLoopWindows ?? [])
     .map((w) => [w.to, w])).values()];
   const paths = new Map();
