@@ -40,6 +40,11 @@ try {
     const m = window.__airradarMapForDiagnostics;
     return Boolean(m && m.getTerrain() && m.getLayer("radar-v6-d-aircraft-3d") && m.getPitch() >= 50);
   }, undefined, { timeout: timeoutMs });
+  // Exercise actual GPU model upload even without a live aircraft stream.
+  result.mesh = await page.evaluate(() => window.__airradarAircraft3dForDiagnostics?.injectSample() ?? null);
+  if (!result.mesh?.gpuReady || result.mesh.vertexCount < 100 || result.mesh.contextLost) {
+    throw new Error(`3D model buffer did not initialize: ${JSON.stringify(result.mesh)}`);
+  }
   // Query the exact MapLibre context; GPU renderer is only verifiable if the browser exposes it.
   result.gpu = await page.evaluate(() => {
     const map = window.__airradarMapForDiagnostics;
