@@ -59,7 +59,7 @@ function fixture(minute) {
   return projectT57SoakSample(status, metrics, at(minute));
 }
 
-function records(count = 12) {
+function records(count = 61) {
   const rows = [{ type: "header", schemaVersion: 1, seconds: (count - 1) * 60,
     intervalSeconds: 60, warmupSeconds: 0 }];
   const seen = new Map();
@@ -112,10 +112,10 @@ describe("T5.7C 24-hour read-only soak", () => {
   it("evaluates 60-second windows, retention and approximate post-major GC changes", () => {
     const result = analyzeT57Soak(records());
     expect(result.verdict).toBe("PASS_WITH_LIMITATIONS");
-    expect(result.eventLoopWindows).toBe(12);
-    expect(result.postMajorGcTrendMiB.oldSpace).toBe(11);
+    expect(result.eventLoopWindows).toBe(61);
+    expect(result.postMajorGcTrendMiB.oldSpace).toBe(59);
     expect(result.hotPathsByWindowCpuMs[0]).toMatchObject({
-      name: "snapshot.trail-update", windows: 12, calls: 120, cpuMs: 360,
+      name: "snapshot.trail-update", windows: 61, calls: 610, cpuMs: 1830,
     });
     expect(result.changesFirstLastDecile.networkAircraft).toBe(0);
     expect(JSON.stringify(result)).not.toContain("PRIVATE_STORE");
