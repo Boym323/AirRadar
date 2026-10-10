@@ -9,7 +9,8 @@
  *
  * Incremental NDJSON is private (0600); a killed job still leaves evidence.
  */
-import { mkdir, open, readFile, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { mkdir, open, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
@@ -100,9 +101,19 @@ function markdown(report) {
 
 export async function analyzeFile(file) {
   if (!file.endsWith(".ndjson")) throw new Error("ndjson_file_required");
-  const size = (await stat(file)).size;
-  if (size > MAX_REPORT_BYTES) throw new Error("report_too_large");
-  const content = await readFile(file, "utf8");
+  // Open exactly once, reject symlinks, and read/stat the same descriptor.
+  // A separate stat(path) then readFile(path) can race with path replacement.
+  const input = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  let content;
+  try {
+    const info = await input.stat();
+    if (!info.isFile() || info.size > MAX_REPORT_BYTES) throw new Error("report_too_large");
+    content = await input.readFile({ encoding: "utf8" });
+    // The file may grow while being read. Never analyze an oversized report.
+    if (Buffer.byteLength(content, "utf8") > MAX_REPORT_BYTES) throw new Error("report_too_large");
+  } finally {
+    await input.close();
+  }
   // A hard termination can leave the final NDJSON write incomplete. Keep
   // only newline-terminated records; never skip an invalid complete line.
   const committed = content.endsWith("\n") ? content : content.slice(0, content.lastIndexOf("\n") + 1);
