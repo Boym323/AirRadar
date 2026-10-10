@@ -186,6 +186,11 @@ declare global {
     __airradarMapResizeCountForDiagnostics?: number;
     __airradarAircraftMarkersForDiagnostics?: Map<string, AircraftMarkerHandle>;
     __airradarWebglAircraftForDiagnostics?: AircraftWebglRuntime;
+    __airradarAircraft3dForDiagnostics?: {
+      syntheticActive: boolean;
+      injectSample: () => { vertexCount: number; gpuReady: boolean; contextLost: boolean | null };
+      read: () => { vertexCount: number; gpuReady: boolean; contextLost: boolean | null };
+    };
   }
 }
 
@@ -842,7 +847,39 @@ export function AirRadarApp() {
     };
     map.on("style.load", restoreAircraftLayer);
     restoreAircraftLayer();
+    // A deterministic local test fixture makes real GPU proof independent of live traffic.
+    // It is inaccessible in the normal radar and never changes SSE or persisted state.
+    const diagnosticFixture: NonNullable<Window["__airradarAircraft3dForDiagnostics"]> = {
+      syntheticActive: false,
+      injectSample: () => {
+        diagnosticFixture.syntheticActive = true;
+        const center = map.getCenter();
+        const types = ["A20N", "B77W", "A388", "C172", "H145"] as const;
+        const fixtures = types.map((aircraftType, index) => ({
+          icaoHex: `FA${String(index).padStart(4,"0")}`,
+          aircraftType,
+          lat: center.lat + (index - 2) * .0011,
+          lon: center.lng + ((index % 2) ? -.0011 : .0011),
+          altitude: 2500,
+          geomAltitude: 2500,
+          baroAltitude: 2500,
+          onGround: false,
+          seenPosSeconds: 0,
+          track: 45 + index * 50,
+          distanceKm: 1 + index,
+        } as AircraftView));
+        runtime.setAircraft(fixtures, null);
+        map.jumpTo({ zoom: Math.max(map.getZoom(), 15.5), pitch: 65 });
+        return runtime.diagnostics();
+      },
+      read: () => runtime.diagnostics(),
+    };
+    if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+      window.__airradarAircraft3dForDiagnostics = diagnosticFixture;
+    }
     return () => {
+      if (window.__airradarAircraft3dForDiagnostics === diagnosticFixture)
+        delete window.__airradarAircraft3dForDiagnostics;
       map.off("style.load", restoreAircraftLayer);
       try {
         if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) map.removeLayer(RADAR_AIRCRAFT_3D_LAYER_ID);
@@ -853,6 +890,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (radar3dMode !== "3d" || !mapReady) return;
+    if (window.__airradarAircraft3dForDiagnostics?.syntheticActive) return;
     aircraft3dRuntimeRef.current?.setAircraft(snapshot.aircraft, selectedHex, document.hidden);
   }, [mapReady, radar3dMode, selectedHex, snapshot.aircraft]);
 
