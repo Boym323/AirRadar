@@ -16,6 +16,8 @@ import { findRecentObserverPasses } from "@/lib/spotter-history";
 import { isSpotterInteresting, scoreSpotterInterest, type SpotterInterestReasonCode } from "@/lib/spotter-interest";
 import { DEFAULT_SPOTTER_ALERT_PREFERENCES, readSpotterAlertPreferences, shouldTriggerSpotterAlert, spotterAlertTag, writeSpotterAlertPreferences, type SpotterAlertPreferences } from "@/lib/spotter-alerts";
 import { headingFromDeviceOrientation, skyFinderDirection, type SkyFinderTurn } from "@/lib/spotter-sky-finder";
+import { cameraElevationFromOrientation } from "@/lib/spotter-camera-ar-projection";
+import { SpotterCameraAR } from "@/components/spotter-camera-ar";
 import { buildSpotterSkyStory, verticalTrend } from "@/lib/spotter-story";
 import { buildPrgArrivalContext } from "@/lib/spotter-arrival-context";
 import { rankUpcomingSky } from "@/lib/spotter-upcoming";
@@ -61,6 +63,7 @@ export function MobileSpotterMode() {
   const alertedTagsRef = useRef<Map<string, number>>(new Map());
   const [skyFinderEnabled, setSkyFinderEnabled] = useState(false);
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
+  const [deviceCameraElevation, setDeviceCameraElevation] = useState<number | null>(null);
   const [orientationState, setOrientationState] = useState<"idle" | "waiting" | "ready" | "denied" | "unavailable">("idle");
   const [logbook, setLogbook] = useState<SpotterLogbookState>({ version: SPOTTER_LOGBOOK_VERSION, entries: [] });
   const [logbookMessage, setLogbookMessage] = useState<string | null>(null);
@@ -109,6 +112,7 @@ export function MobileSpotterMode() {
   useEffect(() => {
     if (!skyFinderEnabled || !pageVisible) {
       setDeviceHeading(null);
+      setDeviceCameraElevation(null);
       return;
     }
     setOrientationState("waiting");
@@ -116,6 +120,7 @@ export function MobileSpotterMode() {
       const heading = headingFromDeviceOrientation(event as DeviceOrientationEvent & { webkitCompassHeading?: number });
       if (heading === null) return;
       setDeviceHeading(heading);
+      setDeviceCameraElevation(cameraElevationFromOrientation(event));
       setOrientationState("ready");
     };
     window.addEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
@@ -1208,6 +1213,15 @@ export function MobileSpotterMode() {
       {orientationState === "denied" ? <p className={styles.discoveryWarning}>{copy.orientationDenied}</p> : null}
       {orientationState === "unavailable" ? <p className={styles.discoveryWarning}>{copy.orientationUnavailable}</p> : null}
       {skyFinderEnabled && orientationState === "waiting" ? <p className={styles.loading}>{copy.orientationWaiting}</p> : null}
+      <SpotterCameraAR
+        available={skyFinderEnabled && orientationState === "ready"}
+        visible={pageVisible}
+        observer={observer}
+        heading={deviceHeading}
+        elevation={deviceCameraElevation}
+        feedLive={connected && Boolean(snapshot?.sourceOnline)}
+        aircraft={visibleAircraft.map((item) => item.aircraft)}
+      />
       {skyTarget ? <div className={styles.skyFinder}>
         <div className={styles.skyCompass} aria-hidden="true">
           <span
