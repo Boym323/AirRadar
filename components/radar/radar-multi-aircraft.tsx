@@ -45,7 +45,7 @@ export function RadarMultiAircraft({ active, hexes, aircraft, limit, onToggle, o
         })}
       </ol>}
       {hexes.length >= limit && <p className={styles.hint}>{english ? "Maximum of 10 aircraft reached." : "Dosažen limit 10 letadel."}</p>}
-      <small className={styles.hint}>{english ? "Local browser selection · live data · dashed trails are receiver observations" : "Výběr pouze v prohlížeči · živá data · přerušované stopy jsou pozorování přijímače"}</small>
+      <small className={styles.hint}>{english ? "Local browser selection · live data · dashed trails reflect the selected LOCAL/NETWORK source" : "Výběr pouze v prohlížeči · živá data · přerušované stopy odpovídají zdroji LOCAL/NETWORK"}</small>
     </div>}
   </section>;
 }
