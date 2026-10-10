@@ -99,7 +99,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
     const active = tabs.querySelector<HTMLElement>(`#airport-v5-tab-${view}`);
     if (!active) return;
     const offset = active.offsetLeft - tabs.offsetLeft;
-    tabs.scrollTo({ left: Math.max(0, offset + active.offsetWidth / 2 - tabs.clientWidth / 2), behavior: "smooth" });
+    tabs.scrollTo({ left: Math.max(0, offset + active.offsetWidth / 2 - tabs.clientWidth / 2), behavior: "auto" });
   }, [view]);
 
   useEffect(() => {
