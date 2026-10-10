@@ -182,6 +182,29 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
     expect(provider.getDiagnostics()).toMatchObject({ requests: 4, failures: 2 });
   });
 
+  it("retains paid flight status even when no filed route or flight id exists", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      flights: [{
+        ident: "STATUS1",
+        scheduled_out: "2026-09-11T12:00:00Z",
+        scheduled_in: "2026-09-11T14:00:00Z",
+        status: "En Route",
+        estimated_in: "2026-09-11T14:05:00Z",
+      }],
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new FlightAwareFlightPlanProvider("secret-test-key");
+    const plan = await provider.getFlightPlan("STATUS1", new Date("2026-09-11T13:00:00Z"));
+    expect(plan).toMatchObject({
+      callsign: "STATUS1",
+      filedRoute: null,
+      waypoints: [],
+      estimatedArrival: "2026-09-11T14:05:00Z",
+      flightAware: { status: "En Route" },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("tracks upstream failures without exposing the API key", async () => {
     const fetchMock = vi.fn(async () => new Response("upstream error", { status: 500 }));
     vi.stubGlobal("fetch", fetchMock);
