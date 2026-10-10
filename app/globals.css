@@ -6368,3 +6368,48 @@ button, input, select, textarea { color-scheme: dark; }
   }
   .radar-quick-actions[data-selection-open="true"] { display: none; }
 }
+
+/* Visual System V5-A2: one source-count disclosure on desktop, one traffic
+ * count on touch screens. Keep the map itself as the primary surface. */
+.topbar-radar .topbar-ops-meta { gap: var(--space-2); }
+.topbar-radar .global-search { flex: 1 1 22rem; max-width: 38rem; min-width: 0; }
+.map-overlay-primary { max-width: 100%; }
+@media (max-width: 820px) {
+  .map-overlay-primary {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    width: max-content;
+    max-width: calc(100vw - 76px);
+    padding: var(--space-1);
+  }
+  .map-overlay-primary .map-summary-card { display: none; }
+  .map-overlay-primary .map-control-group-primary {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .map-overlay-primary > [data-testid="radar-presets-v1"],
+  .map-overlay-primary > .map-layers { flex: 0 0 auto; }
+  .map-overlay-primary .traffic-trigger { min-width: 0; }
+  .radar-quick-actions { max-width: calc(100vw - 76px); }
+}
+@media (max-width: 420px) {
+  .map-overlay-primary .traffic-trigger-label { display: none; }
+  .map-overlay-primary .traffic-trigger { min-width: var(--control-height-touch); justify-content: center; }
+}
+
+/* V5-A3: the selected radar frame owns freshness; never silently reuse an
+ * old weather image after catalog failure. */
+.radar-quick-actions .radar-quick-action[data-weather-state="stale"] { border-color: var(--border-selected); }
+.radar-quick-actions .radar-quick-action[data-weather-state="unavailable"] { border-color: var(--border-default); }
+.radar-quick-weather-state {
+  color: var(--warning);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+}
+.radar-quick-action[data-weather-state="loading"] .radar-quick-weather-state { color: var(--text-secondary); }
+.weather-radar-timeline-heading strong { display: inline-flex; align-items: center; gap: var(--space-2); }
+.weather-radar-stale-label { color: var(--warning); font-size: var(--font-size-2xs); font-weight: 700; }

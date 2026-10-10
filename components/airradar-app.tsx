@@ -104,6 +104,7 @@ import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
+import { radarWeatherPresentation } from "@/lib/radar/weather-layer-presentation";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
@@ -885,7 +886,9 @@ export function AirRadarApp() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource("weather-radar-image") as ImageSource | undefined;
-    const frame = radarCatalog?.frames.find((candidate) => candidate.id === radarFrameId);
+    const frame = radarStatus === "ready" || radarStatus === "stale"
+      ? radarCatalog?.frames.find((candidate) => candidate.id === radarFrameId)
+      : undefined;
     if (!source) return;
     source.updateImage({ url: frame?.imageUrl ?? EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
     if (map.getLayer("weather-radar-layer")) map.setLayoutProperty("weather-radar-layer", "visibility", showWeatherRadar && Boolean(frame) ? "visible" : "none");
@@ -900,7 +903,7 @@ export function AirRadarApp() {
         image.src = neighbour.imageUrl;
       }
     }
-  }, [mapReady, radarCatalog, radarFrameId, radarOpacity, showWeatherRadar]);
+  }, [mapReady, radarCatalog, radarFrameId, radarOpacity, radarStatus, showWeatherRadar]);
 
   useEffect(() => {
     try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
@@ -2999,7 +3002,10 @@ export function AirRadarApp() {
     : activeCoverage === "extended" && networkStatus && ["timeout", "http_error", "invalid_response", "stale"].includes(networkStatus)
       ? t.radar.networkUnavailable
       : null;
-  const selectedRadarFrame = radarCatalog?.frames.find((frame) => frame.id === radarFrameId) ?? null;
+  const selectedRadarFrame = radarStatus === "ready" || radarStatus === "stale"
+    ? radarCatalog?.frames.find((frame) => frame.id === radarFrameId) ?? null
+    : null;
+  const weatherView = radarWeatherPresentation(showWeatherRadar, radarStatus, selectedRadarFrame);
   const aircraftWeatherCenter = snapshot.receiver.lat !== null && snapshot.receiver.lon !== null
     ? { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon, name: snapshot.receiver.name }
     : null;
@@ -3019,8 +3025,6 @@ export function AirRadarApp() {
         <>
           <div className="topbar-ops-meta">
             <StatusBadge className="topbar-live-status" variant={receiverStatusVariant} title={receiverStatusLabel} aria-label={receiverStatusLabel}>{receiverStatusShort}</StatusBadge>
-            <span className="topbar-metric"><strong>{formatNumber(snapshot.sourceStats?.local ?? snapshot.stats.currentAircraft)}</strong><span>LOCAL</span></span>
-            <span className="topbar-metric topbar-metric-network"><strong>{formatNumber(snapshot.sourceStats?.network ?? 0)}</strong><span>NETWORK</span></span>
             <UtcClock />
           </div>
           <details className="topbar-receiver topbar-receiver-menu">
@@ -3044,7 +3048,7 @@ export function AirRadarApp() {
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
             {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
-            <div className="map-overlay-primary">
+            <div className="map-overlay-primary" data-testid="radar-map-hud">
               <Panel className="map-overlay-card map-summary-card">
                 <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
                 {activeCoverage === "extended" && snapshot.sourceStats && <details className="source-counter-details">
@@ -3059,13 +3063,10 @@ export function AirRadarApp() {
                     <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
                   </div>
                 </details>}
-                {hasActiveMapFilters && <div className="map-summary-filter-state" aria-label={`${t.filters.active}: ${activeFilterCount}`}>
-                  <span>{t.filters.title}</span><strong>{activeFilterCount}</strong>
-                </div>}
               </Panel>
               <MapControlGroup className="map-control-group-primary">
               <RadarOperationsCenter />
-              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
+              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" aria-label={t.radar.trafficNearby} data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
@@ -3146,6 +3147,7 @@ export function AirRadarApp() {
             </div>
             <RadarQuickActions
               weatherEnabled={showWeatherRadar}
+              weatherState={weatherView.state}
               atcEnabled={showAtc}
               activeFilterCount={activeFilterCount}
               filtersDisabled={trafficSource === "ogn"}
@@ -3173,9 +3175,12 @@ export function AirRadarApp() {
               following={followSelected}
               onToggle={() => setFollowSelected((value) => !value)}
             /> : null}
-            {(showWeatherRadar && radarCatalog?.frames.length) || (showWeatherRadar && radarStatus === "unavailable") ? <div className="map-overlay-context-row">
-              {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
-                <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
+            {showWeatherRadar ? <div className="map-overlay-context-row" data-testid="radar-weather-map-status" data-state={weatherView.state}>
+              {(weatherView.state === "ready" || weatherView.state === "stale") && radarCatalog?.frames.length && selectedRadarFrame ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
+                <div className="weather-radar-timeline-heading">
+                  <strong>{t.layers.weatherRadar}{weatherView.state === "stale" && <span className="weather-radar-stale-label">{t.radarQuickActions.weatherStale}</span>}</strong>
+                  <span>{formatDateTime(selectedRadarFrame.observedAt, t)}</span>
+                </div>
                 <div className="weather-radar-timeline-controls">
                   <button type="button" aria-label={t.layers.previousFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.max(0, index - 1)].id); }}><UiIcon name="back" /></button>
                   <button type="button" aria-pressed={radarPlaying} aria-label={radarPlaying ? t.layers.pause : t.layers.play} onClick={() => { setRadarLatestMode(false); setRadarPlaying((value) => !value); }}><UiIcon name={radarPlaying ? "pause" : "play"} /></button>
@@ -3183,14 +3188,13 @@ export function AirRadarApp() {
                   <input type="range" min="0" max={Math.max(0, radarCatalog.frames.length - 1)} value={Math.max(0, radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId))} aria-label={t.layers.weatherRadar} onChange={(event) => { setRadarLatestMode(false); setRadarPlaying(false); setRadarFrameId(radarCatalog.frames[Number(event.target.value)].id); }} />
                   <button type="button" className={radarLatestMode ? "active" : ""} aria-pressed={radarLatestMode} onClick={() => { setRadarLatestMode(true); setRadarPlaying(false); setRadarFrameId(radarCatalog.latestFrameId); }}>{t.layers.latest}</button>
                 </div>
-              </div> : <div className="map-layer-notice">{t.layers.radarUnavailable}</div>}
+              </div> : <div className="map-layer-notice" role="status">{weatherView.state === "unavailable" ? t.layers.radarUnavailable : t.radarQuickActions.weatherLoading}</div>}
             </div> : null}
             {networkNotice && <div className="map-source-notice"><span className="network-notice">{networkNotice}</span></div>}
-            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || (selectedAircraftVisible && selectedOperationalTwin?.status === "available") || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
+            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || (selectedAircraftVisible && selectedOperationalTwin?.status === "available") || showAtc || showAtsRoutes || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
               {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
               {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
-              {showWeatherRadar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.weatherRadar}</strong><span><i className="legend-line weather-radar" /> {selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></span>}
               {showMetar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.metar}</strong><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span></span>}
               {showNavigationIntegrity && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.navigationIntegrity}</strong><span><i className="legend-line planned" /> {t.layers.navigationIntegrityReduced}</span><small>{t.layers.navigationIntegrityDisclaimer}</small></span>}
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}

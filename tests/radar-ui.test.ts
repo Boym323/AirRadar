@@ -432,7 +432,7 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain('className="map-overlay-context-row"');
     expect(globalCss).toMatch(/\.map-overlay-primary\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto auto/);
     expect(globalCss).toContain(".map-overlay-context-row .weather-radar-timeline");
-    const primaryStart = appSource.indexOf('<div className="map-overlay-primary">');
+    const primaryStart = appSource.indexOf('className="map-overlay-primary" data-testid="radar-map-hud"');
     const contextRow = appSource.indexOf('className="map-overlay-context-row"');
     expect(primaryStart).toBeGreaterThan(-1);
     expect(contextRow).toBeGreaterThan(primaryStart);

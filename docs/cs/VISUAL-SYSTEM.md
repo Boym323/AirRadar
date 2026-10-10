@@ -218,3 +218,26 @@ desktopovými a mobilními browser testy. Bez výkonových regresí, zbytečnéh
 pollingu, nových providerů a nepodložených tvrzení o leteckém provozu.
 PR ponechte otevřené k revizi; sloučení do main automaticky spouští
 produkční release pipeline.
+
+### Implementace V5-A2: kompaktní mapový HUD
+
+Horní lišta radaru nyní zobrazuje stav přijímače a UTC bez opakování počtů
+LOCAL a NETWORK. Rozdělení podle zdroje je dostupné v rozbalovacím počítadle
+na desktopu při rozšířeném pokrytí a v panelu provozu. Počet aktivních filtrů
+zobrazuje zkratka V5 a filtr provozu, nikoli třetí mapová značka.
+Na šířkách <=820 px zůstává jeden úzký řádek ovládání s počtem okolních
+letadel; duplicitní souhrnná karta se skryje. Dotykové prvky zachovávají
+44px cíle a tlačítko provozu má přístupný název, i když se jeho viditelný
+popisek při <=420 px nezobrazuje. Vyhledávání zůstává hlavním pružným
+prvkem horní lišty.
+
+### Implementace V5-A3: jednoznačný stav meteorologické vrstvy
+
+Zkratka počasí a časová osa používají jednotný stav vybraného snímku:
+vypnuto, načítání, připraveno, zastaralé nebo nedostupné. Starý snímek
+je jasně označen časem; starší nesouvisející snímky nemění aktuální stav.
+Selhání či prázdný katalog zahodí předchozí obrázek i jeho ID a zastaví
+animaci, takže stará data nevypadají jako aktuální počasí. Uložená volba,
+výběr snímků, cache a 60sekundová obnova zůstávají beze změny; žádný nový
+provider nepřibyl. Při nedostupnosti se zobrazuje přeložené upozornění.
+Etapy A2 a A3 musejí před vydáním projít browser testem a kontrolou snímků.
