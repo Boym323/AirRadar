@@ -17,6 +17,20 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.414] - 2026-10-10
+
+Changes since v1.0.413.
+
+**Features touched:** Live Radar, Map Context & Weather, SondeHub Meteorological Sondes.
+
+### Added
+
+- Integrate optional SondeHub radiosonde snapshot map layer with bounded on-demand caching and isolated aircraft state (fd3f28b).
+
+### Changed
+
+- Extend optional V6 aircraft visuals and aviation media while preserving existing map and aircraft data flows.
+
 ## [1.0.413] - 2026-10-10
 
 Changes since v1.0.412.
