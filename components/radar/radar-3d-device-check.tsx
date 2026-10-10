@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { t } from "@/lib/i18n";
 
-type Result = { supported: boolean; frames: number; medianFrameMs: number | null; p95FrameMs: number | null; maxTextureSize: number | null; renderer: string; mobileViewport: boolean; capturedAt: string };
+type Result = { supported: boolean; frames: number; medianFrameMs: number | null; p95FrameMs: number | null; maxTextureSize: number | null; renderer: string; mobileViewport: boolean; capturedAt: string; userAgent: string; touchPoints: number; error: string | null };
 export function Radar3dDeviceCheck() {
   const [result, setResult] = useState<Result | null>(null);
   const [running, setRunning] = useState(false);
@@ -50,6 +50,18 @@ export function Radar3dDeviceCheck() {
         p95FrameMs:samples.length?samples[Math.floor(samples.length*.95)]!:null,
         maxTextureSize,renderer,mobileViewport:window.innerWidth<768,
         capturedAt:new Date().toISOString(),
+        userAgent:navigator.userAgent.slice(0,250), touchPoints:navigator.maxTouchPoints,
+        error:null,
+      });
+    } catch (error) {
+      // A map-owned WebGL context may reject secondary context access on some
+      // browsers. Always return a diagnostic rather than a silent, stuck spinner.
+      setResult({
+        supported:false, frames:0,medianFrameMs:null,p95FrameMs:null,
+        maxTextureSize:null,renderer:"Unavailable",mobileViewport:window.innerWidth<768,
+        capturedAt:new Date().toISOString(),userAgent:navigator.userAgent.slice(0,250),
+        touchPoints:navigator.maxTouchPoints,
+        error:error instanceof Error ? error.message.slice(0,250) : String(error).slice(0,250),
       });
     } finally { setRunning(false); }
   };
@@ -61,6 +73,7 @@ export function Radar3dDeviceCheck() {
       <small>{result.supported?"WebGL2 ✓":"WebGL2 nedostupné"} · {result.renderer} ·
         {result.p95FrameMs!==null?` p95 ${result.p95FrameMs.toFixed(1)} ms / ${result.frames} frames`:" no frame samples"}
         {result.maxTextureSize!==null?` · max texture ${result.maxTextureSize}`:""}</small>
+      {result.error && <p role="alert">{en?"Device measurement failed: ":"Měření zařízení selhalo: "}{result.error}</p>}
       <br />
       <small>{en?"Browser-only measurement on the current device, not a certification of other GPUs.":"Měření v prohlížeči tohoto zařízení; neprokazuje výkon na jiných GPU."}</small>
       <br />
