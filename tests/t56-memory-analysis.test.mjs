@@ -13,6 +13,9 @@ function sample(i) {
       networkTrailPointCount: 300 + i * 25,
       localTrailAircraftCount: 20, networkTrailAircraftCount: 40,
       aircraftCount: 60, activeSseClients: 0,
+      localTrailMaxPointsPerAircraft: 400, networkTrailMaxPointsPerAircraft: 120,
+      localTrailAtLimitAircraftCount: 0, networkTrailAtLimitAircraftCount: 1,
+      localTrailOverLimitAircraftCount: 0, networkTrailOverLimitAircraftCount: 0,
       autocommitOperationAttribution: { processId: 1234, diagnosticsStoreId: "same-store" },
       secret: "NEVER_PROJECT",
     },
@@ -48,6 +51,8 @@ describe("T5.6 memory projection and read-only trend analysis", () => {
     expect(projected.spaces[0].name).toBe("old_space");
     expect(projected.postMajorGc.oldSpaceUsedBytes).toBe(386 * MB);
     expect(projected.networkTrailPoints).toBe(1200);
+    expect(projected.networkTrailMaxPerAircraft).toBe(120);
+    expect(projected.networkTrailOverLimitAircraft).toBe(0);
     expect(JSON.stringify(projected)).not.toContain("NEVER_PROJECT");
     expect(JSON.stringify(projected)).not.toContain("../../secret");
   });
@@ -68,6 +73,10 @@ describe("T5.6 memory projection and read-only trend analysis", () => {
     expect(report.majorGcBaselines).toBe(91);
     expect(report.postMajorGcTrendMiB.heapUsed).toBe(90);
     expect(report.v8SpacesUsedMiB.oldSpace).not.toBeNull();
+    expect(report.trails.boundsDiagnosticsComplete).toBe(true);
+    expect(report.trails.localMaxPerAircraft.max).toBe(400);
+    expect(report.trails.networkMaxPerAircraft.max).toBe(120);
+    expect(report.trails.networkOverLimitAircraft.max).toBe(0);
     expect(report.caveats.join(" ")).toContain("not proof of a leak");
   });
 
