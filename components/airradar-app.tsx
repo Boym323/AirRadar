@@ -1183,30 +1183,6 @@ export function AirRadarApp() {
   }, []);
 
   useEffect(() => {
-    if (!showSondes) { setSondesStatus("idle"); return; }
-    const abort = new AbortController();
-    let active = true;
-    setSondesStatus("loading");
-    void fetch("/api/sondes", { cache: "no-store", signal: abort.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("sonde snapshot unavailable");
-        return response.json() as Promise<SondeHubSnapshot & { enabled?: boolean }>;
-      })
-      .then((data) => {
-        if (!active) return;
-        if (!data.enabled || !data.available || !Array.isArray(data.observations)) {
-          setSondes([]);
-          setSondesStatus("unavailable");
-          return;
-        }
-        setSondes(data.observations.slice(0, 300));
-        setSondesStatus(data.stale ? "stale" : "ready");
-      })
-      .catch(() => { if (active && !abort.signal.aborted) setSondesStatus("unavailable"); });
-    return () => { active = false; abort.abort(); };
-  }, [showSondes]);
-
-  useEffect(() => {
     if (!showOgn) {
       ognLoadStartedRef.current = false;
       return;
