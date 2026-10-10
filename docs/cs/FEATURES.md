@@ -45,6 +45,7 @@ historicky přiřazený.
 | Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Pojmenované browser-local kolekce canonical odkazů AirRadaru a bezpečného URL/query kontextu, omezené na 12 workspace po 12 položkách. |
 | Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL Spotter s režimem Moje poloha, Sky Card, Visual Acquisition z geometrie a regionálního METARu, lokálně počítanou polohou Slunce a světla, vysvětlitelným Photo Opportunity skóre, My Sky Briefingem, PRG Spotting kontextem, Time Machine replay příběhy, browser-local osobním logbookem a foreground alerty, explicitně opt-in serverovými Saved Spots, Sky Finderem, lokálními SVG share kartami a mobile runtime hardeningem. Souřadnice zůstávají v prohlížeči kromě výslovně uloženého Saved Spotu. |
 | SondeHub Meteorological Sondes | optional | weather / traffic | Pre-registry | `/` | `/api/sondes` | Volitelná vrstva meteorologických sond SondeHub. Poskytuje časově označený snímek kolem přijímače s omezenou cache, identifikací zdroje a samostatnými značkami. Nevyužívá pravidelný REST polling ani nemění ADS-B data. |
+| NOAA Space Weather Context | optional | navigation / weather | Pre-registry | `/navigation-integrity` | `/api/navigation-integrity/space-weather` | Volitelný globální index Kp ze služby NOAA SWPC v sekci integrity navigace. Pouze informativní kontext s omezenou RAM cache; neprokazuje místní rušení GNSS. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
