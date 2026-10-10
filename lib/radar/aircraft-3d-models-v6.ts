@@ -103,7 +103,7 @@ function createModel(s: AirframeSpec): readonly AirframeFace[] {
     }
   }
   const wingZ=s.highWing ? R*.9 : -R*.08;
-  const sweep=s.wingSweep ?? (s.group==="widebody"||s.group==="four-engine"?.28:.15);
+  const sweep=s.wingSweep ?? ((s.group==="widebody" || s.group==="four-engine") ? .28 : .15);
   for (const side of [-1,1]){
     const root=side*R*.86, tip=side*W*.50;
     const rootFront=L*.12, rootBack=-L*.22;
