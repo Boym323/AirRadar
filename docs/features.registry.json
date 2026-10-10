@@ -518,9 +518,9 @@
         "/api/navigation-integrity/current",
         "/api/navigation-integrity/aircraft/:hex",
         "/api/navigation-integrity/history",
+        "/api/navigation-integrity/space-weather",
         "/api/admin/navigation-integrity/diagnostics",
-        "/api/admin/navigation-integrity/candidates",
-        "/api/navigation-integrity/space-weather"
+        "/api/admin/navigation-integrity/candidates"
       ],
       "changelogScopes": [
         "navigation",
