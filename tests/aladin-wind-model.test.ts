@@ -14,7 +14,7 @@ const payload = {
 
 describe("ALADIN-CE optional wind model", () => {
   it("uses CHMI 2 km central Europe forecast pressure levels, never CZ 1 km", async () => {
-    const mock = vi.fn(async () => new Response(JSON.stringify(payload), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const mock = vi.fn(async (_url: string | URL | Request) => new Response(JSON.stringify(payload), { status: 200, headers: { "Content-Type": "application/json" } }));
     const provider = new WindAloftProvider(mock as unknown as typeof fetch, () => instant, "ALADIN-CE");
     const result = await provider.getWind(300);
     expect(result.model).toBe("ALADIN-CE");
@@ -29,7 +29,7 @@ describe("ALADIN-CE optional wind model", () => {
     expect(mock).toHaveBeenCalledTimes(1);
   });
   it("leaves the default ICON-EU provider canonical and unmodified", async () => {
-    const mock = vi.fn(async () => new Response(JSON.stringify(payload)));
+    const mock = vi.fn(async (_url: string | URL | Request) => new Response(JSON.stringify(payload)));
     const provider = new WindAloftProvider(mock as unknown as typeof fetch, () => instant);
     expect((await provider.getWind(300)).model).toBe("ICON-EU");
     const url = new URL(String(mock.mock.calls[0]?.[0]));
