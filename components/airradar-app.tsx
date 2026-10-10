@@ -714,6 +714,32 @@ export function AirRadarApp() {
   const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const sondeStatus = useSondeHubMapLayer(mapRef, mapReady, showSondes);
+  // Native details[name] keeps Presets and Layers mutually exclusive.
+  // Dismiss the active map menu outside the HUD and restore focus on Escape.
+  useEffect(() => {
+    const selector = 'details[name="radar-map-menus"][open]';
+    const onPointerDown = (event: PointerEvent) => {
+      const menu = document.querySelector<HTMLDetailsElement>(selector);
+      if (menu && event.target instanceof Node && !menu.contains(event.target)) {
+        menu.open = false;
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const menu = document.querySelector<HTMLDetailsElement>(selector);
+      if (!menu) return;
+      event.preventDefault();
+      menu.open = false;
+      menu.querySelector("summary")?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   useEffect(() => {
     try {
       const persisted = window.localStorage.getItem("airradar-map-appearance-v6");
