@@ -6875,8 +6875,8 @@ button, input, select, textarea { color-scheme: dark; }
 
 
 /* At 821–900px the drawer needs the menu to open leftwards (default).
- * At wider desktop widths it can open rightwards without leaving the viewport. */
-@media (min-width: 901px) and (max-width: 1500px) {
+ * From 901px up, the Layers menu opens rightwards to avoid negative viewport x. */
+@media (min-width: 901px) {
   .map-overlay-primary > .map-layers > .map-layers-menu {
     left: 0;
     right: auto;
