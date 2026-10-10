@@ -78,7 +78,7 @@ async function request(base, path, options = {}) {
   return response;
 }
 
-async function login(base, token) {
+export async function login(base, token) {
   const result = await request(base, "/api/watchlist/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -92,7 +92,7 @@ async function login(base, token) {
   return cookie;
 }
 
-async function fetchJson(base, path, cookie) {
+export async function fetchJson(base, path, cookie) {
   const response = await request(base, path, { headers: { Cookie: cookie } });
   if (!response.ok) throw new Error("Diagnostic request " + path + " HTTP " + response.status);
   return response.json();
