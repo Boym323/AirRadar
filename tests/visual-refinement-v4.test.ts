@@ -36,8 +36,8 @@ describe("Visual System V4 readability and hierarchy", () => {
     const advanced = board.indexOf('data-testid="airport-live-board-advanced"');
     const live = board.indexOf('data-testid="airport-live-board-active"');
     expect(flow).toBeGreaterThan(0);
-    expect(advanced).toBeGreaterThan(flow);
-    expect(live).toBeGreaterThan(advanced);
+    expect(live).toBeGreaterThan(flow);
+    expect(advanced).toBeGreaterThan(live);
     expect(board).toContain('<details className="airport-live-advanced"');
     expect(board).toContain("{t.airport.liveBoardAdvancedLabel}");
     for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-arrival-sequence", "airport-live-board-v9-terminal-horizon", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"])
