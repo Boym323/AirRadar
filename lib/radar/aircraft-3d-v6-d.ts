@@ -93,14 +93,14 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
 /** Finite, type-profiled low-poly airframes oriented to ADS-B true track, not CAD/GLTF models. */
 export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[], licensed = false): Float32Array<ArrayBuffer> {
   const points: number[]=[];
-  for(const aircraft of candidates.slice(0,RADAR_AIRCRAFT_3D_LIMIT)){
+  for(const [index, aircraft] of candidates.slice(0,RADAR_AIRCRAFT_3D_LIMIT).entries()){
     const location=MercatorCoordinate.fromLngLat([aircraft.lon,aircraft.lat],aircraft.altitudeM);
     const metre=location.meterInMercatorCoordinateUnits()*aircraft.scale;
     const angle=aircraft.heading*Math.PI/180;
     const forwardEast=Math.sin(angle), forwardNorth=Math.cos(angle);
     const rightEast=Math.cos(angle), rightNorth=-Math.sin(angle);
     const color=aircraft.approximateAltitude ? [1,0.76,0.35] : [0.30,0.93,0.80];
-    for(const [a,b,c,shade] of (licensed ? licensedFaces(aircraft.aircraftType) : null) ?? airframeModelFaces(aircraft.aircraftType)){
+    for(const [a,b,c,shade] of (licensed && index < 4 ? licensedFaces(aircraft.aircraftType) : null) ?? airframeModelFaces(aircraft.aircraftType)){
       for(const [right,forward,up] of [a,b,c]){
         points.push(location.x+(right*rightEast+forward*forwardEast)*metre,
           location.y-(right*rightNorth+forward*forwardNorth)*metre,
@@ -139,7 +139,7 @@ export class RadarAircraft3dRuntime {
   }
   private loadLicensedModels(): void {
     const generation = this.generation;
-    for (const type of new Set(this.candidates.map(item => item.aircraftType))) {
+    for (const type of new Set(this.candidates.slice(0, 4).map(item => item.aircraftType))) {
       void requestLicensedFaces(type, () => {
         if (this.licensedEnabled && generation === this.generation && this.map) this.updateMesh();
       });
