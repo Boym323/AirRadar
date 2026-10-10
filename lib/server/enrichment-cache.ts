@@ -7,6 +7,7 @@ import { LRUCache } from "lru-cache";
 import pLimit from "p-limit";
 import { logger } from "@/lib/server/logger";
 import type { RouteCacheStore } from "@/lib/server/route-postgres-cache";
+import { getRouteEnrichmentTelemetry, type RouteEnrichmentSnapshot } from "@/lib/server/route-enrichment-telemetry";
 
 export const ENRICHMENT_TTLS = {
   metadataMs: 24 * 60 * 60_000,
@@ -97,6 +98,11 @@ export class ProviderCache {
       });
     this.inFlight.set(key, request);
     return request;
+  }
+
+  hasFreshPositive(key: string): boolean {
+    const entry = this.entries.get(key);
+    return !!entry && entry.value !== null && entry.expiresAt > Date.now();
   }
 
   hasFreshOrPending(key: string): boolean {
@@ -265,6 +271,7 @@ export class EnrichmentService {
       hits: { memory: number; persistent: number; live: number; staleFallback: number };
     };
     persistentRouteCache: { enabled: boolean };
+    routeMetrics: RouteEnrichmentSnapshot;
     flightPlan: {
       enabled: boolean;
       cacheHits: number;
@@ -299,6 +306,7 @@ export class EnrichmentService {
         hits: { ...this.adsbDbHits },
       },
       persistentRouteCache: { enabled: Boolean(this.routeStore) },
+      routeMetrics: getRouteEnrichmentTelemetry().getSnapshot(),
       flightPlan: {
         enabled: this.hasFlightPlanProvider,
         cacheHits: this.flightPlanCacheHits,
@@ -343,6 +351,7 @@ export class EnrichmentService {
     const ramKey = "free-route:" + key;
     const load = () => this.loadFreeRoute(aircraft, observedAt, key);
     const options = { ttlMs: ENRICHMENT_TTLS.routeMs, negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs };
+    if (this.cache.hasFreshPositive(ramKey)) getRouteEnrichmentTelemetry().record("ramHit");
     let result = await this.cache.get(ramKey, load, options);
     // Do not reuse a same-day callsign route after moving off its corridor.
     if (result && !routeMatchesAircraftPosition(aircraft, result)) {
@@ -370,7 +379,10 @@ export class EnrichmentService {
     const callsign = aircraft.callsign;
     if (!callsign) return null;
     const primary = this.providers.flightRoute
-      ? await this.getAdsbDbCached("route", key, () => this.routeLimiter(() => this.providers.flightRoute!.getRoute(callsign, observedAt)), {
+      ? await this.getAdsbDbCached("route", key, () => this.routeLimiter(() => {
+            getRouteEnrichmentTelemetry().record("adsbdbLookup");
+            return this.providers.flightRoute!.getRoute(callsign, observedAt);
+          }), {
           ttlMs: ENRICHMENT_TTLS.routeMs,
           negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
         })
@@ -422,7 +434,7 @@ export class EnrichmentService {
   }
 
   async close(): Promise<void> {
-    await this.adsbDbPersistence?.flush("graceful");
+    await Promise.all([this.adsbDbPersistence?.flush("graceful"), getRouteEnrichmentTelemetry().flush()]);
   }
 
   private async getAdsbDbCached<T extends AircraftEnrichment["metadata"] | AircraftEnrichment["route"]>(
