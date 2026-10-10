@@ -40,6 +40,9 @@ interface RadarMapLayerMenuProps {
   onShowAircraftChange: (value: boolean) => void;
   showOgn: boolean;
   onShowOgnChange: (value: boolean) => void;
+  showSondes: boolean;
+  onShowSondesChange: (value: boolean) => void;
+  sondeStatus: "idle" | "loading" | "ready" | "stale" | "unavailable";
   showAirports: boolean;
   onShowAirportsChange: (value: boolean) => void;
   showSignificantAirports: boolean;
@@ -121,6 +124,9 @@ export function RadarMapLayerMenu({
   onShowAircraftChange,
   showOgn,
   onShowOgnChange,
+  showSondes,
+  onShowSondesChange,
+  sondeStatus,
   showAirports,
   onShowAirportsChange,
   showSignificantAirports,
@@ -189,6 +195,8 @@ export function RadarMapLayerMenu({
         <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
         <label><input type="checkbox" checked={showAircraft} onChange={(event) => onShowAircraftChange(event.target.checked)} /> {t.layers.aircraft}</label>
         <label><input type="checkbox" checked={showOgn} onChange={(event) => onShowOgnChange(event.target.checked)} /> {t.layers.ogn}</label>
+        <label data-testid="map-layer-sondehub"><input type="checkbox" checked={showSondes} onChange={(event) => onShowSondesChange(event.target.checked)} /> {t.layers.sondeHub}{showSondes && sondeStatus !== "ready" ? " · " + (sondeStatus === "loading" ? t.layers.sondeLoadingDetail : sondeStatus === "stale" ? t.layers.reconnecting : t.layers.sondeUnavailable) : ""}</label>
+        {showSondes && <div className="map-layer-sublevel"><small>{t.layers.sondeSnapshotDisclaimer}</small></div>}
       </div>
       <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.aviation}</span>

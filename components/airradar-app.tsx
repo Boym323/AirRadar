@@ -103,6 +103,7 @@ import { AirRadarTopbar, MobileBottomNav, RadarNavRail, UtcClock } from "@/compo
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
+import { useSondeHubMapLayer } from "@/components/radar/use-sondehub-map-layer";
 import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
 import { RadarMultiAircraft } from "@/components/radar/radar-multi-aircraft";
 import { addMultiAircraft, removeMultiAircraft, MULTI_AIRCRAFT_LIMIT } from "@/lib/radar/multi-aircraft";
@@ -548,6 +549,7 @@ export function AirRadarApp() {
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
+  const [showSondes, setShowSondes] = useState(false);
   const ognLoadStartedRef = useRef(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
@@ -701,6 +703,7 @@ export function AirRadarApp() {
   const [mapZoom, setMapZoom] = useState(7.4);
   const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const sondeStatus = useSondeHubMapLayer(mapRef, mapReady, showSondes);
   useEffect(() => {
     try {
       const persisted = window.localStorage.getItem("airradar-map-appearance-v6");
@@ -1105,6 +1108,7 @@ export function AirRadarApp() {
       if (storedSource === "all" || storedSource === "local" || storedSource === "network" || storedSource === "overlap") setMapFilters((current) => ({ ...current, source: storedSource }));
       setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
+      setShowSondes(window.localStorage.getItem("airradar-sondehub-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
@@ -1187,6 +1191,7 @@ export function AirRadarApp() {
     try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
   }, [showOgn]);
 
+  useEffect(() => { try { window.localStorage.setItem("airradar-sondehub-layer", String(showSondes)); } catch { /* optional */ } }, [showSondes]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-layer", String(showWeatherRadar)); } catch { /* optional */ } }, [showWeatherRadar]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
@@ -3464,6 +3469,9 @@ export function AirRadarApp() {
                 onShowAircraftChange={setShowAircraft}
                 showOgn={showOgn}
                 onShowOgnChange={setShowOgn}
+                showSondes={showSondes}
+                onShowSondesChange={setShowSondes}
+                sondeStatus={sondeStatus}
                 showAirports={showAirports}
                 onShowAirportsChange={setShowAirports}
                 showSignificantAirports={showSignificantAirports}
