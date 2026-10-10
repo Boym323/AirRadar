@@ -659,6 +659,7 @@ export function AirRadarApp() {
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
   const [radar3dMode, setRadar3dMode] = useState<Radar3dMode>("2d");
+  const [radar3dLicensedModels, setRadar3dLicensedModels] = useState(false);
   const [radar3dCamera, setRadar3dCamera] = useState<"free" | "follow">("free");
   const aircraft3dRuntimeRef = useRef<RadarAircraft3dRuntime | null>(null);
   const radar3dFollowAtRef = useRef(0);
@@ -814,6 +815,7 @@ export function AirRadarApp() {
     const map = mapRef.current;
     if (!mapReady || !map || radar3dMode !== "3d") return;
     const runtime = createRadarAircraft3dRuntime();
+    runtime.setLicensedModels(radar3dLicensedModels);
     aircraft3dRuntimeRef.current = runtime;
     const restoreAircraftLayer = () => {
       if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) return;
@@ -869,7 +871,11 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (radar3dMode !== "3d" || !mapReady) return;
-    if (window.__airradarAircraft3dForDiagnostics?.syntheticActive) return;
+    aircraft3dRuntimeRef.current?.setLicensedModels(radar3dLicensedModels);
+  }, [radar3dLicensedModels, radar3dMode, mapReady]);
+
+  useEffect(() => {
+    if (radar3dMode !== "3d" || !mapReady) return;
     aircraft3dRuntimeRef.current?.setAircraft(snapshot.aircraft, selectedHex, document.hidden);
   }, [mapReady, radar3dMode, selectedHex, snapshot.aircraft]);
 
@@ -3528,6 +3534,8 @@ export function AirRadarApp() {
               <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
                 radar3dMode={radar3dMode}
+                radar3dLicensedModels={radar3dLicensedModels}
+                onRadar3dLicensedModelsChange={setRadar3dLicensedModels}
                 radar3dCamera={radar3dCamera}
                 onRadar3dCameraChange={(mode) => { setRadar3dCamera(mode); if (mode === "follow") setFollowSelected(false); }}
                 radar3dCameraAvailable={Boolean(selectedHex)}

@@ -1,6 +1,7 @@
 import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput } from "maplibre-gl";
 import type { AircraftView } from "@/lib/aircraft/types";
 import { airframeModelFaces } from "@/lib/radar/aircraft-3d-models-v6";
+import { licensedFaces, requestLicensedFaces } from "@/lib/radar/licensed-aircraft-glb-v6";
 
 export const RADAR_AIRCRAFT_3D_LAYER_ID = "radar-v6-d-aircraft-3d";
 export const RADAR_AIRCRAFT_3D_LIMIT = 12;
@@ -90,25 +91,16 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
 }
 
 /** Finite, type-profiled low-poly airframes oriented to ADS-B true track, not CAD/GLTF models. */
-export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[]): Float32Array<ArrayBuffer> {
+export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[], licensed = false): Float32Array<ArrayBuffer> {
   const points: number[]=[];
-  for(const aircraft of candidates.slice(0,RADAR_AIRCRAFT_3D_LIMIT)){
+  for(const [index, aircraft] of candidates.slice(0,RADAR_AIRCRAFT_3D_LIMIT).entries()){
     const location=MercatorCoordinate.fromLngLat([aircraft.lon,aircraft.lat],aircraft.altitudeM);
     const metre=location.meterInMercatorCoordinateUnits()*aircraft.scale;
     const angle=aircraft.heading*Math.PI/180;
     const forwardEast=Math.sin(angle), forwardNorth=Math.cos(angle);
     const rightEast=Math.cos(angle), rightNorth=-Math.sin(angle);
-    for(const [a,b,c,shade,material] of airframeModelFaces(aircraft.aircraftType)){
-      // Distinct materials are needed for a readable aircraft, not an all-cyan silhouette.
-      const base = material === "glass" ? [0.14,0.24,0.35] :
-        material === "intake" ? [0.09,0.12,0.16] :
-        material === "engine" ? [0.68,0.74,0.78] :
-        material === "rotor" ? [0.32,0.40,0.46] :
-        material === "wing" ? [0.79,0.84,0.87] : [0.93,0.95,0.97];
-      // Amber-tinted structure signals approximate barometric altitude;
-      // cockpit windows and dark engine intakes remain recognizable.
-      const color = aircraft.approximateAltitude && material !== "glass" && material !== "intake"
-        ? [Math.min(1,base[0]*.9+.1),base[1]*.81,base[2]*.61] : base;
+    const color=aircraft.approximateAltitude ? [1,0.76,0.35] : [0.30,0.93,0.80];
+    for(const [a,b,c,shade] of (licensed && index < 2 ? licensedFaces(aircraft.aircraftType) : null) ?? airframeModelFaces(aircraft.aircraftType)){
       for(const [right,forward,up] of [a,b,c]){
         points.push(location.x+(right*rightEast+forward*forwardEast)*metre,
           location.y-(right*rightNorth+forward*forwardNorth)*metre,
@@ -130,6 +122,29 @@ export class RadarAircraft3dRuntime {
   private matrixUniform: WebGLUniformLocation | null = null;
   private vertexData: Float32Array<ArrayBuffer> = new Float32Array(0);
   private dirty = true;
+  private licensedEnabled = false;
+  private candidates: Aircraft3dCandidate[] = [];
+  private generation = 0;
+  setLicensedModels(enabled: boolean): void {
+    if (this.licensedEnabled === enabled) return;
+    this.licensedEnabled = enabled;
+    this.generation++;
+    this.updateMesh();
+    if (enabled) this.loadLicensedModels();
+  }
+  private updateMesh(): void {
+    this.vertexData = aircraft3dVertices(this.candidates, this.licensedEnabled);
+    this.dirty = true;
+    this.map?.triggerRepaint();
+  }
+  private loadLicensedModels(): void {
+    const generation = this.generation;
+    for (const type of new Set(this.candidates.slice(0, 2).map(item => item.aircraftType))) {
+      void requestLicensedFaces(type, () => {
+        if (this.licensedEnabled && generation === this.generation && this.map) this.updateMesh();
+      });
+    }
+  }
   constructor() {
     this.layer={id:RADAR_AIRCRAFT_3D_LAYER_ID,type:"custom",renderingMode:"3d",
       onAdd:(map,gl)=>this.onAdd(map,gl),render:(gl,input)=>this.render(gl,input),onRemove:(_map,gl)=>this.dispose(gl)};
@@ -142,9 +157,9 @@ export class RadarAircraft3dRuntime {
   }
   setAircraft(aircraft: readonly AircraftView[], selectedHex: string | null, hidden = false): void {
     const candidates = hidden ? [] : selectRadarAircraft3d(aircraft,selectedHex);
-    this.vertexData = aircraft3dVertices(candidates);
-    this.dirty = true;
-    this.map?.triggerRepaint();
+    this.candidates = candidates;
+    this.updateMesh();
+    if (this.licensedEnabled && !hidden) this.loadLicensedModels();
   }
   private onAdd(map: import("maplibre-gl").Map, gl: WebGL2RenderingContext): void {
     this.map = map;
@@ -187,6 +202,7 @@ export class RadarAircraft3dRuntime {
     this.vao=null;this.buffer=null;this.program=null;this.gl=null;this.map=null;this.matrixUniform=null;
     // Keep last bounded CPU vertices for recovery after style or WebGL context restoration.
     this.dirty = true;
+    this.generation++;
   }
 }
 export function createRadarAircraft3dRuntime(): RadarAircraft3dRuntime {return new RadarAircraft3dRuntime();}

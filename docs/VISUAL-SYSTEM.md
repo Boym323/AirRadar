@@ -453,3 +453,7 @@ on MapLibre source data, trajectories, SSE, map camera, or the on-demand
 FlightAware policy. Regression: `tests/radar-overlay-visual-polish-v1.test.ts`.
 Verify the desktop and mobile visual browser gate and inspect screenshots prior
 to production deployment.
+
+### V6-D8 – licensed aircraft detail and physical GPU QA
+The radar keeps its built-in bounded 3D low-poly geometry (up to 12 aircraft). Optional online **GLB detailed aircraft** mode is off by default and requires explicit 3D + model opt-in. Models: A320, A350, A380, B737, B787 from [amvlab/aircraft-models](https://github.com/amvlab/aircraft-models), © amvlab [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified by normalization to AirRadar coordinates and family lengths/spans. The URL is pinned to a source commit; max 1.5 MB per GLB and 5,000 triangles per detailed model, at most two detailed airframes, no new SSE/server polling. Unknown types and failed assets keep the existing local models.
+The **Check 3D on this device** control exports browser WebGL2, renderer, texture and requestAnimationFrame cadence evidence. This is not GPU certification: test real Windows/macOS graphics, iOS Safari, Android Chrome for performance, battery, thermal effects, map-style changes and WebGL failure recovery. CI Chromium GPU may be software-rendered.
