@@ -159,5 +159,7 @@ export async function getWindModelComparison(level: WindLevelHpa): Promise<WindM
   const iconSample: ModelWindSample | null = nearest?.speedKt !== null && nearest?.speedKt !== undefined && nearest.directionDeg !== null && nearest.directionDeg !== undefined && iconResult
     ? { model: "ICON-EU", provider: "DWD / Open-Meteo", validAt: iconResult.validAt.endsWith("Z") ? iconResult.validAt : iconResult.validAt + "Z", speedKt: nearest.speedKt, directionDeg: nearest.directionDeg }
     : null;
-  return compareModelWinds(aladinResult.sample, iconSample, { lat, lon }, level, aladinResult.stale || Boolean(iconResult?.stale));
+  // Keep exact receiver location server-side, independently of the public receiver position policy.
+  const publicArea = { lat: Math.round(lat * 10) / 10, lon: Math.round(lon * 10) / 10 };
+  return compareModelWinds(aladinResult.sample, iconSample, publicArea, level, aladinResult.stale || Boolean(iconResult?.stale));
 }
