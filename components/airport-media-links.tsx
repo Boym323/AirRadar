@@ -22,7 +22,6 @@ export function AirportMediaLinks({ icao }: { icao: string }) {
     let stored: string | null = null;
     try { if (key) stored = window.localStorage.getItem(key); } catch { /* storage optional */ }
     setLinks(parseAirportMediaLinks(stored));
-    setPlayingUrl(null);
     setLoaded(true);
     setPermission(false); // Permission is session-only, never persisted.
     setActiveUrl(null);
