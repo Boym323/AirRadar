@@ -27,8 +27,11 @@ describe("CHMI Echo Top HDF5/ODIM product",()=>{
   });
   it("provides bounded catalog and coalesces PNG conversion",async()=>{
     vi.stubEnv("CHMI_ECHOTOP_ENABLED","true");
-    const fetcher=vi.fn(async (url:RequestInfo|URL)=>{
-      if(String(url).endsWith("/hdf5/"))return new Response('<a href="'+NAME+'">Echo Top</a>');
+    const fetcher=vi.fn(async (url:RequestInfo|URL, init?:RequestInit)=>{
+      const path=String(url);
+      if(init?.method==="HEAD"){
+        return new Response(null,{status:path.endsWith("20261010200500.hdf")?200:404,headers:{"content-length":"1024"}});
+      }
       return new Response(Uint8Array.of(137,72,68,70,13,10,26,10,1,2));
     });
     const converter=vi.fn(async (_raw:Uint8Array)=>Uint8Array.of(137,80,78,71,13,10,26,10));
@@ -36,6 +39,7 @@ describe("CHMI Echo Top HDF5/ODIM product",()=>{
     const provider=new EchoTopProvider(fetcher as typeof fetch,()=>NOW,converter,probe);
     const catalog=await provider.getFrames();
     expect(catalog.available).toBe(true);
+    expect(catalog.latestFrameId).toBe("202610102005");
     expect(catalog.product).toBe("ECHO_TOP_HGHT");
     expect(catalog.bounds).toEqual({west:11.267,south:48.047,east:19.624,north:51.458});
     const [one,two]=await Promise.all([
@@ -44,6 +48,6 @@ describe("CHMI Echo Top HDF5/ODIM product",()=>{
     expect(one).toEqual(two);
     expect(converter).toHaveBeenCalledTimes(1);
     expect(probe).toHaveBeenCalledTimes(1);
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(3); // two bounded HEAD probes + one HDF GET
   });
 });
