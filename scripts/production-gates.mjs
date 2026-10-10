@@ -1017,6 +1017,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-v6-d-3d-terrain", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Terrain: true },
         { name: "radar-v6-d-3d-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, v6Terrain: true },
         { name: "radar-v6-g-presentation", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Presentation: true },
+        { name: "airport-v6-h-authorized-media", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 1366, height: 900 }, fullPage: false, v6Media: true },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
         { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
@@ -1063,6 +1064,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         try {
           if (target.locale) {
             await visualPage.addInitScript((locale) => window.localStorage.setItem("airradar-language", locale), target.locale);
+          }
+          if (target.v6Media) {
+            await visualPage.addInitScript(() => {
+              window.localStorage.setItem("airradar-v6-h-media:LKPR", JSON.stringify([{ kind:"camera", title:"QA YouTube embed", url:"https://www.youtube.com/watch?v=M7lc1UVf-VE" }]));
+            });
+            await visualPage.route("**/embed/M7lc1UVf-VE?*", async route => route.fulfill({ status:200, contentType:"text/html", body:"<html></html>" }));
           }
           if (target.mockSkyFavorites) {
             await visualPage.addInitScript(() => window.localStorage.setItem("airradar.my-sky-favorites.v1", JSON.stringify({ version: 1, icaoHexes: ["896139"] })));
@@ -1458,7 +1465,28 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const map = window.__airradarMapForDiagnostics;
               return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
             }, null, { timeout: 15_000 });
+            if (process.env.AIRRADAR_V6_ASSET_QA === "1") {
+              const modelToggle=visualPage.getByTestId("radar-v6-glb-detail").locator("input");
+              await modelToggle.check();
+              if (!(await modelToggle.isChecked())) throw new Error("GLB opt-in failed");
+              const credit=visualPage.getByTestId("radar-v6-glb-detail").locator("..");
+              if (!(await credit.textContent())?.includes("GLB")) throw new Error("Missing licensed model toggle");
+              await visualPage.getByTestId("radar-v6-device-qa").getByRole("button", { name:/3D/i }).first().click();
+              await visualPage.getByTestId("radar-v6-device-qa").getByRole("status").waitFor({state:"visible",timeout:20_000});
+            }
             await layers.evaluate((element) => { element.open = false; });
+          }
+          if (target.v6Media) {
+            const permission=visualPage.locator(".airport-v6-media-permission input");
+            await permission.check();
+            const play=visualPage.getByTestId("airport-media-v6-h").getByRole("button", {name:/Přehrát zde|Play here/i});
+            await play.click();
+            const player=visualPage.getByTestId("airport-v6-authorized-player");
+            await player.locator("iframe").waitFor({state:"visible",timeout:10_000});
+            const src=await player.locator("iframe").getAttribute("src");
+            if (!src?.startsWith("https://www.youtube-nocookie.com/embed/M7lc1UVf-VE")) throw new Error("Unsafe embedded player URL");
+            await permission.uncheck();
+            if (await visualPage.getByTestId("airport-v6-authorized-player").count()) throw new Error("Revoked permission left player active");
           }
           if (target.v6Appearance) {
             const layers = visualPage.locator(".map-layers");
