@@ -6,6 +6,7 @@ import type { AircraftMetadataDiagnostics, ProviderRegistry } from "@/lib/server
 import { LRUCache } from "lru-cache";
 import pLimit from "p-limit";
 import { logger } from "@/lib/server/logger";
+import type { RouteCacheStore } from "@/lib/server/route-postgres-cache";
 
 export const ENRICHMENT_TTLS = {
   metadataMs: 24 * 60 * 60_000,
@@ -106,6 +107,10 @@ export class ProviderCache {
     return this.inFlight.has(key);
   }
 
+  invalidate(key: string): void {
+    this.entries.delete(key);
+  }
+
   clear(): void {
     this.entries.clear();
     this.inFlight.clear();
@@ -199,6 +204,7 @@ export class EnrichmentService {
     private readonly providers: ProviderRegistry,
     private readonly cache = new ProviderCache(),
     adsbDbPersistence?: AdsbDbPersistence,
+    private readonly routeStore?: RouteCacheStore,
   ) {
     // The factory supplies one AdsbDbProvider instance for both capabilities.
     // Sharing only that instance's limiter keeps future provider combinations independent.
@@ -258,6 +264,7 @@ export class EnrichmentService {
       persistence: AdsbDbPersistenceDiagnostics;
       hits: { memory: number; persistent: number; live: number; staleFallback: number };
     };
+    persistentRouteCache: { enabled: boolean };
     flightPlan: {
       enabled: boolean;
       cacheHits: number;
@@ -291,6 +298,7 @@ export class EnrichmentService {
         persistence: this.adsbDbPersistence?.getDiagnostics() ?? disabledAdsbDbPersistence(getAdsbDbCacheFile()),
         hits: { ...this.adsbDbHits },
       },
+      persistentRouteCache: { enabled: Boolean(this.routeStore) },
       flightPlan: {
         enabled: this.hasFlightPlanProvider,
         cacheHits: this.flightPlanCacheHits,
@@ -328,18 +336,46 @@ export class EnrichmentService {
     return Object.keys(enrichment).length ? enrichment : null;
   }
 
-  /** ADSBDB first; ADSB.lol only for missing, incomplete, or implausible routes. */
+  /** Read-through: RAM -> PostgreSQL -> ADSBDB -> ADSB.lol, without paid providers. */
   private async resolveFreeRoute(aircraft: Aircraft, observedAt: Date): Promise<FlightRoute | null> {
+    if (!aircraft.callsign) return null;
+    const key = routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex);
+    const ramKey = "free-route:" + key;
+    const load = () => this.loadFreeRoute(aircraft, observedAt, key);
+    const options = { ttlMs: ENRICHMENT_TTLS.routeMs, negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs };
+    let result = await this.cache.get(ramKey, load, options);
+    // Do not reuse a same-day callsign route after moving off its corridor.
+    if (result && !routeMatchesAircraftPosition(aircraft, result)) {
+      this.cache.invalidate(ramKey);
+      result = await this.cache.get(ramKey, load, options);
+    }
+    return result && routeMatchesAircraftPosition(aircraft, result) ? result : null;
+  }
+
+  private rememberVerifiedRoute(key: string, route: FlightRoute): FlightRoute {
+    // Cache persistence must never hold up asynchronous live enrichment.
+    if (this.routeStore) void this.routeStore.put(key, route, ENRICHMENT_TTLS.routeMs).catch(() => {});
+    return route;
+  }
+
+  private async loadFreeRoute(aircraft: Aircraft, observedAt: Date, key: string): Promise<FlightRoute | null> {
+    if (this.routeStore) {
+      let saved: FlightRoute | null = null;
+      try { saved = await this.routeStore.get(key); } catch { /* optional DB */ }
+      if (saved && saved.callsign === aircraft.callsign
+        && saved.originAirport && saved.destinationAirport
+        && routeMatchesAircraftPosition(aircraft, saved)) return saved;
+    }
+    // External calls run only after both in-memory and durable cache misses.
     const callsign = aircraft.callsign;
     if (!callsign) return null;
-    const key = routeCacheKey(callsign, observedAt, aircraft.icaoHex);
     const primary = this.providers.flightRoute
       ? await this.getAdsbDbCached("route", key, () => this.routeLimiter(() => this.providers.flightRoute!.getRoute(callsign, observedAt)), {
           ttlMs: ENRICHMENT_TTLS.routeMs,
           negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
         })
       : null;
-    if (primary?.origin && primary.destination && primary.originAirport && primary.destinationAirport && routeMatchesAircraftPosition(aircraft, primary)) return primary;
+    if (primary?.origin && primary.destination && primary.originAirport && primary.destinationAirport && routeMatchesAircraftPosition(aircraft, primary)) return this.rememberVerifiedRoute(key, primary);
     const fallback = this.providers.flightRouteFallback;
     if (!fallback || aircraft.lat === null || aircraft.lon === null) return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
     let resolved: FlightRoute | null = null;
@@ -352,7 +388,7 @@ export class EnrichmentService {
     } catch {
       // Route service failures must not block live traffic or poison negative cache.
     }
-    if (resolved?.origin && resolved.destination && routeMatchesAircraftPosition(aircraft, resolved)) return resolved;
+    if (resolved?.origin && resolved.destination && resolved.originAirport && resolved.destinationAirport && routeMatchesAircraftPosition(aircraft, resolved)) return this.rememberVerifiedRoute(key, resolved);
     return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
   }
 
