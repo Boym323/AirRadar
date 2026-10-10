@@ -17,6 +17,66 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.410] - 2026-10-10
+
+Changes since v1.0.409.
+
+**Features touched:** Mobile Spotter Mode, Statistics & Recaps.
+
+### Added
+
+- Add plausible bounds for receiver distance, ground speed, and flight altitude fix(statistics): enforce plausible distance and speed checks in coverage intelligence test(coverage): add test for rejecting implausible historical distance and speed records (153f4cac)
+- Add bounded multi-aircraft map tracking, pinned cards and trails (58f29100)
+- Add native dark/light map modes and opt-in attributed satellite overlay (08ecb584)
+- Add opt-in privacy-preserving camera AR to mobile Spotter (250b5db5)
+
+### Fixed
+
+- Narrow supported basemap paint property keys for MapLibre typing (8e379d03)
+- Type MapLibre dynamic paint values to preserve expression properties (47a3bc0c)
+- Label extended-coverage trails by their actual source (337a8e40)
+- Require GPS or explicit observer altitude for camera AR overlays (9f87f6de)
+- Prevent Multi-view HUD intercepting radar quick actions (4da42351)
+- Use public MapLibre layer visibility API for satellite browser gate (540c9be1)
+
+### Performance
+
+- Memoize camera observer geometry for stable overlay calculations (c6dc80a3)
+
+### Maintenance
+
+- Sync generated repository metadata (#728) (0d156009)
+- Add desktop/mobile screenshot and map-mode interaction smoke gates (e899e5a1)
+- Align browser readiness regression with satellite fail-soft mode (90de2586)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(sanity): add plausible bounds for receiver distance, ground speed, and flight altitude fix(statistics): enforce plausible distance and speed checks in coverage intelligence test(coverage): add test for rejecting implausible historical distance and speed records (153f4cac)
+- chore(metadata): sync generated repository metadata (#728) (0d156009)
+- feat(v6-a): add bounded multi-aircraft map tracking, pinned cards and trails (58f29100)
+- feat(v6-b): add native dark/light map modes and opt-in attributed satellite overlay (08ecb584)
+- feat(v6-c): add opt-in privacy-preserving camera AR to mobile Spotter (250b5db5)
+- fix(v6-b): narrow supported basemap paint property keys for MapLibre typing (8e379d03)
+- merge(v6-c): inherit V6-B map paint typing fix (896b1f98)
+- fix(v6-b): type MapLibre dynamic paint values to preserve expression properties (47a3bc0c)
+- merge(v6-c): adopt corrected MapLibre paint property typing (b79fb603)
+- fix(v6-a): label extended-coverage trails by their actual source (337a8e40)
+- merge(v6): align source-aware V6-A trail labels into feat/v6-b-map-appearance (3563e530)
+- merge(v6-c): align source-aware multi-aircraft trail labels (df3a43c4)
+- fix(v6-c): require GPS or explicit observer altitude for camera AR overlays (9f87f6de)
+- perf(v6-c): memoize camera observer geometry for stable overlay calculations (c6dc80a3)
+- test(v6): add desktop/mobile screenshot and map-mode interaction smoke gates (e899e5a1)
+- Merge pull request #729 from Boym323/feat/v6-a-live-multi-aircraft (97de0b22)
+- Merge pull request #730 from Boym323/feat/v6-b-map-appearance (140fef94)
+- Merge pull request #731 from Boym323/feat/v6-c-spotter-camera-ar (9c9ecaab)
+- fix(v6): prevent Multi-view HUD intercepting radar quick actions (4da42351)
+- Merge pull request #732 from Boym323/fix/v6-multiview-pointer-events (c0730549)
+- fix(v6): use public MapLibre layer visibility API for satellite browser gate (540c9be1)
+- test(v6): align browser readiness regression with satellite fail-soft mode (90de2586)
+- Merge pull request #733 from Boym323/fix/v6-satellite-gate-layout (4cdc5855)
+
+</details>
 ## [1.0.409] - 2026-10-10
 
 Changes since v1.0.408.
