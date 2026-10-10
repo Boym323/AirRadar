@@ -1252,3 +1252,99 @@
     overscroll-behavior: contain;
   }
 }
+
+/* Visual System V5-B1/B2: one scannable flight identity, accurate partial
+ * route, and progressive operational context without a long default scroll. */
+.aircraft-quick-identity-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.aircraft-quick-identity-meta span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface-interactive);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+}
+.aircraft-quick-identity-meta .aircraft-quick-meta-type {
+  border-color: var(--border-accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.aircraft-quick-header-context [data-freshness="stale"] { color: var(--warning); }
+.aircraft-quick-deep-context {
+  margin-top: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+.aircraft-quick-deep-context > summary {
+  cursor: pointer;
+  padding: var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 750;
+}
+.aircraft-quick-deep-context > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.aircraft-quick-deep-context[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+.aircraft-quick-deep-context > .aircraft-quick-section { margin: 0 var(--space-3) var(--space-3); }
+@media (max-width: 820px) {
+  .aircraft-quick-identity-meta span { font-size: var(--font-size-xs); }
+  .aircraft-quick-deep-context > summary { min-height: var(--control-height-touch); }
+}
+
+/* Visual System V5-B3: flight actions are available regardless of active
+ * tab; the existing map follow and watchlist state remain separate actions. */
+.aircraft-quick-header .aircraft-v5-quick-actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding-bottom: var(--space-1);
+  margin-top: var(--space-3);
+}
+.aircraft-v5-quick-actions .aircraft-quick-action {
+  flex: 0 0 auto;
+  min-height: var(--control-height-touch);
+  max-width: 13rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+.aircraft-v5-quick-actions .aircraft-quick-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.aircraft-v5-quick-actions .aircraft-quick-action[aria-pressed="true"] {
+  border-color: var(--border-accent);
+  color: var(--accent);
+  background: var(--surface-accent-soft);
+}
+.aircraft-v5-share-status { margin: 0; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.aircraft-v5-share-status:empty { display: none; }
+.aircraft-quick-live-state[data-freshness="stale"] { color: var(--warning); }
+@media (max-width: 820px) {
+  .aircraft-quick-header .aircraft-v5-quick-actions {
+    margin-top: var(--space-2);
+    padding-bottom: var(--space-1);
+  }
+}
+
+/* At V5 mobile peek heights (43svh), a sticky full hero would cover the
+ * tab panel. Keep the identity scrollable within the existing aircraft drawer. */
+@media (max-width: 820px) {
+  .aircraft-quick-header { position: relative; top: auto; }
+}

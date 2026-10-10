@@ -256,3 +256,28 @@ existing stream and cleanup behavior. This reduces hidden background work,
 prevents needless pressure on the public intelligence API rate limit and
 preserves strict browser console/HTTP error validation; no 429 responses
 are suppressed or ignored in test assertions.
+
+### V5-B1/B2: aircraft glance and progressive intelligence
+
+The selected-aircraft drawer keeps the shared four-metric
+`RadarTrafficHero` but now displays aircraft type, registration and
+observed operator as separate source-backed chips instead of a long merged
+text line. Incomplete route enrichment displays only known endpoints and
+never renders a fabricated origin-to-destination arrow. Position age is
+visibly marked stale beyond 60 seconds. Flight Situation keeps summary,
+relevant ATC, available route weather and flight events immediately
+accessible; deep navigation integrity, SIGMET, observed aircraft weather
+and wind context live in a keyboard-accessible native disclosure. No
+provenance, advanced data or existing APIs were removed.
+
+### V5-B3: accessible immediate flight actions
+
+The selected-aircraft summary now carries a single cross-tab quick-action
+strip: follow on map (real existing map-follow state), center on map,
+flight history, native share/clipboard URL, alert-rule settings and full
+aircraft detail. The independent star remains an ICAO watchlist toggle,
+not a fake push notification subscription. Follow is disabled for aircraft
+without a position. Sharing sends only the canonical public aircraft-detail
+link from the user's browser; missing sharing permissions receive explicit
+accessible feedback. All actions are reachable without first entering the
+Flight tab, use >=44 px tap targets and localized labels.

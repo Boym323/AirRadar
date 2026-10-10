@@ -46,6 +46,8 @@ interface RadarDrawerDetailsProps {
   onBack: () => void;
   onClose: () => void;
   onCenter: () => void;
+  following: boolean;
+  onToggleFollow: () => void;
   onToggleWatchlist: () => void;
 }
 
@@ -80,6 +82,8 @@ export function RadarDrawerDetails({
   onBack,
   onClose,
   onCenter,
+  following,
+  onToggleFollow,
   onToggleWatchlist,
 }: RadarDrawerDetailsProps) {
   if (drawerState !== "aircraft" && drawerState !== "ogn") return null;
@@ -119,6 +123,8 @@ export function RadarDrawerDetails({
       onBack={onBack}
       onClose={onClose}
       onCenter={onCenter}
+      following={following}
+      onToggleFollow={onToggleFollow}
       onToggleWatchlist={onToggleWatchlist}
     /> : <div className="detail-content">
       <div className="detail-disclaimer aircraft-offline-notice">{t.aircraft.notCurrentlyInRange}</div>

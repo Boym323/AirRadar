@@ -250,3 +250,27 @@ i při zavřeném panelu připojoval intelligence SSE a načítal
 Nyní navazuje spojení až při otevření panelu a při zavření zachovává
 původní úklid spojení. Snižuje to skrytou zátěž i tlak na veřejný
 limit požadavků. Chyby 429 se v browser testu nezamlčují ani neignorují.
+
+### V5-B1/B2: shrnutí letu a postupné zobrazení intelligence
+
+Detail vybraného letadla zachovává společné čtyři živé metriky
+`RadarTrafficHero`. Typ, registrace a pozorovaný provozovatel mají
+oddělené značky místo dlouhého textového řádku. Neúplná trasa zobrazuje
+jen známá letiště a nevytváří nepravdivou šipku odlet–přílet.
+Pozice starší než 60 s má viditelné upozornění. Záložka Situace
+přednostně ukazuje souhrn, ATC, dostupný kontext trasy a provozní
+události; navigační integrita, SIGMET, pozorované počasí a vítr
+zůstávají v nativní přístupné rozbalovací sekci. Žádné datové zdroje
+ani pokročilé údaje se neodstraňují.
+
+### V5-B3: rychlé akce v detailu letu
+
+Souhrn vybraného letadla má napříč záložkami jeden řádek rychlých akcí:
+sledování letadla na mapě (skutečný existující map-follow stav),
+vycentrování, historie letu, nativní sdílení/kopie veřejné adresy,
+nastavení pravidel upozornění a úplný detail. Hvězdička zůstává
+samostatným zařazením ICAO do watchlistu, nikoliv nepravdivým
+přihlášením k push. Při chybějící poloze je sledování nedostupné.
+Sdílení využívá jen prohlížeč a veřejný odkaz na detail; bez oprávnění
+hlásí srozumitelný přístupný stav. Akce jsou viditelné bez přepínání
+na záložku Let, s alespoň 44px dotykovým cílem a překlady.

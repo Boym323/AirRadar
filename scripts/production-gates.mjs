@@ -2173,6 +2173,23 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await sidebar.locator(".aircraft-row").first().click();
         const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
         await quickDetail.waitFor({ state: "visible" });
+        // V5-B: quick actions must be available before changing tabs, without
+        // requiring hidden flight context or additional data requests.
+        const v5Actions = quickDetail.getByTestId("aircraft-v5-quick-actions");
+        await v5Actions.waitFor({ state: "visible" });
+        const v5ActionContract = await v5Actions.evaluate((element) => ({
+          count: element.querySelectorAll("a,button").length,
+          mapFollow: Boolean(element.querySelector('[data-testid="aircraft-v5-follow"][aria-pressed]')),
+          share: Boolean(element.querySelector('[data-testid="aircraft-v5-share"]')),
+          history: Boolean(element.querySelector('a[href^="/history?hex="]')),
+          alertRules: Boolean(element.querySelector('a[href="/alerts"]')),
+          detail: Boolean(element.querySelector('a[href^="/aircraft/"]')),
+        }));
+        if (v5ActionContract.count !== 6
+          || !v5ActionContract.mapFollow || !v5ActionContract.share
+          || !v5ActionContract.history || !v5ActionContract.alertRules || !v5ActionContract.detail) {
+          throw new Error(`V5 aircraft quick actions failed at ${viewport.width}px: ${JSON.stringify(v5ActionContract)}`);
+        }
         const quickContract = await quickDetail.evaluate((element) => ({
           tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
@@ -2208,6 +2225,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await quickDetail.getByRole("tab", { name: "Situace", exact: true }).click();
         await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
         await quickDetail.getByTestId("route-weather-match").waitFor({ state: "visible" });
+        const advancedContext = quickDetail.getByTestId("aircraft-v5-advanced-context");
+        await advancedContext.waitFor({ state: "visible" });
+        if (await advancedContext.evaluate((element) => (element).open)) {
+          throw new Error("V5 aircraft advanced context must start collapsed");
+        }
+        await advancedContext.locator("summary").click();
+        if (!await advancedContext.evaluate((element) => (element).open)) {
+          throw new Error("V5 aircraft advanced context disclosure failed to open");
+        }
         await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
         const situationContract = await quickDetail.evaluate((element) => ({
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
