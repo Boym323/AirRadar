@@ -984,7 +984,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "command-search-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historické lety" },
         { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
-        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
+        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, openAirportAdvanced: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -1248,10 +1248,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await activeInbound.waitFor({ state: "visible", timeout: 15_000 });
             await activeOutbound.waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.locator('[data-testid="airport-live-board-flow-pulse"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-testid="airport-live-board-v6-pressure"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-testid="airport-live-board-v7-runway-flow"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-testid="airport-live-board-v7-arrival-sequence"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-testid="airport-live-board-v8-arrival-flow"]').waitFor({ state: "visible", timeout: 15_000 });
+            const advanced = visualPage.locator('[data-testid="airport-live-board-advanced"]');
+            await advanced.locator("summary").waitFor({ state: "visible", timeout: 15_000 });
+            if (await advanced.locator('[data-testid="airport-live-board-v6-pressure"]').isVisible()) {
+              throw new Error("Airport advanced analysis must start collapsed");
+            }
+            if (target.openAirportAdvanced) {
+              await advanced.locator("summary").click();
+              for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"]) {
+                await advanced.locator(`[data-testid="${id}"]`).waitFor({ state: "visible", timeout: 15_000 });
+              }
+            }
             await visualPage.locator('[data-testid="airport-v3-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveReadiness) {
@@ -1349,6 +1356,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible", timeout: 15_000 });
             await sidebar.locator(".aircraft-row").first().click();
             await visualPage.locator('[data-testid="aircraft-quick-detail"]').waitFor({ state: "visible", timeout: 15_000 });
+            if (target.viewport.width <= 820) {
+              const glance = await sidebar.boundingBox();
+              if (!glance || glance.height > Math.min(target.viewport.height * 0.43, 390) + 3) {
+                throw new Error("Mobile aircraft glance takes too much map space");
+              }
+              if (await visualPage.locator(".map-summary-card").isVisible()) {
+                throw new Error("Redundant map counter remains visible above selected aircraft");
+              }
+            }
           }
           if (target.expandAircraft) {
             const drawer = visualPage.locator("#radar-sidebar");

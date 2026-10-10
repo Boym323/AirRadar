@@ -435,6 +435,47 @@ export function AirportOperationsBoard({
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardFlowNoAttention}</p>}
     </section>
 
+    <div className="airport-live-active" data-testid="airport-live-board-active">
+      <ActiveTrafficLane
+        kicker={t.airport.liveBoardActiveInboundKicker}
+        title={t.airport.liveBoardActiveInboundTitle}
+        observations={activeTraffic.inbound}
+        testId="airport-live-board-active-inbound"
+      />
+      <ActiveTrafficLane
+        kicker={t.airport.liveBoardActiveOutboundKicker}
+        title={t.airport.liveBoardActiveOutboundTitle}
+        observations={activeTraffic.outbound}
+        testId="airport-live-board-active-outbound"
+      />
+    </div>
+
+    <div className="airport-live-lanes">
+      <LiveMovementLane
+        kicker={t.airport.liveBoardArrivalsKicker}
+        title={t.airport.liveBoardArrivalsTitle}
+        movements={liveBoard.arrivals}
+        testId="airport-live-board-arrivals"
+      />
+      <LiveMovementLane
+        kicker={t.airport.liveBoardDeparturesKicker}
+        title={t.airport.liveBoardDeparturesTitle}
+        movements={liveBoard.departures}
+        testId="airport-live-board-departures"
+      />
+      <LiveMovementLane
+        kicker={t.airport.liveBoardAlertsKicker}
+        title={t.airport.liveBoardAlertsTitle}
+        movements={liveBoard.attention}
+        testId="airport-live-board-alerts"
+      />
+    </div>
+
+    <details className="airport-live-advanced" data-testid="airport-live-board-advanced">
+      <summary>
+        <span><strong>{t.airport.liveBoardAdvancedLabel}</strong><small>{t.airport.liveBoardAdvancedHint}</small></span>
+        <span className="airport-live-advanced-chevron" aria-hidden="true">⌄</span>
+      </summary>
     <section className="airport-live-flow-pressure" data-testid="airport-live-board-v6-pressure" aria-labelledby="airport-live-v6-pressure-title">
       <div className="airport-live-flow-heading">
         <div>
@@ -756,42 +797,7 @@ export function AirportOperationsBoard({
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV9NoInbound}</p>}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV9Disclaimer}</p>
     </section> : null}
-
-    <div className="airport-live-active" data-testid="airport-live-board-active">
-      <ActiveTrafficLane
-        kicker={t.airport.liveBoardActiveInboundKicker}
-        title={t.airport.liveBoardActiveInboundTitle}
-        observations={activeTraffic.inbound}
-        testId="airport-live-board-active-inbound"
-      />
-      <ActiveTrafficLane
-        kicker={t.airport.liveBoardActiveOutboundKicker}
-        title={t.airport.liveBoardActiveOutboundTitle}
-        observations={activeTraffic.outbound}
-        testId="airport-live-board-active-outbound"
-      />
-    </div>
-
-    <div className="airport-live-lanes">
-      <LiveMovementLane
-        kicker={t.airport.liveBoardArrivalsKicker}
-        title={t.airport.liveBoardArrivalsTitle}
-        movements={liveBoard.arrivals}
-        testId="airport-live-board-arrivals"
-      />
-      <LiveMovementLane
-        kicker={t.airport.liveBoardDeparturesKicker}
-        title={t.airport.liveBoardDeparturesTitle}
-        movements={liveBoard.departures}
-        testId="airport-live-board-departures"
-      />
-      <LiveMovementLane
-        kicker={t.airport.liveBoardAlertsKicker}
-        title={t.airport.liveBoardAlertsTitle}
-        movements={liveBoard.attention}
-        testId="airport-live-board-alerts"
-      />
-    </div>
+    </details>
 
     <div className="airport-v3-grid">
       <section className="airport-v3-panel airport-v3-runway" aria-labelledby="airport-v3-runway-title">

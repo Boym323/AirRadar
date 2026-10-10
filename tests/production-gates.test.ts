@@ -177,10 +177,11 @@ describe("production release metadata gate", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('[data-product="airport-live-board-v8"]');
     expect(source).toContain('[data-testid="airport-live-board-flow-pulse"]');
-    expect(source).toContain('[data-testid="airport-live-board-v6-pressure"]');
-    expect(source).toContain('[data-testid="airport-live-board-v7-runway-flow"]');
-    expect(source).toContain('[data-testid="airport-live-board-v7-arrival-sequence"]');
-    expect(source).toContain('[data-testid="airport-live-board-v8-arrival-flow"]');
+    for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow"]) {
+      expect(source).toContain(`"${id}"`);
+    }
+    expect(source).toContain("openAirportAdvanced");
+    expect(source).toContain('await advanced.locator("summary").click()');
     expect(source).not.toContain('[data-product="airport-live-board-v6"]');
     expect(source).not.toContain('[data-product="airport-live-board-v7"]');
   });

@@ -168,3 +168,19 @@ Při zásahu do existující funkce:
 
 Migrace je postupná. Chování funkcí ani datové kontrakty se nesmějí měnit jen
 kvůli dokončení vizuálního úklidu.
+
+## Visual System V4: čitelnost a hierarchie informací (10. 10. 2026)
+
+- Základní tokeny pro malé popisky a sekundární text jsou větší o 1 px.
+  Základní text zůstává na 14 px a dotykové ovládací prvky na 44 px.
+- Sbalený mobilní panel vybraného letadla má výšku maximálně 43svh / 390 px;
+  explicitní rozbalení zůstává do 80svh. Duplicitní počítadlo nad mapou
+  zmizí pouze tehdy, když je panel vybraného letadla otevřený.
+- Orientační popisky a hranice v malých měřítkách jsou o něco čitelnější.
+  Podklad OpenFreeMap a atribuce se nemění.
+- Živý přehled letiště dává přednost aktuálnímu provozu a výjimkám před
+  pokročilou analytikou. Všechna existující data V6–V9 a D2–D4 zůstávají
+  dostupná v rozbalovací sekci s českým a anglickým popisem.
+- Regresní testy hlídají tokeny, stav panelu, sémantiku mapy a pořadí informací.
+  Nové produkční screenshoty stále vyžadují ruční kontrolu; pixel-diff
+  baseline zatím není součástí automatické kontroly.

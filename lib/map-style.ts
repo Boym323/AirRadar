@@ -39,16 +39,16 @@ export function applyAirRadarBasemapReadability(map: MapLibreMap): void {
         map.setPaintProperty(id, "text-halo-width", airport ? 1.3 : 1.1);
         map.setPaintProperty(id, "text-opacity", [
           "interpolate", ["linear"], ["zoom"],
-          3, airport ? 0.46 : 0.38,
-          6, airport ? 0.72 : 0.62,
+          3, airport ? 0.58 : 0.50,
+          6, airport ? 0.78 : 0.68,
           9, airport ? 0.9 : 0.78,
         ]);
       } else if (layer.type === "line" && BOUNDARY_LAYER.test(id)) {
         map.setPaintProperty(id, "line-color", AIRRADAR_MAP_THEME.basemap.boundary);
         map.setPaintProperty(id, "line-opacity", [
           "interpolate", ["linear"], ["zoom"],
-          3, 0.34,
-          6, 0.5,
+          3, 0.44,
+          6, 0.56,
           9, 0.62,
         ]);
       }

@@ -35,10 +35,10 @@
   --border-selected: color-mix(in srgb, var(--selected) 42%, transparent);
   --border-danger: color-mix(in srgb, var(--danger) 46%, transparent);
 
-  --font-size-2xs: 10px;
-  --font-size-xs: 11px;
-  --font-size-sm: 11px;
-  --font-size-md: 12px;
+  --font-size-2xs: 11px;
+  --font-size-xs: 12px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
   --font-size-base: 14px;
   --font-size-lg: 16px;
   --font-size-xl: 20px;
@@ -6253,4 +6253,63 @@ button, input, select, textarea { color-scheme: dark; }
   .map-summary-item span { font-size: var(--font-size-xs); }
   .traffic-trigger { padding-inline: var(--space-2); font-size: var(--font-size-xs); }
   .map-layers > summary { padding-inline: var(--space-2); font-size: var(--font-size-xs); }
+}
+
+/* Visual System V4: progressive disclosure and readable operational typography. */
+.airport-live-board .ui-kicker,
+.airport-live-board .airport-v3-disclaimer {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-body);
+}
+.airport-live-board .airport-v3-heading p,
+.airport-live-board .airport-v3-meta {
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body);
+}
+.airport-live-advanced {
+  display: block;
+  min-width: 0;
+  margin-block: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+}
+.airport-live-advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-height-touch);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+  cursor: pointer;
+  list-style: none;
+}
+.airport-live-advanced > summary::-webkit-details-marker { display: none; }
+.airport-live-advanced > summary:hover { background: var(--surface-interactive); }
+.airport-live-advanced > summary > span:first-child {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.airport-live-advanced > summary strong { font-size: var(--font-size-base); }
+.airport-live-advanced > summary small {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-body);
+}
+.airport-live-advanced-chevron {
+  color: var(--accent);
+  font-size: var(--font-size-xl);
+  transition: transform var(--motion-fast) ease;
+}
+.airport-live-advanced[open] .airport-live-advanced-chevron { transform: rotate(180deg); }
+.airport-live-advanced[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+.airport-live-advanced > section { margin: var(--space-3); }
+@media (max-width: 820px) {
+  .radar-content:has(.sidebar.drawer-aircraft.has-selection:not(.drawer-closed)) .map-summary-card {
+    display: none;
+  }
+  .airport-live-advanced > summary { padding-inline: var(--space-3); }
+  .airport-live-advanced > section { margin: var(--space-2); }
 }

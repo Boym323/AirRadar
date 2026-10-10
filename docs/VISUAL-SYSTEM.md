@@ -171,3 +171,20 @@ When touching an existing feature:
 
 The migration is incremental. Feature behavior and data contracts must not be
 changed merely to complete a visual cleanup.
+
+## Visual System V4: readability and information hierarchy (2026-10-10)
+
+- Increased reusable microcopy and supporting-label typography by 1 px via
+  shared tokens; preserved the 14 px body baseline and 44 px touch controls.
+- The selected-aircraft mobile glance now starts at up to 43svh / 390px;
+  explicit expand remains available at up to 80svh. The redundant map
+  counter is hidden only when the selected-aircraft drawer is visible.
+- Low-zoom place/airport labels and boundaries are slightly brighter while
+  roads/POIs remain deliberately quiet. OpenFreeMap and attribution are unchanged.
+- Airport Live Board presents current traffic, exceptions and the live lanes
+  before optional advanced analyses. The full V6–V9 and D2–D4 evidence remains
+  accessible within a native keyboard-operated details disclosure, with
+  localized Czech and English copy. No data fetching or calculation changed.
+- Regression tests guard typography tokens, mobile collapsed/expanded
+  behavior, map semantics and disclosure order. Production browser screenshots
+  must still be manually reviewed after CI; no image-diff baseline is implied.
