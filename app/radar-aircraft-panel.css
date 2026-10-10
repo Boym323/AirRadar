@@ -1420,8 +1420,7 @@
 }
 
 @container aircraft-drawer-header (min-width: 370px) {
-  .sidebar.drawer-aircraft .aircraft-header-not-used { display: none; }
-  .aircraft-v5-quick-actions {
+  .sidebar.drawer-aircraft .aircraft-quick-header .aircraft-v5-quick-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
