@@ -1076,25 +1076,48 @@
       ]
     },
     {
-      "id": "aladin-wind-compare",
-      "name": "ALADIN / ICON-EU Wind Comparison",
-      "category": "weather",
+      "id": "sondehub",
+      "name": "SondeHub Radiosondes",
+      "category": "weather / extended objects",
       "status": "optional",
       "introducedVersion": null,
-      "summary": "Explicit on-demand receiver-area comparison of CHMI ALADIN Central Europe 2km and DWD ICON-EU pressure-level winds with validity and freshness safeguards; default disabled.",
+      "summary": "Opt-in SondeHub radiosonde map overlay with validated altitude, observed track and model-predicted landing; on-demand bounded caches separate from ADS-B/OGN.",
       "pages": [
-        "/weather"
+        "/"
       ],
       "apis": [
-        "/api/weather/wind/compare"
+        "/api/sondes",
+        "/api/sondes/:serial"
       ],
       "changelogScopes": [
-        "aladin-wind"
+        "sondehub"
       ],
       "changelogKeywords": [
-        "ALADIN wind",
-        "ICON-EU ALADIN comparison",
-        "regional wind model"
+        "sondehub",
+        "radiosonde",
+        "weather balloon"
+      ]
+    },
+    {
+      "id": "space-weather-context",
+      "name": "NOAA Space Weather Context",
+      "category": "navigation / weather",
+      "status": "optional",
+      "introducedVersion": null,
+      "summary": "Operator-enabled on-demand NOAA global planetary Kp context in Navigation Integrity with bounded RAM cache and explicit non-GNSS-evidence disclaimer.",
+      "pages": [
+        "/navigation-integrity"
+      ],
+      "apis": [
+        "/api/navigation-integrity/space-weather"
+      ],
+      "changelogScopes": [
+        "space-weather"
+      ],
+      "changelogKeywords": [
+        "NOAA Space Weather",
+        "geomagnetic Kp",
+        "planetary K index"
       ]
     }
   ]

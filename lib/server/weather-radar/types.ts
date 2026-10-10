@@ -8,6 +8,7 @@ export const WEATHER_RADAR_BOUNDS = {
 export const WEATHER_RADAR_PROVIDER = "CHMI" as const;
 export const WEATHER_RADAR_PRODUCT = "MAX_Z_MASKED" as const;
 export type WeatherRadarProduct = typeof WEATHER_RADAR_PRODUCT | "PSEUDOCAPPI_2KM";
+export const WEATHER_RADAR_CAPPI_SOURCE_URL = "https://opendata.chmi.cz/meteorology/weather/radar/composite/pseudocappi2km/png/";
 export const WEATHER_RADAR_SOURCE_URL = "https://opendata.chmi.cz/meteorology/weather/radar/composite/maxz/png_masked/";
 export const WEATHER_RADAR_PSEUDOCAPPI_URL = "https://opendata.chmi.cz/meteorology/weather/radar/composite/pseudocappi2km/png/";
 export const WEATHER_RADAR_CATALOG_TTL_MS = 60_000;
