@@ -3019,8 +3019,6 @@ export function AirRadarApp() {
         <>
           <div className="topbar-ops-meta">
             <StatusBadge className="topbar-live-status" variant={receiverStatusVariant} title={receiverStatusLabel} aria-label={receiverStatusLabel}>{receiverStatusShort}</StatusBadge>
-            <span className="topbar-metric"><strong>{formatNumber(snapshot.sourceStats?.local ?? snapshot.stats.currentAircraft)}</strong><span>LOCAL</span></span>
-            <span className="topbar-metric topbar-metric-network"><strong>{formatNumber(snapshot.sourceStats?.network ?? 0)}</strong><span>NETWORK</span></span>
             <UtcClock />
           </div>
           <details className="topbar-receiver topbar-receiver-menu">
@@ -3044,7 +3042,7 @@ export function AirRadarApp() {
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
             {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
-            <div className="map-overlay-primary">
+            <div className="map-overlay-primary" data-testid="radar-map-hud">
               <Panel className="map-overlay-card map-summary-card">
                 <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
                 {activeCoverage === "extended" && snapshot.sourceStats && <details className="source-counter-details">
@@ -3059,13 +3057,10 @@ export function AirRadarApp() {
                     <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
                   </div>
                 </details>}
-                {hasActiveMapFilters && <div className="map-summary-filter-state" aria-label={`${t.filters.active}: ${activeFilterCount}`}>
-                  <span>{t.filters.title}</span><strong>{activeFilterCount}</strong>
-                </div>}
               </Panel>
               <MapControlGroup className="map-control-group-primary">
               <RadarOperationsCenter />
-              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
+              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" aria-label={t.radar.trafficNearby} data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>

@@ -221,3 +221,15 @@ Each PR must pass lint/typecheck, Vitest, visual:check and the relevant desktop
 and mobile browser gates. Avoid performance regressions, unnecessary polling,
 new data providers and unsupported aviation certainty claims. Keep the PR open for review; merging to main starts the automated production
 release pipeline.
+
+### V5-A2 implemented: compact map HUD
+
+The radar topbar now shows receiver health and UTC without repeating LOCAL and
+NETWORK counters. Extended-coverage source counts remain available in the
+map HUD disclosure on desktop and in the traffic browser. The filter total
+appears on the V5 quick-filter action and traffic browser, not a third map
+badge. At <=820px the map uses a single compact control row with the nearby
+traffic count; the independent redundant summary card is hidden. Touch
+controls retain 44px targets and the traffic trigger retains an accessible
+name even when its visible label is hidden at <=420px. Search remains the
+primary flexible topbar control.
