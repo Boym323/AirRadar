@@ -130,7 +130,7 @@ export function decodeLicensedGlb(buffer: ArrayBuffer, family: LicensedFamily = 
     for(const id of roots)visit(id,identity(),0,new Set());
   }else for(let i=0;i<doc.meshes.length;i++)processMesh(i,identity());
   if(raw.length===0)throw Error("No GLB triangles");
-  let min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+  const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
   for(const tri of raw)for(const p of tri)for(let i=0;i<3;i++){min[i]=Math.min(min[i]!,p[i]!);max[i]=Math.max(max[i]!,p[i]!);}
   // glTF Y-up: the longest of X/Z is treated as wingspan, the other as forward.
   const spanAxis=max[0]!-min[0]!>max[2]!-min[2]!?0:2;
