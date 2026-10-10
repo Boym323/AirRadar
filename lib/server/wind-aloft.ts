@@ -11,10 +11,13 @@ export const WIND_GRID = {
 } as const;
 
 const API_URL = "https://api.open-meteo.com/v1/dwd-icon";
+const ALADIN_API_URL = "https://api.open-meteo.com/v1/forecast";
 const CACHE_TTL_MS = 30 * 60_000;
 const STALE_IF_ERROR_MS = 3 * 60 * 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 const MODEL = "ICON-EU" as const;
+export type WindForecastModel = "ICON-EU" | "ALADIN-CE";
+export const WIND_ALADIN_MODEL_ID = "chmi_aladin_central_europe_2km" as const;
 
 export interface WindAloftPoint {
   lat: number;
@@ -24,8 +27,8 @@ export interface WindAloftPoint {
 }
 
 export interface WindAloftResponse {
-  provider: "DWD / Open-Meteo";
-  model: typeof MODEL;
+  provider: "DWD / Open-Meteo" | "ČHMÚ / Open-Meteo";
+  model: WindForecastModel;
   modelRun: string | null;
   validAt: string;
   availableValidTimes: string[];
@@ -76,7 +79,7 @@ export class WindAloftProvider {
   private lastFailureAt: string | null = null;
   private consecutiveFailures = 0;
 
-  constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now) {}
+  constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now, private readonly model: WindForecastModel = MODEL) {}
 
   async getWind(level: WindLevelHpa, requestedValidAt: string | null = null): Promise<WindAloftResponse> {
     const snapshot = await this.getSnapshot();
@@ -92,13 +95,13 @@ export class WindAloftProvider {
       const lon = finite((point as RawPoint & { longitude?: unknown }).longitude);
       return lat === null || lon === null ? [] : [{ lat, lon, speedKt: speed, directionDeg: direction }];
     });
-    return { provider: "DWD / Open-Meteo", model: MODEL, modelRun: snapshot.modelRun, validAt, availableValidTimes: snapshot.validTimes.slice(0, 96), levelHpa: level, points, fetchedAt: new Date(snapshot.fetchedAt).toISOString(), stale: this.clock() - snapshot.fetchedAt > CACHE_TTL_MS };
+    return { provider: this.model === "ALADIN-CE" ? "ČHMÚ / Open-Meteo" : "DWD / Open-Meteo", model: this.model, modelRun: snapshot.modelRun, validAt, availableValidTimes: snapshot.validTimes.slice(0, 96), levelHpa: level, points, fetchedAt: new Date(snapshot.fetchedAt).toISOString(), stale: this.clock() - snapshot.fetchedAt > CACHE_TTL_MS };
   }
 
   diagnostics(): { status: "online" | "degraded" | "offline"; operationalState: "on_demand" | "loading" | "ok" | "degraded" | "offline"; reasonCode: string | null; model: string; modelRun: string | null; validTimes: number; cacheEntries: number; lastSuccessAt: string | null; hasAttempted: boolean; inFlight: boolean; attempts: number; lastAttemptAt: string | null; lastFailureAt: string | null; consecutiveFailures: number } {
     const stale = this.snapshot !== null && this.clock() - this.snapshot.fetchedAt > CACHE_TTL_MS;
     const operationalState = !this.hasAttempted ? "on_demand" : this.inFlight !== null ? "loading" : this.snapshot ? (stale || this.consecutiveFailures ? "degraded" : "ok") : "offline";
-    return { status: this.snapshot ? (stale || this.consecutiveFailures ? "degraded" : "online") : "offline", operationalState, reasonCode: operationalState === "on_demand" ? "NOT_INITIALIZED" : operationalState === "loading" ? "FIRST_LOAD_PENDING" : operationalState === "degraded" ? (this.snapshot ? "STALE_CACHE" : "LAST_REFRESH_FAILED") : operationalState === "offline" ? "UPSTREAM_UNAVAILABLE" : null, model: MODEL, modelRun: this.snapshot?.modelRun ?? null, validTimes: this.snapshot?.validTimes.length ?? 0, cacheEntries: this.snapshot ? 1 : 0, lastSuccessAt: this.snapshot ? new Date(this.snapshot.fetchedAt).toISOString() : null, hasAttempted: this.hasAttempted, inFlight: this.inFlight !== null, attempts: this.attempts, lastAttemptAt: this.lastAttemptAt, lastFailureAt: this.lastFailureAt, consecutiveFailures: this.consecutiveFailures };
+    return { status: this.snapshot ? (stale || this.consecutiveFailures ? "degraded" : "online") : "offline", operationalState, reasonCode: operationalState === "on_demand" ? "NOT_INITIALIZED" : operationalState === "loading" ? "FIRST_LOAD_PENDING" : operationalState === "degraded" ? (this.snapshot ? "STALE_CACHE" : "LAST_REFRESH_FAILED") : operationalState === "offline" ? "UPSTREAM_UNAVAILABLE" : null, model: this.model, modelRun: this.snapshot?.modelRun ?? null, validTimes: this.snapshot?.validTimes.length ?? 0, cacheEntries: this.snapshot ? 1 : 0, lastSuccessAt: this.snapshot ? new Date(this.snapshot.fetchedAt).toISOString() : null, hasAttempted: this.hasAttempted, inFlight: this.inFlight !== null, attempts: this.attempts, lastAttemptAt: this.lastAttemptAt, lastFailureAt: this.lastFailureAt, consecutiveFailures: this.consecutiveFailures };
   }
 
   private async getSnapshot(): Promise<Snapshot> {
@@ -117,10 +120,10 @@ export class WindAloftProvider {
     this.attempts += 1;
     this.lastAttemptAt = new Date(this.clock()).toISOString();
     const grid = buildWindGrid();
-    const url = new URL(API_URL);
+    const url = new URL(this.model === "ALADIN-CE" ? ALADIN_API_URL : API_URL);
     url.searchParams.set("latitude", grid.map((point) => point.lat).join(","));
     url.searchParams.set("longitude", grid.map((point) => point.lon).join(","));
-    url.searchParams.set("models", "icon_eu");
+    url.searchParams.set("models", this.model === "ALADIN-CE" ? WIND_ALADIN_MODEL_ID : "icon_eu");
     url.searchParams.set("hourly", WIND_LEVELS_HPA.flatMap((level) => [`wind_speed_${level}hPa`, `wind_direction_${level}hPa`]).join(","));
     url.searchParams.set("wind_speed_unit", "kn");
     url.searchParams.set("timezone", "UTC");
@@ -145,3 +148,5 @@ export class WindAloftProvider {
 }
 
 export const defaultWindAloftProvider = new WindAloftProvider();
+/** Independent opt-in model cache; existing ICON-EU/Weather Fusion remains canonical. */
+export const defaultAladinWindAloftProvider = new WindAloftProvider(fetch, Date.now, "ALADIN-CE");
