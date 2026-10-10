@@ -27,9 +27,9 @@ const nextConfig: NextConfig = {
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "Permissions-Policy", value: "camera=(), geolocation=(self), microphone=(), payment=(), usb=()" },
         { key: "X-Frame-Options", value: "DENY" },
-        // MapLibre needs a blob worker; OSM is the only external map origin.
+        // MapLibre needs a blob worker; allow only configured basemap, satellite and DEM tile origins.
         // Next.js production runtime currently needs inline bootstrap/style code.
-        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://t.plnspttrs.net https://www.planespotters.net; connect-src 'self' data: https://tile.openstreetmap.org https://tiles.openfreemap.org; worker-src 'self' blob:; child-src blob:; font-src 'self' data:;" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://tiles.maps.eox.at https://tiles.mapterhorn.com https://t.plnspttrs.net https://www.planespotters.net; connect-src 'self' data: https://tile.openstreetmap.org https://tiles.openfreemap.org https://tiles.maps.eox.at https://tiles.mapterhorn.com; worker-src 'self' blob:; child-src blob:; font-src 'self' data:;" },
       ],
     }];
   },
