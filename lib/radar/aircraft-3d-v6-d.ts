@@ -127,7 +127,7 @@ export class RadarAircraft3dRuntime {
   private buffer: WebGLBuffer | null = null;
   private vao: WebGLVertexArrayObject | null = null;
   private matrixUniform: WebGLUniformLocation | null = null;
-  private vertexData = new Float32Array(0);
+  private vertexData: Float32Array = new Float32Array(0);
   private dirty = true;
   constructor() {
     this.layer={id:RADAR_AIRCRAFT_3D_LAYER_ID,type:"custom",renderingMode:"3d",
