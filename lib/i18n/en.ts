@@ -24,6 +24,11 @@ export const en = {
     geofenceSaved: "Geofence saved",
     geofenceFailed: "Geofence could not be saved",
   },
+  aircraftQuickV5: {
+    identity: "Aircraft identity and operator",
+    advancedContext: "Additional operational context",
+    advancedContextHint: "Navigation, weather and data quality",
+  },
   radarQuickActions: {
     title: "Quick map actions",
     search: "Find flight",

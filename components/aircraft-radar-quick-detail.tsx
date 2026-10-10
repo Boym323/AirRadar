@@ -106,9 +106,9 @@ function RouteEndpoint({ code, airport }: { code: string | null; airport: Airpor
 function RouteSection({ route, visible }: { route: FlightRoute | undefined; visible: boolean }) {
   if (!visible || !route) return null;
   return <>
-    <div className="aircraft-quick-header-route" aria-label={t.route.context}>
+    <div className="aircraft-quick-header-route" aria-label={t.route.context} data-completeness={route.origin || route.originAirport ? route.destination || route.destinationAirport ? "both" : "partial" : "partial"}>
       <RouteEndpoint code={route.origin} airport={route.originAirport} />
-      <span aria-hidden="true">→</span>
+      {(route.origin || route.originAirport) && (route.destination || route.destinationAirport) && <span aria-hidden="true">→</span>}
       <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
     </div>
     <p className="aircraft-quick-header-route-note">{t.route.contextDisclaimer}</p>
@@ -774,7 +774,11 @@ export function AircraftRadarQuickDetail({
         <div className="aircraft-quick-identity">
           <span className="aircraft-quick-eyebrow">{t.history.aircraftDetail}</span>
           <h1>{aircraft.callsign || registration || aircraft.icaoHex}</h1>
-          {(operator || headerType || registration) && <p>{[operator, headerType, registration].filter(Boolean).join(" · ")}</p>}
+          {(operator || headerType || registration) && <div className="aircraft-quick-identity-meta" data-testid="aircraft-v5-identity" aria-label={t.aircraftQuickV5.identity}>
+            {headerType && <span className="aircraft-quick-meta-type">{headerType}</span>}
+            {registration && <span>{registration}</span>}
+            {operator && <span>{operator}</span>}
+          </div>}
           <RadarTrafficHero
             className="aircraft-quick-header-hero"
             showIdentity={false}
@@ -788,7 +792,7 @@ export function AircraftRadarQuickDetail({
           />
           <div className="aircraft-quick-header-context" aria-label={t.aircraft.liveTrackingTitle}>
             {aircraft.distanceKm !== null && <span><strong>{formatDistance(aircraft.distanceKm)}</strong> {t.aircraft.distance}</span>}
-            {sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}
+            {sourceAge && <span data-freshness={aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds <= 60 ? "fresh" : "stale"}>{t.aircraft.positionAge}: {sourceAge}{aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds > 60 ? ` · ${t.intelligence.stale}` : ""}</span>}
             {phase && <strong>{phase}</strong>}
           </div>
           <RouteSection route={route} visible={hasRouteData} />
@@ -814,14 +818,17 @@ export function AircraftRadarQuickDetail({
         onFocus={onOperationalFocus}
       /> : null}
       <SituationSummarySection summary={situation} />
-      <NavigationIntegritySection aircraft={aircraft} />
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
-      <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
       <RouteWeatherSection context={routeWeather} />
-      <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
-      <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       <IntelligenceSection events={intelligenceEvents} />
+      <details className="aircraft-quick-deep-context" data-testid="aircraft-v5-advanced-context">
+        <summary>{t.aircraftQuickV5.advancedContext}</summary>
+        <NavigationIntegritySection aircraft={aircraft} />
+        <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
+        <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
+        <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
+      </details>
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}
     {activeTab === "data" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-data" aria-labelledby="aircraft-tab-data"><TelemetrySection aircraft={aircraft} /><DataSection aircraft={aircraft} /></div>}

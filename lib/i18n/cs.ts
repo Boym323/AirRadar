@@ -22,6 +22,11 @@ export const cs = {
     geofenceSaved: "Geozóna uložena",
     geofenceFailed: "Geozónu se nepodařilo uložit",
   },
+  aircraftQuickV5: {
+    identity: "Identita letadla a provozovatel",
+    advancedContext: "Další provozní souvislosti",
+    advancedContextHint: "Navigace, počasí a kvalita dat",
+  },
   radarQuickActions: {
     title: "Rychlé ovládání mapy",
     search: "Najít let",
