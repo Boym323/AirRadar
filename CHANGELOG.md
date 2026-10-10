@@ -17,6 +17,22 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.395] - 2026-10-10
+
+Changes since v1.0.394.
+
+### Added
+
+- T5.6A bounded V8 memory attribution and production sampler (#691) (c0d448e9)
+- Unify T5.6 V8 memory and trail-bound audit reporting (#693) (1c338dc8)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(perf): T5.6A bounded V8 memory attribution and production sampler (#691) (c0d448e9)
+- feat(perf): unify T5.6 V8 memory and trail-bound audit reporting (#693) (1c338dc8)
+
+</details>
 ## [1.0.394] - 2026-10-10
 
 Changes since v1.0.393.
