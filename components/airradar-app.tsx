@@ -702,13 +702,19 @@ export function AirRadarApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    try {
-      setRadar3dTerrain(map, radar3dMode);
-    } catch (error) {
-      console.warn("Optional V6-D terrain unavailable; restoring flat map.", error);
-      setRadar3dMode("2d");
-      setRadar3dTerrain(map, "2d");
-    }
+    // A new map style discards raster DEM sources and terrain; restore opt-in 3D after style.load.
+    const restoreTerrain = () => {
+      try {
+        setRadar3dTerrain(map, radar3dMode);
+      } catch (error) {
+        console.warn("Optional V6-D terrain unavailable; restoring flat map.", error);
+        setRadar3dMode("2d");
+        try { setRadar3dTerrain(map, "2d"); } catch { /* Style may be reloading. */ }
+      }
+    };
+    map.on("style.load", restoreTerrain);
+    restoreTerrain();
+    return () => { map.off("style.load", restoreTerrain); };
   }, [mapReady, radar3dMode]);
   useEffect(() => {
     if (!presentationMode || !mapReady || presentationPaused) return;
