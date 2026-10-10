@@ -16,18 +16,19 @@ describe("ČHMÚ PseudoCAPPI radar product", () => {
     expect(parseWeatherRadarCatalog('<a href="' + maxFile + '">frame</a>', now, "PSEUDOCAPPI_2KM")).toHaveLength(0);
   });
   it("uses the separate official CHMI path and never requests MAX-Z", async () => {
-    const fetcher = vi.fn(async (url: string | URL | Request) => {
+    const mock = vi.fn(async (url: string | URL | Request) => {
       const requested = String(url);
       if (requested.endsWith("/png/")) return new Response('<a href="' + file + '">frame</a>', { status: 200 });
-      return new Response(png, { status: 200, headers: { "Content-Type": "image/png" } });
-    }) as unknown as typeof fetch;
+      return new Response(png as BodyInit, { status: 200, headers: { "Content-Type": "image/png" } });
+    });
+    const fetcher = mock as unknown as typeof fetch;
     const provider = new WeatherRadarProvider(fetcher, () => now, "PSEUDOCAPPI_2KM");
     const catalog = await provider.getFrames();
     expect(catalog.available).toBe(true);
     expect(catalog.product).toBe("PSEUDOCAPPI_2KM");
     expect(catalog.frames[0]?.imageUrl).toBe("/api/weather/radar/frame/202609181155?product=PSEUDOCAPPI_2KM");
     expect(await provider.getFrame("202609181155")).toEqual(png);
-    expect(fetcher).toHaveBeenCalledTimes(2);
-    expect(fetcher.mock.calls.map((args) => String(args[0])).every((url) => url.includes("/pseudocappi2km/png/"))).toBe(true);
+    expect(mock).toHaveBeenCalledTimes(2);
+    expect(mock.mock.calls.map((args) => String(args[0])).every((url) => url.includes("/pseudocappi2km/png/"))).toBe(true);
   });
 });
