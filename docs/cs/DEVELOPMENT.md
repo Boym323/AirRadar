@@ -293,7 +293,8 @@ vhodnou podmínkou: MapLibre může hlásit false při načítání volitelných
 vzdálených rastrových/DEM dlaždic, přestože vektorová mapa je už vidět.
 Test nadále selže, pokud se styl neinicializuje nebo je mapa prázdná.
 Při opakovaných browser testech různých šířek může pomocné RXW obohacení
-`/api/aircraft/communications/waypoints` vrátit očekávané HTTP 429;
+`/api/aircraft/communications/waypoints` nebo doplňková metadata
+`/api/aircraft/[hex]/communications` vrátit očekávané HTTP 429;
 neočekávané API chyby zůstávají blokující.
 
 
