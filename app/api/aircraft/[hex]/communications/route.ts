@@ -18,7 +18,11 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
     return Response.json({ error: "Invalid ICAO24 identifier" }, { status: 400, headers });
   }
 
+  const flight = new URL(request.url).searchParams.get("flight")?.trim().toUpperCase() ?? null;
+  if (flight !== null && !/^[A-Z0-9]{2,10}$/.test(flight)) {
+    return Response.json({ error: "Invalid flight identifier" }, { status: 400, headers });
+  }
   const hub = getRxwHubService();
   hub.start();
-  return Response.json(hub.getSnapshot(normalized), { headers });
+  return Response.json(hub.getSnapshot(normalized, flight), { headers });
 }

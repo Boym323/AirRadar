@@ -20,8 +20,8 @@ When disabled, the integration creates no network connection, writes no records 
 
 The adapter **never stores, republishes or logs message text**, decoded CPDLC/ACARS payloads,
 personal information or raw message objects. Only ICAO24, timestamp, protocol, radio
-frequency, station identifier, message label and an upstream UID are held in an in-memory
-bounded cache. The cache is not persisted; it expires messages after two hours.
+frequency, station identifier, message label, structured route observations and
+an upstream UID are held in an in-memory bounded cache. The cache is not persisted; it expires messages after two hours.
 
 Matching requires a valid ICAO24 hex address (not non-ICAO `~` readsb identities or callsign
 guesses). Incoming positions are **never merged into the ADS-B map or flight tracks**.
@@ -44,3 +44,30 @@ Messages may lack ICAO24 and are deliberately dropped instead of making unreliab
 History is only process-local for up to two hours, not a durable archive.
 
 Tests: `npx vitest run tests/rxw-hub-store.test.ts tests/rxw-hub-service.test.ts`
+
+## V2: Structured route evidence
+
+The adapter now parses only upstream structured `depa`, `dsta`, `eta`, and
+`flight` fields. It accepts complete **3-letter IATA / 4-letter ICAO**
+airport pairs within the same message and a UTC **clock-only** ETA
+(`HHMM`, `HH:MM`, or a trailing `Z`). It never derives waypoints from
+`text`, `data`, `libacars`, or `decodedText`; no full filed route is claimed.
+
+`GET /api/aircraft/{icao24}/communications?flight=CSA123` returns a
+`routeHint` marked `source=rxw-acarshub`, `confidence=reported`,
+and timestamped with the original reception time. A hint is selected only
+when a **single message** supplies both airports, ICAO24 matches the
+aircraft and the ACARS flight identifier exactly matches the requested
+live callsign, and the message is at most **45 minutes** old. Reports
+without a flight identifier remain visible as historical metadata but
+are never promoted into an active-flight route. The API returns null
+when these checks fail.
+
+The aircraft detail's **Datová komunikace** section shows the reported
+airport pair and ETA separately from the existing ADSBDB/ADSB.lol and
+FlightAware route information, explicitly labeled **unverified**.
+RXW does **not** overwrite the canonical `FlightRoute`, change
+flight-history records, or generate additional FlightAware calls.
+The route evidence is kept only in the already-bounded in-memory
+message cache (two-hour message retention); it does not introduce DB writes
+or new network requests. Access still requires RXW operator permission.

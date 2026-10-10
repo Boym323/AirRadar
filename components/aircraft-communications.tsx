@@ -17,7 +17,7 @@ function stateLabel(state: RxwHubConnectionState, cs: boolean): string {
  * Displays safe, technical metadata only. Full ACARS/CPDLC message bodies are
  * intentionally not served by the AirRadar API.
  */
-export function AircraftCommunications({ icaoHex }: { icaoHex: string }) {
+export function AircraftCommunications({ icaoHex, callsign }: { icaoHex: string; callsign?: string | null }) {
   const [snapshot, setSnapshot] = useState<RxwHubPublicSnapshot | null>(null);
   const cs = t.locale.startsWith("cs");
 
@@ -29,7 +29,9 @@ export function AircraftCommunications({ icaoHex }: { icaoHex: string }) {
     const refresh = () => {
       if (inFlight || !active) return;
       inFlight = true;
-      void fetch("/api/aircraft/" + encodeURIComponent(icaoHex) + "/communications", {
+      const matchingFlight = typeof callsign === "string" && /^[A-Z0-9]{2,10}$/i.test(callsign.trim())
+        ? "?flight=" + encodeURIComponent(callsign.trim().toUpperCase()) : "";
+      void fetch("/api/aircraft/" + encodeURIComponent(icaoHex) + "/communications" + matchingFlight, {
         cache: "no-store",
         signal: controller.signal,
       })
@@ -49,7 +51,7 @@ export function AircraftCommunications({ icaoHex }: { icaoHex: string }) {
     refresh();
     const timer = setInterval(refresh, 30_000);
     return () => { active = false; clearInterval(timer); controller.abort(); };
-  }, [icaoHex]);
+  }, [icaoHex, callsign]);
 
   if (!snapshot?.enabled) return null;
   const lastSeen = snapshot.lastReceivedAt
@@ -65,6 +67,17 @@ export function AircraftCommunications({ icaoHex }: { icaoHex: string }) {
       <span className={styles.status} data-state={snapshot.connection}>{stateLabel(snapshot.connection, cs)}</span>
     </div>
 
+    {snapshot.routeHint && <div className={styles.routeHint}>
+      <div className={styles.routeLabel}>{cs ? "Trasa hlášená přes ACARS (neověřeno)" : "ACARS reported route (unverified)"}</div>
+      <div className={styles.routeAirports}><strong>{snapshot.routeHint.origin}</strong><span aria-hidden="true">→</span><strong>{snapshot.routeHint.destination}</strong></div>
+      <div className={styles.meta}>
+        {snapshot.routeHint.etaUtc && <span>{cs ? "Hlášené ETA (UTC)" : "Reported ETA (UTC)"}: {snapshot.routeHint.etaUtc}</span>}
+        <span>{cs ? "Let" : "Flight"}: {snapshot.routeHint.flight}</span>
+        <span>{cs ? "Zachyceno" : "Observed"}: {new Date(snapshot.routeHint.observedAt).toLocaleString(t.locale)}</span>
+      </div>
+      <p className={styles.note}>{cs ? "Doplňková indikace ze strukturovaných polí. Nemění ověřenou trasu ani údaje FlightAware." : "Supplementary structured-field evidence. Does not override verified routes or FlightAware data."}</p>
+    </div>}
+
     {snapshot.messages.length ? (
       <div className={styles.list}>
         {snapshot.messages.map((item) => (
@@ -74,6 +87,7 @@ export function AircraftCommunications({ icaoHex }: { icaoHex: string }) {
               <span>{cs ? "Stanice" : "Station"}: {item.stationId}</span>
               {item.frequencyMhz !== null && <span>{item.frequencyMhz} MHz</span>}
               {item.label && <span>{cs ? "Kód" : "Label"}: {item.label}</span>}
+              {item.reportedRoute && <span>{cs ? "Hlášená trasa" : "Reported route"}: {item.reportedRoute.origin} → {item.reportedRoute.destination}{item.reportedRoute.etaUtc ? " · ETA " + item.reportedRoute.etaUtc : ""}</span>}
             </div>
           </div>
         ))}
