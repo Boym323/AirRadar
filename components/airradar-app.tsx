@@ -776,9 +776,22 @@ export function AirRadarApp() {
     if (!mapReady || !map || radar3dMode !== "3d") return;
     const runtime = createRadarAircraft3dRuntime();
     aircraft3dRuntimeRef.current = runtime;
-    map.addLayer(runtime.layer);
+    const restoreAircraftLayer = () => {
+      if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) return;
+      try {
+        map.addLayer(runtime.layer);
+      } catch (error) {
+        // The map remains usable if a 3D custom layer cannot be attached.
+        console.warn("Optional V6-D aircraft layer could not be restored.", error);
+      }
+    };
+    map.on("style.load", restoreAircraftLayer);
+    restoreAircraftLayer();
     return () => {
-      if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) map.removeLayer(RADAR_AIRCRAFT_3D_LAYER_ID);
+      map.off("style.load", restoreAircraftLayer);
+      try {
+        if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) map.removeLayer(RADAR_AIRCRAFT_3D_LAYER_ID);
+      } catch { /* The map may already have been destroyed. */ }
       if (aircraft3dRuntimeRef.current === runtime) aircraft3dRuntimeRef.current = null;
     };
   }, [mapReady, radar3dMode]);
