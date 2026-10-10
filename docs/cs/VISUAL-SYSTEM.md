@@ -372,3 +372,8 @@ Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
 ## V6-A — sledování více letadel
 
 Přepínač **Více letadel** na živém radaru přidává lokální výběr až deseti ICAO identit. Kliknutí na letadlo při zapnutém režimu připne jeho ICAO a nad mapou zobrazí jeho aktuální telemetrii, i když už je vybráno jiné letadlo. Přerušované čáry jsou pouze reálně zachycené stopy, nikoli modelovaná trasa. Při ztrátě signálu zůstává karta označená jako mimo pokrytí; režim lze ukončit bez změny filtru či serverových watchlistů. Využívá existující stream a MapLibre, nepřidává nové SSE spojení.
+
+
+## V6-B — mapové podklady bez přestavění radaru
+
+Živý radar nabízí tmavý (původní OpenFreeMap), světlý (překreslení pouze barev původního podkladu) a volitelný historický satelitní režim (EOxCloudless Sentinel 2020). Instance MapLibre, živé značky, zdroje tras/počasí/ATC, ovládání a SSE zůstávají zachované. Světlé barvy se aplikují jen na původní podkladové vrstvy. Satelitní WMTS se načte teprve na vyžádání pod leteckými vrstvami s povinnou atribucí. **Snímky z roku 2020 nejsou živé a volná licence je pouze pro nekomerční účely**; komerční provoz vyžaduje odpovídající licenci. Volba se ukládá pouze v prohlížeči.
