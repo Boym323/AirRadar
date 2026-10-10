@@ -115,6 +115,11 @@ jobs:
       - name: PR critical runtime smoke
         if: github.event_name == 'pull_request' && steps.scope.outputs.critical == 'true'
         run: npm run test:production -- --core
+      - name: Verify pinned CC BY Airbus/Boeing GLB sources
+        if: github.event_name == 'pull_request' && github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa'
+        env:
+          RUN_LIVE_GLB_ASSET_AUDIT: "1"
+        run: npm run test:targeted -- tests/licensed-aircraft-glb-v6.test.ts
       # GPU paths need a real browser in addition to typecheck/Vitest/core smoke.
       - name: Install Chromium for V6 3D browser QA
         if: github.event_name == 'pull_request' && (github.head_ref == 'feat/v6-d2-d5-aircraft-3d-camera-budget' || (github.head_ref == 'feat/v6-d6-airframe-models' || github.head_ref == 'feat/v6-d8-realistic-glb-licensed-media-gpu-qa'))
