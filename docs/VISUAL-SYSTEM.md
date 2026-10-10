@@ -400,3 +400,8 @@ The live radar provides dark (existing OpenFreeMap), light (paint-only recolorin
 ## V6-C — opt-in mobile camera AR
 
 The existing mobile Spotter Sky Finder now contains a browser-only rear-camera overlay. The user must first enable Sky Finder / orientation permission and then explicitly enable the camera. Fresh LOCAL ADS-B positions with usable observer elevation are projected into an approximate portrait field of view; off-screen, stale and sensor-unavailable targets are hidden rather than invented. Manual tilt calibration is session-local. Camera video is never uploaded, stored, recorded, or added to the aircraft stream; media tracks are stopped when closed, hidden or unmounted. Secure-context and permission failures leave the original Sky Finder intact. This approximate display is not aviation navigation equipment.
+
+
+### V6-D1: opt-in 3D terrain
+
+Radar appearance controls offer **2D (default)** and **3D terrain (beta)**. The existing MapLibre map is unchanged: the Mapterhorn raster DEM is loaded lazily only after opt-in. Switching off disables terrain and restores a flat pitch. Attribution remains visible. DEM requires an external tile provider; the default 2D radar stays independent. Aircraft glyphs are map-projected, **not yet 3D aircraft models at true altitude**. Verify the browser gate, GPU impact, and mobile layout before release.

@@ -149,6 +149,7 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBasemapReadability } from "@/lib/map-style";
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
+import { setRadar3dTerrain, type Radar3dMode } from "@/lib/radar/terrain-v6-d";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
@@ -631,6 +632,7 @@ export function AirRadarApp() {
   const [trafficOpen, setTrafficOpen] = useState(false);
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
+  const [radar3dMode, setRadar3dMode] = useState<Radar3dMode>("2d");
   const nativeBasemapLayerIdsRef = useRef<string[]>([]);
   const [multiAircraftMode, setMultiAircraftMode] = useState(false);
   const multiAircraftModeRef = useRef(false);
@@ -685,6 +687,17 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     applyRadarMapAppearance(map, nativeBasemapLayerIdsRef.current, mapAppearance);
   }, [mapAppearance, mapReady]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    try {
+      setRadar3dTerrain(map, radar3dMode);
+    } catch (error) {
+      console.warn("Optional V6-D terrain unavailable; restoring flat map.", error);
+      setRadar3dMode("2d");
+      setRadar3dTerrain(map, "2d");
+    }
+  }, [mapReady, radar3dMode]);
   const chooseMapAppearance = (value: RadarMapAppearance) => {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
@@ -3167,6 +3180,8 @@ export function AirRadarApp() {
               </MapControlGroup>
               <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
+                radar3dMode={radar3dMode}
+                onRadar3dModeChange={setRadar3dMode}
                 mapAppearance={mapAppearance}
                 onMapAppearanceChange={chooseMapAppearance}
                 showAircraft={showAircraft}

@@ -382,3 +382,8 @@ Přepínač **Více letadel** na živém radaru přidává lokální výběr až
 ## V6-C — mobilní kamera AR na vyžádání
 
 Dosavadní mobilní Sky Finder obsahuje volitelné překrytí živého obrazu zadní kamery. Uživatel nejprve povolí Sky Finder a senzory a následně výslovně zapne kameru. Do orientačního zorného pole telefonu na výšku se promítají pouze čerstvé lokálně přijaté ADS-B polohy s použitelnou elevací vůči pozorovateli; zastaralé, mimo záběr nebo bez spolehlivých senzorů se nezobrazují. Ruční korekce náklonu zůstává jen v relaci. Video se neodesílá, neukládá ani nenahrává; mediální stopy se zastaví po vypnutí, skrytí karty a odpojení komponenty. Chyba oprávnění či HTTPS nenaruší původní Sky Finder. Překrytí není certifikovaná navigační pomůcka.
+
+
+### V6-D1: volitelný 3D terén
+
+Mapa nabízí **2D (výchozí)** a **3D terén (beta)**. Stávající mapa MapLibre zůstává zachována; výšková data Mapterhorn (DEM) se načítají až po výslovném zapnutí. Vypnutí obnoví plochý pohled bez výměny mapového stylu. Zdroj je uveden v atribuci. Nedostupnost externího DEM nesmí ovlivnit výchozí radar. Ikony letadel jsou zatím mapové značky, **nikoli 3D modely ve skutečné výšce**. Před nasazením ověřit desktop, mobil a výkon GPU.
