@@ -11,6 +11,7 @@ export const ROUTE_METRIC_KEYS = [
 export type RouteMetricKey = (typeof ROUTE_METRIC_KEYS)[number];
 export type RouteMetricBucket = { hour: string } & Record<RouteMetricKey, number>;
 export interface RouteEnrichmentSnapshot {
+  enabled: boolean;
   windowHours: 24;
   buckets: RouteMetricBucket[];
   totals: Record<RouteMetricKey, number>;
@@ -127,6 +128,7 @@ export class RouteEnrichmentTelemetry {
     for (const bucket of buckets) for (const key of ROUTE_METRIC_KEYS) totals[key] += bucket[key];
     const lookups = totals.dbHit + totals.dbMiss;
     return {
+      enabled: process.env.ROUTE_DB_CACHE_ENABLED?.trim().toLowerCase() === "true",
       windowHours: 24,
       buckets,
       totals,
