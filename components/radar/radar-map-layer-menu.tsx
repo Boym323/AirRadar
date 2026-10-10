@@ -76,8 +76,8 @@ interface RadarMapLayerMenuProps {
   onShowSigmetChange: (value: boolean) => void;
   showWeatherRadar: boolean;
   onShowWeatherRadarChange: (value: boolean) => void;
-  radarProduct: WeatherRadarProduct;
-  onRadarProductChange: (product: WeatherRadarProduct) => void;
+  radarProduct: "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM";
+  onRadarProductChange: (value: "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM") => void;
   radarOpacity: number;
   onRadarOpacityChange: (value: number) => void;
   selectedRadarFrame: RadarFrameSummary | null;
@@ -229,7 +229,8 @@ export function RadarMapLayerMenu({
         <span className="map-layer-group-title">{t.layers.groups.weather}</span>
         <label data-testid="map-layer-weather-radar"><input type="checkbox" checked={showWeatherRadar} onChange={(event) => onShowWeatherRadarChange(event.target.checked)} /> {t.layers.weatherRadar}</label>
         {showWeatherRadar && <div className="map-layer-sublevel weather-radar-controls">
-          <label className="map-layer-mode"><span>{t.locale.startsWith("cs") ? "Radarový produkt" : "Radar product"}</span><select value={radarProduct} onChange={(event) => onRadarProductChange(event.target.value as WeatherRadarProduct)}><option value="MAX_Z_MASKED">MAX_Z · {t.locale.startsWith("cs") ? "maximální odrazivost" : "maximum reflectivity"}</option><option value="PSEUDOCAPPI_2KM">PseudoCAPPI · 2 km</option></select></label>
+          <label className="map-layer-mode"><span>{t.layers.radarProduct}</span><select value={radarProduct} aria-label={t.layers.radarProduct} onChange={(event) => onRadarProductChange(event.target.value as "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM")}><option value="MAX_Z_MASKED">{t.layers.radarMaxZ}</option><option value="PSEUDOCAPPI_2KM">{t.layers.radarCappi2km}</option></select></label>
+          {radarProduct === "PSEUDOCAPPI_2KM" && <small>{t.layers.radarCappiDisclaimer}</small>}
           <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => onRadarOpacityChange(Number(event.target.value))} /></label>
           <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
         </div>}

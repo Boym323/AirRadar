@@ -586,7 +586,7 @@ export function AirRadarApp() {
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
-  const [radarProduct, setRadarProduct] = useState<WeatherRadarProduct>("MAX_Z_MASKED");
+  const [radarProduct, setRadarProduct] = useState<"MAX_Z_MASKED" | "PSEUDOCAPPI_2KM">("MAX_Z_MASKED");
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
   const [showWind, setShowWind] = useState(false);
@@ -1152,7 +1152,8 @@ export function AirRadarApp() {
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
       setShowSondes(window.localStorage.getItem("airradar-sondehub-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
-      if (window.localStorage.getItem("airradar-weather-radar-product") === "PSEUDOCAPPI_2KM") setRadarProduct("PSEUDOCAPPI_2KM");
+      const savedRadarProduct = window.localStorage.getItem("airradar-weather-radar-product");
+      if (savedRadarProduct === "MAX_Z_MASKED" || savedRadarProduct === "PSEUDOCAPPI_2KM") setRadarProduct(savedRadarProduct);
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
@@ -3575,7 +3576,7 @@ export function AirRadarApp() {
                 onShowSigmetChange={setShowSigmet}
                 showWeatherRadar={showWeatherRadar}
                 radarProduct={radarProduct}
-                onRadarProductChange={setRadarProduct}
+                onRadarProductChange={(product) => { setRadarProduct(product); setRadarPlaying(false); }}
                 onShowWeatherRadarChange={(value) => {
                   setShowWeatherRadar(value);
                   if (!value) setRadarPlaying(false);
