@@ -409,11 +409,11 @@ export class AircraftStateService {
   private buildSnapshotCore(coverage: CoverageMode, includeTrails: boolean): StateSnapshot {
     this.snapshotBuildCounts[coverage] += 1;
     const aircraft = (coverage === "extended"
-      ? mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
+      ? measureRuntime("snapshot.source-merge", this.localAircraft.size + this.networkAircraft.size, () => mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
           localStaleAfterMs: getAircraftStaleAfterMs(),
           networkStaleAfterMs: getAdsbLolStaleAfterMs(),
           sourcePreferences: this.sourcePreferences,
-        })
+        }))
       : Array.from(this.localAircraft.values()))
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
       .map((item) => {
@@ -1318,22 +1318,24 @@ export class AircraftStateService {
   }
 
   private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
-    const previousTrail = previous?.trail ?? [];
-    const sourceChanged = Boolean(previous?.provenance?.positionOrigin && incoming.provenance?.positionOrigin
-      && (previous.provenance.positionOrigin !== incoming.provenance.positionOrigin
-        || previous.provenance.positionSource !== incoming.provenance.positionSource));
-    const base = sourceChanged ? [] : previousTrail;
-    const point = trailPointFromAircraft(incoming);
-    if (incoming.origin === "local") {
-      return point ? appendBoundedServerTrailPoint(base, point) : base;
-    }
-    const next = point ? appendTrailPoint(base, point) : base;
-    const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
-    const bounded = next.filter((point) => {
-      const recordedAt = Date.parse(point.recordedAt);
-      return !Number.isFinite(cutoff) || (Number.isFinite(recordedAt) && recordedAt >= cutoff);
+    return measureRuntime("snapshot.trail-update", 1, () => {
+      const previousTrail = previous?.trail ?? [];
+      const sourceChanged = Boolean(previous?.provenance?.positionOrigin && incoming.provenance?.positionOrigin
+        && (previous.provenance.positionOrigin !== incoming.provenance.positionOrigin
+          || previous.provenance.positionSource !== incoming.provenance.positionSource));
+      const base = sourceChanged ? [] : previousTrail;
+      const point = trailPointFromAircraft(incoming);
+      if (incoming.origin === "local") {
+        return point ? appendBoundedServerTrailPoint(base, point) : base;
+      }
+      const next = point ? appendTrailPoint(base, point) : base;
+      const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
+      const bounded = next.filter((point) => {
+        const recordedAt = Date.parse(point.recordedAt);
+        return !Number.isFinite(cutoff) || (Number.isFinite(recordedAt) && recordedAt >= cutoff);
+      });
+      return bounded.slice(-getNetworkTrailMaxPoints());
     });
-    return bounded.slice(-getNetworkTrailMaxPoints());
   }
 
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {

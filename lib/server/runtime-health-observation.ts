@@ -5,6 +5,8 @@ import { getHeapSpaceStatistics } from "node:v8";
 // The Node bootstrap enables this by default and supports an explicit opt-out.
 const MAX_GC_SAMPLES = 64;
 const MAX_HEAP_SPACES = 16;
+const EVENT_LOOP_WINDOW_MS = 60_000;
+const MAX_EVENT_LOOP_WINDOWS = 15;
 const SAFE_SPACE_NAME = /^[a-z_]{1,48}$/;
 export type V8HeapSpaceSample = {
   name: string;
@@ -44,6 +46,8 @@ type RuntimeHealthState = {
   lastPostMajorGc?: PostMajorGcMemory | null;
   lastCpuUsage: NodeJS.CpuUsage | null;
   lastCpuAtNs: bigint | null;
+  windowTimer: ReturnType<typeof setInterval> | null;
+  eventLoopWindows: Array<{ from: string; to: string; p95Ms: number; p99Ms: number; maxMs: number }>;
 };
 
 // Next standalone builds can evaluate instrumentation and route modules in
@@ -63,7 +67,23 @@ const state = processGlobal.__airRadarRuntimeHealthObservation ??= {
   lastPostMajorGc: null,
   lastCpuUsage: null,
   lastCpuAtNs: null,
+  windowTimer: null,
+  eventLoopWindows: [],
 };
+
+function captureEventLoopWindow(): void {
+  if (!state.loop) return;
+  const now = Date.now();
+  state.eventLoopWindows.push({
+    from: new Date(now - EVENT_LOOP_WINDOW_MS).toISOString(),
+    to: new Date(now).toISOString(),
+    p95Ms: Number((state.loop.percentile(95) / 1e6).toFixed(3)),
+    p99Ms: Number((state.loop.percentile(99) / 1e6).toFixed(3)),
+    maxMs: Number((state.loop.max / 1e6).toFixed(3)),
+  });
+  if (state.eventLoopWindows.length > MAX_EVENT_LOOP_WINDOWS) state.eventLoopWindows.shift();
+  state.loop.reset();
+}
 
 function cpuSnapshot() {
   const usage = process.cpuUsage();
@@ -123,6 +143,8 @@ export function startRuntimeHealthObservation(): void {
     }
   });
   state.observer.observe({ entryTypes: ["gc"] });
+  state.windowTimer = setInterval(captureEventLoopWindow, EVENT_LOOP_WINDOW_MS);
+  state.windowTimer.unref?.();
 }
 
 export function stopRuntimeHealthObservation(): void {
@@ -130,6 +152,9 @@ export function stopRuntimeHealthObservation(): void {
   state.observer = null;
   state.loop?.disable();
   state.loop = null;
+  if (state.windowTimer) clearInterval(state.windowTimer);
+  state.windowTimer = null;
+  state.eventLoopWindows = [];
   state.gc = [];
   state.gcCount = 0;
   state.gcPauseMs = 0;
@@ -160,6 +185,7 @@ export function getRuntimeHealthObservation() {
     eventLoopLagP50Ms: state.loop ? Number((state.loop.percentile(50) / 1e6).toFixed(3)) : null,
     eventLoopLagP95Ms: state.loop ? Number((state.loop.percentile(95) / 1e6).toFixed(3)) : null,
     eventLoopLagP99Ms: state.loop ? Number((state.loop.percentile(99) / 1e6).toFixed(3)) : null,
+    eventLoopLagWindows: state.eventLoopWindows.map((window) => ({ ...window })),
     gcSampleCount: state.gc.length,
     gcCount: state.gcCount,
     gcTotalPauseMs: state.gcPauseMs,
