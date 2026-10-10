@@ -9,7 +9,6 @@ import type {
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { selectAircraftAltitude } from "@/lib/aircraft/altitude-provenance";
 
-const POSITION_TIE_MS = 1_000;
 const EMERGENCY_TIE_MS = 1_000;
 const SQUAWK_TIE_MS = 1_000;
 
