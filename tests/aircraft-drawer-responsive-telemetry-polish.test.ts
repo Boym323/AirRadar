@@ -43,6 +43,15 @@ describe("aircraft drawer responsive telemetry polish", () => {
     expect(quick).toContain("verticalRate={compactVerticalRateLabel(aircraft.verticalRate)}");
   });
 
+  it("guards real text geometry in the production browser smoke", () => {
+    const browserGate = read("scripts/production-gates.mjs");
+    expect(browserGate).toContain("aircraftDrawerLayout");
+    expect(browserGate).toContain("range.getBoundingClientRect()");
+    expect(browserGate).toContain("twoMetricRows");
+    expect(browserGate).toContain("overflowingValues");
+    expect(browserGate).toContain("overflowingActions");
+  });
+
   it("does not overlay scrollable tabs with a sticky aircraft header", () => {
     expect(polish).toContain(".sidebar.drawer-aircraft .aircraft-quick-header");
     expect(polish).toContain("position: relative");
