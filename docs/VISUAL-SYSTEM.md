@@ -321,3 +321,20 @@ checks weather and map mounts, then returns to the requested screenshot view.
 It captures the overview at desktop, 390 px and 320 px, a mobile arrivals
 board and the desktop advanced analytics view. No mock airport UI is accepted
 as a substitute for an actual Playwright-rendered view.
+
+### V5-C screenshot polish (v1.0.405 follow-up)
+
+- Receiver-based D4 textual signals now occupy the full card width rather than
+  inheriting the flight-lane three-column layout.
+- Below 600 px, observed arrival/departure rows become compact labeled cards,
+  while retaining one semantic HTML table and the same flight links/data.
+  The airport title/actions are compact at 320–390 px.
+- The active airport tab scrolls into view; a trailing affordance indicates
+  that more tabs are available in the current scroll direction.
+- D2–D4 evidence is retained in a keyboard-accessible optional disclosure.
+  When none of those models has enough evidence, the disclosure shows one
+  localized explanatory empty-state message.
+- CI screenshots cover all seven views across 320, 390, 768 and 1366 px;
+  browser smoke explicitly expands and verifies the nested evidence, then
+  collapses it before the analytics screenshot. A passing CI test is not a
+  substitute for human inspection of the new release artifacts.
