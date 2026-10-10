@@ -131,6 +131,23 @@ export class PostgresRouteCache implements RouteCacheStore {
     if (now - this.lastCleanup >= 60 * 60_000) { this.lastCleanup = now; void this.prune(); }
   }
 
+  /** Database count is sampled at most once per five minutes, not per status/SSE request. */
+  private refreshCount(): void {
+    const now = Date.now();
+    if (now - this.lastCountAttempt < 5 * 60_000) return;
+    this.lastCountAttempt = now;
+    void this.run<number | null>(null, async (db) => {
+      const rows = await db.runtime().query(db.raw.sql`
+        SELECT COUNT(*)::integer AS "entries"
+        FROM "public"."routeEnrichmentCache"
+        WHERE "expiresAtMs" > ${BigInt(Date.now())}
+      `.returnsRow({ entries: "pg/int4@1" }).build());
+      return rows[0]?.entries ?? null;
+    }).then((count) => {
+      if (count !== null) getRouteEnrichmentTelemetry().setValidEntries(count);
+    });
+  }
+
   private async prune(): Promise<void> {
     const cutoff = BigInt(Date.now());
     await this.run(false, async (db) => {
