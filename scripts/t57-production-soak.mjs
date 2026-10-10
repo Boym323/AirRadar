@@ -7,11 +7,13 @@
  * T57_SECONDS=86400 T57_INTERVAL_SECONDS=60 node scripts/t57-production-soak.mjs
  * node scripts/t57-production-soak.mjs --analyze /tmp/airradar-t57-....ndjson
  *
- * Incremental NDJSON is private (0600); a killed job still leaves evidence.
+ * Incremental NDJSON is private (0600) in a private 0700 directory; a killed
+ * job still leaves evidence.
  */
 import { constants } from "node:fs";
-import { mkdir, open, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, mkdtemp, open, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
@@ -156,10 +158,14 @@ async function run() {
   if (expectedCommit && !initial.identity.commit.startsWith(expectedCommit)) {
     throw new Error("unexpected_production_commit");
   }
-  const output = process.env.T57_OUTPUT ??
-    ("/tmp/airradar-t57-" + new Date().toISOString().replace(/[:.]/g, "-") + ".ndjson");
+  // mkdtemp atomically creates a private 0700 directory even though the
+  // parent temporary directory is shared. Never place a predictable filename
+  // directly in a world-writable directory.
+  const privateDir = process.env.T57_OUTPUT ? null :
+    await mkdtemp(join(tmpdir(), "airradar-t57-"));
+  const output = process.env.T57_OUTPUT ?? join(privateDir, "soak.ndjson");
   if (!output.endsWith(".ndjson")) throw new Error("ndjson_output_required");
-  await mkdir(dirname(output), { recursive: true });
+  if (privateDir === null) await mkdir(dirname(output), { recursive: true });
 
   const handle = await open(output, "wx", 0o600);
   let stopped = false;
