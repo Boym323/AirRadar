@@ -21,9 +21,26 @@ export function Radar3dDeviceCheck() {
         let previous=performance.now();
         // Observe existing map frames; do not create a second render loop or canvas.
         for(let i=0;i<61;i++){
-          const now=await new Promise<number>(resolve=>requestAnimationFrame(resolve));
-          if(i>0)samples.push(now-previous);
-          previous=now;
+          if (document.visibilityState !== "visible") break;
+          // Backgrounded/throttled tabs may never receive another animation
+          // frame. Bound each sample so manual device QA always returns a result.
+          const now = await new Promise<number | null>(resolve => {
+            let settled = false;
+            const finish = (value: number | null) => {
+              if (settled) return;
+              settled = true;
+              window.clearTimeout(timeout);
+              resolve(value);
+            };
+            const timeout = window.setTimeout(() => {
+              window.cancelAnimationFrame(frame);
+              finish(null);
+            }, 600);
+            const frame = window.requestAnimationFrame(time => finish(time));
+          });
+          if (now === null) break;
+          if (i > 0) samples.push(now - previous);
+          previous = now;
         }
       }
       samples.sort((a,b)=>a-b);
