@@ -435,6 +435,11 @@ export function AirportOperationsBoard({
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardFlowNoAttention}</p>}
     </section>
 
+    <details className="airport-live-advanced" data-testid="airport-live-board-advanced">
+      <summary>
+        <span><strong>{t.airport.liveBoardAdvancedLabel}</strong><small>{t.airport.liveBoardAdvancedHint}</small></span>
+        <span className="airport-live-advanced-chevron" aria-hidden="true">⌄</span>
+      </summary>
     <section className="airport-live-flow-pressure" data-testid="airport-live-board-v6-pressure" aria-labelledby="airport-live-v6-pressure-title">
       <div className="airport-live-flow-heading">
         <div>
@@ -756,6 +761,7 @@ export function AirportOperationsBoard({
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV9NoInbound}</p>}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV9Disclaimer}</p>
     </section> : null}
+    </details>
 
     <div className="airport-live-active" data-testid="airport-live-board-active">
       <ActiveTrafficLane

@@ -1787,6 +1787,8 @@ export const en = {
     liveBoardKicker: "Airport Live Board V7",
     liveBoardFlowKicker: "NOW Flow",
     liveBoardFlowTitle: "Current traffic flow",
+    liveBoardAdvancedLabel: "Detailed operations analysis",
+    liveBoardAdvancedHint: "Predictions, runway trends, arrival sequence and supporting evidence",
     liveBoardFlowInbound: "Inbound",
     liveBoardFlowFinal: "Final",
     liveBoardFlowHolding: "Holding",

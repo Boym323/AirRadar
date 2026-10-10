@@ -1785,6 +1785,8 @@ export const cs = {
     liveBoardKicker: "ŽIVÝ PŘEHLED LETIŠTĚ V7",
     liveBoardFlowKicker: "AKTUÁLNÍ PROVOZ",
     liveBoardFlowTitle: "Aktuální provozní tok",
+    liveBoardAdvancedLabel: "Podrobné provozní analýzy",
+    liveBoardAdvancedHint: "Předpovědi, dráhy, příletové sekvence a podklady k vyhodnocení",
     liveBoardFlowInbound: "Přílety",
     liveBoardFlowFinal: "Final",
     liveBoardFlowHolding: "Holding",
