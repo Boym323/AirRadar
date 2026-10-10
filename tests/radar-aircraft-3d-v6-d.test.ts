@@ -95,7 +95,7 @@ describe("V6-D 3D model selection and GPU budget",()=>{
     expect(b78x.length).toBeGreaterThan(resolveAirframeSpec("B789").length);
     expect(airframeFaceCount("A388")).toBeGreaterThan(airframeFaceCount("A20N"));
     const materials = new Set(airframeModelFaces("A20N").map((face) => face[4]));
-    for (const required of ["body","wing","engine","glass","intake"]) expect(materials.has(required)).toBe(true);
+    for (const required of ["body","wing","engine","glass","intake"] as const) expect(materials.has(required)).toBe(true);
     const vertices = aircraft3dVertices(selectRadarAircraft3d([target("COLOR01", { aircraftType: "A20N" })], null));
     const uniqueColors = new Set<string>();
     for(let i=3;i<vertices.length;i+=6) uniqueColors.add([vertices[i],vertices[i+1],vertices[i+2]].join(":"));
