@@ -98,7 +98,7 @@ const SHAPE = [
 ] as const;
 
 /** A schematic airplane in local metres oriented to ADS-B true track, not a type-correct 3D asset. */
-export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[]): Float32Array {
+export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[]): Float32Array<ArrayBuffer> {
   const points: number[]=[];
   for(const aircraft of candidates.slice(0,RADAR_AIRCRAFT_3D_LIMIT)){
     const location=MercatorCoordinate.fromLngLat([aircraft.lon,aircraft.lat],aircraft.altitudeM);
@@ -127,7 +127,7 @@ export class RadarAircraft3dRuntime {
   private buffer: WebGLBuffer | null = null;
   private vao: WebGLVertexArrayObject | null = null;
   private matrixUniform: WebGLUniformLocation | null = null;
-  private vertexData: Float32Array = new Float32Array(0);
+  private vertexData: Float32Array<ArrayBuffer> = new Float32Array(0);
   private dirty = true;
   constructor() {
     this.layer={id:RADAR_AIRCRAFT_3D_LAYER_ID,type:"custom",renderingMode:"3d",
