@@ -1410,7 +1410,9 @@
   min-height: var(--control-height-touch);
   padding: var(--space-2);
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: manual;
   line-height: var(--line-height-body);
   text-align: center;
 }
@@ -1419,10 +1421,48 @@
   grid-column: auto;
 }
 
-@container aircraft-drawer-header (min-width: 370px) {
-  .sidebar.drawer-aircraft .aircraft-quick-header .aircraft-v5-quick-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* The parent panel may be only ~400px wide even on desktop. Do not switch to
+ * three action columns based on viewport size: Czech labels split mid-word.
+ * The single-column fallback is reserved for exceptionally narrow drawers. */
+@container aircraft-drawer-header (max-width: 270px) {
+  .aircraft-v5-quick-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Four live metrics cannot fit next to the watchlist control in a 400px drawer:
+ * keep the full altitude/speed/heading/V/S numbers in a stable two-by-two grid.
+ * This rule is drawer-specific; shared OGN/traffic cards are unchanged. */
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+  min-width: 0;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics > div {
+  min-width: 0;
+  padding-right: 0;
+  border-right: 0;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics > div:nth-child(odd) {
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics strong {
+  display: block;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics span {
+  display: block;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  white-space: normal;
 }
 
 /* All four sections remain visible at minimum drawer width. */
