@@ -988,7 +988,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
         { name: "airport-v5-operations-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "operations" },
         { name: "airport-v5-weather-desktop", path: "/airports/LKPR", selector: ".airport-weather-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "weather" },
-        { name: "airport-v5-map-desktop", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map" },
+        { name: "airport-v5-map-desktop", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map", verifyAirportMapShortcut: true },
+        { name: "airport-v5-map-mobile", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map" },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -1009,6 +1010,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-320", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false },
         { name: "radar-mobile-320-credits", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false, openMapCredits: true },
+        { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
+        { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
         { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
@@ -1250,6 +1253,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.locator('[data-testid="daily-intelligence-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockAirportV3) {
+            if (target.verifyAirportMapShortcut) {
+              await visualPage.getByTestId("airport-v5-map-shortcut").click();
+              await visualPage.locator('[data-testid="airport-v5-panel"][id="airport-v5-panel-map"]').waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByTestId("airport-v5-tab-overview").click();
+            }
             const tabs = visualPage.getByTestId("airport-v5-tabs");
             await tabs.waitFor({ state: "visible", timeout: 15_000 });
             const switchAirportView = async (view) => {
@@ -1411,6 +1419,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") === before,
                 { key: layer, before: original },
               );
+            }
+          }
+          if (target.enableMapFocus) {
+            const focus = visualPage.getByTestId("radar-quick-map-focus");
+            await focus.waitFor({ state: "visible", timeout: 15_000 });
+            await focus.click();
+            await visualPage.waitForFunction(() => document.querySelector(".radar-workspace")?.getAttribute("data-map-focus") === "true");
+            if (await visualPage.locator(".radar-nav-rail").isVisible() || await visualPage.locator(".radar-content > .sidebar").isVisible()) {
+              throw new Error("V5-E map focus must give the map its full width");
             }
           }
           if (target.selectAircraft) {

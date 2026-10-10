@@ -131,7 +131,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
       kicker={airport.iataCode ? `${airport.iataCode} · ${airport.icaoCode}` : airport.icaoCode}
       title={airport.name}
       description={location}
-      actions={<button type="button" className="button-secondary" onClick={toggleFavorite} aria-pressed={favorite} title={favorite ? t.pwa.favoriteRemove : t.pwa.favoriteAdd}>{favorite ? "★" : "☆"} {t.pwa.favorites}</button>}
+      actions={<div className="airport-v5-header-actions"><button type="button" className="button-secondary" onClick={() => switchView("map")} data-testid="airport-v5-map-shortcut">{t.airport.map}</button><button type="button" className="button-secondary" onClick={toggleFavorite} aria-pressed={favorite} title={favorite ? t.pwa.favoriteRemove : t.pwa.favoriteAdd}>{favorite ? "★" : "☆"} {t.pwa.favorites}</button></div>}
     />
 
     <div className="airport-v5-tabs-rail" data-has-more={tabsHaveMore ? "true" : "false"}>

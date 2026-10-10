@@ -360,3 +360,28 @@ as a substitute for an actual Playwright-rendered view.
   responsive and airport screenshot matrix. As before, human inspection
   of post-release screenshots is required before considering visual
   polish complete.
+
+### V5-E2–E6: map-first presentation, aircraft glance, route evidence and airport workflow
+
+- Radar **Map focus** is a reversible state. It expands the existing live
+  MapLibre instance into the available workspace; the collapsed navigation
+  rail and traffic browser return without resubscribing or starting a new
+  receiver poll. An aircraft selection automatically leaves focus mode.
+  The original map filters, weather/ATC controls and source attribution
+  remain accessible.
+- The aircraft first glance now shows bounded, confidence-labelled route
+  progress **only when existing Route Corridor evidence supplies a valid
+  percentage**. This is modeled route progress, not a confirmed arrival,
+  gate or flight status; no ETA is fabricated.
+- The in-map legend explicitly differentiates receiver-observed trail,
+  modeled/public remaining route and the current projected segment.
+  Existing MapLibre layers/colors and ADS-B/OGN data sources are retained.
+- Airport detail adds a direct Map shortcut. Its nearby aircraft panel
+  filters the existing shared live observations into all, approaching or
+  departing aircraft, with a direct `/?aircraft=<ICAO>` link into the
+  radar's **existing aircraft-focus deep link**. There is no second
+  airport SSE connection.
+- Visual System V5-E6 verification includes unit/boundary tests,
+  desktop/mobile Map focus browser interactions and screenshots, an
+  airport Map shortcut interaction and 390px airport map screenshot.
+  Review screenshots after the production browser gate before release.
