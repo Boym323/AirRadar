@@ -1,5 +1,13 @@
 import { shortestTurnDeg } from "@/lib/spotter-sky-finder";
 
+/** Never invent a camera observer elevation: GPS altitude or explicit user input is required. */
+export function resolveCameraObserverAltitude(gpsMeters: number | null, manualMeters: string): number | null {
+  if (gpsMeters !== null && Number.isFinite(gpsMeters)) return gpsMeters;
+  if (manualMeters.trim() === "") return null;
+  const height = Number(manualMeters);
+  return Number.isFinite(height) && height >= -500 && height <= 9000 ? height : null;
+}
+
 export interface CameraProjection {
   xPercent: number;
   yPercent: number;

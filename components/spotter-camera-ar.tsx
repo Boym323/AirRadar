@@ -5,7 +5,7 @@ import type { AircraftView } from "@/lib/aircraft/types";
 import type { SpotterObserverPosition } from "@/lib/spotter-location";
 import { observerGeometry } from "@/lib/spotter-location";
 import { positionAgeMs } from "@/lib/aircraft/source-merge";
-import { projectAircraftToCamera } from "@/lib/spotter-camera-ar-projection";
+import { projectAircraftToCamera, resolveCameraObserverAltitude } from "@/lib/spotter-camera-ar-projection";
 import { formatAltitude, formatDistance, t } from "@/lib/i18n";
 import { Button } from "@/components/ui-primitives";
 import styles from "./spotter-camera-ar.module.css";
@@ -28,6 +28,9 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
   const [active, setActive] = useState(false);
   const [state, setState] = useState<CameraState>("idle");
   const [tiltCorrection, setTiltCorrection] = useState(0);
+  const [manualAltitudeMeters, setManualAltitudeMeters] = useState("");
+  const cameraAltitudeMeters = resolveCameraObserverAltitude(observer?.altitudeMeters ?? null, manualAltitudeMeters);
+  const cameraObserver = observer && cameraAltitudeMeters !== null ? { ...observer, altitudeMeters: cameraAltitudeMeters } : null;
   const videoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (!active || !visible) return;
@@ -57,11 +60,11 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
   }, [active, visible]);
 
   const labels = useMemo(() => {
-    if (!observer || heading === null || elevation === null || !feedLive || !available || state !== "ready") return [];
+    if (!cameraObserver || heading === null || elevation === null || !feedLive || !available || state !== "ready") return [];
     const now = Date.now();
     return aircraft.flatMap((item) => {
       if (positionAgeMs(item, now) > 20_000) return [];
-      const geometry = observerGeometry(item, observer);
+      const geometry = observerGeometry(item, cameraObserver);
       if (geometry?.elevationDeg === null || geometry?.elevationDeg === undefined) return [];
       const projection = projectAircraftToCamera(geometry.bearingDeg, geometry.elevationDeg, heading, elevation + tiltCorrection);
       return projection ? [{
@@ -72,7 +75,7 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
         ...projection,
       }] : [];
     }).sort((a, b) => Math.abs(a.azimuthDeltaDeg) + Math.abs(a.elevationDeltaDeg) - (Math.abs(b.azimuthDeltaDeg) + Math.abs(b.elevationDeltaDeg))).slice(0, 8);
-  }, [aircraft, available, elevation, feedLive, heading, observer, state, tiltCorrection]);
+  }, [aircraft, available, cameraObserver, elevation, feedLive, heading, state, tiltCorrection]);
 
   const enable = () => {
     if (active) { setActive(false); setState("idle"); return; }
@@ -89,6 +92,10 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
       </Button>
     </div>
     {!available && <p className={styles.note}>{english ? "First enable Sky Finder and allow compass access. Portrait orientation is required." : "Nejprve zapni Sky Finder a povol kompas. Telefon musí být na výšku."}</p>}
+    {observer?.altitudeMeters === null && <label className={styles.calibration}>{english ? "Observer altitude (m above sea level)" : "Nadmořská výška pozorovatele (m)"}
+      <input type="number" inputMode="decimal" min="-500" max="9000" step="1" value={manualAltitudeMeters} onChange={(event) => setManualAltitudeMeters(event.target.value)} placeholder={english ? "Enter actual altitude" : "Zadej skutečnou výšku"} />
+    </label>}
+    {active && cameraAltitudeMeters === null && <p className={styles.note} role="status">{english ? "GPS altitude unavailable. Enter your observed elevation to show AR labels." : "GPS neposkytuje nadmořskou výšku. Pro značky AR ji prosím zadej ručně."}</p>}
     {state === "denied" && <p className={styles.note} role="status">{english ? "Camera permission denied. Change it in browser settings." : "Přístup ke kameře byl zamítnut. Změň oprávnění v prohlížeči."}</p>}
     {state === "unavailable" && <p className={styles.note} role="status">{english ? "Camera needs HTTPS and browser camera support." : "Kamera vyžaduje HTTPS a podporu prohlížeče."}</p>}
     {state === "failed" && <p className={styles.note} role="status">{english ? "Camera unavailable. Sky Finder remains usable." : "Kamera není dostupná. Sky Finder zůstává funkční."}</p>}
