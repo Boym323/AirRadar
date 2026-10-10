@@ -204,7 +204,8 @@ describe("production release metadata gate", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("map?.isStyleLoaded()");
     expect(source).toContain("map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer))");
-    expect(source).toContain("}, undefined, { timeout: 25_000 });");
+    expect(source).toContain('}, target.v6Appearance === "satellite", { timeout: 25_000 });');
+    expect(source).toContain('getLayoutProperty("radar-v6-satellite-layer", "visibility")');
   });
 
   it("accepts only bounded per-aircraft enrichment rate limits in the visual sweep", () => {
