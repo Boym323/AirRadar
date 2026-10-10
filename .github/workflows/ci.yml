@@ -400,10 +400,30 @@ jobs:
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
-          sudo -n /var/www/airradar/deploy/release.sh \
-            --branch main \
-            --automated \
-            --commit "${GITHUB_SHA}"
+          # A manual release may briefly hold the release flock; never remove or bypass it.
+          # Retry only that explicit contention, not validation/rollback failures.
+          for attempt in 1 2 3 4 5; do
+            output="$(mktemp)"
+            if sudo -n /var/www/airradar/deploy/release.sh \
+                --branch main \
+                --automated \
+                --commit "${GITHUB_SHA}" >"${output}" 2>&1; then
+              cat -- "${output}"
+              rm -f -- "${output}"
+              exit 0
+            else
+              result=$?
+            fi
+            cat -- "${output}"
+            if grep -Fq 'Another AirRadar release is already running.' "${output}" && (( attempt < 5 )); then
+              rm -f -- "${output}"
+              echo "::warning::Another AirRadar release holds the lock (attempt ${attempt}/5); retrying after 30 seconds."
+              sleep 30
+            else
+              rm -f -- "${output}"
+              exit "${result}"
+            fi
+          done
 
       - name: Remove legacy validated-SHA bootstrap tag
         if: always() && steps.legacy-bootstrap-tag.outputs.tag != ''
