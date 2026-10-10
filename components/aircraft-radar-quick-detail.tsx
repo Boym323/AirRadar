@@ -722,6 +722,7 @@ export function AircraftRadarQuickDetail({
   sectorTraffic,
 }: AircraftRadarQuickDetailProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("flight");
+  const [advancedContextOpen, setAdvancedContextOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "shared" | "unavailable">("idle");
   const metadata = aircraft.enrichment?.metadata;
@@ -842,12 +843,14 @@ export function AircraftRadarQuickDetail({
       <RouteWeatherSection context={routeWeather} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       <IntelligenceSection events={intelligenceEvents} />
-      <details className="aircraft-quick-deep-context" data-testid="aircraft-v5-advanced-context">
+      <details className="aircraft-quick-deep-context" data-testid="aircraft-v5-advanced-context" onToggle={(event) => setAdvancedContextOpen(event.currentTarget.open)}>
         <summary>{t.aircraftQuickV5.advancedContext}</summary>
-        <NavigationIntegritySection aircraft={aircraft} />
-        <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
-        <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
-        <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
+        {advancedContextOpen && <>
+          <NavigationIntegritySection aircraft={aircraft} />
+          <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
+          <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
+          <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
+        </>}
       </details>
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}
