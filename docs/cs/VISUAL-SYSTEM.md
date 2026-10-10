@@ -274,3 +274,14 @@ přihlášením k push. Při chybějící poloze je sledování nedostupné.
 Sdílení využívá jen prohlížeč a veřejný odkaz na detail; bez oprávnění
 hlásí srozumitelný přístupný stav. Akce jsou viditelné bez přepínání
 na záložku Let, s alespoň 44px dotykovým cílem a překlady.
+
+### V5-C1: přehledné členění letišť
+
+Detail letiště nabízí sedm přístupných pohledů (Přehled, Přílety, Odlety,
+Provoz, Počasí, Mapa, Analýzy), vodorovně posuvné dotykové záložky, ovládání
+šipkami/Home/End a stálé odkazy `#airport-view-*`. Controller provozu
+a živých letadel zůstává jediný a sdílený. Přehled obsahuje základní údaje,
+pozorované pohyby a počasí; referenční infrastruktura je v rozbalovací sekci.
+Mapu, podrobné počasí a historické analýzy načítáme jen v příslušném
+pohledu. Jde o pozorování či odvození z přijímače, ne oficiální zpoždění,
+gate nebo veřejný letový řád.

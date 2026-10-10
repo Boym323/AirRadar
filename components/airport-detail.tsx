@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
@@ -8,6 +8,7 @@ import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
 import { AirportMovementAnalytics } from "@/components/airport-movement-analytics";
 import { AirportWeatherPanel } from "@/components/airport-weather";
 import { AirportOperationsBoard } from "@/components/airport-operations-board";
+import { AIRPORT_V5_VIEWS, type AirportV5View } from "@/lib/airport-v5-views";
 import { useAirportOperationsController } from "@/components/airport-operations-controller";
 import { AirportNearbyAircraft } from "@/components/airport-nearby-aircraft";
 import { useAirportLiveTrafficController } from "@/components/airport-live-traffic-controller";
@@ -71,10 +72,34 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
       .map((item) => item.aircraft.icaoHex),
     [liveTrafficController.observations],
   );
+  // One shared airport controller even as views change. No extra SSE or polling.
   const operationsController = useAirportOperationsController(airport.icaoCode, predictiveHexes);
   const [favorite, toggleFavorite] = useFavoriteAirport(airport.icaoCode);
+  const [view, setView] = useState<AirportV5View>("overview");
 
-  return <main className="airport-page">
+  useEffect(() => {
+    const match = /^#airport-view-(overview|arrivals|departures|operations|weather|map|analytics)$/.exec(window.location.hash);
+    if (match) setView(match[1] as AirportV5View);
+  }, []);
+
+  function switchView(next: AirportV5View) {
+    setView(next);
+    if (typeof window !== "undefined") window.history.replaceState(null, "", `#airport-view-${next}`);
+  }
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, current: AirportV5View) {
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = AIRPORT_V5_VIEWS.indexOf(current);
+    const next = event.key === "Home" ? AIRPORT_V5_VIEWS[0]
+      : event.key === "End" ? AIRPORT_V5_VIEWS[AIRPORT_V5_VIEWS.length - 1]
+        : AIRPORT_V5_VIEWS[(index + (event.key === "ArrowRight" ? 1 : AIRPORT_V5_VIEWS.length - 1)) % AIRPORT_V5_VIEWS.length];
+    switchView(next);
+    window.requestAnimationFrame(() => document.getElementById(`airport-v5-tab-${next}`)?.focus());
+  }
+
+  const operationViews = view === "overview" || view === "arrivals" || view === "departures" || view === "operations" || view === "analytics";
+
+  return <main className="airport-page airport-v5-page" data-testid="airport-v5-page">
     <PageHeader
       className="airport-page-header"
       backLink={<Link className="back-link" href="/">{t.airport.backToRadar}</Link>}
@@ -84,72 +109,90 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
       actions={<button type="button" className="button-secondary" onClick={toggleFavorite} aria-pressed={favorite} title={favorite ? t.pwa.favoriteRemove : t.pwa.favoriteAdd}>{favorite ? "★" : "☆"} {t.pwa.favorites}</button>}
     />
 
-    <AirportOperationsBoard airport={airport} runways={infrastructure.runways} controller={operationsController} liveTraffic={liveTrafficController} />
+    <nav className="airport-v5-tabs" role="tablist" aria-label={t.airportV5.navigation} data-testid="airport-v5-tabs">
+      {AIRPORT_V5_VIEWS.map((item) => <button
+        key={item}
+        type="button"
+        role="tab"
+        id={`airport-v5-tab-${item}`}
+        data-testid={`airport-v5-tab-${item}`}
+        aria-selected={view === item}
+        aria-controls={`airport-v5-panel-${item}`}
+        tabIndex={view === item ? 0 : -1}
+        className={view === item ? "active" : ""}
+        onClick={() => switchView(item)}
+        onKeyDown={(event) => onTabKeyDown(event, item)}
+      >{t.airportV5.tabs[item]}</button>)}
+    </nav>
 
-    <div className="airport-layout">
-      <div className="airport-overview">
+    <div id={`airport-v5-panel-${view}`} className="airport-v5-panel" role="tabpanel" aria-labelledby={`airport-v5-tab-${view}`} data-testid="airport-v5-panel">
+      {operationViews && <AirportOperationsBoard airport={airport} runways={infrastructure.runways} controller={operationsController} liveTraffic={liveTrafficController} view={view} />}
+
+      {view === "weather" && <section className="airport-card airport-weather-card airport-v5-standalone" aria-labelledby="airport-weather-title">
+        <h2 id="airport-weather-title">{t.weather.title}</h2>
+        <AirportWeatherPanel
+          airport={airport}
+          runways={infrastructure.runways}
+          sharedState={{
+            weather: operationsController.weather,
+            loading: operationsController.status === "loading",
+            failed: operationsController.weatherFailed,
+            onRetry: operationsController.refresh,
+          }}
+        />
+      </section>}
+
+      {view === "map" && <div className="airport-v5-two-column">
         <section className="airport-card airport-map-card" aria-labelledby="airport-map-title">
           <h2 id="airport-map-title">{t.airport.map}</h2>
           <AirportMap airport={airport} infrastructure={infrastructure} />
         </section>
-
-        <section className="airport-card airport-weather-card" aria-labelledby="airport-weather-title">
-          <h2 id="airport-weather-title">{t.weather.title}</h2>
-          {/* Existing contract: <AirportWeatherPanel airport={airport} />; runway wind remains additive. */}
-          <AirportWeatherPanel
-            airport={airport}
-            runways={infrastructure.runways}
-            sharedState={{
-              weather: operationsController.weather,
-              loading: operationsController.status === "loading",
-              failed: operationsController.weatherFailed,
-              onRetry: operationsController.refresh,
-            }}
-          />
-        </section>
-      </div>
-
-      <div className="airport-content">
-        <AirportTrafficSummary airport={airport} />
-
-        <AirportMovementAnalytics airport={airport} />
-
         <AirportNearbyAircraft liveTraffic={liveTrafficController} />
+      </div>}
 
-        <section className="airport-card airport-reference-card" aria-labelledby="airport-information-title">
-          <h2 id="airport-information-title">{t.airport.information}</h2>
-          <dl className="airport-info-grid">
-            <div><dt>{t.airport.icao}</dt><dd>{airport.icaoCode}</dd></div>
-            <div><dt>{t.airport.iata}</dt><dd>{value(airport.iataCode)}</dd></div>
-            <div><dt>{t.airport.name}</dt><dd>{airport.name}</dd></div>
-            <div><dt>{t.airport.city}</dt><dd>{value(airport.city)}</dd></div>
-            <div><dt>{t.airport.country}</dt><dd>{value(airport.country)}</dd></div>
-            <div><dt>{t.airport.elevation}</dt><dd>{airport.elevationFt !== null && airport.elevationFt !== undefined ? `${Math.round(airport.elevationFt * 0.3048).toLocaleString()} m / ${airport.elevationFt.toLocaleString()} ft` : t.common.notReported}</dd></div>
-            <div><dt>{t.airport.type}</dt><dd>{airportTypeLabel(airport.type)}</dd></div>
-            <div><dt>{t.airport.scheduledService}</dt><dd>{airport.scheduledService === null || airport.scheduledService === undefined ? t.common.notReported : airport.scheduledService ? t.common.yes : t.common.no}</dd></div>
-            <div><dt>{t.airport.coordinates}</dt><dd>{formatCoordinate(airport.latitude)}, {formatCoordinate(airport.longitude)}</dd></div>
-          </dl>
-        </section>
+      {view === "analytics" && <div className="airport-v5-analytics-extras">
+        <AirportTrafficSummary airport={airport} />
+        <AirportMovementAnalytics airport={airport} />
+      </div>}
 
-        <div className="airport-reference-grid">
-          <AirportInfrastructureSections infrastructure={infrastructure} />
+      {view === "overview" && <details className="airport-v5-reference" data-testid="airport-v5-reference">
+        <summary>{t.airportV5.referenceDetails}</summary>
+        <div className="airport-v5-reference-grid">
+          <section className="airport-card airport-reference-card" aria-labelledby="airport-information-title">
+            <h2 id="airport-information-title">{t.airport.information}</h2>
+            <dl className="airport-info-grid">
+              <div><dt>{t.airport.icao}</dt><dd>{airport.icaoCode}</dd></div>
+              <div><dt>{t.airport.iata}</dt><dd>{value(airport.iataCode)}</dd></div>
+              <div><dt>{t.airport.name}</dt><dd>{airport.name}</dd></div>
+              <div><dt>{t.airport.city}</dt><dd>{value(airport.city)}</dd></div>
+              <div><dt>{t.airport.country}</dt><dd>{value(airport.country)}</dd></div>
+              <div><dt>{t.airport.elevation}</dt><dd>{airport.elevationFt !== null && airport.elevationFt !== undefined ? `${Math.round(airport.elevationFt * 0.3048).toLocaleString()} m / ${airport.elevationFt.toLocaleString()} ft` : t.common.notReported}</dd></div>
+              <div><dt>{t.airport.type}</dt><dd>{airportTypeLabel(airport.type)}</dd></div>
+              <div><dt>{t.airport.scheduledService}</dt><dd>{airport.scheduledService === null || airport.scheduledService === undefined ? t.common.notReported : airport.scheduledService ? t.common.yes : t.common.no}</dd></div>
+              <div><dt>{t.airport.coordinates}</dt><dd>{formatCoordinate(airport.latitude)}, {formatCoordinate(airport.longitude)}</dd></div>
+            </dl>
+          </section>
+
+          <div className="airport-reference-grid">
+            <AirportInfrastructureSections infrastructure={infrastructure} />
+          </div>
+
+          <section className="airport-card airport-nearby-card" aria-labelledby="airport-nearby-title">
+            <h2 id="airport-nearby-title">{t.airport.nearbyTitle}</h2>
+            <p className="airport-nearby-description">{t.airport.nearbyDescription}</p>
+            {nearbyAirports.length === 0 ? <div className="airport-traffic-message">{t.airport.nearbyEmpty}</div> : <ol className="airport-nearby-list">
+              {nearbyAirports.map((item) => <li key={item.airport.icaoCode}>
+                <Link className="airport-nearby-name" href={`/airports/${encodeURIComponent(item.airport.icaoCode)}`}>
+                  <span>{item.airport.iataCode ? `${item.airport.iataCode} · ` : ""}{item.airport.icaoCode}</span>
+                  <small>{item.airport.name}</small>
+                </Link>
+                <span className="airport-nearby-meta"><span>{formatDistance(item.distanceKm)}</span><span>{formatTrack(item.bearing)}</span></span>
+              </li>)}
+            </ol>}
+          </section>
+
         </div>
-
-        <section className="airport-card airport-nearby-card" aria-labelledby="airport-nearby-title">
-          <h2 id="airport-nearby-title">{t.airport.nearbyTitle}</h2>
-          <p className="airport-nearby-description">{t.airport.nearbyDescription}</p>
-          {nearbyAirports.length === 0 ? <div className="airport-traffic-message">{t.airport.nearbyEmpty}</div> : <ol className="airport-nearby-list">
-            {nearbyAirports.map((item) => <li key={item.airport.icaoCode}>
-              <Link className="airport-nearby-name" href={`/airports/${encodeURIComponent(item.airport.icaoCode)}`}>
-                <span>{item.airport.iataCode ? `${item.airport.iataCode} · ` : ""}{item.airport.icaoCode}</span>
-                <small>{item.airport.name}</small>
-              </Link>
-              <span className="airport-nearby-meta"><span>{formatDistance(item.distanceKm)}</span><span>{formatTrack(item.bearing)}</span></span>
-            </li>)}
-          </ol>}
-        </section>
-
-      </div>
+      </details>}
     </div>
     <p className="airport-data-source">{t.airport.dataSource}</p>
   </main>;

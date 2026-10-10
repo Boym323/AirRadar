@@ -281,3 +281,14 @@ without a position. Sharing sends only the canonical public aircraft-detail
 link from the user's browser; missing sharing permissions receive explicit
 accessible feedback. All actions are reachable without first entering the
 Flight tab, use >=44 px tap targets and localized labels.
+
+### V5-C1: airport information architecture
+
+Airport detail now has seven accessible views (overview, arrivals, departures,
+operations, weather, map, analytics), horizontal-scroll touch tabs, arrow/Home/End
+keyboard navigation, stable `#airport-view-*` deep links and shared airport
+operations/live-traffic controllers. The overview uses an airport hero, observed
+metrics, weather and live traffic; reference infrastructure remains in a native
+disclosure. Map, weather, background airport analytics and the airport nearby
+panel mount only in their selected view. Operational quantities are receiver-
+observed/inferred: no provider-sourced gates, official delays or fake schedules.
