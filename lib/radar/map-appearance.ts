@@ -58,7 +58,7 @@ export function applyRadarMapAppearance(map: MapLibreMap, nativeIds: readonly st
     if (!original) continue;
     const update = lightBasemapPaint({ id: layer.id, type: layer.type, paint: original });
     for (const key of Object.keys(update)) {
-      map.setPaintProperty(layer.id, key, mode === "light" ? update[key] : original[key]);
+      map.setPaintProperty(layer.id, key as Parameters<MapLibreMap["setPaintProperty"]>[1], mode === "light" ? update[key] : original[key]);
     }
   }
   map.setPaintProperty("map-tint", "fill-opacity", mode === "dark" ? 0.13 : mode === "light" ? 0 : 0.05);
