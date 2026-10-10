@@ -1,11 +1,31 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { AircraftView } from "@/lib/aircraft/types";
-import { selectRadarAircraft3d, aircraft3dVertices, RADAR_AIRCRAFT_3D_LIMIT } from "@/lib/radar/aircraft-3d-v6-d";
+import { selectRadarAircraft3d, aircraft3dVertices, RADAR_AIRCRAFT_3D_LIMIT, createRadarAircraft3dRuntime } from "@/lib/radar/aircraft-3d-v6-d";
 const target=(icaoHex:string, extra:Partial<AircraftView>={}): AircraftView=>({
   icaoHex, lat:49.22, lon:17.71, altitude:12000, geomAltitude:12010, baroAltitude:12000,
   track:90, onGround:false, seenPosSeconds:3, distanceKm:30, ...extra,
 } as AircraftView);
 describe("V6-D 3D model selection and GPU budget",()=>{
+  it("keeps the radar operational when optional WebGL2 shader creation fails", () => {
+    const runtime = createRadarAircraft3dRuntime();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const map = { triggerRepaint: vi.fn() };
+    const gl = {
+      VERTEX_SHADER: 35633,
+      ARRAY_BUFFER: 34962,
+      createShader: () => null,
+      bindVertexArray: vi.fn(),
+      bindBuffer: vi.fn(),
+    };
+    try {
+      expect(() => runtime.layer.onAdd?.(map as never, gl as never)).not.toThrow();
+      expect(warn).toHaveBeenCalledOnce();
+      expect(() => runtime.layer.onRemove?.(map as never, gl as never)).not.toThrow();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("never manufactures positions, stale locations or altitudes",()=>{
     const all=[target("GOOD"),target("STALE",{seenPosSeconds:99}),target("NOGPS",{lat:null}),target("GROUND",{onGround:true}),target("NOALT",{altitude:null,geomAltitude:null,baroAltitude:null})];
     expect(selectRadarAircraft3d(all,null).map(x=>x.icaoHex)).toEqual(["GOOD"]);
