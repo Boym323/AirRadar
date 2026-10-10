@@ -100,7 +100,7 @@ export function aircraft3dVertices(candidates: readonly Aircraft3dCandidate[], l
     const forwardEast=Math.sin(angle), forwardNorth=Math.cos(angle);
     const rightEast=Math.cos(angle), rightNorth=-Math.sin(angle);
     const color=aircraft.approximateAltitude ? [1,0.76,0.35] : [0.30,0.93,0.80];
-    for(const [a,b,c,shade] of (licensed && index < 4 ? licensedFaces(aircraft.aircraftType) : null) ?? airframeModelFaces(aircraft.aircraftType)){
+    for(const [a,b,c,shade] of (licensed && index < 2 ? licensedFaces(aircraft.aircraftType) : null) ?? airframeModelFaces(aircraft.aircraftType)){
       for(const [right,forward,up] of [a,b,c]){
         points.push(location.x+(right*rightEast+forward*forwardEast)*metre,
           location.y-(right*rightNorth+forward*forwardNorth)*metre,
