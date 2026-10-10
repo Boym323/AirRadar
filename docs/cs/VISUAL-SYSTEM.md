@@ -392,3 +392,8 @@ Mapa nabízí **2D (výchozí)** a **3D terén (beta)**. Stávající mapa MapLi
 ### V6-G: prezentační režim (první verze)
 
 Ovládací prvek přepne radar na celou obrazovku, ale používá stávající živý stream. Každých 45 sekund se vystřídá pohled na **čerstvě pozorované lokální letadlo ve vzduchu**; nejsou-li dostupná, kamera se vrátí na polohu přijímače. Režim nepřidává další stream, externí dotazy, polling ani zápisy. Uživatel může střídání pozastavit a režim kdykoli ukončit. Editor TV playlistů a sdílené presety nejsou součástí první verze.
+
+
+### V6-E: důkaz původu a stáří stavu letu
+
+Detail letadla už zobrazuje na vyžádání načtená data FlightAware (stav, plánované/odhadované/skutečné časy, zpoždění, brány). V6-E přidává označení zdroje AeroAPI, čas získání a konzervativní hodnocení stáří (do 60 minut, starší, neznámé), případně jasnou informaci o nedostupnosti externích údajů. Polohy ADS-B ani odvozené trasy se nevydávají za oficiální letový plán či FIDS. Nové UI nevytváří žádné placené dotazy ani polling na pozadí.

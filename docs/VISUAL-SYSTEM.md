@@ -410,3 +410,8 @@ Radar appearance controls offer **2D (default)** and **3D terrain (beta)**. The 
 ### V6-G: Presentation Mode (first delivery)
 
 A dedicated map control enters fullscreen on user action and keeps the existing live radar feed. The presentation cycles between **fresh, local, airborne receiver observations** every 45 seconds; when none are usable it returns to the configured public receiver viewpoint. It adds no stream, provider request, server polling, write path or autoplay when hidden. A pause button stops automatic camera rotation. Users can leave presentation at any time. This does not yet implement a TV playlist editor or externally shared presets.
+
+
+### V6-E: verified flight-status evidence
+
+Aircraft details already show on-demand FlightAware status, actual/estimated/scheduled flight phases, delays, gates and operational context when a paid, rate-limited provider lookup yields data. V6-E adds an explicit AeroAPI provenance/fetch-time banner and conservative freshness assessment (within 60 minutes versus older/unknown), and a clear unavailable state when no provider record exists. ADS-B positions and inferred routes are never relabeled as an airline schedule or official FIDS. No additional paid calls or background polling are introduced by this UI.
