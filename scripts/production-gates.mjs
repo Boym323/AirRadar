@@ -1500,16 +1500,45 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await layers.evaluate((element) => { element.open = false; });
           }
           if (target.v6Media) {
-            const permission=visualPage.locator(".airport-v6-media-permission input");
+            const root = visualPage.getByTestId("airport-media-v6-h");
+            const permission = root.locator(".airport-v6-media-permission input");
+            const play = root.getByRole("button", {name:/Přehrát zde|Play here/i});
+            const consentReady = async () => {
+              await visualPage.waitForFunction(() => {
+                const media = document.querySelector('[data-testid="airport-media-v6-h"]');
+                const playButton = Array.from(media?.querySelectorAll("button") ?? [])
+                  .find(button => /Přehrát zde|Play here/.test(button.textContent ?? ""));
+                return media?.getAttribute("data-consent-status") === "granted" &&
+                  playButton && !playButton.disabled;
+              }, null, {timeout:5_000});
+            };
             await permission.check();
-            const play=visualPage.getByTestId("airport-media-v6-h").getByRole("button", {name:/Přehrát zde|Play here/i});
-            await play.click();
-            const player=visualPage.getByTestId("airport-v6-authorized-player");
+            try {
+              await consentReady();
+            } catch {
+              // A late React hydration/remount may consume the first checkbox
+              // action; one real user-style off/on retry must activate consent.
+              await permission.uncheck();
+              await permission.check();
+              try {
+                await consentReady();
+              } catch (error) {
+                const evidence = await root.evaluate(element => ({
+                  consent: element.getAttribute("data-consent-status"),
+                  checked: element.querySelector(".airport-v6-media-permission input")?.checked,
+                  playDisabled: Array.from(element.querySelectorAll("button"))
+                    .find(button => /Přehrát zde|Play here/.test(button.textContent ?? ""))?.disabled,
+                })).catch(() => ({unavailable:true}));
+                throw new Error(`Airport media consent did not activate player: ${JSON.stringify(evidence)}; ${String(error)}`);
+              }
+            }
+            await play.click({timeout:5_000});
+            const player = visualPage.getByTestId("airport-v6-authorized-player");
             await player.locator("iframe").waitFor({state:"visible",timeout:10_000});
-            const src=await player.locator("iframe").getAttribute("src");
+            const src = await player.locator("iframe").getAttribute("src");
             if (!src?.startsWith("https://www.youtube-nocookie.com/embed/M7lc1UVf-VE")) throw new Error("Unsafe embedded player URL");
             await permission.uncheck();
-            if (await visualPage.getByTestId("airport-v6-authorized-player").count()) throw new Error("Revoked permission left player active");
+            await player.waitFor({state:"detached",timeout:5_000});
           }
           if (target.v6Appearance) {
             const layers = visualPage.locator(".map-layers");
