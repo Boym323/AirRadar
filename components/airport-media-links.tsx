@@ -41,7 +41,7 @@ export function AirportMediaLinks({ icao }: { icao: string }) {
     setTitle(""); setUrl(""); setMessage("");
   };
 
-  return <section className="airport-card airport-v6-media" data-testid="airport-media-v6-h" aria-labelledby="airport-media-title">
+  return <section className="airport-card airport-v6-media" data-testid="airport-media-v6-h" data-consent-status={permission ? "granted" : "pending"} aria-labelledby="airport-media-title">
     <h2 id="airport-media-title">{copy.title}</h2>
     <p>{copy.help}</p>
     {loaded && links.length > 0 && <label className="airport-v6-media-permission">
