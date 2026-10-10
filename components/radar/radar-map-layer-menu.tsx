@@ -267,7 +267,7 @@ export function RadarMapLayerMenu({
         {radar3dMode === "3d" && <label data-testid="radar-v6-glb-detail"><input type="checkbox" checked={radar3dLicensedModels} onChange={(event) => onRadar3dLicensedModelsChange(event.target.checked)} />
           {t.locale.startsWith("en") ? "Detailed aircraft models (online GLB)" : "Detailní modely letadel (online GLB)"}
         </label>}
-        {radar3dMode === "3d" && <small>{t.locale.startsWith("en") ? "Altitude-aware low-poly 3D, maximum 12 aircraft. Detailed Airbus/Boeing GLBs load only when enabled; other types use local silhouettes." : "Výškově umístěné 3D modely, nejvýše 12 letadel. Detailní GLB Airbus/Boeing se načtou jen po zapnutí, nejvýše pro dvě prioritní letadla; ostatní zobrazí lokální siluety."}
+        {radar3dMode === "3d" && <small>{t.locale.startsWith("en") ? "Altitude-aware low-poly 3D, maximum 12 aircraft. Detailed Airbus/Boeing GLBs load for up to two priority aircraft when enabled; others use local silhouettes." : "Výškově umístěné 3D modely, nejvýše 12 letadel. Detailní GLB Airbus/Boeing se načtou jen po zapnutí, nejvýše pro dvě prioritní letadla; ostatní zobrazí lokální siluety."}
         {radar3dLicensedModels && <> · <a href="https://github.com/amvlab/aircraft-models" target="_blank" rel="noopener noreferrer">amvlab</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> ({t.locale.startsWith("en")?"normalized for AirRadar":"normalizováno pro AirRadar"})</>}
         </small>}
         {radar3dMode === "3d" && <Radar3dDeviceCheck />}
