@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getRuntimeHealthObservation, startRuntimeHealthObservation, stopRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 
 describe("opt-in runtime health observation", () => {
@@ -24,5 +24,16 @@ describe("opt-in runtime health observation", () => {
     expect(snapshot.cpuSystemTimeMs).toBeGreaterThanOrEqual(0);
     stopRuntimeHealthObservation();
     expect(getRuntimeHealthObservation().status).toBe("disabled");
+  });
+
+  it("shares observation state across separately evaluated module copies", async () => {
+    vi.resetModules();
+    const startupModule = await import("@/lib/server/runtime-health-observation");
+    startupModule.startRuntimeHealthObservation();
+
+    vi.resetModules();
+    const routeModule = await import("@/lib/server/runtime-health-observation");
+    expect(routeModule.getRuntimeHealthObservation().status).toBe("enabled");
+    routeModule.stopRuntimeHealthObservation();
   });
 });
