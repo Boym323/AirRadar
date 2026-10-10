@@ -47,7 +47,7 @@ describe("optional enrichment providers", () => {
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
   });
 
-  it("rejects an incomplete FlightPlan when the fallback route endpoint returns HTTP 500", async () => {
+  it("preserves FlightAware status when the optional route endpoint returns HTTP 500", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [{
         ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z",
@@ -57,12 +57,12 @@ describe("optional enrichment providers", () => {
       .mockResolvedValueOnce(new Response("upstream failure", { status: 500 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z")))
-      .rejects.toThrow("FlightAware route returned HTTP 500");
+    await expect(new FlightAwareFlightPlanProvider("secret-key", { includeRouteFallback: true }).getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z")))
+      .resolves.toMatchObject({ callsign: "UAE139", waypoints: [], estimatedArrival: "2026-01-01T16:20:00Z" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("rejects an incomplete FlightPlan when the fallback route endpoint times out", async () => {
+  it("preserves FlightAware status when the optional route endpoint times out", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [{
         ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z",
@@ -71,8 +71,8 @@ describe("optional enrichment providers", () => {
       .mockRejectedValueOnce(new Error("The operation was aborted"));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z")))
-      .rejects.toThrow("The operation was aborted");
+    await expect(new FlightAwareFlightPlanProvider("secret-key", { includeRouteFallback: true }).getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z")))
+      .resolves.toMatchObject({ callsign: "UAE139", waypoints: [], scheduledArrival: "2026-01-01T16:00:00Z" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
