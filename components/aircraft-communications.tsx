@@ -67,6 +67,33 @@ export function AircraftCommunications({ icaoHex, callsign }: { icaoHex: string;
       <span className={styles.status} data-state={snapshot.connection}>{stateLabel(snapshot.connection, cs)}</span>
     </div>
 
+
+    {snapshot.waypointPlan && <div className={styles.fpnPanel}>
+      <div className={styles.heading}>
+        <div>
+          <h3>{cs ? "FMS letový plán • ACARS H1/FPN" : "FMS flight plan • ACARS H1/FPN"}</h3>
+          <p>{snapshot.waypointPlan.origin} → {snapshot.waypointPlan.destination}
+            {" · "}{snapshot.waypointPlan.waypoints.length} {cs ? "bodů" : "fixes"}
+            {" · "}{snapshot.waypointPlan.positionedCount} {cs ? "se souřadnicemi" : "georeferenced"}
+          </p>
+        </div>
+        <span className={styles.status}>{cs ? "Nahlášeno · neověřeno" : "Reported · unverified"}</span>
+      </div>
+      <ol className={styles.waypointList} aria-label={cs ? "Nahlášené waypointy" : "Reported waypoints"}>
+        {snapshot.waypointPlan.waypoints.map((point, index) => (
+          <li key={index} className={styles.waypoint}>
+            <span className={styles.waypointIndex}>{index + 1}.</span>
+            <strong>{point.name}</strong>
+            {point.via && <span className={styles.waypointVia}>via {point.via}</span>}
+            {point.lat !== null && point.lon !== null && <span className={styles.waypointCoords}>{point.lat.toFixed(3)}°, {point.lon.toFixed(3)}°</span>}
+          </li>
+        ))}
+      </ol>
+      <p className={styles.note}>{cs
+        ? "Plán získaný z jedné ACARS zprávy, nikoli ověřená aktuální trasa. Na mapě se spojují jen sousední body s explicitními souřadnicemi."
+        : "Plan decoded from one ACARS message, not a verified active route. Only consecutive points with explicit coordinates are connected on the map."}</p>
+    </div>}
+
     {snapshot.routeHint && <div className={styles.routeHint}>
       <div className={styles.routeLabel}>{cs ? "Trasa hlášená přes ACARS (neověřeno)" : "ACARS reported route (unverified)"}</div>
       <div className={styles.routeAirports}><strong>{snapshot.routeHint.origin}</strong><span aria-hidden="true">→</span><strong>{snapshot.routeHint.destination}</strong></div>

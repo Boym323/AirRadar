@@ -1,3 +1,33 @@
+/** A structured, unverified FPN waypoint; coordinates are explicit millidegrees only. */
+export interface RxwWaypoint {
+  name: string;
+  lat: number | null;
+  lon: number | null;
+  via: string | null;
+  /** Never draw an inferred segment across gaps/discontinuities. */
+  breakBefore: boolean;
+}
+
+export interface RxwWaypointPlan {
+  icaoHex: string;
+  flight: string;
+  origin: string;
+  destination: string;
+  status: "planned" | "inactive";
+  waypoints: RxwWaypoint[];
+  positionedCount: number;
+  observedAt: string;
+  stationId: string;
+  source: "rxw-acarshub";
+  confidence: "reported";
+}
+
+export interface RxwWaypointAvailability {
+  icaoHex: string;
+  flight: string;
+  waypointCount: number;
+}
+
 /** Public, deliberately content-free metadata from an optional ACARS Hub source. */
 export interface RxwReportedRoute {
   origin: string;
@@ -42,5 +72,6 @@ export interface RxwHubPublicSnapshot {
   lastReceivedAt: string | null;
   /** A live-flight candidate is only provided when ICAO24 and callsign match. */
   routeHint: RxwRouteEvidence | null;
+  waypointPlan: RxwWaypointPlan | null;
   messages: RxwCommunication[];
 }

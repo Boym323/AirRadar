@@ -93,8 +93,14 @@ export class RxwHubService {
       connection: this.connection,
       lastReceivedAt: this.lastReceivedAt,
       routeHint: isRxwHubEnabled() ? this.store.routeForFlight(icaoHex, callsign) : null,
+      waypointPlan: isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true" ? this.store.waypointPlanForFlight(icaoHex, callsign) : null,
       messages: isRxwHubEnabled() ? this.store.list(icaoHex) : [],
     };
+  }
+
+  getWaypointAvailability(): { enabled: boolean; aircraft: ReturnType<RxwHubMessageStore["waypointAvailability"]> } {
+    const enabled = isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true";
+    return { enabled, aircraft: enabled ? this.store.waypointAvailability() : [] };
   }
 
   stop(): void {

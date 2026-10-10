@@ -1056,12 +1056,13 @@
       "category": "aircraft / communications",
       "status": "optional",
       "introducedVersion": null,
-      "summary": "Optional RXW ACARS Hub metadata integration using one server-side Socket.IO client, bounded ICAO24-matched cache and a content-free communications panel. Disabled by default; requires provider authorization.",
+      "summary": "Optional RXW ACARS Hub metadata and independently parsed H1/FPN waypoint reports with bounded in-memory caches, aircraft plan badges and a non-authoritative map overlay. Disabled by default; requires provider authorization.",
       "pages": [
         "/aircraft/:hex"
       ],
       "apis": [
-        "/api/aircraft/:hex/communications"
+        "/api/aircraft/:hex/communications",
+        "/api/aircraft/communications/waypoints"
       ],
       "changelogScopes": [
         "rxw-acars"
@@ -1069,7 +1070,9 @@
       "changelogKeywords": [
         "RXW Hub",
         "ACARS communications",
-        "VDL2 communications"
+        "VDL2 communications",
+        "FPN waypoints",
+        "RXW route plan"
       ]
     }
   ]

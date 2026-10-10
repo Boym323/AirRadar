@@ -71,3 +71,43 @@ flight-history records, or generate additional FlightAware calls.
 The route evidence is kept only in the already-bounded in-memory
 message cache (two-hour message retention); it does not introduce DB writes
 or new network requests. Access still requires RXW operator permission.
+
+## V3: H1/FPN waypoint plans and radar differentiation
+
+V3 adds a **strict, bounded decoder for the known H1/FPN flight-plan layout**.
+This is a separately enabled capability: set both \`RXW_HUB_ENABLED=true\` and
+\`RXW_FPN_ENABLED=true\` only after receiving authorization to use the content.
+Both flags default to off. \`RXW_FPN_ENABLED\` alone creates no RXW connection.
+
+* The decoder accepts an **entire single** H1 message beginning with \`FPN/\`,
+  containing \`DA\`, \`AA\` and a sequence of \`F\` waypoint fixes (or a
+  recognizable \`CR\` sequence). The message must end with four hex checksum
+  characters; the checksum **is not cryptographically verified**.
+* The \`RP\` status means **planned/reported**, not verified as the active
+  filed flight plan. \`RI\` invalidates the matching older plan. The decoder
+  checks the optional FPN header flight against the ACARS flight identifier.
+* Waypoints preserve order, names, optional inbound airways and explicit
+  georeferences (\`N01234W123456\` = 1.234°, −123.456°). Unknown coordinates
+  stay null. Missing payload chunks are not reconstructed or guessed.
+* Full ACARS text and decoded payloads are never cached, logged, published
+  in an API, or written to PostgreSQL. The parser only extracts allowlisted
+  plan metadata and at most 80 fixes. Plans are bounded to 256 aircraft,
+  expire after 45 minutes and are matched by **ICAO24 + exact callsign**.
+* \`GET /api/aircraft/{icao24}/communications?flight=... \` now also returns
+  \`waypointPlan\` for an exact match. The radar calls
+  \`GET /api/aircraft/communications/waypoints\` **once every 60 seconds**
+  to retrieve a maximum of 256 aircraft identifiers and their flight
+  identities, never per-aircraft route requests.
+* Aircraft with a recent matching RP plan receive an amber **FP** indicator
+  and subtle ring on the map. For a selected aircraft, a dashed amber
+  route/waypoint overlay includes **only adjacent fixes with explicit
+  coordinates**. It never interpolates across missing waypoints or
+  discontinuities. Existing aircraft icon priority/emergency appearance,
+  ADS-B tracks, ADSBDB/ADSB.lol and FlightAware are unchanged.
+
+Only the documented H1/FPN format is supported. Other types such as H1/POS,
+ADS-C, multi-part reassembly, SID/STAR synthesis, and file-plan quality
+promotion remain future work. Actual RXW availability and operator
+authorization remain unverified.
+
+V3 tests: \`npx vitest run tests/rxw-fpn-waypoints.test.ts\`

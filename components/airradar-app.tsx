@@ -154,6 +154,18 @@ import { createRadarAircraft3dRuntime, RADAR_AIRCRAFT_3D_LAYER_ID, type RadarAir
 import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
 import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
+import type { RxwWaypointAvailability, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
+import {
+  createRxwFpnBadges,
+  createRxwFpnRoute,
+  RXW_FPN_BADGE_SOURCE,
+  RXW_FPN_BADGE_CIRCLE,
+  RXW_FPN_BADGE_LABEL,
+  RXW_FPN_ROUTE_SOURCE,
+  RXW_FPN_ROUTE_LINE,
+  RXW_FPN_ROUTE_POINTS,
+  RXW_FPN_ROUTE_LABEL,
+} from "@/lib/radar/rxw-fpn-visual";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
@@ -666,6 +678,7 @@ export function AirRadarApp() {
   const aircraftMotionRuntimeRef = useRef<AircraftMotionRuntime | null>(null);
   const aircraftWebglRuntimeRef = useRef<AircraftWebglRuntime | null>(null);
   const aircraftWebglLabelAircraftRef = useRef<Map<string, AircraftView>>(new Map());
+  const rxwFpnAvailabilityRef = useRef<RxwWaypointAvailability[]>([]);
   const aircraftWebglLabelsUpdatedAtRef = useRef(Number.NEGATIVE_INFINITY);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
@@ -836,6 +849,7 @@ export function AirRadarApp() {
     });
   }, [mapReady, radar3dMode, radar3dCamera, selectedHex, snapshot.aircraft]);
 
+
   const chooseMapAppearance = (value: RadarMapAppearance) => {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
@@ -967,6 +981,84 @@ export function AirRadarApp() {
     onSelectedAircraftRemoved,
     scheduleMapSync: scheduleAircraftMapSync,
   });
+
+  // One bounded summary request per minute for all visible radar aircraft,
+  // not one Socket.IO connection or network request per aircraft.
+  useEffect(() => {
+    if (!mapReady) return;
+    let active = true;
+    let busy = false;
+    const draw = () => {
+      const source = mapRef.current?.getSource(RXW_FPN_BADGE_SOURCE) as GeoJSONSource | undefined;
+      if (source) source.setData(createRxwFpnBadges(liveAircraftByHexRef.current, showAircraft ? rxwFpnAvailabilityRef.current : []));
+    };
+    const refresh = () => {
+      if (busy) return;
+      busy = true;
+      void fetch("/api/aircraft/communications/waypoints", { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("RXW availability unavailable");
+          return await response.json() as { enabled: boolean; aircraft: RxwWaypointAvailability[] };
+        })
+        .then((payload) => {
+          if (!active) return;
+          rxwFpnAvailabilityRef.current = payload.enabled && Array.isArray(payload.aircraft)
+            ? payload.aircraft.slice(0, 256) : [];
+          draw();
+        })
+        .catch(() => {
+          if (!active) return;
+          rxwFpnAvailabilityRef.current = [];
+          draw();
+        })
+        .finally(() => { busy = false; });
+    };
+    refresh();
+    const refreshTimer = setInterval(refresh, 60_000);
+    const geometryTimer = setInterval(draw, 5_000);
+    return () => {
+      active = false;
+      clearInterval(refreshTimer);
+      clearInterval(geometryTimer);
+      rxwFpnAvailabilityRef.current = [];
+    };
+  }, [mapReady, liveAircraftByHexRef, showAircraft]);
+
+  useEffect(() => {
+    if (!mapReady) return;
+    let active = true;
+    const controller = new AbortController();
+    const clear = () => {
+      const source = mapRef.current?.getSource(RXW_FPN_ROUTE_SOURCE) as GeoJSONSource | undefined;
+      if (source) source.setData(createRxwFpnRoute(null));
+    };
+    clear();
+    if (!selectedHex) return () => { active = false; controller.abort(); };
+    let busy = false;
+    const refresh = () => {
+      if (busy) return;
+      const callsign = liveAircraftByHexRef.current.get(selectedHex)?.callsign?.trim().toUpperCase();
+      if (!callsign || !/^[A-Z0-9]{2,10}$/.test(callsign)) { clear(); return; }
+      busy = true;
+      void fetch("/api/aircraft/" + encodeURIComponent(selectedHex) + "/communications?flight=" + encodeURIComponent(callsign), {
+        cache: "no-store", signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("RXW plan unavailable");
+          return await response.json() as { waypointPlan: RxwWaypointPlan | null };
+        })
+        .then((result) => {
+          if (!active || liveAircraftByHexRef.current.get(selectedHex)?.callsign?.trim().toUpperCase() !== callsign) return;
+          const source = mapRef.current?.getSource(RXW_FPN_ROUTE_SOURCE) as GeoJSONSource | undefined;
+          if (source) source.setData(createRxwFpnRoute(result.waypointPlan));
+        })
+        .catch(() => { if (active) clear(); })
+        .finally(() => { busy = false; });
+    };
+    refresh();
+    const timer = setInterval(refresh, 30_000);
+    return () => { active = false; controller.abort(); clearInterval(timer); clear(); };
+  }, [mapReady, selectedHex, liveAircraftByHexRef]);
 
   const airportsDataset = useDatasetQuery<Airport[]>({
     url: receiverPositionAvailable ? `/api/airports?lat=${encodeURIComponent(String(snapshot.receiver.lat))}&lon=${encodeURIComponent(String(snapshot.receiver.lon))}&radiusNm=${AIRPORT_MAP_RADIUS_NM}` : "/api/airports",
@@ -2139,6 +2231,48 @@ export function AirRadarApp() {
           "text-halo-color": AIRRADAR_MAP_THEME.outline,
           "text-halo-width": 1,
         },
+      });
+
+      // Low-volume, independent ACARS FPN indicator. It does not alter aircraft
+      // icon colors, selection/emergency priority, live positions or the SSE.
+      map.addSource(RXW_FPN_BADGE_SOURCE, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: RXW_FPN_BADGE_CIRCLE, type: "circle", source: RXW_FPN_BADGE_SOURCE, minzoom: 5.8,
+        paint: { "circle-radius": 17, "circle-opacity": 0, "circle-stroke-color": "#e6bb65", "circle-stroke-width": 1.8, "circle-stroke-opacity": 0.8 },
+      });
+      map.addLayer({
+        id: RXW_FPN_BADGE_LABEL, type: "symbol", source: RXW_FPN_BADGE_SOURCE, minzoom: 6.2,
+        layout: { "text-field": "FP", "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [1.65, -1.5], "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true },
+        paint: { "text-color": "#e6bb65", "text-halo-color": "#091725", "text-halo-width": 1.6 },
+      });
+
+      // Dashed, reported (unverified) H1/FPN route of the selected aircraft.
+      // We draw only adjacent georeferenced fixes, never guessed straight lines.
+
+      for (const badgeLayer of [RXW_FPN_BADGE_CIRCLE, RXW_FPN_BADGE_LABEL]) {
+        map.on("click", badgeLayer, (event: MapLayerMouseEvent) => {
+          const hex = event.features?.[0]?.properties?.icaoHex;
+          if (typeof hex === "string") selectAircraft(hex);
+        });
+        map.on("mouseenter", badgeLayer, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", badgeLayer, () => { map.getCanvas().style.cursor = ""; });
+      }
+      map.addSource(RXW_FPN_ROUTE_SOURCE, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: RXW_FPN_ROUTE_LINE, type: "line", source: RXW_FPN_ROUTE_SOURCE,
+        filter: ["==", ["geometry-type"], "LineString"],
+        paint: { "line-color": "#e6bb65", "line-opacity": 0.8, "line-width": 2, "line-dasharray": [2, 2] },
+      });
+      map.addLayer({
+        id: RXW_FPN_ROUTE_POINTS, type: "circle", source: RXW_FPN_ROUTE_SOURCE,
+        filter: ["==", ["geometry-type"], "Point"],
+        paint: { "circle-radius": 3.6, "circle-color": "#e6bb65", "circle-stroke-width": 1.2, "circle-stroke-color": "#091725" },
+      });
+      map.addLayer({
+        id: RXW_FPN_ROUTE_LABEL, type: "symbol", source: RXW_FPN_ROUTE_SOURCE,
+        filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "labelVisible"], true]],
+        layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 1.3], "text-allow-overlap": false, "text-optional": true },
+        paint: { "text-color": "#e6bb65", "text-halo-color": "#091725", "text-halo-width": 1.1 },
       });
       map.addSource(OGN_LABEL_SOURCE_ID, {
         type: "geojson",
