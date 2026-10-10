@@ -635,6 +635,7 @@ function FlightStateSection({ aircraft }: { aircraft: AircraftView }) {
 }
 
 function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
+  const [advancedTelemetryOpen, setAdvancedTelemetryOpen] = useState(false);
   const position = aircraft.lat === null || aircraft.lon === null ? null : `${formatCoordinate(aircraft.lat)}, ${formatCoordinate(aircraft.lon)}`;
   return <QuickSection id="aircraft-quick-telemetry-title" title={t.aircraft.detailSections.telemetry} className="aircraft-quick-telemetry">
     <div className="aircraft-quick-detail-grid">
@@ -647,7 +648,14 @@ function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
       <DetailValue label={t.aircraft.rssi} value={aircraft.rssi === null ? null : `${formatNumber(aircraft.rssi, 1)} dBFS`} />
       <DetailValue label={t.aircraft.messages} value={formatNumber(aircraft.messages)} />
     </div>
-    <AircraftAdsbTelemetry aircraft={aircraft} />
+    <details
+      className="aircraft-quick-telemetry-more"
+      data-testid="aircraft-quick-telemetry-more"
+      onToggle={(event) => setAdvancedTelemetryOpen(event.currentTarget.open)}
+    >
+      <summary>{t.aircraft.advancedTelemetry}</summary>
+      {advancedTelemetryOpen && <AircraftAdsbTelemetry aircraft={aircraft} compact />}
+    </details>
   </QuickSection>;
 }
 
