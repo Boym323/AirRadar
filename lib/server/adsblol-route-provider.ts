@@ -68,6 +68,10 @@ function airportRecord(value: unknown): RouteSetAirport | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as RouteSetAirport : null;
 }
 
+function routeRow(value: unknown): RouteSetRow | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as RouteSetRow : null;
+}
+
 /**
  * Queues callsign lookups from one snapshot into bounded POST /routeset requests.
  * A failed batch rejects its callers, so upstream outages are NOT negative-cached.
@@ -148,11 +152,11 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
 
       const results = await Promise.all(batch.map(async (lookup, index) => {
         const rowAtIndex = rows.length === batch.length ? rows[index] : null;
-        const indexed = airportRecord(rowAtIndex) as RouteSetRow | null;
+        const indexed = routeRow(rowAtIndex);
         const matchingIndex = normalizedCallsign(indexed?.callsign) === lookup.callsign ? indexed : null;
         // Non-positional response matching is safe only when callsign is unique.
         const row = matchingIndex ?? (callsignCounts.get(lookup.callsign) === 1
-          ? rows.map((candidate) => airportRecord(candidate) as RouteSetRow | null)
+          ? rows.map(routeRow)
               .find((candidate) => normalizedCallsign(candidate?.callsign) === lookup.callsign)
           : null);
         return this.parseRoute(row ?? null, lookup);
@@ -173,7 +177,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
     if (!row || row.plausible !== true) return null;
     const codePair = stringValue(row.airport_codes)?.toUpperCase().split("-");
     const airports = Array.isArray(row._airports) ? row._airports : [];
-    if (codePair?.length !== 2 || airports.length !== 2) return null;
+    if (!codePair || codePair.length !== 2 || airports.length !== 2) return null;
     const originRaw = airportRecord(airports[0]);
     const destinationRaw = airportRecord(airports[1]);
     if (!originRaw || !destinationRaw) return null;
