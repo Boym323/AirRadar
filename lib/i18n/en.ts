@@ -31,6 +31,9 @@ export const en = {
     atc: "ATC",
     filters: "Filters",
     activeFilters: (count: number) => `${count} active filters`,
+    weatherLoading: "Loading",
+    weatherStale: "Stale",
+    weatherUnavailable: "Unavailable",
   },
   uiExtras: {
     localObservation: "Last LOCAL observation",

@@ -61,6 +61,7 @@ export function useRadarWeatherContext({
   const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
 
   const radarGenerationRef = useRef(0);
+  const radarWasEnabledRef = useRef(false);
   const windGenerationRef = useRef(0);
   const sigmetGenerationRef = useRef(0);
   const sigmetUnavailableRef = useRef(onSigmetUnavailable);
@@ -69,8 +70,19 @@ export function useRadarWeatherContext({
   useEffect(() => {
     const generation = ++radarGenerationRef.current;
     if (!showWeatherRadar) {
+      radarWasEnabledRef.current = false;
       setRadarPlaying(false);
+      setRadarCatalog(null);
+      setRadarFrameId(null);
+      setRadarStatus("idle");
       return;
+    }
+    if (!radarWasEnabledRef.current) {
+      radarWasEnabledRef.current = true;
+      setRadarCatalog(null);
+      setRadarFrameId(null);
+      setRadarPlaying(false);
+      setRadarStatus("loading");
     }
 
     let active = true;
@@ -81,19 +93,27 @@ export function useRadarWeatherContext({
         if (!response.ok) throw new Error("radar catalog unavailable");
         const catalog = await response.json() as WeatherRadarCatalogResponse;
         if (!active || generation !== radarGenerationRef.current) return;
+        if (!catalog.available || !catalog.latestFrameId || !catalog.frames.some((frame) => frame.id === catalog.latestFrameId)) {
+          setRadarCatalog(null);
+          setRadarFrameId(null);
+          setRadarPlaying(false);
+          setRadarStatus("unavailable");
+          return;
+        }
         setRadarCatalog(catalog);
-        setRadarStatus(
-          catalog.available && catalog.frames.length
-            ? catalog.frames.some((frame) => frame.stale) ? "stale" : "ready"
-            : "unavailable",
-        );
+        setRadarStatus("ready");
         setRadarFrameId((current) => radarLatestMode
           ? catalog.latestFrameId
           : current && catalog.frames.some((frame) => frame.id === current)
             ? current
             : catalog.latestFrameId);
       } catch {
-        if (active && generation === radarGenerationRef.current) setRadarStatus("unavailable");
+        if (active && generation === radarGenerationRef.current) {
+          setRadarCatalog(null);
+          setRadarFrameId(null);
+          setRadarPlaying(false);
+          setRadarStatus("unavailable");
+        }
       }
     };
 

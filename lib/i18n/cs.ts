@@ -29,6 +29,9 @@ export const cs = {
     atc: "ATC",
     filters: "Filtry",
     activeFilters: (count: number) => `${count} aktivních filtrů`,
+    weatherLoading: "Načítání",
+    weatherStale: "Zastaralé",
+    weatherUnavailable: "Nedostupné",
   },
   uiExtras: {
     localObservation: "Poslední místní pozorování",
