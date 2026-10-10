@@ -286,11 +286,15 @@ polling. Configure them in the server-only `.env`; never use
 | --- | --- | --- |
 | ADSBDB metadata/routes | `ADSBDB_ENABLED=true` | Disabled |
 | ADSB.lol routeset fallback | `ADSBLOL_ROUTE_ENABLED=true` | Disabled; batched POST, only if ADSBDB route is missing or implausible |
+| Persistent verified-route cache | `ROUTE_DB_CACHE_ENABLED=true` | Disabled until the additive SQL table is installed; RAM → PostgreSQL → ADSBDB → ADSB.lol |
 | tar1090 aircraft catalog | `AIRCRAFT_METADATA_URL` when using a tar1090 root | Best effort, daily conditional sync |
 | FlightAware flight plans | `FLIGHTAWARE_ENABLED=true` and `FLIGHTAWARE_API_KEY` | Disabled; paid data only after clicking **Load flight details** on the aircraft page; extra paid `/route` lookup requires `FLIGHTAWARE_ROUTE_FALLBACK_ENABLED=true` |
 | AviationWeather.gov METAR/TAF/SIGMET | No key; server-side AWC integration | Disabled; opt-in |
 | Planespotters aircraft photos | `AIRCRAFT_PHOTOS_ENABLED=true` | Disabled |
 | Server alerts/Pushover | `/var/lib/airradar/alerts.json` in production, `PUSHOVER_ENABLED=true` plus server credentials | Rules/no-op notifier until explicitly configured |
+
+**Route Cache V2 (optional):** First apply the additive `deploy/sql/route-enrichment-cache-v2.sql` to the intended development PostgreSQL database, verify the new table and your Prisma 8 schema-management policy, and only then schedule the same migration in production. The SQL does not alter `Flight` or `FlightPosition`. Set `ROUTE_DB_CACHE_ENABLED=true` on the server after the table is present. Without the table or during a DB outage the feature fails soft to the existing free route sources; the feature flag is off by default. Do not apply this SQL to production accidentally.
+
 
 Source, licensing, URL allowlists, cache behavior, and operational limits are
 in [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md). Route airport metadata is
