@@ -36,6 +36,12 @@ export interface RuntimeDiagnostics {
   networkTrailAircraftCount: number | null;
   localTrailPointCount: number | null;
   networkTrailPointCount: number | null;
+  localTrailMaxPointsPerAircraft: number | null;
+  networkTrailMaxPointsPerAircraft: number | null;
+  localTrailAtLimitAircraftCount: number | null;
+  networkTrailAtLimitAircraftCount: number | null;
+  localTrailOverLimitAircraftCount: number | null;
+  networkTrailOverLimitAircraftCount: number | null;
   trailEstimatedBytes: number | null;
   listenerCount: number | null;
   metadataHotCacheSize: number | null;
@@ -158,6 +164,12 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     networkTrailAircraftCount: null,
     localTrailPointCount: null,
     networkTrailPointCount: null,
+    localTrailMaxPointsPerAircraft: null,
+    networkTrailMaxPointsPerAircraft: null,
+    localTrailAtLimitAircraftCount: null,
+    networkTrailAtLimitAircraftCount: null,
+    localTrailOverLimitAircraftCount: null,
+    networkTrailOverLimitAircraftCount: null,
     trailEstimatedBytes: null,
     listenerCount: null,
     metadataHotCacheSize: null,

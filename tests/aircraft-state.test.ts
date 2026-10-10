@@ -64,6 +64,11 @@ describe("aircraft state service", () => {
     expect(compact.aircraft[0].trail).toBeUndefined();
     expect(full.aircraft[0].trail).toHaveLength(1);
     expect(service.getAircraft(full.aircraft[0].icaoHex)?.trail).toHaveLength(1);
+    const diagnostics = service.getDiagnostics();
+    expect(diagnostics.localTrailMaxPointsPerAircraft).toBeLessThanOrEqual(600);
+    expect(diagnostics.localTrailOverLimitAircraftCount).toBe(0);
+    expect(diagnostics.networkTrailOverLimitAircraftCount).toBe(0);
+    expect(diagnostics.localTrailPointCount).toBeGreaterThanOrEqual(1);
   });
 
   it("publishes the correct aircraft icon identity in the first live snapshot", async () => {
@@ -530,6 +535,9 @@ describe("aircraft state service", () => {
     internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: base.toISOString(), provider: "readsb" });
     internal.applyNetworkSnapshot({ aircraft: [network], fetchedAt: base.toISOString(), provider: "adsb.lol" });
     expect(service.getSnapshot({ coverage: "extended" }).aircraft.map((item) => item.icaoHex).sort()).toEqual(["ABC123", "DEF456"]);
+    expect(service.getDiagnostics().networkTrailPointCount).toBeGreaterThan(0);
+    expect(service.getDiagnostics().networkTrailMaxPointsPerAircraft).toBeGreaterThan(0);
+    expect(service.getDiagnostics().networkTrailOverLimitAircraftCount).toBe(0);
 
     const shortGap = new Date(base.getTime() + 10_000);
     vi.setSystemTime(shortGap);
@@ -542,6 +550,9 @@ describe("aircraft state service", () => {
     const degraded = service.getSnapshot({ coverage: "extended" });
     expect(degraded.aircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
     expect(degraded.coverageStats).toMatchObject({ displayedAircraft: 1, localAircraft: 1, networkAircraft: 0, networkOnlyAircraft: 0 });
+    expect(service.getDiagnostics().networkTrailPointCount).toBe(0);
+    expect(service.getDiagnostics().networkTrailMaxPointsPerAircraft).toBe(0);
+    expect(service.getDiagnostics().networkTrailAtLimitAircraftCount).toBe(0);
   });
 
   it("retains a locally observed aircraft through a short successful snapshot omission", () => {
