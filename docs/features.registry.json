@@ -1076,24 +1076,25 @@
       ]
     },
     {
-      "id": "sondehub-sondes",
-      "name": "SondeHub Meteorological Sondes",
-      "category": "weather / traffic",
+      "id": "sondehub",
+      "name": "SondeHub Radiosondes",
+      "category": "weather / extended objects",
       "status": "optional",
       "introducedVersion": null,
-      "summary": "Operator-enabled receiver-centered SondeHub radiosonde snapshot layer with bounded caching, provenance and isolated map markers; no background REST polling or ADS-B ingestion.",
+      "summary": "Opt-in SondeHub radiosonde map overlay with validated altitude, observed track and model-predicted landing; on-demand bounded caches separate from ADS-B/OGN.",
       "pages": [
         "/"
       ],
       "apis": [
-        "/api/sondes"
+        "/api/sondes",
+        "/api/sondes/:serial"
       ],
       "changelogScopes": [
         "sondehub"
       ],
       "changelogKeywords": [
-        "SondeHub sondes",
-        "meteorological sonde",
+        "sondehub",
+        "radiosonde",
         "weather balloon"
       ]
     }
