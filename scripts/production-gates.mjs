@@ -1517,9 +1517,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.openMapCredits) {
             const attribution = visualPage.locator(".radar-content .maplibregl-ctrl-attrib");
             await attribution.waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.waitForFunction(() => {
+              const element = document.querySelector(".radar-content .maplibregl-ctrl-attrib");
+              return element?.classList.contains("maplibregl-compact") && !element.classList.contains("maplibregl-compact-show");
+            }, undefined, { timeout: 15_000 });
             await attribution.locator(".maplibregl-ctrl-attrib-button").click();
-            await visualPage.locator(".radar-content .maplibregl-ctrl-attrib.maplibregl-compact-show")
-              .waitFor({ state: "visible", timeout: 5_000 });
+            await visualPage.waitForFunction(() =>
+              document.querySelector(".radar-content .maplibregl-ctrl-attrib")?.classList.contains("maplibregl-compact-show"),
+              undefined, { timeout: 5_000 });
             const visibleCreditLinks = await attribution.locator(".maplibregl-ctrl-attrib-inner a:visible").count();
             if (visibleCreditLinks < 1) {
               throw new Error("V5-E expanded map credits must retain a visible source link");
