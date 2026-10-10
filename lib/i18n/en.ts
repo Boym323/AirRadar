@@ -755,6 +755,8 @@ export const en = {
     radarCappiDisclaimer: "Reflectivity at 2 km above mean sea level, not the radar echo top.",
     metar: "METAR",
     windAloft: "Wind aloft",
+    windModelSelection: "Wind model",
+    aladinModelNote: "CHMI ALADIN Central Europe 2 km · optional forecast; does not replace ICON-EU in analysis or Digital Twin.",
     navigationIntegrity: "Navigation integrity",
     navigationIntegrityReduced: "Reduced",
     navigationIntegrityDisclaimer: "Based on ADS-B navigation integrity telemetry; not official GNSS monitoring.",

@@ -69,6 +69,15 @@ labelled `ICON-EU / Model forecast` with model run and valid time where the
 transport supplies them. It has its own valid-time selector and does not share
 the radar timeline.
 
+An optional `ALADIN-CE` selection now uses Open-Meteo `v1/forecast` with
+`models=chmi_aladin_central_europe_2km`, retaining the same pressure levels,
+knots, UTC valid-time handling and independent bounded cache as the default
+ICON-EU product. The model selector is an explicit user action; historical wind
+archives, Aircraft Weather fusion and Digital Twin continue using canonical
+ICON-EU. ALADIN CZ 1 km does **not** supply these pressure-level variables,
+so it is not offered as a wind-aloft provider. Open-Meteo hosted free-plan
+licensing/usage restrictions must be reviewed before commercial use.
+
 ## AUP/UUP
 
 The map reuses the existing Czech AUP/UUP pipeline at `/api/airspace/activity`

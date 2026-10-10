@@ -38,6 +38,7 @@ interface UseRadarWeatherContextOptions {
   showMetar: boolean;
   showWind: boolean;
   windLevel: WindLevelHpa;
+  windModel?: "ICON-EU" | "ALADIN-CE";
   onSigmetUnavailable(): void;
 }
 
@@ -48,6 +49,7 @@ export function useRadarWeatherContext({
   showMetar,
   showWind,
   windLevel,
+  windModel = "ICON-EU",
   onSigmetUnavailable,
 }: UseRadarWeatherContextOptions) {
   const [radarCatalog, setRadarCatalog] = useState<WeatherRadarCatalogResponse | null>(null);
@@ -200,7 +202,7 @@ export function useRadarWeatherContext({
     const generation = ++windGenerationRef.current;
     const controller = new AbortController();
     setWindStatus("loading");
-    const params = new URLSearchParams({ level: String(windLevel) });
+    const params = new URLSearchParams({ level: String(windLevel), model: windModel });
     if (windValidAt) params.set("valid", windValidAt);
 
     fetch(`/api/weather/wind?${params.toString()}`, {
@@ -224,7 +226,7 @@ export function useRadarWeatherContext({
       });
 
     return () => controller.abort();
-  }, [showWind, windLevel, windValidAt]);
+  }, [showWind, windLevel, windValidAt, windModel]);
 
   useEffect(() => {
     const generation = ++sigmetGenerationRef.current;

@@ -753,6 +753,8 @@ export const cs = {
     radarCappiDisclaimer: "Odrazivost v hladině 2 km nad mořem. Nejde o výšku radarového echa (Echo Top).",
     metar: "METAR",
     windAloft: "Vítr ve výšce",
+    windModelSelection: "Model větru",
+    aladinModelNote: "ČHMÚ ALADIN Central Europe 2 km · volitelná předpověď; nenahrazuje ICON-EU v analýzách ani Digital Twinu.",
     navigationIntegrity: "Integrita navigace",
     navigationIntegrityReduced: "Snížená",
     navigationIntegrityDisclaimer: "Vychází z telemetrie integrity ADS-B; nejde o oficiální sledování GNSS.",
