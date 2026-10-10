@@ -86,12 +86,13 @@ export class RxwHubService {
     }
   }
 
-  getSnapshot(icaoHex: string): RxwHubPublicSnapshot {
+  getSnapshot(icaoHex: string, callsign: string | null = null): RxwHubPublicSnapshot {
     return {
       enabled: isRxwHubEnabled(),
       source: "RXW Hub",
       connection: this.connection,
       lastReceivedAt: this.lastReceivedAt,
+      routeHint: isRxwHubEnabled() ? this.store.routeForFlight(icaoHex, callsign) : null,
       messages: isRxwHubEnabled() ? this.store.list(icaoHex) : [],
     };
   }

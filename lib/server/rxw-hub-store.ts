@@ -1,7 +1,8 @@
-import type { RxwCommunication } from "@/lib/aircraft/rxw-communications";
+import type { RxwCommunication, RxwReportedRoute, RxwRouteEvidence } from "@/lib/aircraft/rxw-communications";
 
-/** No raw message text, decoded payloads or operational conversations are retained. */
+/** Never retain raw message text, decoded ACARS/CPDLC content or operational conversations. */
 export const RXW_MESSAGE_TTL_MS = 2 * 60 * 60_000;
+export const RXW_ROUTE_HINT_TTL_MS = 45 * 60_000;
 export const RXW_MAX_AIRCRAFT = 512;
 export const RXW_MAX_MESSAGES_PER_AIRCRAFT = 20;
 export const RXW_MAX_SEEN_UIDS = 12_000;
@@ -26,9 +27,39 @@ export function rxwIcaoHex(raw: Record<string, unknown>): string | null {
   if (typeof raw.icao === "number" && Number.isInteger(raw.icao) && raw.icao >= 0 && raw.icao <= 0xffffff) {
     return raw.icao.toString(16).toUpperCase().padStart(6, "0");
   }
-  // Some decoder versions expose the hexadecimal ICAO identifier as a string.
   const fallback = shortString(raw.icao, 6);
   return fallback && /^[0-9a-fA-F]{6}$/.test(fallback) ? fallback.toUpperCase() : null;
+}
+
+/** Recognize airport codes, never accept unknown/placeholder values as route evidence. */
+export function rxwAirportCode(value: unknown): string | null {
+  const code = shortString(value, 4)?.toUpperCase();
+  if (!code || !/^[A-Z]{3,4}$/.test(code) || ["ZZZZ", "XXXX", "XXX", "UNK", "NIL", "NONE"].includes(code)) return null;
+  return code;
+}
+
+export function rxwFlightIdentifier(value: unknown): string | null {
+  const flight = shortString(value, 10)?.toUpperCase();
+  return flight && /^[A-Z0-9]{2,10}$/.test(flight) ? flight : null;
+}
+
+/**
+ * ACARS Hub's structured eta is commonly HHMM UTC. Preserve a UTC clock only:
+ * no fabricated arrival day, timezone, schedule or flight-plan ETA.
+ */
+export function rxwEtaUtc(value: unknown): string | null {
+  const raw = shortString(value, 8)?.toUpperCase();
+  if (!raw) return null;
+  const match = /^([01]\d|2[0-3]):?([0-5]\d)Z?$/.exec(raw);
+  return match ? match[1] + ":" + match[2] + "Z" : null;
+}
+
+/** Only a complete pair in the *same* upstream message may form a route claim. */
+export function parseRxwReportedRoute(raw: Record<string, unknown>): RxwReportedRoute | null {
+  const origin = rxwAirportCode(raw.depa);
+  const destination = rxwAirportCode(raw.dsta);
+  if (!origin || !destination || origin === destination) return null;
+  return { origin, destination, etaUtc: rxwEtaUtc(raw.eta), flight: rxwFlightIdentifier(raw.flight) };
 }
 
 export function normalizeRxwCommunication(value: unknown, now = Date.now()): RxwCommunication | null {
@@ -57,10 +88,41 @@ export function normalizeRxwCommunication(value: unknown, now = Date.now()): Rxw
     stationId,
     frequencyMhz,
     label: shortString(raw.label, 16),
+    reportedRoute: parseRxwReportedRoute(raw),
   };
 }
 
-/** Process-local bounded metadata cache. Never persists or publishes raw ACARS message bodies. */
+/** A strictly secondary hint for the currently identified flight, never a verified route. */
+export function selectRxwRouteEvidence(
+  messages: readonly RxwCommunication[],
+  icaoHex: string,
+  callsign: string | null,
+  now = Date.now(),
+): RxwRouteEvidence | null {
+  const flight = rxwFlightIdentifier(callsign);
+  if (!flight || !/^[0-9A-F]{6}$/.test(icaoHex)) return null;
+  const matched = messages
+    .filter((message) => {
+      const observedAt = Date.parse(message.timestamp);
+      return message.icaoHex === icaoHex
+        && message.reportedRoute?.flight === flight
+        && Number.isFinite(observedAt)
+        && observedAt <= now
+        && observedAt >= now - RXW_ROUTE_HINT_TTL_MS;
+    })
+    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))[0];
+  if (!matched?.reportedRoute) return null;
+  return {
+    ...matched.reportedRoute,
+    icaoHex,
+    observedAt: matched.timestamp,
+    stationId: matched.stationId,
+    source: "rxw-acarshub",
+    confidence: "reported",
+  };
+}
+
+/** Process-local bounded metadata cache. Does not persist any ACARS text or raw messages. */
 export class RxwHubMessageStore {
   private readonly aircraft = new Map<string, RxwCommunication[]>();
   private readonly seen = new Map<string, number>();
@@ -103,6 +165,10 @@ export class RxwHubMessageStore {
       else this.aircraft.delete(icaoHex);
     }
     return fresh.slice();
+  }
+
+  routeForFlight(icaoHex: string, callsign: string | null, now = Date.now()): RxwRouteEvidence | null {
+    return selectRxwRouteEvidence(this.list(icaoHex, now), icaoHex, callsign, now);
   }
 
   stats(): { aircraft: number; accepted: number; uids: number } {

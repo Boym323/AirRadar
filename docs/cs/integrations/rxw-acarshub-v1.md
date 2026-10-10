@@ -25,7 +25,7 @@ a sekce se nezobrazuje.
 Adaptér **neuchovává, nezveřejňuje ani nezapisuje do logů obsah zpráv**, dekódované
 ACARS/CPDLC payloady, osobní údaje ani celé původní zprávy. Do omezené paměťové
 cache ukládá pouze ICAO24, čas, protokol, frekvenci, identifikátor přijímací stanice,
-kód zprávy a UID ze zdroje. Cache se nezapisuje na disk a zprávy po dvou hodinách expirují.
+kód zprávy, strukturované hlášení trasy a UID ze zdroje. Cache se nezapisuje na disk a zprávy po dvou hodinách expirují.
 
 Párování vyžaduje platnou ICAO24 adresu. Nepoužívá ne-ICAO identifikátory readsb
 s prefixem `~` ani odhady podle callsignu. Přijaté polohy se **nikdy neslučují
@@ -51,3 +51,32 @@ Zprávy bez ICAO24 se záměrně zahazují. Historie je pouze v paměti procesu,
 nejdéle na dvě hodiny; nejde o trvalý archiv.
 
 Testy: `npx vitest run tests/rxw-hub-store.test.ts tests/rxw-hub-service.test.ts`
+
+## V2: Strukturované informace o trase
+
+Adaptér nově parsuje pouze strukturovaná pole `depa`, `dsta`,
+`eta` a `flight` ze zdrojové zprávy. Přijímá úplné dvojice
+**třípísmenných IATA / čtyřpísmenných ICAO** kódů letišť,
+které se vyskytují v **téže zprávě**, a ETA pouze jako **čas v UTC**
+(`HHMM`, `HH:MM` nebo s koncovým `Z`).
+Neodvozuje waypointy z polí `text`, `data`, `libacars`
+či `decodedText` a netvrdí, že jde o kompletní letový plán.
+
+`GET /api/aircraft/{icao24}/communications?flight=CSA123` vrací
+`routeHint` označený `source=rxw-acarshub` a
+`confidence=reported` spolu s původním časem příjmu.
+Návrh trasy vznikne jen tehdy, když **jedna zpráva** obsahuje obě
+letiště, ICAO24 odpovídá letadlu, identifikátor letu se přesně shoduje
+s aktuálním callsignem a zpráva není starší než **45 minut**.
+Zprávy bez identifikátoru letu mohou zůstat v technických metadatech,
+ale nesmí se automaticky přiřadit aktuálnímu letu. Pokud podmínky
+nejsou splněny, API vrací null.
+
+Detail letadla v sekci **Datová komunikace** ukazuje nahlášená
+letiště a ETA odděleně od stávajících údajů ADSBDB/ADSB.lol
+a FlightAware, výslovně jako **neověřené**.
+RXW **nepřepisuje** autoritativní `FlightRoute`, nemění historii
+letů ani nevytváří nové dotazy do FlightAware.
+Indikace trasy zůstávají jen ve stávající omezené paměťové cache
+(dvouhodinové uchování zpráv); nepřibývají databázové zápisy
+ani další síťové dotazy. Stále je nutný souhlas provozovatele RXW.

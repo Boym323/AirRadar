@@ -563,7 +563,7 @@ export function AircraftDetailV3({
       </div>
     </section>
 
-    <AircraftCommunications icaoHex={icaoHex} />
+    <AircraftCommunications icaoHex={icaoHex} callsign={liveAircraft?.callsign ?? null} />
 
     <div id="aircraft-receiver" className={styles.receiverSection}>
     <DataSources
