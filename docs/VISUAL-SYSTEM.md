@@ -80,6 +80,18 @@ and aircraft color legends only appear when their corresponding mode is active,
 and are hidden on small screens when they would compete with the map or bottom
 navigation.
 
+## System status V4: operator-first diagnostic hierarchy (2026-10-10)
+
+The `/system` diagnostics page groups existing cards into Application & Performance,
+Reception & Tracking, Database & Routes, and Services & Data Sources without
+altering API ownership or receiver/SSE behavior. A compact in-page anchor bar
+avoids long unstructured scrolling. An attention rail shows only genuine
+`degraded`/`offline` subsystems; disabled/on-demand states remain neutral.
+Routine green card badges are muted while the top overview retains the main
+system health signal. Group grids collapse to one column on narrow screens.
+Regressions are guarded in `tests/system-status-visual-polish-v4.test.ts` and
+must pass desktop/mobile browser visual smoke before release.
+
 ## Visual debt budget
 
 Run:
@@ -425,3 +437,19 @@ The optional 3D terrain mode can render up to 12 lightweight, geographic, altitu
 ### V6-D6: finite type-profiled low-poly airframes
 
 The optional 3D custom layer now uses bounded, locally generated airframe geometry with recognizably different fuselage lengths, spans, wing placements, fins and engine placements for selected ICAO aircraft types (Airbus, Boeing, regional aircraft, general aviation and helicopters). Unknown types retain an explicitly generic fallback; observations and positions are never invented. Dimensions are approximate visual profiles, **not manufacturer-approved, type-faithful GLTF or CAD models**. Geometry is cached by a finite static catalog (not aircraft IDs), the limit stays at 12 objects, 2D remains the default and there are no new network requests or background processes. Physical GPU and mobile testing remains required before claiming photorealism.
+
+## Radar popover / selected-aircraft visual polish (2026-10-10)
+
+The desktop radar keeps both native map menu triggers but places Presets and
+Layers in the same named `details` group, so only one can obscure the air
+picture at a time. Outside pointer interaction or Escape dismisses an open
+menu, with Escape restoring focus to its summary. Both panels are
+height-bounded and scrollable. With the selected-aircraft drawer open, the
+compact flight-follow control enters the map HUD's natural vertical flow,
+without covering map buttons. At desktop drawer widths all six aircraft
+quick actions wrap into a visible 3×2 grid, replacing the clipped horizontal
+strip; mobile retains its touch-oriented behavior. These changes have no effect
+on MapLibre source data, trajectories, SSE, map camera, or the on-demand
+FlightAware policy. Regression: `tests/radar-overlay-visual-polish-v1.test.ts`.
+Verify the desktop and mobile visual browser gate and inspect screenshots prior
+to production deployment.

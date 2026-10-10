@@ -143,3 +143,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* The popover is bounded and keyboard-reachable even with many saved presets. */
+.menu {
+  max-height: min(65svh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@media (max-width: 900px) {
+  .menu {
+    max-height: min(60svh, 460px);
+    left: var(--space-4);
+    right: var(--space-4);
+  }
+}

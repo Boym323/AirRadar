@@ -235,3 +235,32 @@
     padding-inline: 8px;
   }
 }
+
+
+/* Radar visual polish: the selected-aircraft follow strip is part of the
+ * vertical HUD stack, never positioned over the preset/layer controls. */
+.hud.compact {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  transform: none;
+  width: min(480px, 100%);
+  max-width: 100%;
+  margin-top: var(--space-2);
+  min-height: var(--control-height-touch);
+}
+
+.hud.compact .toggle {
+  min-height: var(--control-height-touch);
+}
+
+@media (max-width: 820px) {
+  .hud.compact {
+    top: auto;
+    left: auto;
+    width: min(480px, 100%);
+    max-width: 100%;
+    margin-top: var(--space-2);
+  }
+}

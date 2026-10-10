@@ -9,6 +9,7 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
 import type { Radar3dMode } from "@/lib/radar/terrain-v6-d";
+import type { WeatherRadarProduct } from "@/lib/server/weather-radar/types";
 
 interface AtsRoutesSummary {
   available: boolean;
@@ -75,6 +76,8 @@ interface RadarMapLayerMenuProps {
   onShowSigmetChange: (value: boolean) => void;
   showWeatherRadar: boolean;
   onShowWeatherRadarChange: (value: boolean) => void;
+  radarProduct: WeatherRadarProduct;
+  onRadarProductChange: (product: WeatherRadarProduct) => void;
   radarOpacity: number;
   onRadarOpacityChange: (value: number) => void;
   selectedRadarFrame: RadarFrameSummary | null;
@@ -159,6 +162,8 @@ export function RadarMapLayerMenu({
   onShowSigmetChange,
   showWeatherRadar,
   onShowWeatherRadarChange,
+  radarProduct,
+  onRadarProductChange,
   radarOpacity,
   onRadarOpacityChange,
   selectedRadarFrame,
@@ -188,7 +193,7 @@ export function RadarMapLayerMenu({
   colorMode,
   onColorModeChange,
 }: RadarMapLayerMenuProps) {
-  return <details className="map-layers">
+  return <details name="radar-map-menus" className="map-layers">
     <MapControl as="summary" aria-label={t.layers.title} title={t.layers.title}><UiIcon name="layers" /><span className="map-control-label">{t.layers.title}</span></MapControl>
     <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
       <div className="map-layer-group">
@@ -224,6 +229,7 @@ export function RadarMapLayerMenu({
         <span className="map-layer-group-title">{t.layers.groups.weather}</span>
         <label data-testid="map-layer-weather-radar"><input type="checkbox" checked={showWeatherRadar} onChange={(event) => onShowWeatherRadarChange(event.target.checked)} /> {t.layers.weatherRadar}</label>
         {showWeatherRadar && <div className="map-layer-sublevel weather-radar-controls">
+          <label className="map-layer-mode"><span>{t.locale.startsWith("cs") ? "Radarový produkt" : "Radar product"}</span><select value={radarProduct} onChange={(event) => onRadarProductChange(event.target.value as WeatherRadarProduct)}><option value="MAX_Z_MASKED">MAX_Z · {t.locale.startsWith("cs") ? "maximální odrazivost" : "maximum reflectivity"}</option><option value="PSEUDOCAPPI_2KM">PseudoCAPPI · 2 km</option></select></label>
           <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => onRadarOpacityChange(Number(event.target.value))} /></label>
           <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
         </div>}
