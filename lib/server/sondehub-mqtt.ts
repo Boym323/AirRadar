@@ -131,7 +131,7 @@ export class SondeMqttReceiver {
   private connecting = false;
   private connected = false;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
-  private buffer = new Uint8Array();
+  private buffer: Uint8Array<ArrayBufferLike> = new Uint8Array();
   private session = 0;
 
   constructor(private readonly fetcher: typeof fetch = fetch, private readonly now: () => number = Date.now) {}
