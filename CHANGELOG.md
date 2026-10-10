@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.398] - 2026-10-10
+
+Changes since v1.0.397.
+
+### Performance
+
+- Add bounded memory retention attribution (#700) (0e91a143)
+
+### Maintenance
+
+- Sync generated repository metadata (#698) (670463ea)
+- Sync generated repository metadata (#699) (fa0f41e6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#698) (670463ea)
+- chore(metadata): sync generated repository metadata (#699) (fa0f41e6)
+- perf(T5.7A): add bounded memory retention attribution (#700) (0e91a143)
+
+</details>
 ## [1.0.397] - 2026-10-10
 
 Changes since v1.0.396.
