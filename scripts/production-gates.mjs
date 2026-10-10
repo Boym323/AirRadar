@@ -1569,18 +1569,35 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             if ("fonts" in document) await document.fonts.ready;
           });
           if (target.path.includes("mapDiagnostics=1")) {
-            await visualPage.waitForFunction((satelliteMode) => {
-              const map = window.__airradarMapForDiagnostics;
-              // Screenshot evidence is only useful once actual vector
-              // basemap features have been rendered. A map instance alone
-              // can still produce a featureless black visual baseline.
-              if (!map || (!satelliteMode && !map.isStyleLoaded())) return false;
-              try {
-                return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
-              } catch {
-                return false;
-              }
-            }, target.v6Appearance === "satellite", { timeout: 25_000 });
+            try {
+              await visualPage.waitForFunction((allowPendingRaster) => {
+                const map = window.__airradarMapForDiagnostics;
+                // A 3D terrain DEM may still be fetching after vector basemap
+                // features are rendered. Never mistake that for a blank map.
+                if (!map || (!allowPendingRaster && !map.isStyleLoaded())) return false;
+                try {
+                  return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
+                } catch {
+                  return false;
+                }
+              }, target.v6Appearance === "satellite" || target.v6Terrain === true, { timeout: 25_000 });
+            } catch (error) {
+              const evidence = await visualPage.evaluate(() => {
+                const map = window.__airradarMapForDiagnostics;
+                if (!map) return { mapReady: false };
+                let renderedVectorFeatures = 0;
+                try { renderedVectorFeatures = map.queryRenderedFeatures().filter((feature) => Boolean(feature.sourceLayer)).length; }
+                catch { /* A reloading style may temporarily reject feature queries. */ }
+                return {
+                  mapReady: true,
+                  styleLoaded: map.isStyleLoaded(),
+                  renderedVectorFeatures,
+                  terrain: Boolean(map.getTerrain()),
+                  pitch: map.getPitch(),
+                };
+              }).catch(() => ({ diagnosticsUnavailable: true }));
+              throw new Error(`Visual smoke ${target.name} missing basemap evidence: ${JSON.stringify(evidence)}; ${String(error)}`);
+            }
           }
           if (target.openMapCredits) {
             const attribution = visualPage.locator(".radar-content .maplibregl-ctrl-attrib");
