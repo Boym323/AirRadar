@@ -798,8 +798,8 @@ export function AirRadarApp() {
       pitch: 65,
       bearing: selected.track !== null && Number.isFinite(selected.track) ? selected.track : map.getBearing(),
       zoom: Math.max(map.getZoom(), 9),
-      duration: 900,
-      essential: true,
+      duration: prefersReducedMotion() ? 0 : 900,
+      essential: false,
     });
   }, [mapReady, radar3dMode, radar3dCamera, selectedHex, snapshot.aircraft]);
 
