@@ -17,35 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.411] - 2026-10-10
-
-Changes since v1.0.410.
-
-**Features touched:** Navigation Integrity, Watchlist, Alerts & Fleet.
-
-### Added
-
-- Opt-in ACARS Hub communications integration (#742) (db687a41)
-- Integrate 3D radar beta, presentation, flight status, fleets and media (#740) (5bd312f1)
-
-### Changed
-
-- Route Enrichment V1: ADSB.lol batch fallback + úspora FlightAware (#741) (d57de066)
-
-### Maintenance
-
-- Sync generated repository metadata (#734) (ebde5445)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#734) (ebde5445)
-- Route Enrichment V1: ADSB.lol batch fallback + úspora FlightAware (#741) (d57de066)
-- feat(rxw): opt-in ACARS Hub communications integration (#742) (db687a41)
-- feat(v6): integrate 3D radar beta, presentation, flight status, fleets and media (#740) (5bd312f1)
-
-</details>
-
 ## [1.0.410] - 2026-10-10
 
 Changes since v1.0.409.
@@ -106,6 +77,7 @@ Changes since v1.0.409.
 - Merge pull request #733 from Boym323/fix/v6-satellite-gate-layout (4cdc5855)
 
 </details>
+
 ## [1.0.409] - 2026-10-10
 
 Changes since v1.0.408.
@@ -125,6 +97,7 @@ Changes since v1.0.408.
 - fix(visual): compact mobile map focus label with accessible name (#727) (2fc70cb9)
 
 </details>
+
 ## [1.0.408] - 2026-10-10
 
 Changes since v1.0.407.
@@ -148,6 +121,7 @@ Changes since v1.0.407.
 - test(route): align full release assertion with V5-E provenance legend (#725) (85b7f33d)
 
 </details>
+
 ## [1.0.407] - 2026-10-10
 
 Changes since v1.0.406.
@@ -172,6 +146,7 @@ Changes since v1.0.406.
 - fix(map): correct V5-E narrow attribution and browser gate (#722) (c916cf9a)
 
 </details>
+
 ## [1.0.406] - 2026-10-10
 
 Changes since v1.0.405.
@@ -191,6 +166,7 @@ Changes since v1.0.405.
 - fix(visual): complete AirRadar V5-C airport polish (#719) (ab2031c5)
 
 </details>
+
 ## [1.0.405] - 2026-10-10
 
 Changes since v1.0.404.
@@ -217,6 +193,7 @@ Changes since v1.0.404.
 - fix(test): await airport tab activation before visual capture (#717) (f118ffd0)
 
 </details>
+
 ## [1.0.404] - 2026-10-10
 
 Changes since v1.0.403.
@@ -238,6 +215,7 @@ Changes since v1.0.403.
 - feat(aircraft): Visual System V5-B — flight glance, context a rychlé akce (#714) (cefba309)
 
 </details>
+
 ## [1.0.403] - 2026-10-10
 
 Changes since v1.0.402.
@@ -266,6 +244,7 @@ Changes since v1.0.402.
 - test(radar): align full release suite with lazy Operations Center (#712) (2f20bdb0)
 
 </details>
+
 ## [1.0.402] - 2026-10-10
 
 Changes since v1.0.401.
@@ -289,6 +268,7 @@ Changes since v1.0.401.
 - feat(radar): Visual System V5-A1 rychlé akce nad mapou (#708) (86e3df66)
 
 </details>
+
 ## [1.0.401] - 2026-10-10
 
 Changes since v1.0.400.
@@ -303,6 +283,7 @@ Changes since v1.0.400.
 - perf(T5.7C): read-only 24-hour retention and event-loop soak sampler (#704) (50dcd2b9)
 
 </details>
+
 ## [1.0.400] - 2026-10-10
 
 Changes since v1.0.399.
@@ -324,6 +305,7 @@ Changes since v1.0.399.
 - feat(visual): Visual System V4 readability and airport hierarchy (#705) (17108010)
 
 </details>
+
 ## [1.0.399] - 2026-10-10
 
 Changes since v1.0.398.
@@ -338,6 +320,7 @@ Changes since v1.0.398.
 - perf(T5.7B): add windowed event-loop and CPU attribution (#701) (7564d8b0)
 
 </details>
+
 ## [1.0.398] - 2026-10-10
 
 Changes since v1.0.397.
@@ -359,6 +342,7 @@ Changes since v1.0.397.
 - perf(T5.7A): add bounded memory retention attribution (#700) (0e91a143)
 
 </details>
+
 ## [1.0.397] - 2026-10-10
 
 Changes since v1.0.396.
@@ -373,6 +357,7 @@ Changes since v1.0.396.
 - perf(T5.6D): matched memory evidence and isolated SSE fanout benchmark (#697) (9de643db)
 
 </details>
+
 ## [1.0.396] - 2026-10-10
 
 Changes since v1.0.395.
@@ -394,6 +379,7 @@ Changes since v1.0.395.
 - perf(T5.6C): reduce per-aircraft allocations in source merge (#696) (87868448)
 
 </details>
+
 ## [1.0.395] - 2026-10-10
 
 Changes since v1.0.394.
@@ -410,6 +396,7 @@ Changes since v1.0.394.
 - feat(perf): unify T5.6 V8 memory and trail-bound audit reporting (#693) (1c338dc8)
 
 </details>
+
 ## [1.0.394] - 2026-10-10
 
 Changes since v1.0.393.
@@ -429,6 +416,7 @@ Changes since v1.0.393.
 - feat(perf): T5.6B private trail retention validation (#692) (c6bae665)
 
 </details>
+
 ## [1.0.393] - 2026-10-10
 
 Changes since v1.0.392.
@@ -448,6 +436,7 @@ Changes since v1.0.392.
 - docs(performance): record T5.5 production runtime results (#689) (bf1dc6b4)
 
 </details>
+
 ## [1.0.392] - 2026-10-10
 
 Changes since v1.0.391.
@@ -469,6 +458,7 @@ Changes since v1.0.391.
 - fix(runtime): share health observer across standalone bundles (#687) (5559e1f7)
 
 </details>
+
 ## [1.0.391] - 2026-10-10
 
 Changes since v1.0.390.
@@ -488,6 +478,7 @@ Changes since v1.0.390.
 - ops(T5.5): production CPU, GC and memory audit sampler (#685) (7e816527)
 
 </details>
+
 ## [1.0.390] - 2026-10-10
 
 Changes since v1.0.389.
@@ -516,6 +507,7 @@ Changes since v1.0.389.
 - test(history): make seven-day public route fixture time-independent (#683) (33998f87)
 
 </details>
+
 ## [1.0.389] - 2026-10-09
 
 Changes since v1.0.388.
@@ -535,6 +527,7 @@ Changes since v1.0.388.
 - ops: authenticated production navigation metrics sampler (#681) (2e34f7e5)
 
 </details>
+
 ## [1.0.388] - 2026-10-09
 
 Changes since v1.0.387.
@@ -566,6 +559,7 @@ Changes since v1.0.387.
 - Merge pull request #679 from Boym323/perf/t52-navigation-duplicate-write-suppression (8b59b2dd)
 
 </details>
+
 ## [1.0.387] - 2026-10-09
 
 Changes since v1.0.386.
@@ -580,6 +574,7 @@ Changes since v1.0.386.
 - docs(t51): add DEV acceptance and production validation report (9599afc1)
 
 </details>
+
 ## [1.0.386] - 2026-10-09
 
 Changes since v1.0.385.
@@ -623,6 +618,7 @@ Changes since v1.0.385.
 - Merge pull request #674 from Boym323/perf/t50-health-latency (a1f63b1e)
 
 </details>
+
 ## [1.0.385] - 2026-10-09
 
 Changes since v1.0.384.
@@ -642,6 +638,7 @@ Changes since v1.0.384.
 - Add performance artifacts for ATC metadata, performance, database failure lanes, environment, health windows, PostgreSQL deltas, and runtime memory (#673) (0e535bec)
 
 </details>
+
 ## [1.0.384] - 2026-10-09
 
 Changes since v1.0.383.
@@ -663,6 +660,7 @@ Changes since v1.0.383.
 - perf(health): T4.8 ATC metadata-only fast path with 30s single-flight cache (#671) (e985bf10)
 
 </details>
+
 ## [1.0.383] - 2026-10-09
 
 Changes since v1.0.382.
@@ -687,6 +685,7 @@ Changes since v1.0.382.
 - perf: expose admin DB failure attribution windows (#669) (2db98247)
 
 </details>
+
 ## [1.0.382] - 2026-10-09
 
 Changes since v1.0.381.
