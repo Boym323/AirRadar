@@ -1,13 +1,13 @@
 export function airportMediaCopy(locale: string) {
   return locale.startsWith("cs") ? {
-    title: "Letecká média", help: "Vlastní externí odkazy na kamery a letecké audio. Ověřte souhlas poskytovatele a případná omezení.",
+    title: "Letecká média", help: "Uložené odkazy na kamery a letecké audio. Vložené přehrávání je možné pouze u podporovaných zdrojů a pokud jej autor povolí.",
     empty: "Zatím žádný odkaz pro toto letiště.", camera: "Kamera", audio: "Audio", sourceTitle: "Název zdroje", link: "HTTPS adresa",
-    add: "Přidat odkaz", remove: "Odebrat", open: "Otevřít externí zdroj", invalid: "Neplatná nebo duplicitní veřejná HTTPS adresa.",
-    privacy: "Obsah není přehráván v AirRadaru. Otevření může podléhat pravidlům jiného webu.",
+    add: "Přidat odkaz", play: "Přehrát zde", stop: "Zavřít přehrávač", embedHelp: "Přehrávač může být autorem omezen. Pokud nefunguje, otevřete zdroj přímo.", remove: "Odebrat", open: "Otevřít externí zdroj", invalid: "Neplatná nebo duplicitní veřejná HTTPS adresa.",
+    privacy: "Přehrávač se načte až po kliknutí. Odesílá spojení poskytovateli; nelze obejít omezení nebo zakázané vložení. Jiné weby se otevírají externě.",
   } : {
-    title: "Aviation media", help: "Your external links to webcams or aviation audio. Check provider consent and applicable restrictions.",
+    title: "Aviation media", help: "Saved webcam and aviation audio links. Embedded playback is available only for supported sources when the publisher allows it.",
     empty: "No links saved for this airport.", camera: "Camera", audio: "Audio", sourceTitle: "Source name", link: "HTTPS address",
-    add: "Add link", remove: "Remove", open: "Open external source", invalid: "Invalid or duplicate public HTTPS address.",
-    privacy: "AirRadar does not play this content. Following the link may be subject to another site's rules.",
+    add: "Add link", play: "Play here", stop: "Close player", embedHelp: "The publisher may restrict embedding. Open the original source if playback is unavailable.", remove: "Remove", open: "Open external source", invalid: "Invalid or duplicate public HTTPS address.",
+    privacy: "The player loads only after a click and contacts its provider. Publisher restrictions cannot be bypassed; other sites open externally.",
   };
 }
