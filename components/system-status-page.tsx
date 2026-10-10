@@ -89,14 +89,18 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return <div className="system-field"><dt>{label}</dt><dd>{value}</dd></div>;
 }
 
-function HealthSummary({ data, dictionary, streamConnected }: { data: SystemStatusApiResponse; dictionary: LocaleDictionary; streamConnected: boolean }) {
-  const services = [
+function systemHealthServices(data: SystemStatusApiResponse, dictionary: LocaleDictionary, streamConnected: boolean) {
+  return [
     { label: dictionary.system.receiver, status: data.receiver.status },
     { label: dictionary.system.database, status: data.database.status },
     { label: dictionary.system.sse, status: streamConnected ? "ok" : "degraded" as SystemStatus },
     { label: dictionary.system.weather, status: data.weather.status },
     { label: dictionary.system.windAloft, status: data.mapLayers.wind.diagnostic.operationalState },
   ] as const;
+}
+
+function HealthSummary({ data, dictionary, streamConnected }: { data: SystemStatusApiResponse; dictionary: LocaleDictionary; streamConnected: boolean }) {
+  const services = systemHealthServices(data, dictionary, streamConnected);
   return <section className="system-health-summary" aria-labelledby="system-health-heading">
     <div className="system-health-summary-heading">
       <div>
@@ -105,7 +109,7 @@ function HealthSummary({ data, dictionary, streamConnected }: { data: SystemStat
       </div>
       <StatusBadge status={data.status} dictionary={dictionary} />
     </div>
-    <p className="system-health-state">{formatStatus(data.status, dictionary)}</p>
+    <p className="system-health-state">{dictionary.system.overviewSubtitle}</p>
     <div className="system-health-services">
       {services.map((service) => <div className="system-health-service" key={service.label}>
         <span className={`system-health-dot ${statusBadgeVariant(service.status)}`} aria-hidden="true" />
@@ -113,6 +117,59 @@ function HealthSummary({ data, dictionary, streamConnected }: { data: SystemStat
         <strong>{formatStatus(service.status, dictionary)}</strong>
       </div>)}
     </div>
+  </section>;
+}
+
+function SystemAttention({ data, dictionary, streamConnected }: {
+  data: SystemStatusApiResponse;
+  dictionary: LocaleDictionary;
+  streamConnected: boolean;
+}) {
+  const issues = systemHealthServices(data, dictionary, streamConnected)
+    .filter((service) => service.status === "degraded" || service.status === "offline");
+  if (!issues.length) return null;
+  return <section className="system-attention" aria-label={dictionary.system.attentionTitle}>
+    <div className="system-attention-copy">
+      <strong>{dictionary.system.attentionTitle}</strong>
+      <p>{dictionary.system.attentionDescription}</p>
+    </div>
+    <ul>
+      {issues.map((issue) => <li key={issue.label}>
+        <span>{issue.label}</span>
+        <StatusBadge status={issue.status} dictionary={dictionary} />
+      </li>)}
+    </ul>
+  </section>;
+}
+
+function SystemJumpNav({ dictionary }: { dictionary: LocaleDictionary }) {
+  const links = [
+    { href: "#system-overview", label: dictionary.system.sectionOverview },
+    { href: "#system-runtime", label: dictionary.system.sectionRuntime },
+    { href: "#system-reception", label: dictionary.system.sectionReception },
+    { href: "#system-data", label: dictionary.system.sectionData },
+    { href: "#system-services", label: dictionary.system.sectionServices },
+  ];
+  return <nav className="system-jump-nav" aria-label={dictionary.system.sectionNavigation}>
+    <span>{dictionary.system.sections}</span>
+    <div>
+      {links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
+    </div>
+  </nav>;
+}
+
+function SystemSection({ id, title, description, children }: {
+  id: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return <section className="system-section" id={id} aria-labelledby={id + "-heading"}>
+    <header className="system-section-header">
+      <h2 id={id + "-heading"}>{title}</h2>
+      <p>{description}</p>
+    </header>
+    <div className="system-section-grid">{children}</div>
   </section>;
 }
 
@@ -639,7 +696,6 @@ export function SystemStatusPage() {
 
     <div className="system-toolbar">
       <div className="system-toolbar-status">
-        {data && <StatusBadge status={data.status} dictionary={dictionary} />}
         {data && <span>{dictionary.system.checkedAt}: {formatDateTime(data.checkedAt, dictionary)}</span>}
         <span className={`system-live-indicator ${streamConnected ? "connected" : "reconnecting"}`} aria-live="polite">
           <span aria-hidden="true">●</span> {streamConnected ? dictionary.system.realtime : dictionary.system.reconnecting}
@@ -652,7 +708,10 @@ export function SystemStatusPage() {
     {error && <p className="statistics-error" role="alert">{dictionary.system.requestFailed}</p>}
 
     {data && <div className="system-grid">
-      <HealthSummary data={data} dictionary={dictionary} streamConnected={streamConnected} />
+      <div id="system-overview" className="system-overview-anchor"><HealthSummary data={data} dictionary={dictionary} streamConnected={streamConnected} /></div>
+      <SystemAttention data={data} dictionary={dictionary} streamConnected={streamConnected} />
+      <SystemJumpNav dictionary={dictionary} />
+      <SystemSection id="system-runtime" title={dictionary.system.sectionRuntime} description={dictionary.system.sectionRuntimeDescription}>
       {detailed && data.operationalHealth && <UiCard className="system-card" aria-label={operationalLabels.title}>
         <div className="system-card-header">
           <h2>{operationalLabels.title}</h2>
@@ -713,6 +772,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.validationReadiness} value={`ETA ${data.predictiveValidation.readiness.ETA} · RUNWAY ${data.predictiveValidation.readiness.RUNWAY}`} />
       </Card>}
 
+      </SystemSection>
+      <SystemSection id="system-reception" title={dictionary.system.sectionReception} description={dictionary.system.sectionReceptionDescription}>
       <Card title={dictionary.system.receiver} status={data.receiver.readsb.status} dictionary={dictionary}>
         <Field label={dictionary.system.readsb} value={<StatusBadge status={data.receiver.readsb.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.source} value={`${data.receiver.readsb.provider} · ${data.receiver.readsb.sourceStatus === "live" ? dictionary.system.online : data.receiver.readsb.sourceStatus === "offline" ? dictionary.system.offline : formatStatus("demo", dictionary)}`} />
@@ -905,6 +966,8 @@ export function SystemStatusPage() {
         {detailed && data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
       </Card>
 
+      </SystemSection>
+      <SystemSection id="system-data" title={dictionary.system.sectionData} description={dictionary.system.sectionDataDescription}>
       <Card title={dictionary.system.database} status={data.database.status} dictionary={dictionary}>
         <Field label={dictionary.system.database} value={data.database.connected ? dictionary.system.connected : formatStatus(data.database.status, dictionary)} />
         <Field label={dictionary.system.historyPersistence} value={<StatusBadge status={data.database.history.status} dictionary={dictionary} />} />
@@ -924,6 +987,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.timezone} value={`${data.statistics.date} · ${data.statistics.timezone}`} />
       </Card>
 
+      </SystemSection>
+      <SystemSection id="system-services" title={dictionary.system.sectionServices} description={dictionary.system.sectionServicesDescription}>
       <Card title={dictionary.system.atc} status={data.atc.status} dictionary={dictionary}>
         <Field label={dictionary.system.configured} value={data.atc.configured ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.freshness} value={data.atc.freshness === "current" ? dictionary.system.current : data.atc.freshness === "stale" ? dictionary.system.stale : formatStatus(data.atc.status, dictionary)} />
@@ -1023,6 +1088,7 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.ourAirports} value={<StatusBadge status={data.dataSources.ourAirports.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.enabled} value={data.dataSources.ourAirports.enabled ? dictionary.system.configured : dictionary.system.disabled} />
       </Card>
+      </SystemSection>
     </div>}
   </main>;
 }

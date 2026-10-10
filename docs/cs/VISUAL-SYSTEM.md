@@ -408,6 +408,19 @@ Volitelný 3D terén vykreslí nejvýše 12 jednoduchých prostorových siluet l
 
 Volitelná 3D vrstva používá lokálně vytvářené nízkopolygonové tvary s odlišnými rozměry trupu, rozpětím, polohou křídel, ocasními plochami a motory podle vybraných ICAO kódů (Airbus, Boeing, regionální letadla, všeobecné letectví a vrtulníky). Neznámý typ má obecný náhradní model. Jde o **vizuálně rozlišitelné přibližné tvary**, nikoli přesné licencované modely GLTF/CAD. Geometrie se sdílí podle konečného katalogu typů, nikoli podle identifikátorů letadel; limit zůstává 12 objektů, výchozí režim je 2D a nevznikají další síťové dotazy ani procesy. Pro fotorealistické zobrazení bude nutné ověření na skutečných GPU a mobilech.
 
+
+## Stav systému V4: jasná hierarchie diagnostiky (2026-10-10)
+
+Stránka `/system` seskupuje existující karty do sekcí Aplikace a výkon,
+Příjem a sledování, Databáze a trasy a Služby a datové zdroje bez změny
+API ani toku přijímače/SSE. Rychlá navigace umožňuje skákat mezi sekcemi.
+Pruh upozornění se zobrazuje pouze při stavu `degraded`/`offline`;
+vypnuté a on-demand služby nejsou považované za incident. Běžné štítky
+„OK“ jsou méně výrazné, hlavní stav zůstává v horním přehledu. Na úzkých
+displejích se diagnostika přeskupí do jednoho sloupce.
+Regresní test `tests/system-status-visual-polish-v4.test.ts` a desktopové/
+mobilní vizuální testy jsou podmínkou nasazení.
+
 ### V6-D8 – detailní modely a ověření GPU
 Základní 3D terén i ohraničená vrstva až 12 lokálně zachycených letadel zůstává dostupná offline jako jednoduchá vektorová geometrie. Volitelné **Detailní modely letadel (online GLB)** jsou vypnuté ve výchozím stavu; načítají se pouze po uživatelském zapnutí 3D a tohoto přepínače. Používají veřejnou sadu [amvlab/aircraft-models](https://github.com/amvlab/aircraft-models) (bez firemních log), autor **amvlab**, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), normalizovanou do souřadnic a fyzických rozměrů pro AirRadar. Podporované rodiny: A320, A350, A380, B737 a B787. Ostatní typy, chyby dekódování, síťové výpadky nebo nekompatibilní GPU pokračují původními typově odstupňovanými low-poly siluetami. Zdroj assetů je připnut na konkrétní upstream commit; max 1,5 MB/soubor, 5 000 trojúhelníků na detailní model, nejvýše dvě detailní letadla a 12 letadel celkem, žádný nový SSE/serverový dotaz.
 Přepínač 3D poskytuje **Ověřit 3D na tomto zařízení** a export JSON důkazu: WebGL2, identita rendereru (pokud ji prohlížeč zveřejní), limit textur a vzorkovaná cadence requestAnimationFrame. Jde o měření prohlížeče a orientační snímkové odezvy, nikoli o certifikovaný benchmark GPU. Uživatel musí fyzicky ověřit alespoň desktopovou diskrétní/integr. GPU, iOS Safari a Android Chrome, ověřit 2D návrat při selhání WebGL, přepínání stylu, skutečně používané modely, výdrž a teplotu zařízení. Chromium CI test běží softwarově a fyzický telefon nenahrazuje.
