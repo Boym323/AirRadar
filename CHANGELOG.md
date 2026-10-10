@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.413] - 2026-10-10
+
+Changes since v1.0.412.
+
+**Features touched:** System Observability.
+
+### Changed
+
+- System Status V4: operator-first visual polish and diagnostic sections (#755) (009864da)
+- Radar UI polish: exclusive map menus, follow HUD and visible drawer actions (#759) (fd4680c8)
+- Fix blocked release: render-backed basemap browser gate + optional RXW 429 (#763) (1a9ce61f)
+
+### Maintenance
+
+- Sync generated repository metadata (#758) (54341440)
+
+<details>
+<summary>Technical commits</summary>
+
+- System Status V4: operator-first visual polish and diagnostic sections (#755) (009864da)
+- chore(metadata): sync generated repository metadata (#758) (54341440)
+- Radar UI polish: exclusive map menus, follow HUD and visible drawer actions (#759) (fd4680c8)
+- Fix blocked release: render-backed basemap browser gate + optional RXW 429 (#763) (1a9ce61f)
+
+</details>
+
 ## [1.0.412] - 2026-10-10
 
 Changes since v1.0.411.
