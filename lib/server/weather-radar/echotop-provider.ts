@@ -6,7 +6,6 @@ export const ECHOTOP_BOUNDS = { west: 11.267, south: 48.047, east: 19.624, north
 const FILE_RE = /^T_PADV23_C_OKPR_(\d{14})\.hdf$/;
 const ID_RE = /^\d{12}$/;
 const MAX_HDF_BYTES = 8 * 1024 * 1024;
-const MAX_CATALOG_BYTES = 350_000;
 const MAX_PNG_BYTES = 12 * 1024 * 1024;
 const STALE_MS = 18 * 60_000;
 const HORIZON_MS = 2 * 60 * 60_000;
@@ -55,7 +54,6 @@ export function parseEchoTopCatalog(html: string, now=Date.now()): EchoTopFrame[
       ...parsed, imageUrl:"/api/weather/radar/echotop/frame/"+parsed.id,
       stale:now-Date.parse(parsed.observedAt)>STALE_MS,
     });
-    if(unique.size>MAX_FRAMES*25)break;
   }
   return [...unique.values()].sort((a,b)=>a.id.localeCompare(b.id)).slice(-MAX_FRAMES);
 }
@@ -154,9 +152,30 @@ export class EchoTopProvider {
     if(this.fetchingCatalog)return this.fetchingCatalog;
     const request=(async()=>{
       try{
-        const res=await this.fetcher(ECHOTOP_SOURCE_URL,{signal:AbortSignal.timeout(8_000),cache:"no-store"});
-        const body=await boundedBytes(res,MAX_CATALOG_BYTES);
-        const frames=parseEchoTopCatalog(new TextDecoder().decode(body),now);
+        // ČHMÚ's directory index grows without bound and normally lists oldest
+        // files first. Probe a small allowlisted set of recent file names with
+        // HEAD instead of downloading/parsing the entire directory.
+        const rounded=Math.floor(now / (5*60_000)) * (5*60_000);
+        const frames:EchoTopFrame[]=[];
+        for(let slot=0;slot<8;slot++){
+          const instant=rounded-slot*5*60_000;
+          const t=new Date(instant).toISOString().replace(/[-:]/g,"").replace(/T/g,"").slice(0,12);
+          const file="T_PADV23_C_OKPR_"+t+"00.hdf";
+          const probe=await this.fetcher(ECHOTOP_SOURCE_URL+file,{
+            method:"HEAD",cache:"no-store",signal:AbortSignal.timeout(3_000)
+          });
+          if(!probe.ok)continue;
+          const bytes=Number(probe.headers.get("content-length")??"0");
+          if(bytes>MAX_HDF_BYTES)continue;
+          const observedAt=validTimestamp(t+"00",now);
+          if(!observedAt)continue;
+          frames.push({
+            id:t,observedAt,
+            imageUrl:"/api/weather/radar/echotop/frame/"+t,
+            stale:now-Date.parse(observedAt)>STALE_MS,
+          });
+          break;
+        }
         const value={...this.empty(),available:frames.length>0,frames,latestFrameId:frames.at(-1)?.id??null};
         this.catalog={value,time:this.clock()};
         return value;
