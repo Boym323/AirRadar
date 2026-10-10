@@ -1451,7 +1451,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.v6Terrain) {
             const layers = visualPage.locator(".map-layers");
-            await layers.locator("summary").click();
+            // A native <details> interaction must not wait for unrelated SSE-driven navigation.
+            await layers.evaluate((element) => { element.open = true; });
             await visualPage.getByTestId("radar-v6-d-terrain").locator("select").selectOption("3d");
             await visualPage.waitForFunction(() => {
               const map = window.__airradarMapForDiagnostics;
