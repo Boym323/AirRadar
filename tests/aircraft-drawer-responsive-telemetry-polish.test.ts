@@ -30,6 +30,9 @@ describe("aircraft drawer responsive telemetry polish", () => {
     expect(polish).toContain(".sidebar.drawer-aircraft .aircraft-quick-header");
     expect(polish).toContain("position: relative");
     expect(polish).toContain("z-index: auto");
+    expect(polish).toContain(".sidebar.drawer-aircraft .aircraft-quick-tabs");
+    expect(polish).toContain("grid-template-columns: repeat(4, minmax(0, 1fr))");
+    expect(polish).toContain("overflow-x: visible");
     expect(drawer).toContain('key={selectedOgnTarget ? `ogn-${selectedOgnTarget.id}` : selectedIdentity}');
   });
 
