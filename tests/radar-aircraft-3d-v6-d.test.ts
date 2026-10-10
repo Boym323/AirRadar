@@ -94,6 +94,12 @@ describe("V6-D 3D model selection and GPU budget",()=>{
     expect(b77w.span).toBeGreaterThan(b738.span);
     expect(b78x.length).toBeGreaterThan(resolveAirframeSpec("B789").length);
     expect(airframeFaceCount("A388")).toBeGreaterThan(airframeFaceCount("A20N"));
+    const materials = new Set(airframeModelFaces("A20N").map((face) => face[4]));
+    for (const required of ["body","wing","engine","glass","intake"]) expect(materials.has(required)).toBe(true);
+    const vertices = aircraft3dVertices(selectRadarAircraft3d([target("COLOR01", { aircraftType: "A20N" })], null));
+    const uniqueColors = new Set<string>();
+    for(let i=3;i<vertices.length;i+=6) uniqueColors.add([vertices[i],vertices[i+1],vertices[i+2]].join(":"));
+    expect(uniqueColors.size).toBeGreaterThan(5);
     // Geometry remains finite, cached and bounded: at most 12 airframes.
     for(const code of ["A20N","A21N","B738","B38M","B39M","B77W","B78X","A388","C172","H145"]) {
       expect(airframeFaceCount(code)).toBeLessThan(300);
