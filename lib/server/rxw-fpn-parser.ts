@@ -56,6 +56,11 @@ export function parseRxwH1Fpn(text: unknown, acarsFlight: unknown): ParseResult 
   if (!flightId) return null;
 
   const terminal = groups.at(-1) ?? "";
+  // Without an actual checksum, the last four coordinate digits are also
+  // hexadecimal. Do not mistake them for a checksum and silently truncate a
+  // valid final fix into an invalid one.
+  const lastRouteToken = terminal.split(".").at(-1)?.split(",").at(-1)?.trim() ?? "";
+  if (parseFpnCoordinate(lastRouteToken)) return null;
   if (!/[0-9A-F]{4}$/.test(terminal.toUpperCase())) return null;
   groups[groups.length - 1] = terminal.slice(0, -4);
 

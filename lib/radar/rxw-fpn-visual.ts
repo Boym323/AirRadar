@@ -48,8 +48,8 @@ export function createRxwFpnRoute(plan: RxwWaypointPlan | null): FeatureCollecti
         properties: { name: point.name, index, labelVisible: index % 3 === 0 || index === plan.waypoints.length - 1 },
         geometry: { type: "Point", coordinates },
       });
-      if (!point.breakBefore && previous?.lat !== null && previous?.lon !== null
-        && Math.abs(previous!.lon! - point.lon!) <= 180) {
+      if (!point.breakBefore && previous && previous.lat !== null && previous.lon !== null
+        && Math.abs(previous.lon - point.lon!) <= 180) {
         features.push({
           type: "Feature",
           properties: { from: previous!.name, to: point.name, reported: true },
