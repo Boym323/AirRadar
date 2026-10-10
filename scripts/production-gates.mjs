@@ -1010,6 +1010,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-320", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false },
         { name: "radar-mobile-320-credits", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false, openMapCredits: true },
+        { name: "radar-v6-multiview-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableV6Multi: true },
+        { name: "radar-v6-multiview-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableV6Multi: true },
+        { name: "radar-v6-light-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "light" },
+        { name: "radar-v6-satellite-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "satellite" },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
         { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
@@ -1420,6 +1424,30 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 { key: layer, before: original },
               );
             }
+          }
+          if (target.enableV6Multi) {
+            const multi = visualPage.getByTestId("radar-multi-aircraft");
+            await multi.waitFor({ state: "visible", timeout: 15_000 });
+            await multi.locator('button[aria-expanded]').click();
+            await visualPage.waitForFunction(() => document.querySelector('[data-testid="radar-multi-aircraft"]')?.getAttribute("data-active") === "true");
+            const panel = visualPage.locator("#radar-multi-aircraft-panel");
+            await panel.waitFor({ state: "visible", timeout: 10_000 });
+            if (!await panel.locator("button").count()) {
+              throw new Error("V6-A Multi-view panel must remain interactive");
+            }
+          }
+          if (target.v6Appearance) {
+            const layers = visualPage.locator(".map-layers");
+            await layers.locator("summary").click();
+            const selector = visualPage.getByTestId("map-appearance-v6").locator("select");
+            await selector.selectOption(target.v6Appearance);
+            await visualPage.waitForFunction((appearance) => {
+              const map = window.__airradarMapForDiagnostics;
+              if (!map?.getLayer("map-tint")) return false;
+              if (appearance === "satellite") return map.getLayer("radar-v6-satellite-layer")?.layout?.visibility === "visible";
+              return !map.getLayer("radar-v6-satellite-layer") && map.getPaintProperty("map-tint", "fill-opacity") === 0;
+            }, target.v6Appearance, { timeout: 15_000 });
+            await layers.locator("summary").click();
           }
           if (target.enableMapFocus) {
             const focus = visualPage.getByTestId("radar-quick-map-focus");

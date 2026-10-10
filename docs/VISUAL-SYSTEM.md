@@ -395,3 +395,8 @@ The live radar provides a **Multi-view** local-only picker for up to ten ICAO id
 ## V6-B — map appearance without changing radar runtime
 
 The live radar provides dark (existing OpenFreeMap), light (paint-only recoloring of the same OpenFreeMap base) and an opt-in historical satellite (EOxCloudless Sentinel 2020) display. The MapLibre instance, live markers, route/weather/ATC sources, map controls and SSE are not recreated. Native basemap layer IDs are captured before AirRadar layers are installed; light recoloring affects only those baseline paint properties. The satellite WMTS is added lazily under AirRadar map overlays and uses the provider-mandated visible credit. **2020 imagery is not real time and is free for non-commercial use only**. Do not enable this option in a commercial deployment without appropriate licensing. Preferences remain browser local.
+
+
+## V6-C — opt-in mobile camera AR
+
+The existing mobile Spotter Sky Finder now contains a browser-only rear-camera overlay. The user must first enable Sky Finder / orientation permission and then explicitly enable the camera. Fresh LOCAL ADS-B positions with usable observer elevation are projected into an approximate portrait field of view; off-screen, stale and sensor-unavailable targets are hidden rather than invented. Manual tilt calibration is session-local. Camera video is never uploaded, stored, recorded, or added to the aircraft stream; media tracks are stopped when closed, hidden or unmounted. Secure-context and permission failures leave the original Sky Finder intact. This approximate display is not aviation navigation equipment.
