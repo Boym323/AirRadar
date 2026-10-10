@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Produce a traced runtime bundle so validated CI artifacts can run without
   // coupling the server process to the full development dependency tree.
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/api/weather/radar/echotop/frame/*": ["./scripts/chmi-echotop-render.py"],
+  },
   // Releases build into an isolated directory and activate it only after the
   // build has completed successfully. Runtime defaults to the conventional
   // .next directory after activation.
