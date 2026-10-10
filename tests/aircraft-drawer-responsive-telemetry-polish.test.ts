@@ -11,12 +11,15 @@ describe("aircraft drawer responsive telemetry polish", () => {
 
   it("keeps all six actions visible within the actual drawer width", () => {
     expect(polish).toContain("container: aircraft-drawer-header / inline-size");
-    expect(polish).toContain("@container aircraft-drawer-header (min-width: 370px)");
+    expect(polish).toContain("@container aircraft-drawer-header (max-width: 270px)");
     expect(polish).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
-    expect(polish).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(polish).not.toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
     expect(polish).toContain("overflow: visible");
-    expect(polish).toContain("white-space: normal");
-    expect(polish).toContain("overflow-wrap: anywhere");
+    const actionBlock = polish.split(".sidebar.drawer-aircraft .aircraft-v5-quick-actions .aircraft-quick-action {")[1]?.split("}")[0];
+    expect(actionBlock).toContain("white-space: normal");
+    expect(actionBlock).toContain("overflow-wrap: normal");
+    expect(actionBlock).toContain("word-break: normal");
+    expect(actionBlock).not.toContain("overflow-wrap: anywhere");
     expect(quick).toContain('data-testid="aircraft-v5-quick-actions"');
     expect(quick).toContain("t.aircraftQuickV5.followMap");
     expect(quick).toContain("t.aircraft.centerOnAircraft");
@@ -24,6 +27,29 @@ describe("aircraft drawer responsive telemetry polish", () => {
     expect(quick).toContain("t.aircraftQuickV5.share");
     expect(quick).toContain("t.aircraftQuickV5.alerts");
     expect(quick).toContain("t.aircraft.fullDetail");
+  });
+
+  it("keeps the full live altitude, speed, track and vertical rate visible in a narrow desktop drawer", () => {
+    const metricsBlock = polish.split(".sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics {")[1]?.split("}")[0];
+    const metricsValueBlock = polish.split(".sidebar.drawer-aircraft .aircraft-quick-header-hero .radar-traffic-hero-metrics strong {")[1]?.split("}")[0];
+    expect(metricsBlock).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(metricsBlock).toContain("min-width: 0");
+    expect(metricsValueBlock).toContain("white-space: nowrap");
+    expect(metricsValueBlock).toContain("font-size: var(--font-size-base)");
+    expect(polish).toContain(".radar-traffic-hero-metrics > div:nth-child(odd)");
+    expect(quick).toContain("altitude={formatAltitude(aircraft.altitude)}");
+    expect(quick).toContain("speed={formatSpeed(aircraft.groundSpeed)}");
+    expect(quick).toContain("track={formatTrack(aircraft.track)}");
+    expect(quick).toContain("verticalRate={compactVerticalRateLabel(aircraft.verticalRate)}");
+  });
+
+  it("guards real text geometry in the production browser smoke", () => {
+    const browserGate = read("scripts/production-gates.mjs");
+    expect(browserGate).toContain("aircraftDrawerLayout");
+    expect(browserGate).toContain("range.getBoundingClientRect()");
+    expect(browserGate).toContain("twoMetricRows");
+    expect(browserGate).toContain("overflowingValues");
+    expect(browserGate).toContain("overflowingActions");
   });
 
   it("does not overlay scrollable tabs with a sticky aircraft header", () => {
