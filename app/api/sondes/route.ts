@@ -1,5 +1,6 @@
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { defaultSondeHubProvider, isSondeHubEnabled } from "@/lib/server/sondehub-provider";
+import { defaultSondeMqttReceiver, isSondeMqttEnabled } from "@/lib/server/sondehub-mqtt";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,5 +17,22 @@ export async function GET(request: Request): Promise<Response> {
       !Number.isFinite(radiusKm) || radiusKm < 25 || radiusKm > 300) {
     return Response.json({ error: "Invalid SondeHub area" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
-  return Response.json(await defaultSondeHubProvider.getSnapshot(lat, lon, radiusKm), { headers: { "Cache-Control": "no-store" } });
+  if (isSondeMqttEnabled()) defaultSondeMqttReceiver.requestStart();
+  const base = await defaultSondeHubProvider.getSnapshot(lat, lon, radiusKm);
+  const live = isSondeMqttEnabled() ? defaultSondeMqttReceiver.getSnapshot(lat, lon, radiusKm) : null;
+  const bySerial = new Map(base.sondes.map((item) => [item.serial, item]));
+  for (const item of live?.sondes ?? []) {
+    const existing = bySerial.get(item.serial);
+    if (!existing || item.observedAt > existing.observedAt) bySerial.set(item.serial, item);
+  }
+  const sondes = [...bySerial.values()]
+    .sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt))
+    .slice(0, 100);
+  return Response.json({
+    ...base,
+    available: base.available || Boolean(live?.sondes.length),
+    stale: base.stale && !live?.connected,
+    sondes,
+    live: { enabled: isSondeMqttEnabled(), connected: live?.connected ?? false, observedAt: live?.observedAt ?? null },
+  }, { headers: { "Cache-Control": "no-store" } });
 }

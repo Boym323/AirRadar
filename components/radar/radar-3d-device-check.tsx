@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { t } from "@/lib/i18n";
 
-type Result = { supported: boolean; frames: number; medianFrameMs: number | null; p95FrameMs: number | null; maxTextureSize: number | null; renderer: string; mobileViewport: boolean; capturedAt: string };
+type Result = { supported: boolean; frames: number; medianFrameMs: number | null; p95FrameMs: number | null; maxTextureSize: number | null; renderer: string; mobileViewport: boolean; capturedAt: string; userAgent: string; touchPoints: number; error: string | null };
 export function Radar3dDeviceCheck() {
   const [result, setResult] = useState<Result | null>(null);
   const [running, setRunning] = useState(false);
@@ -19,8 +19,11 @@ export function Radar3dDeviceCheck() {
       const samples:number[]=[];
       if(gl && document.visibilityState==="visible"){
         let previous=performance.now();
+        // A total wall-clock deadline is essential: throttled browsers can
+        // deliver many RAF callbacks slightly below the per-frame timeout.
+        const deadline = previous + 4000;
         // Observe existing map frames; do not create a second render loop or canvas.
-        for(let i=0;i<61;i++){
+        for(let i=0;i<61 && performance.now()<deadline;i++){
           if (document.visibilityState !== "visible") break;
           // Backgrounded/throttled tabs may never receive another animation
           // frame. Bound each sample so manual device QA always returns a result.
@@ -35,7 +38,7 @@ export function Radar3dDeviceCheck() {
             const timeout = window.setTimeout(() => {
               window.cancelAnimationFrame(frame);
               finish(null);
-            }, 600);
+            }, Math.max(1, Math.min(600, deadline - performance.now())));
             const frame = window.requestAnimationFrame(time => finish(time));
           });
           if (now === null) break;
@@ -50,6 +53,18 @@ export function Radar3dDeviceCheck() {
         p95FrameMs:samples.length?samples[Math.floor(samples.length*.95)]!:null,
         maxTextureSize,renderer,mobileViewport:window.innerWidth<768,
         capturedAt:new Date().toISOString(),
+        userAgent:navigator.userAgent.slice(0,250), touchPoints:navigator.maxTouchPoints,
+        error:null,
+      });
+    } catch (error) {
+      // A map-owned WebGL context may reject secondary context access on some
+      // browsers. Always return a diagnostic rather than a silent, stuck spinner.
+      setResult({
+        supported:false, frames:0,medianFrameMs:null,p95FrameMs:null,
+        maxTextureSize:null,renderer:"Unavailable",mobileViewport:window.innerWidth<768,
+        capturedAt:new Date().toISOString(),userAgent:navigator.userAgent.slice(0,250),
+        touchPoints:navigator.maxTouchPoints,
+        error:error instanceof Error ? error.message.slice(0,250) : String(error).slice(0,250),
       });
     } finally { setRunning(false); }
   };
@@ -61,6 +76,7 @@ export function Radar3dDeviceCheck() {
       <small>{result.supported?"WebGL2 ✓":"WebGL2 nedostupné"} · {result.renderer} ·
         {result.p95FrameMs!==null?` p95 ${result.p95FrameMs.toFixed(1)} ms / ${result.frames} frames`:" no frame samples"}
         {result.maxTextureSize!==null?` · max texture ${result.maxTextureSize}`:""}</small>
+      {result.error && <p role="alert">{en?"Device measurement failed: ":"Měření zařízení selhalo: "}{result.error}</p>}
       <br />
       <small>{en?"Browser-only measurement on the current device, not a certification of other GPUs.":"Měření v prohlížeči tohoto zařízení; neprokazuje výkon na jiných GPU."}</small>
       <br />

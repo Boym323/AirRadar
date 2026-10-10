@@ -114,17 +114,40 @@ export function useSondeHubMapLayer(mapRef: RefObject<MapLibreMap | null>, ready
     setStatus("loading");
     const center = map.getCenter();
     const params = new URLSearchParams({ lat: center.lat.toFixed(3), lon: center.lng.toFixed(3), radiusKm: "200" });
-    void fetch("/api/sondes?" + params.toString(), { signal: abort.signal, cache: "no-store" })
-      .then((response) => { if (!response.ok) throw new Error("SondeHub unavailable"); return response.json() as Promise<SondeSnapshot>; })
-      .then((result) => {
-        if (stopped) return;
-        points = result.enabled && result.available ? result.sondes : [];
-        setStatus(!result.enabled || !result.available ? "unavailable" : result.stale ? "stale" : "ready");
-        render();
-      })
-      .catch(() => { if (!stopped) setStatus("unavailable"); });
+    let refreshTimer: ReturnType<typeof setInterval> | null = null;
+    let pending = false;
+    const loadSnapshot = () => {
+      if (pending || stopped || abort.signal.aborted) return;
+      pending = true;
+      void fetch("/api/sondes?" + params.toString(), { signal: abort.signal, cache: "no-store" })
+        .then((response) => {
+          if (!response.ok) throw new Error("SondeHub unavailable");
+          return response.json() as Promise<SondeSnapshot & { live?: { enabled: boolean; connected: boolean } }>;
+        })
+        .then((result) => {
+          if (stopped) return;
+          if (result.enabled && result.available) {
+            points = result.sondes;
+            setStatus(result.stale ? "stale" : "ready");
+            render();
+          } else if (points.length === 0) {
+            setStatus("unavailable");
+          } else {
+            setStatus("stale");
+          }
+          // Poll *our own bounded snapshot endpoint*, never SondeHub REST directly.
+          // Server SondeHub REST cache remains 20 minutes even with live MQTT enabled.
+          if (result.live?.enabled && !refreshTimer) {
+            refreshTimer = setInterval(loadSnapshot, 20_000);
+          }
+        })
+        .catch(() => { if (!stopped) setStatus(points.length ? "stale" : "unavailable"); })
+        .finally(() => { pending = false; });
+    };
+    loadSnapshot();
     return () => {
       stopped = true;
+      if (refreshTimer) clearInterval(refreshTimer);
       abort.abort();
       popup?.remove();
       map.off("style.load", render);

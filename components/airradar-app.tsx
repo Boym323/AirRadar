@@ -717,19 +717,23 @@ export function AirRadarApp() {
   const [mapReady, setMapReady] = useState(false);
   const sondeStatus = useSondeHubMapLayer(mapRef, mapReady, showSondes);
   const echoTopStatus = useEchoTopMapLayer(mapRef, mapReady, showEchoTop);
+  // Native details[name] keeps Presets and Layers mutually exclusive.
+  // Dismiss the active map menu outside the HUD and restore focus on Escape.
   useEffect(() => {
-    const openedMenus = () => document.querySelectorAll<HTMLDetailsElement>('details[name="radar-map-menus"][open]');
+    const selector = 'details[name="radar-map-menus"][open]';
     const onPointerDown = (event: PointerEvent) => {
-      for (const menu of openedMenus()) {
-        if (!menu.contains(event.target as Node)) menu.open = false;
+      const menu = document.querySelector<HTMLDetailsElement>(selector);
+      if (menu && event.target instanceof Node && !menu.contains(event.target)) {
+        menu.open = false;
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      for (const menu of openedMenus()) {
-        menu.open = false;
-        menu.querySelector<HTMLElement>("summary")?.focus();
-      }
+      const menu = document.querySelector<HTMLDetailsElement>(selector);
+      if (!menu) return;
+      event.preventDefault();
+      menu.open = false;
+      menu.querySelector("summary")?.focus();
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -738,6 +742,7 @@ export function AirRadarApp() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+
   useEffect(() => {
     try {
       const persisted = window.localStorage.getItem("airradar-map-appearance-v6");
