@@ -64,8 +64,8 @@ export function parseAladinWind(raw: unknown, level: WindLevelHpa, now: number):
   if (!hourly || typeof hourly !== "object" || Array.isArray(hourly)) return null;
   const item = hourly as Record<string, unknown>;
   const times = item.time;
-  const speeds = item[\`wind_speed_\${level}hPa\`];
-  const directions = item[\`wind_direction_\${level}hPa\`];
+  const speeds = item[`wind_speed_${level}hPa`];
+  const directions = item[`wind_direction_${level}hPa`];
   if (!Array.isArray(times) || !Array.isArray(speeds) || !Array.isArray(directions)) return null;
   let best: { index: number; distance: number } | null = null;
   for (let i = 0; i < Math.min(times.length, 100); i++) {
@@ -104,7 +104,7 @@ export class AladinWindProvider {
       const url = new URL(API_URL);
       url.searchParams.set("latitude", lat.toFixed(4));
       url.searchParams.set("longitude", lon.toFixed(4));
-      url.searchParams.set("hourly", \`wind_speed_\${level}hPa,wind_direction_\${level}hPa\`);
+      url.searchParams.set("hourly", `wind_speed_${level}hPa,wind_direction_${level}hPa`);
       url.searchParams.set("wind_speed_unit", "kn");
       url.searchParams.set("timezone", "UTC");
       url.searchParams.set("forecast_days", "3");
