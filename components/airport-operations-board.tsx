@@ -771,7 +771,7 @@ export function AirportOperationsBoard({
       <div className="airport-live-flow-heading">
         <div><span className="ui-kicker">AIRPORT INTELLIGENCE / D4</span><h3>{airportDCopy.contextHeading}</h3></div>
       </div>
-      {airportContextD4.signals.length ? <ul className="airport-live-flight-list">
+      {airportContextD4.signals.length ? <ul className="airport-live-flight-list airport-d4-signals">
         {airportContextD4.signals.map((signal) => <li key={signal}>{airportDCopy.contextSignals[signal]}</li>)}
       </ul> : <p className="airport-v3-empty">{airportDCopy.noContext}</p>}
       <p><Link href="/airspace">{airportDCopy.contextAtcLink} ↗</Link></p>
