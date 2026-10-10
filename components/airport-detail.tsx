@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
@@ -76,6 +76,31 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
   const operationsController = useAirportOperationsController(airport.icaoCode, predictiveHexes);
   const [favorite, toggleFavorite] = useFavoriteAirport(airport.icaoCode);
   const [view, setView] = useState<AirportV5View>("overview");
+  const tabsRef = useRef<HTMLElement>(null);
+  const [tabsHaveMore, setTabsHaveMore] = useState(false);
+
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    if (!tabs) return;
+    const syncOverflow = () => setTabsHaveMore(tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 2);
+    const observer = new ResizeObserver(syncOverflow);
+    observer.observe(tabs);
+    tabs.addEventListener("scroll", syncOverflow, { passive: true });
+    syncOverflow();
+    return () => {
+      observer.disconnect();
+      tabs.removeEventListener("scroll", syncOverflow);
+    };
+  }, []);
+
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    if (!tabs || tabs.scrollWidth <= tabs.clientWidth) return;
+    const active = tabs.querySelector<HTMLElement>(`#airport-v5-tab-${view}`);
+    if (!active) return;
+    const offset = active.offsetLeft - tabs.offsetLeft;
+    tabs.scrollTo({ left: Math.max(0, offset + active.offsetWidth / 2 - tabs.clientWidth / 2), behavior: "smooth" });
+  }, [view]);
 
   useEffect(() => {
     const match = /^#airport-view-(overview|arrivals|departures|operations|weather|map|analytics)$/.exec(window.location.hash);
@@ -109,7 +134,8 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
       actions={<button type="button" className="button-secondary" onClick={toggleFavorite} aria-pressed={favorite} title={favorite ? t.pwa.favoriteRemove : t.pwa.favoriteAdd}>{favorite ? "★" : "☆"} {t.pwa.favorites}</button>}
     />
 
-    <nav className="airport-v5-tabs" role="tablist" aria-label={t.airportV5.navigation} data-testid="airport-v5-tabs">
+    <div className="airport-v5-tabs-rail" data-has-more={tabsHaveMore ? "true" : "false"}>
+    <nav ref={tabsRef} className="airport-v5-tabs" role="tablist" aria-label={t.airportV5.navigation} data-testid="airport-v5-tabs">
       {AIRPORT_V5_VIEWS.map((item) => <button
         key={item}
         type="button"
@@ -124,6 +150,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
         onKeyDown={(event) => onTabKeyDown(event, item)}
       >{t.airportV5.tabs[item]}</button>)}
     </nav>
+    </div>
 
     <div id={`airport-v5-panel-${view}`} className="airport-v5-panel" role="tabpanel" aria-labelledby={`airport-v5-tab-${view}`} data-testid="airport-v5-panel">
       {operationViews && <AirportOperationsBoard airport={airport} runways={infrastructure.runways} controller={operationsController} liveTraffic={liveTrafficController} view={view} />}
