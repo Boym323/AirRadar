@@ -64,6 +64,7 @@ export function useRadarWeatherContext({
 
   const radarGenerationRef = useRef(0);
   const radarWasEnabledRef = useRef(false);
+  const radarLastProductRef = useRef(radarProduct);
   const windGenerationRef = useRef(0);
   const sigmetGenerationRef = useRef(0);
   const sigmetUnavailableRef = useRef(onSigmetUnavailable);
@@ -79,7 +80,9 @@ export function useRadarWeatherContext({
       setRadarStatus("idle");
       return;
     }
-    if (!radarWasEnabledRef.current) {
+    const changedProduct = radarLastProductRef.current !== radarProduct;
+    radarLastProductRef.current = radarProduct;
+    if (!radarWasEnabledRef.current || changedProduct) {
       radarWasEnabledRef.current = true;
       setRadarCatalog(null);
       setRadarFrameId(null);
