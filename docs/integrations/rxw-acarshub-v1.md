@@ -43,4 +43,4 @@ rights of **hub.rxw.cz** have not been confirmed; enabling requires operator app
 Messages may lack ICAO24 and are deliberately dropped instead of making unreliable matches.
 History is only process-local for up to two hours, not a durable archive.
 
-Tests: `npx vitest run tests/rxw-hub-store.test.ts`
+Tests: `npx vitest run tests/rxw-hub-store.test.ts tests/rxw-hub-service.test.ts`
