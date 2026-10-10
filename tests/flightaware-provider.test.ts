@@ -74,7 +74,7 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const provider = new FlightAwareFlightPlanProvider("secret-test-key");
+    const provider = new FlightAwareFlightPlanProvider("secret-test-key", { includeRouteFallback: true });
     const plan = await provider.getFlightPlan("TEST123", new Date("2026-09-11T13:00:00Z"));
 
     expect(plan).toMatchObject({ filedRoute: null, waypoints: ["VLM", "HDO"] });
@@ -145,7 +145,7 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
     expect(provider.getDiagnostics()).toMatchObject({ requests: 2, rateLimited: 1, limitPerDay: 2 });
   });
 
-  it("does not cache an incomplete plan when the fallback route request fails", async () => {
+  it("preserves and caches paid status when the optional waypoint request fails", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       if (url.endsWith("/route")) return new Response("upstream error", { status: 500 });
@@ -164,6 +164,7 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
       maxRequestsPerMinute: 10,
       maxRequestsPerHour: 10,
       maxRequestsPerDay: 10,
+      includeRouteFallback: true,
     });
     const service = new EnrichmentService({ flightPlan: provider });
     const target = normalizeAircraft(
@@ -173,13 +174,35 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
     if (!target) throw new Error("test aircraft could not be normalized");
     const observedAt = new Date("2026-09-11T13:00:00Z");
 
-    expect(await service.getFlightPlanOnDemand(target, observedAt)).toBeNull();
-    expect(await service.getFlightPlanOnDemand(target, observedAt)).toBeNull();
+    expect(await service.getFlightPlanOnDemand(target, observedAt)).toMatchObject({ callsign: "FAILROUTE", waypoints: [], scheduledDeparture: "2026-09-11T12:00:00Z" });
+    expect(await service.getFlightPlanOnDemand(target, observedAt)).toMatchObject({ callsign: "FAILROUTE", waypoints: [] });
 
-    // Each attempt performs ident + fallback route again. If the failed
-    // fallback had been positively or negatively cached, this would stay at 2.
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect(provider.getDiagnostics()).toMatchObject({ requests: 4, failures: 2 });
+    // The successful status remains cached even when the optional paid route fails.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(provider.getDiagnostics()).toMatchObject({ requests: 2, failures: 1 });
+  });
+
+  it("retains paid flight status even when no filed route or flight id exists", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      flights: [{
+        ident: "STATUS1",
+        scheduled_out: "2026-09-11T12:00:00Z",
+        scheduled_in: "2026-09-11T14:00:00Z",
+        status: "En Route",
+        estimated_in: "2026-09-11T14:05:00Z",
+      }],
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new FlightAwareFlightPlanProvider("secret-test-key");
+    const plan = await provider.getFlightPlan("STATUS1", new Date("2026-09-11T13:00:00Z"));
+    expect(plan).toMatchObject({
+      callsign: "STATUS1",
+      filedRoute: null,
+      waypoints: [],
+      estimatedArrival: "2026-09-11T14:05:00Z",
+      flightAware: { status: "En Route" },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("tracks upstream failures without exposing the API key", async () => {

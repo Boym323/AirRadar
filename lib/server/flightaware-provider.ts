@@ -52,6 +52,8 @@ interface FlightAwareBudgetOptions {
   maxCostUsdPerDay?: number;
   maxCostUsdPerMonth?: number;
   ledgerPath?: string;
+  /** Extra paid /route call, OFF unless the operator explicitly requests it. */
+  includeRouteFallback?: boolean;
 }
 
 class SlidingWindowRequestBudget {
@@ -206,6 +208,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
   private readonly ledger: FlightAwareUsageLedger;
   private readonly maxCostDay: number | null;
   private readonly maxCostMonth: number | null;
+  private readonly includeRouteFallback: boolean;
   private reservedCost = 0;
   private budgetBlocked = 0;
   private providerState = "ready";
@@ -228,6 +231,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
     });
     this.maxCostDay = options.maxCostUsdPerDay && options.maxCostUsdPerDay > 0 ? options.maxCostUsdPerDay : null;
     this.maxCostMonth = options.maxCostUsdPerMonth && options.maxCostUsdPerMonth > 0 ? options.maxCostUsdPerMonth : null;
+    this.includeRouteFallback = options.includeRouteFallback === true;
   }
 
   getDiagnostics(): FlightAwareDiagnostics {
@@ -322,8 +326,15 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
     // The ident response already carries the filed route in normal cases. A
     // second paid /route call is therefore reserved strictly for the fallback
     // case where the filed route is absent.
-    const waypoints = !filedRoute && faFlightId ? await this.readRoute(faFlightId) : [];
-    if (!filedRoute && waypoints.length === 0) return null;
+    let waypoints: string[] = [];
+    if (this.includeRouteFallback && !filedRoute && faFlightId) {
+      try {
+        waypoints = await this.readRoute(faFlightId);
+      } catch {
+        // This lookup is supplementary; retain already-paid status and times.
+      }
+    }
+    // Preserve already-paid flight status and schedule even if route fixes are absent.
     const flightAware = statusFromFlight(flight);
 
     return {
