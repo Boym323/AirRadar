@@ -230,6 +230,54 @@ describe("provider enrichment cache", () => {
     expect(getFlightPlan).toHaveBeenCalledTimes(7);
   });
 
+  it("uses free ADSB.lol fallback for a missing ADSBDB route, and reuses its cache", async () => {
+    const primary = vi.fn(async () => null);
+    const fallback = vi.fn(async (callsign: string) => ({
+      ...route(callsign, "LKPR", "LZIB"),
+      originAirport: { icaoCode: "LKPR", iataCode: "PRG", name: "Prague", city: "Prague", country: "CZ", latitude: 50.1008, longitude: 14.26 },
+      destinationAirport: { icaoCode: "LZIB", iataCode: "BTS", name: "Bratislava", city: "Bratislava", country: "SK", latitude: 48.17, longitude: 17.21 },
+      source: "adsblol-routeset",
+    }));
+    const service = new EnrichmentService({
+      flightRoute: { name: "adsbdb", getRoute: primary },
+      flightRouteFallback: { name: "adsblol-routeset", getRoute: fallback },
+    });
+    const target = aircraft("ABC123", "CSA123");
+    const at = new Date("2026-10-10T10:00:00Z");
+    const one = await service.enrich(target, at);
+    const two = await service.enrich(target, at);
+    expect(one?.route?.source).toBe("adsblol-routeset");
+    expect(two?.route?.source).toBe("adsblol-routeset");
+    expect(primary).toHaveBeenCalledTimes(1);
+    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(fallback).toHaveBeenCalledWith("CSA123", at, { lat: 50, lon: 14 });
+  });
+
+  it("never consults the ADSB.lol fallback when the primary route is valid", async () => {
+    const known = {
+      ...route("CSA123", "LKPR", "LZIB"),
+      originAirport: { icaoCode: "LKPR", iataCode: "PRG", name: "Prague", city: "Prague", country: "CZ", latitude: 50.1008, longitude: 14.26 },
+      destinationAirport: { icaoCode: "LZIB", iataCode: "BTS", name: "Bratislava", city: "Bratislava", country: "SK", latitude: 48.17, longitude: 17.21 },
+    };
+    const fallback = vi.fn(async () => null);
+    const service = new EnrichmentService({
+      flightRoute: { name: "adsbdb", getRoute: async () => known },
+      flightRouteFallback: { name: "adsblol-routeset", getRoute: fallback },
+    });
+    expect((await service.enrich(aircraft("ABC123", "CSA123"), new Date()))?.route).toEqual(known);
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("rejects geographically impossible fallback routes", async () => {
+    const fallback = vi.fn(async (callsign: string) => ({
+      ...route(callsign, "OMDB", "VHHH"),
+      originAirport: { icaoCode: "OMDB", iataCode: "DXB", name: "Dubai", city: "Dubai", country: "AE", latitude: 25.253, longitude: 55.365 },
+      destinationAirport: { icaoCode: "VHHH", iataCode: "HKG", name: "Hong Kong", city: "Hong Kong", country: "HK", latitude: 22.308, longitude: 113.918 },
+    }));
+    const service = new EnrichmentService({ flightRouteFallback: { name: "adsblol-routeset", getRoute: fallback } });
+    await expect(service.enrich(aircraft("ABC123", "CSA123"), new Date())).resolves.toBeNull();
+  });
+
   it("caches on-demand FlightAware results for six hours and negative results for thirty minutes", async () => {
     const getFlightPlan = vi.fn(async (callsign: string): Promise<FlightPlan> => ({
       callsign, scheduledDeparture: null, actualDeparture: null, scheduledArrival: null,
