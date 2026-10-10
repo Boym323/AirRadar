@@ -250,7 +250,7 @@ describe("radar UI polish helpers", () => {
 
   it("keeps Operations Center in a focused read-only intelligence boundary", () => {
     expect(appSource).toContain("<RadarOperationsCenter />");
-    expect(radarOperationsCenterSource).toContain("useIntelligenceStream()");
+    expect(radarOperationsCenterSource).toContain("useIntelligenceStream(open)");
     expect(radarOperationsCenterSource).toContain('"/api/alerts?page=0&pageSize=50&filter=all"');
     expect(radarOperationsCenterSource).toContain('"/api/logbook/summary"');
     expect(radarOperationsCenterSource).toContain("/operations?period=24h");
