@@ -1347,6 +1347,30 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await visualPage.getByText(target.commandExpected).first().waitFor({ state: "visible", timeout: 15_000 });
             }
           }
+          if (target.name === "radar-desktop" || target.name === "radar-mobile") {
+            const quickActions = visualPage.getByTestId("radar-quick-actions");
+            await quickActions.waitFor({ state: "visible", timeout: 15_000 });
+            for (const key of ["search", "weather", "atc", "filters"]) {
+              const control = quickActions.getByTestId(`radar-quick-${key}`);
+              if (!await control.isVisible() || !await control.isEnabled()) {
+                throw new Error(`Visual V5 radar quick action missing or disabled: ${key}`);
+              }
+            }
+            for (const layer of ["weather", "atc"]) {
+              const control = quickActions.getByTestId(`radar-quick-${layer}`);
+              const original = await control.getAttribute("aria-pressed");
+              await control.click();
+              await visualPage.waitForFunction(
+                ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") !== before,
+                { key: layer, before: original },
+              );
+              await control.click();
+              await visualPage.waitForFunction(
+                ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") === before,
+                { key: layer, before: original },
+              );
+            }
+          }
           if (target.selectAircraft) {
             const trafficTrigger = visualPage.locator('[data-testid="traffic-trigger"]');
             if (await trafficTrigger.isVisible()) await trafficTrigger.click();
@@ -1363,6 +1387,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               }
               if (await visualPage.locator(".map-summary-card").isVisible()) {
                 throw new Error("Redundant map counter remains visible above selected aircraft");
+              }
+              if (await visualPage.getByTestId("radar-quick-actions").isVisible()) {
+                throw new Error("Visual V5 map quick actions obscure the selected aircraft on mobile");
               }
             }
           }

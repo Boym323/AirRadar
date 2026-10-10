@@ -216,4 +216,5 @@ počasí či duplicitních ATC zdrojů.
 Každé PR musí projít lint/typecheck, Vitest, visual:check a příslušnými
 desktopovými a mobilními browser testy. Bez výkonových regresí, zbytečného
 pollingu, nových providerů a nepodložených tvrzení o leteckém provozu.
-Sloučení designového PR samo o sobě nenařizuje produkční nasazení.
+PR ponechte otevřené k revizi; sloučení do main automaticky spouští
+produkční release pipeline.

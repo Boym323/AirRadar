@@ -219,5 +219,5 @@ search, aircraft state, weather fetches or ATC polling.
 
 Each PR must pass lint/typecheck, Vitest, visual:check and the relevant desktop
 and mobile browser gates. Avoid performance regressions, unnecessary polling,
-new data providers and unsupported aviation certainty claims. No production
-release is implied by merging a design planning PR.
+new data providers and unsupported aviation certainty claims. Keep the PR open for review; merging to main starts the automated production
+release pipeline.
