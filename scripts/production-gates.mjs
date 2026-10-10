@@ -1476,7 +1476,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await play.click();
             const frame = media.getByTestId("airport-v6-authorized-player").locator("iframe");
             await frame.waitFor({ state: "visible", timeout: 15_000 });
-            if (await frame.getAttribute("src") !== "https://www.youtube-nocookie.com/embed/AbCdEf123_9") {
+            if (await frame.getAttribute("src") !== "https://www.youtube-nocookie.com/embed/AbCdEf123_9?controls=1&playsinline=1") {
               throw new Error("V6-H iframe escaped the official approved video endpoint");
             }
             if (!await media.locator('a[href="https://www.youtube.com/live/AbCdEf123_9"]').count()) {
