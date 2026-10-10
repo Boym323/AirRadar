@@ -17,7 +17,7 @@ describe("ALADIN versus ICON-EU (diagnostic only)", () => {
     expect(compareModelWinds(a, { ...b, validAt: a.validAt }, { lat: 49.2, lon: 17.6 }, 300).directionDifferenceDeg).toBe(10);
   });
   it("fetches only on demand and coalesces in-flight calls", async () => {
-    const fetcher = vi.fn(async () => Response.json(payload));
+    const fetcher = vi.fn(async (_url: RequestInfo | URL) => Response.json(payload));
     const provider = new AladinWindProvider(fetcher as typeof fetch, () => NOW);
     const [first, second] = await Promise.all([provider.getWind(300, 49.2, 17.6), provider.getWind(300, 49.2, 17.6)]);
     expect(first.sample?.speedKt).toBe(74);
