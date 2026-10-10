@@ -323,7 +323,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
     // second paid /route call is therefore reserved strictly for the fallback
     // case where the filed route is absent.
     const waypoints = !filedRoute && faFlightId ? await this.readRoute(faFlightId) : [];
-    if (!filedRoute && waypoints.length === 0) return null;
+    // Preserve already-paid flight status and schedule even if route fixes are absent.
     const flightAware = statusFromFlight(flight);
 
     return {
