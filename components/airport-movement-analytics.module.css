@@ -1,14 +1,14 @@
 .panel {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .notice {
-  padding: .75rem .85rem;
-  border: 1px solid var(--border);
-  border-radius: .65rem;
-  color: var(--muted);
-  font-size: .8rem;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
 }
 
 .metrics {
@@ -18,33 +18,33 @@
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .card {
   display: grid;
-  gap: .85rem;
-  padding: .9rem;
-  border: 1px solid var(--border);
-  border-radius: .75rem;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .75rem;
+  gap: var(--space-3);
 }
 
 .cardHeader h3 {
   margin: 0;
-  font-size: .9rem;
+  font-size: var(--font-size-base);
 }
 
 .small {
-  color: var(--muted);
-  font-size: .72rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .chart {
@@ -65,8 +65,8 @@
 }
 
 .bucket > span {
-  color: var(--muted);
-  font-size: .58rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
 }
 
 .barWrap {
@@ -80,38 +80,38 @@
   display: block;
   width: min(100%, 14px);
   min-height: 1px;
-  border-radius: .25rem .25rem 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: var(--accent);
   opacity: .9;
 }
 
 .runways {
   display: grid;
-  gap: .65rem;
+  gap: var(--space-3);
 }
 
 .runwayRow {
   display: grid;
-  gap: .3rem;
+  gap: var(--space-1);
 }
 
 .runwayRow > div {
   display: flex;
   justify-content: space-between;
-  gap: .75rem;
+  gap: var(--space-3);
 }
 
 .runwayRow > div span {
-  color: var(--muted);
-  font-size: .74rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .track {
   display: block;
   height: .4rem;
   overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--border) 58%, transparent);
+  border-radius: var(--radius-pill);
+  background: var(--border-default);
 }
 
 .track > span {
@@ -123,8 +123,8 @@
 
 .disclaimer {
   margin: 0;
-  color: var(--muted);
-  font-size: .72rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 @media (max-width: 1100px) {

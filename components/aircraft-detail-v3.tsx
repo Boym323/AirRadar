@@ -7,6 +7,7 @@ import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/pho
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
+import { formatAircraftManufacturerModel } from "@/lib/aircraft/display-name";
 import { formatAge, formatAltitude, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
@@ -342,7 +343,7 @@ export function AircraftDetailV3({
         {detail?.logbook.isReturning && <div className="aircraft-logbook-badge returning" title={t.logbook.returningAircraftReason(detail.logbook.returningGapDays ?? 0)}>{t.logbook.returningAircraft}</div>}
       </div>
       <div className="aircraft-page-identity"><span>{icaoHex}</span>{registration && <span>{registration}</span>}{aircraftType && <span>{aircraftType}</span>}</div>
-      <div className="aircraft-page-subtitle">{[manufacturer, model].filter(Boolean).join(" ") || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
+      <div className="aircraft-page-subtitle">{formatAircraftManufacturerModel(manufacturer, model) || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
       {hasRouteData && route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
         <span>{route.originAirport?.iataCode || route.originAirport?.icaoCode || route.origin || t.common.emptyValue}</span>
         <span aria-hidden="true">→</span>

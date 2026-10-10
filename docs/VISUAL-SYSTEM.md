@@ -338,3 +338,25 @@ as a substitute for an actual Playwright-rendered view.
   browser smoke explicitly expands and verifies the nested evidence, then
   collapses it before the analytics screenshot. A passing CI test is not a
   substitute for human inspection of the new release artifacts.
+
+### V5-E1: visual polish and language parity (2026-10-10)
+
+- Airport Movement Analytics uses a dedicated bilingual copy module rather
+  than mixed Czech/English literals. Period labels, titles, runway evidence,
+  status and disclaimers follow the selected user locale. This does not
+  change the receiver-derived movement counts, API or scoring.
+- Aircraft identity presentation no longer repeats a manufacturer if its
+  original metadata model name already starts with the same manufacturer.
+  Both the current and fallback detail views use one formatting helper.
+  Original manufacturer and model metadata remain available separately.
+- The 320px radar keeps MapLibre/OpenFreeMap/OSM credits in the existing
+  compact attribution control with an expandable link list. No credits
+  or links are suppressed, and the compact control no longer claims a large
+  area of the map; an additional screenshot tests the expanded state.
+- Historical movement analytics use existing shared surface, border,
+  typography and radius tokens. Visual debt budgets are unchanged.
+- The production browser gate now captures English airport analytics on
+  mobile and expanded map attribution at 320px, in addition to its original
+  responsive and airport screenshot matrix. As before, human inspection
+  of post-release screenshots is required before considering visual
+  polish complete.

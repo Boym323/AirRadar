@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import { t } from "@/lib/i18n";
+import { airportMovementAnalyticsText } from "@/lib/i18n/airport-movement-analytics";
 import {
   EmptyState,
   MetricCard,
@@ -89,46 +90,7 @@ function runwayShare(count: number, total: number): number {
 }
 
 export function AirportMovementAnalytics({ airport }: { airport: Airport }) {
-  const cs = t.locale.startsWith("cs");
-  const copy = cs ? {
-    title: "Movement Analytics",
-    subtitle: "Historická analytika receiver-inferred pohybů nad existujícím bounded airport movement API.",
-    arrivals: "Přílety",
-    departures: "Odlety",
-    total: "Celkem",
-    peak: "Peak UTC hour",
-    goArounds: "Go-around",
-    holding: "Holding",
-    runwayUsage: "Runway usage",
-    trafficTrend: "Provoz podle UTC hodiny",
-    noRunway: "Pro toto období nejsou k dispozici runway-inferred pohyby.",
-    noData: "Pro toto období nejsou k dispozici movement data.",
-    loading: "Načítám movement analytics…",
-    failed: "Movement analytics nejsou dočasně dostupné.",
-    incomplete: "Vzorek je neúplný nebo oříznutý bounded limity backendu.",
-    inferred: "Pohyby a runway assignment jsou odvozené z pozorování přijímače; nejde o autoritativní FIDS/ATC data.",
-    classified: "klasifikováno",
-    unknown: "bez určené dráhy",
-  } : {
-    title: "Movement Analytics",
-    subtitle: "Historical analytics over the existing bounded receiver-inferred airport movement API.",
-    arrivals: "Arrivals",
-    departures: "Departures",
-    total: "Total",
-    peak: "Peak UTC hour",
-    goArounds: "Go-arounds",
-    holding: "Holding",
-    runwayUsage: "Runway usage",
-    trafficTrend: "Traffic by UTC hour",
-    noRunway: "No runway-inferred movements are available for this period.",
-    noData: "No movement data is available for this period.",
-    loading: "Loading movement analytics…",
-    failed: "Movement analytics is temporarily unavailable.",
-    incomplete: "The sample is incomplete or truncated by bounded backend limits.",
-    inferred: "Movements and runway assignments are inferred from receiver observations; they are not authoritative FIDS/ATC data.",
-    classified: "classified",
-    unknown: "unknown runway",
-  };
+  const copy = airportMovementAnalyticsText(t.locale);
 
   const [period, setPeriod] = useState<Period>("24h");
   const [data, setData] = useState<MovementsResponse | null>(null);
@@ -186,7 +148,7 @@ export function AirportMovementAnalytics({ airport }: { airport: Airport }) {
                 className={period === item ? "active" : ""}
                 onClick={() => setPeriod(item)}
               >
-                {item}
+                {item === "today" ? copy.today : item}
               </button>
             ))}
           </SegmentedControl>
@@ -206,7 +168,7 @@ export function AirportMovementAnalytics({ airport }: { airport: Airport }) {
             <MetricCard
               value={peak ? String(peak.hour).padStart(2, "0") + ":00" : "—"}
               label={copy.peak}
-              detail={peak ? String(peak.total) + " movements" : undefined}
+              detail={peak ? String(peak.total) + " " + copy.movementsUnit : undefined}
             />
             <MetricCard value={data.summary.goArounds} label={copy.goArounds} />
             <MetricCard value={data.summary.holding} label={copy.holding} />

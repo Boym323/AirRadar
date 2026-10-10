@@ -6682,3 +6682,30 @@ button, input, select, textarea { color-scheme: dark; }
   .airport-v5-evidence-details { margin: var(--space-2); }
   .airport-v5-evidence-details > section { margin: var(--space-2); }
 }
+
+/* V5-E: keep required map credits discoverable without covering the 320px
+ * radar. This styles the existing MapLibre compact attribution control only;
+ * source credits and their links remain present and available on expansion. */
+@media (max-width: 420px) {
+  .radar-content .maplibregl-ctrl-bottom-right {
+    max-width: calc(100vw - var(--space-6));
+  }
+  .radar-content .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) {
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 28px;
+    padding: 0 24px 0 0;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+  }
+  .radar-content .maplibregl-ctrl-attrib.maplibregl-compact-show {
+    max-width: min(272px, calc(100vw - var(--space-6)));
+    border-radius: var(--radius-md);
+    overflow-wrap: anywhere;
+  }
+  .radar-content .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+    max-height: 25svh;
+    overflow-y: auto;
+    line-height: var(--line-height-body);
+  }
+}

@@ -1,0 +1,51 @@
+/** Airport movement analytics copy: keep CS/EN in i18n, not in the React view. */
+export const airportMovementAnalyticsCopy = {
+  cs: {
+    title: "Analýza pohybů letadel",
+    subtitle: "Historické vyhodnocení pohybů odvozených z pozorování přijímače.",
+    arrivals: "Přílety",
+    departures: "Odlety",
+    total: "Celkem",
+    peak: "Nejvytíženější hodina UTC",
+    movementsUnit: "pozorovaných pohybů",
+    goArounds: "Přerušená přiblížení",
+    holding: "Vyčkávání",
+    runwayUsage: "Využití vzletových a přistávacích drah",
+    trafficTrend: "Provoz podle hodin UTC",
+    noRunway: "Pro toto období nejsou k dispozici spolehlivé údaje o využití drah.",
+    noData: "Pro toto období nejsou k dispozici pozorované pohyby.",
+    loading: "Načítání analýzy pohybů…",
+    failed: "Analýza pohybů je dočasně nedostupná.",
+    incomplete: "Záznamy jsou neúplné nebo omezené limity datového zdroje.",
+    inferred: "Pohyby a určení drah jsou odvozené z pozorování přijímače, nikoli z oficiálních údajů letiště či ATC.",
+    classified: "s určenou dráhou",
+    unknown: "bez určené dráhy",
+    today: "Dnes",
+  },
+  en: {
+    title: "Aircraft movement analytics",
+    subtitle: "Historical movements inferred from receiver observations.",
+    arrivals: "Arrivals",
+    departures: "Departures",
+    total: "Total",
+    peak: "Busiest UTC hour",
+    movementsUnit: "observed movements",
+    goArounds: "Go-arounds",
+    holding: "Holding",
+    runwayUsage: "Runway usage",
+    trafficTrend: "Traffic by UTC hour",
+    noRunway: "No reliable runway usage evidence is available for this period.",
+    noData: "No observed movements are available for this period.",
+    loading: "Loading movement analytics…",
+    failed: "Movement analytics are temporarily unavailable.",
+    incomplete: "Observations are incomplete or truncated by source limits.",
+    inferred: "Movements and runway assignments are inferred from receiver observations, not official airport or ATC data.",
+    classified: "with identified runway",
+    unknown: "unknown runway",
+    today: "Today",
+  },
+} as const;
+
+export function airportMovementAnalyticsText(locale: string) {
+  return locale.startsWith("en") ? airportMovementAnalyticsCopy.en : airportMovementAnalyticsCopy.cs;
+}

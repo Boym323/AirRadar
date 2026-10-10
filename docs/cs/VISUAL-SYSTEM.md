@@ -327,3 +327,21 @@ Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
   320, 390, 768 a 1366 px. Browser test rozbalí evidence, ověří je
   a před snímkem analytiky je znovu sbalí. Úspěšný CI neznamená
   automaticky hotovou lidskou kontrolu snímků.
+
+### V5-E1: doladění vizuálu a jazykové parity (2026-10-10)
+
+- Analýza pohybů letiště používá samostatný česko-anglický slovník místo
+  promíchaných českých a anglických textů. Titulky, období, informace o
+  dráze a upozornění se přepínají podle zvoleného jazyka. Výpočty a API
+  pozorovaných pohybů se nemění.
+- Identita letadla neopakuje výrobce, pokud název modelu již výrobce
+  obsahuje. Stejná formátovací funkce slouží stávajícímu i staršímu
+  detailu; původní metadata výrobce a modelu zůstávají samostatně.
+- Na šířce 320 px je atribuce MapLibre, OpenFreeMap a OSM kompaktní.
+  Rozbalená stále nabízí původní povinné odkazy. Nový screenshot ověřuje
+  rozbalený stav bez skrytí atribuce.
+- Historická analytika využívá sdílené tokeny povrchů, ohraničení,
+  typografie a zaoblení; limity vizuálního dluhu se nezvyšují.
+- Produkční browser gate pořizuje navíc mobilní analytiku v angličtině
+  a rozbalenou atribuci mapy na 320 px. Po vydání je stále nutná
+  lidská kontrola finálních screenshotů.
