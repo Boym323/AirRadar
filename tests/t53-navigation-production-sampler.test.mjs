@@ -3,7 +3,7 @@ import { navigationSample, metricDelta } from "../scripts/t53-navigation-product
 
 describe("T5.3 authorized navigation performance sampler", () => {
   const diagnostics = {
-    observationsCreated: 50, persisted: 32, deduplicated: 12,
+    observationsCreated: 50, persisted: 32, ormAttempts: 32, ormSuccesses: 32, deduplicated: 12,
     navigationWriteMemo: {
       scope: "process-local", avoidedUpserts: 17,
       confirmedKeys: 21, inFlight: 0, ttlMs: 120000, maxKeys: 1024,
@@ -39,6 +39,9 @@ describe("T5.3 authorized navigation performance sampler", () => {
       avoidedUpserts: 17, confirmedKeys: 21, inFlight: 0, ttlMs: 120000, maxKeys: 1024,
     });
     expect(result.dbLane).toMatchObject({ attempts: 80, successes: 78, failures: 2 });
+    expect(result.ormAttempts).toBe(32);
+    expect(result.ormSuccesses).toBe(32);
+    expect(result.runtime.aircraftCount).toBeNull();
     expect(result.diagnosticProcess).toBe(321);
     expect(result.diagnosticStoreId).toBe("diagnostics-stable");
     expect(result.runtime.rssBytes).toBe(11111);

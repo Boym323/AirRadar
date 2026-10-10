@@ -3,8 +3,10 @@ import { registerShutdownCoordinator } from "@/lib/server/shutdown";
 import { defaultMapContextArchiveService } from "@/lib/server/map-context";
 import { startRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
+import { startRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 
 registerShutdownCoordinator();
+startRuntimeHealthObservation();
 
 // Aircraft collection is a server responsibility, not a client-triggered side
 // effect. Start readsb/network polling, history persistence, statistics and

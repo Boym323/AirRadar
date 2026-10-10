@@ -9,6 +9,8 @@ describe("opt-in runtime health observation", () => {
     expect(snapshot.status).toBe("disabled");
     expect(snapshot.eventLoopLagP95Ms).toBeNull();
     expect(snapshot.heapUsedBytes).toBeGreaterThan(0);
+    expect(snapshot.externalBytes).toBeGreaterThanOrEqual(0);
+    expect(snapshot.arrayBuffersBytes).toBeGreaterThanOrEqual(0);
   });
 
   it("starts and stops idempotently without retaining observers", () => {
@@ -17,6 +19,9 @@ describe("opt-in runtime health observation", () => {
     const snapshot = getRuntimeHealthObservation();
     expect(snapshot.status).toBe("enabled");
     expect(snapshot.gcSampleCount).toBeLessThanOrEqual(64);
+    expect(snapshot.gcCount).toBeGreaterThanOrEqual(snapshot.gcSampleCount);
+    expect(snapshot.cpuUserTimeMs).toBeGreaterThanOrEqual(0);
+    expect(snapshot.cpuSystemTimeMs).toBeGreaterThanOrEqual(0);
     stopRuntimeHealthObservation();
     expect(getRuntimeHealthObservation().status).toBe("disabled");
   });

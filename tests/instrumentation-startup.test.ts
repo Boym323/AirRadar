@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   startMapContext: vi.fn(async () => undefined),
   startRuntimeTelemetry: vi.fn(),
   startAlertDelivery: vi.fn(),
+  startRuntimeHealthObservation: vi.fn(),
 }));
 
 vi.mock("@/lib/server/shutdown", () => ({
@@ -27,6 +28,9 @@ vi.mock("@/lib/server/runtime-telemetry", () => ({
 vi.mock("@/lib/server/alert-delivery-worker", () => ({
   getAlertDeliveryWorker: () => ({ start: mocks.startAlertDelivery }),
 }));
+vi.mock("@/lib/server/runtime-health-observation", () => ({
+  startRuntimeHealthObservation: mocks.startRuntimeHealthObservation,
+}));
 
 describe("server instrumentation startup", () => {
   beforeEach(() => {
@@ -36,6 +40,7 @@ describe("server instrumentation startup", () => {
     mocks.startMapContext.mockClear();
     mocks.startRuntimeTelemetry.mockClear();
     mocks.startAlertDelivery.mockClear();
+    mocks.startRuntimeHealthObservation.mockClear();
   });
 
   it("starts aircraft collection eagerly with the Node runtime", async () => {
@@ -46,5 +51,6 @@ describe("server instrumentation startup", () => {
     expect(mocks.startMapContext).toHaveBeenCalledOnce();
     expect(mocks.startRuntimeTelemetry).toHaveBeenCalledOnce();
     expect(mocks.startAlertDelivery).toHaveBeenCalledOnce();
+    expect(mocks.startRuntimeHealthObservation).toHaveBeenCalledOnce();
   });
 });

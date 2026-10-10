@@ -134,6 +134,8 @@ export interface NavigationIntegrityAnomaly {
 export interface NavigationIntegrityDiagnostics {
   observationsCreated: number;
   persisted: number;
+  ormAttempts: number;
+  ormSuccesses: number;
   deduplicated: number;
   rejectedInvalidOrStale: number;
   aircraftContributors: number;

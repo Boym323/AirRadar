@@ -107,7 +107,7 @@ const globalStore = globalThis as typeof globalThis & { __airRadarNavigationInte
 const store: IntegrityStore = globalStore.__airRadarNavigationIntegrity ??= {
   observations: [], lastPersisted: new Map(), active: new Map(), candidateHits: new Map(), normalHits: new Map(), lastEvaluationAt: 0, writeTail: Promise.resolve(), currentVersion: 0, currentCache: new Map(),
   diagnostics: {
-    observationsCreated: 0, persisted: 0, deduplicated: 0, rejectedInvalidOrStale: 0, aircraftContributors: 0, cellsPopulated: 0, baselineCellsReady: 0,
+    observationsCreated: 0, persisted: 0, ormAttempts: 0, ormSuccesses: 0, deduplicated: 0, rejectedInvalidOrStale: 0, aircraftContributors: 0, cellsPopulated: 0, baselineCellsReady: 0,
     anomalyCandidates: 0, anomaliesOpened: 0, anomaliesClosed: 0, confidence: { LOW: 0, MEDIUM: 0, HIGH: 0 }, rejectionReasons: {}, lastObservationAt: null, lastPersistedAt: null, baselineMaturity: { UNAVAILABLE: 0, IMMATURE: 0, PARTIAL: 0, READY: 0, STRONG: 0 },
   }, lastCollectionAt: 0,
 };
@@ -168,13 +168,16 @@ export async function persistNavigationIntegrityObservation(observation: Navigat
   // immutable key on collision; never overwrite a previously stored position,
   // timestamp, classification, or provenance. PostgreSQL may still touch the
   // existing tuple, so do not count every successful upsert as a new insert.
-  await persistAcknowledgedOnce(key, () =>
-    trackDbOperation("navigation.observation.create", () =>
+  await persistAcknowledgedOnce(key, async () => {
+    store.diagnostics.ormAttempts += 1;
+    await trackDbOperation("navigation.observation.create", () =>
       schema.NavigationIntegrityObservation.upsert({
         conflictOn: { dedupKey: key },
         update: { dedupKey: key },
         create: row,
-      })));
+      }));
+    store.diagnostics.ormSuccesses += 1;
+  });
 }
 
 async function persistAnomaly(anomaly: NavigationIntegrityAnomaly): Promise<void> {

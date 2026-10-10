@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({
   authenticated: vi.fn(() => false),
   rateLimit: vi.fn(() => ({ allowed: true })),
   metrics: vi.fn(() => ({ "health.total": { calls: 5, avgMs: 30, maxMs: 50, p50Ms: 25, p95Ms: 49, p99Ms: 50, samplesMs: [1, 2] } })),
-  runtime: vi.fn(() => ({ status: "disabled", heapUsedBytes: 123, heapTotalBytes: 200, rssBytes: 300, eventLoopLagP50Ms: null, eventLoopLagP95Ms: null, eventLoopLagP99Ms: null, gcSampleCount: 0, gcMaxPauseMs: null, gcAveragePauseMs: null })),
+  runtime: vi.fn(() => ({ status: "disabled", heapUsedBytes: 123, heapTotalBytes: 200, rssBytes: 300, externalBytes: 10, arrayBuffersBytes: 11, cpuUserTimeMs: 12, cpuSystemTimeMs: 13, cpuIntervalUserTimeMs: null, cpuIntervalSystemTimeMs: null, cpuIntervalPercent: null, eventLoopLagP50Ms: null, eventLoopLagP95Ms: null, eventLoopLagP99Ms: null, gcSampleCount: 0, gcCount: 0, gcTotalPauseMs: 0, gcMaxPauseMs: null, gcAveragePauseMs: null })),
 }));
 vi.mock("@/lib/server/watchlist-auth", () => ({ isWatchlistSessionValid: mocks.authenticated }));
 vi.mock("@/lib/server/rate-limit", () => ({ checkPublicRateLimit: mocks.rateLimit, rateLimitResponse: vi.fn() }));
@@ -28,6 +28,7 @@ describe("authenticated runtime performance projection", () => {
     expect(body.phases["health.total"].calls).toBe(5);
     expect(body.phases["health.total"].samplesMs).toBeUndefined();
     expect(Object.keys(body.phases)).toHaveLength(9);
+    expect(body.hotPaths).toEqual([]);
     expect(body.runtime.status).toBe("disabled");
   });
 });
