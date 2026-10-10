@@ -91,7 +91,7 @@ export function parseAladinWind(raw: unknown, level: WindLevelHpa, now: number):
 
 export class AladinWindProvider {
   private cache: { sample: ModelWindSample; level: WindLevelHpa; fetchedAt: number; lat: number; lon: number } | null = null;
-  private inFlight: Promise<ModelWindSample | null> | null = null;
+  private inFlight: { key: string; promise: Promise<ModelWindSample | null> } | null = null;
   constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now) {}
   async getWind(level: WindLevelHpa, lat: number, lon: number): Promise<{ sample: ModelWindSample | null; stale: boolean }> {
     const now = this.clock();
@@ -99,7 +99,8 @@ export class AladinWindProvider {
     if (cached && cached.level === level && cached.lat === lat && cached.lon === lon && now - cached.fetchedAt < CACHE_MS) {
       return { sample: cached.sample, stale: false };
     }
-    if (this.inFlight) return { sample: await this.inFlight, stale: false };
+    const key = `${level}:${lat.toFixed(4)}:${lon.toFixed(4)}`;
+    if (this.inFlight?.key === key) return { sample: await this.inFlight.promise, stale: false };
     const run = (async () => {
       const url = new URL(API_URL);
       url.searchParams.set("latitude", lat.toFixed(4));
@@ -134,12 +135,12 @@ export class AladinWindProvider {
       this.cache = { sample: parsed, level, fetchedAt: this.clock(), lat, lon };
       return parsed;
     })();
-    this.inFlight = run;
+    this.inFlight = { key, promise: run };
     try { return { sample: await run, stale: false }; }
     catch {
       if (cached && cached.level === level && cached.lat === lat && cached.lon === lon && now - cached.fetchedAt <= STALE_MS) return { sample: cached.sample, stale: true };
       return { sample: null, stale: false };
-    } finally { if (this.inFlight === run) this.inFlight = null; }
+    } finally { if (this.inFlight?.promise === run) this.inFlight = null; }
   }
 }
 
