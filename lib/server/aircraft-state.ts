@@ -41,7 +41,7 @@ import { getRuntimePerformanceDiagnostics, measureRuntime, measureRuntimeAsync }
 import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
-import { appendBoundedServerTrailPoint, appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
+import { appendBoundedServerTrailPoint, appendTrailPoint, trailPointFromAircraft, SERVER_LOCAL_TRAIL_MAX_POINTS } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
@@ -481,6 +481,12 @@ export class AircraftStateService {
     networkTrailAircraftCount: number;
     localTrailPointCount: number;
     networkTrailPointCount: number;
+    localTrailMaxPointsPerAircraft: number;
+    networkTrailMaxPointsPerAircraft: number;
+    localTrailAtLimitAircraftCount: number;
+    networkTrailAtLimitAircraftCount: number;
+    localTrailOverLimitAircraftCount: number;
+    networkTrailOverLimitAircraftCount: number;
     trailEstimatedBytes: number;
     listenerCount: number;
     running: boolean;
@@ -509,16 +515,37 @@ export class AircraftStateService {
     operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
   } {
-    let localTrailPointCount = 0;
-    for (const aircraft of this.localAircraft.values()) localTrailPointCount += aircraft.trail.length;
-    let networkTrailPointCount = 0;
-    for (const aircraft of this.networkAircraft.values()) networkTrailPointCount += aircraft.trail.length;
+    let localTrailPointCount = 0, localTrailMaxPointsPerAircraft = 0;
+    let localTrailAtLimitAircraftCount = 0, localTrailOverLimitAircraftCount = 0;
+    for (const aircraft of this.localAircraft.values()) {
+      const points = aircraft.trail.length;
+      localTrailPointCount += points;
+      localTrailMaxPointsPerAircraft = Math.max(localTrailMaxPointsPerAircraft, points);
+      if (points === SERVER_LOCAL_TRAIL_MAX_POINTS) localTrailAtLimitAircraftCount++;
+      if (points > SERVER_LOCAL_TRAIL_MAX_POINTS) localTrailOverLimitAircraftCount++;
+    }
+    const networkMax = getNetworkTrailMaxPoints();
+    let networkTrailPointCount = 0, networkTrailMaxPointsPerAircraft = 0;
+    let networkTrailAtLimitAircraftCount = 0, networkTrailOverLimitAircraftCount = 0;
+    for (const aircraft of this.networkAircraft.values()) {
+      const points = aircraft.trail.length;
+      networkTrailPointCount += points;
+      networkTrailMaxPointsPerAircraft = Math.max(networkTrailMaxPointsPerAircraft, points);
+      if (points === networkMax) networkTrailAtLimitAircraftCount++;
+      if (points > networkMax) networkTrailOverLimitAircraftCount++;
+    }
     return {
       aircraftCount: this.aircraft.size,
       localTrailAircraftCount: this.localAircraft.size,
       networkTrailAircraftCount: this.networkAircraft.size,
       localTrailPointCount,
       networkTrailPointCount,
+      localTrailMaxPointsPerAircraft,
+      networkTrailMaxPointsPerAircraft,
+      localTrailAtLimitAircraftCount,
+      networkTrailAtLimitAircraftCount,
+      localTrailOverLimitAircraftCount,
+      networkTrailOverLimitAircraftCount,
       // Practical estimate for one retained TrailPoint including V8 object/array overhead.
       trailEstimatedBytes: (localTrailPointCount + networkTrailPointCount) * 96,
       listenerCount: this.listeners.size,
