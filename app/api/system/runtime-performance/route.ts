@@ -46,6 +46,9 @@ export async function GET(request: Request): Promise<Response> {
     schemaVersion: 2, scope: "process-local", phases, hotPaths,
     runtime: {
       status: runtime.status,
+      v8HeapSpaces: runtime.v8HeapSpaces,
+      majorGcCount: runtime.majorGcCount,
+      postMajorGc: runtime.postMajorGc,
       heapUsedBytes: runtime.heapUsedBytes, heapTotalBytes: runtime.heapTotalBytes,
       rssBytes: runtime.rssBytes, externalBytes: runtime.externalBytes, arrayBuffersBytes: runtime.arrayBuffersBytes,
       cpuUserTimeMs: runtime.cpuUserTimeMs, cpuSystemTimeMs: runtime.cpuSystemTimeMs,
