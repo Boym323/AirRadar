@@ -4,6 +4,7 @@ import { defaultMapContextArchiveService } from "@/lib/server/map-context";
 import { startRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { startRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
+import { getRxwHubService } from "@/lib/server/rxw-hub-service";
 
 registerShutdownCoordinator();
 startRuntimeHealthObservation();
@@ -16,5 +17,6 @@ startRuntimeHealthObservation();
 getAircraftStateService().start();
 startRuntimeTelemetry();
 getAlertDeliveryWorker().start();
+getRxwHubService().start(); // Opt-in; creates no external connection while disabled.
 
 void defaultMapContextArchiveService.start();

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import type { AircraftView } from "@/lib/aircraft/types";
+import type { AircraftView, FlightPlan } from "@/lib/aircraft/types";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -14,6 +14,7 @@ import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { PredictiveAircraftAdvisories } from "@/components/predictive-aircraft-advisories";
 import { AircraftWeatherFusion } from "@/components/aircraft-weather-fusion";
 import { AircraftOperationalTwin } from "@/components/aircraft-operational-twin";
+import { AircraftCommunications } from "@/components/aircraft-communications";
 import { FollowJourneyButton } from "@/components/follow-journey-button";
 import {
   AircraftAltitudeChart,
@@ -254,9 +255,11 @@ export function AircraftDetailV3({
   loading = false,
   error = null,
   backHref = "/",
+  flightAwareEnabled = false,
 }: {
   detail: AircraftDetailResponse | null;
   liveAircraft: AircraftView | null;
+  flightAwareEnabled?: boolean;
   loading?: boolean;
   error?: string | null;
   backHref?: string;
@@ -272,7 +275,10 @@ export function AircraftDetailV3({
   const registrationCountry = metadata?.registrationCountryCode ?? metadata?.registrationCountry ?? databaseAircraft?.registrationCountryCode ?? databaseAircraft?.registrationCountry;
   const callsign = liveAircraft?.callsign || t.history.unknownCallsign;
   const route = liveAircraft?.enrichment?.route ?? null;
-  const flightPlan = liveAircraft?.enrichment?.flightPlan ?? null;
+  const [requestedFlightPlan, setRequestedFlightPlan] = useState<FlightPlan | null>(null);
+  const [flightAwareLoading, setFlightAwareLoading] = useState(false);
+  const [flightAwareError, setFlightAwareError] = useState<string | null>(null);
+  const flightPlan = requestedFlightPlan ?? liveAircraft?.enrichment?.flightPlan ?? null;
   const flightAware = flightPlan?.flightAware ?? null;
   const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
   const backLink = backHref === "/history" ? "/history" : "/";
@@ -287,6 +293,28 @@ export function AircraftDetailV3({
   const [flightHistoryLoading, setFlightHistoryLoading] = useState(false);
   const [photoAvailable, setPhotoAvailable] = useState(false);
   const handlePhotoAvailability = useCallback((available: boolean) => setPhotoAvailable(available), []);
+
+  useEffect(() => {
+    setRequestedFlightPlan(null);
+    setFlightAwareError(null);
+  }, [icaoHex, liveAircraft?.callsign]);
+
+  const loadFlightAware = async () => {
+    if (!liveAircraft?.callsign || flightAwareLoading) return;
+    setFlightAwareLoading(true);
+    setFlightAwareError(null);
+    try {
+      const response = await fetch("/api/aircraft/" + encodeURIComponent(icaoHex) + "?mode=flightaware", { cache: "no-store" });
+      if (!response.ok) throw new Error("AeroAPI unavailable");
+      const payload = await response.json() as { flightPlan?: FlightPlan | null };
+      if (!payload.flightPlan || payload.flightPlan.callsign !== liveAircraft.callsign) throw new Error("No matching flight");
+      setRequestedFlightPlan(payload.flightPlan);
+    } catch {
+      setFlightAwareError(t.locale.startsWith("cs") ? "Podrobnosti letu nejsou dostupné." : "Flight details are unavailable.");
+    } finally {
+      setFlightAwareLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (icaoHex === t.common.emptyValue) return;
@@ -405,7 +433,7 @@ export function AircraftDetailV3({
 
     <div className={styles.operationalGrid}>
       <div className={styles.primaryColumn}>
-        {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations) && <section id="aircraft-flight" className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
+        {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations || (flightAwareEnabled && Boolean(liveAircraft?.callsign))) && <section id="aircraft-flight" className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
           <h2 id="aircraft-current-flight-title">{t.aircraft.currentFlightTitle}</h2>
           <div className={styles.journeyFollow}>
             <FollowJourneyButton
@@ -417,6 +445,12 @@ export function AircraftDetailV3({
             />
             <Link href={"/journeys"}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Followed journeys"} →</Link>
           </div>
+          {flightAwareEnabled && liveAircraft?.callsign && !flightPlan && <div className="aircraft-trail-actions">
+            <button type="button" className="primary-button" disabled={flightAwareLoading} onClick={() => void loadFlightAware()}>
+              {flightAwareLoading ? (t.locale.startsWith("cs") ? "Načítání…" : "Loading…") : (t.locale.startsWith("cs") ? "Načíst podrobnosti letu (FlightAware)" : "Load flight details (FlightAware)")}
+            </button>
+            {flightAwareError && <span role="status">{flightAwareError}</span>}
+          </div>}
           {hasRouteData && route && <div className="aircraft-route-endpoints">
             <RouteEndpoint code={route.origin} airport={route.originAirport} />
             <span className="aircraft-route-arrow" aria-hidden="true">↓</span>
@@ -524,6 +558,8 @@ export function AircraftDetailV3({
         <div className={styles.lifetimeCard}><AircraftLifetimeStatsCard stats={detail?.lifetimeStats ?? null} /></div>
       </div>
     </section>
+
+    <AircraftCommunications icaoHex={icaoHex} />
 
     <div id="aircraft-receiver" className={styles.receiverSection}>
     <DataSources
