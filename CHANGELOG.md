@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.403] - 2026-10-10
+
+Changes since v1.0.402.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Complete Visual System V5 phase A HUD and weather (#710) (f5ef1244)
+
+### Fixed
+
+- Start intelligence stream only on Operations Center open (#711) (0da09dd9)
+
+### Maintenance
+
+- Sync generated repository metadata (#709) (4d926079)
+- Align full release suite with lazy Operations Center (#712) (2f20bdb0)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#709) (4d926079)
+- feat(radar): complete Visual System V5 phase A HUD and weather (#710) (f5ef1244)
+- fix(radar): start intelligence stream only on Operations Center open (#711) (0da09dd9)
+- test(radar): align full release suite with lazy Operations Center (#712) (2f20bdb0)
+
+</details>
 ## [1.0.402] - 2026-10-10
 
 Changes since v1.0.401.
