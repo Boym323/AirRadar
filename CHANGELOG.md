@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.409] - 2026-10-10
+
+Changes since v1.0.408.
+
+### Fixed
+
+- Compact mobile map focus label with accessible name (#727) (2fc70cb9)
+
+### Maintenance
+
+- Sync generated repository metadata (#726) (d8fa9226)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#726) (d8fa9226)
+- fix(visual): compact mobile map focus label with accessible name (#727) (2fc70cb9)
+
+</details>
 ## [1.0.408] - 2026-10-10
 
 Changes since v1.0.407.
