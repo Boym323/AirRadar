@@ -6,6 +6,7 @@ import {
   type AirportResolverLike,
 } from "@/lib/server/airport-resolver";
 import type { FlightRouteProvider, RouteLookupPosition } from "@/lib/server/provider";
+import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 
 /** Independent of the ADSB.lol traffic provider; route lookups are opt-in. */
 const ROUTESET_URL = "https://api.adsb.lol/api/0/routeset";
@@ -127,6 +128,8 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       this.requests += 1;
+      getRouteEnrichmentTelemetry().record("adsblolBatch");
+      getRouteEnrichmentTelemetry().record("adsblolLookup", batch.length);
       const response = await fetch(ROUTESET_URL, {
         method: "POST",
         cache: "no-store",
@@ -164,6 +167,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
       results.forEach((result, index) => batch[index].resolve(result));
     } catch (error) {
       this.failures += 1;
+      getRouteEnrichmentTelemetry().record("adsblolError");
       this.nextAllowedAt = Math.max(this.nextAllowedAt, Date.now() + ERROR_BACKOFF_MS);
       batch.forEach((lookup) => lookup.reject(error));
     } finally {
