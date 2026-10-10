@@ -1491,6 +1491,41 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible", timeout: 15_000 });
             await sidebar.locator(".aircraft-row").first().click();
             await visualPage.locator('[data-testid="aircraft-quick-detail"]').waitFor({ state: "visible", timeout: 15_000 });
+            // CSS overflow sweeps miss overlapping numbers inside the drawer.
+            // Measure the actual rendered glyph bounds on desktop/tablet/mobile.
+            const aircraftDrawerLayout = await sidebar.evaluate((drawer) => {
+              const cells = [...drawer.querySelectorAll(".aircraft-quick-header-hero .radar-traffic-hero-metrics > div")];
+              const actions = [...drawer.querySelectorAll(".aircraft-v5-quick-actions .aircraft-quick-action")];
+              const boxes = cells.map((cell) => cell.getBoundingClientRect());
+              const overflowingValues = cells.flatMap((cell, index) => {
+                const value = cell.querySelector("strong");
+                if (!value) return [index];
+                const range = document.createRange();
+                range.selectNodeContents(value);
+                const glyphs = range.getBoundingClientRect();
+                const tile = cell.getBoundingClientRect();
+                return glyphs.right > tile.right + 1 || glyphs.left < tile.left - 1 ? [index] : [];
+              });
+              const overflowingActions = actions.filter((action) => {
+                const style = getComputedStyle(action);
+                return style.overflowWrap === "anywhere" || action.scrollWidth > action.clientWidth + 2;
+              }).map((action) => action.textContent?.trim());
+              return {
+                metricCount: cells.length,
+                actionCount: actions.length,
+                twoMetricRows: boxes.length === 4
+                  && Math.abs(boxes[0].top - boxes[1].top) < 2
+                  && Math.abs(boxes[2].top - boxes[3].top) < 2
+                  && boxes[2].top > boxes[0].top + 2,
+                overflowingValues,
+                overflowingActions,
+              };
+            });
+            if (aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 6
+              || !aircraftDrawerLayout.twoMetricRows || aircraftDrawerLayout.overflowingValues.length
+              || aircraftDrawerLayout.overflowingActions.length) {
+              throw new Error(`Aircraft drawer geometry fails at ${target.viewport.width}px: ${JSON.stringify(aircraftDrawerLayout)}`);
+            }
             if (target.viewport.width <= 820) {
               const glance = await sidebar.boundingBox();
               if (!glance || glance.height > Math.min(target.viewport.height * 0.43, 390) + 3) {
