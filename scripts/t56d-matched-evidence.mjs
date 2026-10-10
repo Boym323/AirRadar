@@ -9,7 +9,6 @@ import { pathToFileURL } from "node:url";
 import { analyzeT56Samples } from "./t56-memory-analysis.mjs";
 import { stats } from "./t55-runtime-analysis.mjs";
 
-const MiB = 1024 * 1024;
 const MAX_ROWS = 600;
 const round = (value) => Number(value.toFixed(3));
 const median = (samples, field) => stats(samples.map((row) => row[field]))?.p50 ?? null;

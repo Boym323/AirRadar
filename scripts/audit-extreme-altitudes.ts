@@ -31,11 +31,6 @@ function csv(rows: Record<string, unknown>[]): string {
   const keys = Object.keys(rows[0] ?? { empty: null });
   return [keys.join(","), ...rows.map((r) => keys.map((k) => csvValue(r[k])).join(",")), ""].join("\n");
 }
-function bucket(value: number): string {
-  if (value > 100_000) return "100k+";
-  const lower = Math.floor(value / 10_000) * 10_000;
-  return `${lower}-${lower + 9_999}`;
-}
 function rate(a: number | null, b: number | null, seconds: number | null): number | null {
   return a !== null && b !== null && seconds !== null && seconds > 0 ? (b - a) / (seconds / 60) : null;
 }

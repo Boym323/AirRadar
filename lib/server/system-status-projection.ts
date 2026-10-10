@@ -5,7 +5,7 @@ export type SystemStatusDetailLevel = "public" | "admin";
 export type SystemStatusApiResponse = Omit<SystemStatusResponse, "flightPositionPersistenceShadow"> & { detailLevel: SystemStatusDetailLevel; operationalHealth?: OperationalHealthV2 };
 
 export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
-  const { flightPositionPersistenceShadow: _flightPositionPersistenceShadow, ...publicStatus } = status;
+  const publicStatus = { ...status, flightPositionPersistenceShadow: undefined };
   return {
     ...publicStatus,
     predictiveValidation: undefined,

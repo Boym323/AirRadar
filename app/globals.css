@@ -4900,14 +4900,6 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-page { max-width: var(--page-width); padding: var(--space-6) var(--space-4) 42px; }
 .airport-page-header { margin-bottom: var(--space-4); }
 .airport-page-header .ui-kicker, .airport-kicker { margin-top: 0; color: var(--selected); font-size: var(--font-size-sm); font-weight: 700; letter-spacing: .12em; }
-.airport-operations-summary { margin-bottom: var(--space-5); padding: var(--space-4) 0 var(--space-2); border-top: 1px solid var(--border-default); border-bottom: 1px solid var(--border-default); }
-.airport-operations-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); }
-.airport-operations-heading h2 { margin: var(--space-1) 0 0; color: var(--text-primary); font-size: var(--font-size-lg); letter-spacing: -.02em; }
-.airport-operations-metrics { margin-inline: calc(var(--space-2) * -1); }
-.airport-operation-metric { min-width: 0; padding: var(--space-3) var(--space-2); border: 0; border-right: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: transparent; }
-.airport-operation-metric:first-child { border-left: 2px solid var(--accent); background: var(--surface-accent-soft); }
-.airport-operation-metric:last-child { border-right: 0; }
-.airport-operation-metric .ui-metric-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .airport-v3-board {
   display: grid;
@@ -5155,7 +5147,6 @@ button, input, select, textarea { color-scheme: dark; }
   .airport-overview { grid-template-columns: minmax(0, 1fr); }
   .airport-map-card { order: -1; }
   .airport-reference-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .airport-operation-metric:nth-child(4) { border-right: 0; }
 }
 
 @media (max-width: 620px) {
@@ -5170,10 +5161,6 @@ button, input, select, textarea { color-scheme: dark; }
   .airport-v3-story-link { grid-column: 3; grid-row: 1 / span 2; }
   .ui-page-header h1 { font-size: clamp(25px, 9vw, 34px); }
   .airport-page { padding: var(--space-5) var(--space-3) 36px; }
-  .airport-operations-heading { align-items: flex-start; flex-direction: column; }
-  .airport-operations-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .airport-operation-metric { border-bottom: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); }
-  .airport-operation-metric:nth-child(even) { border-right: 0; }
   .airport-map { height: 280px; }
   .airport-reference-grid { grid-template-columns: 1fr; }
 }

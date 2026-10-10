@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -2667,9 +2667,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       if (dataLayerSmoke) {
         const dataLayerStartedAt = performance.now();
         const airportLayer = page.getByTestId("map-layer-airports");
-        const atcLayer = page.getByTestId("map-layer-atc");
-        const atsLayer = page.getByTestId("map-layer-ats");
-        const sigmetLayer = page.getByTestId("map-layer-sigmet");
         await airportLayer.waitFor({ state: "visible" });
         await page.evaluate(() => {
           for (const testId of ["map-layer-airports", "map-layer-atc", "map-layer-ats", "map-layer-sigmet"]) {

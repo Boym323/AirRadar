@@ -14,7 +14,6 @@ const DRY_RUN = `${ARTIFACT_DIR}/historical-altitude-maxaltitude-dry-run.json`;
 const EXPECTED_ROWS = 491;
 const EXPECTED_CHANGED_FLIGHTS = 3;
 const EXPECTED_UNCHANGED_FLIGHTS = 166;
-const EXPECTED_NO_VALID_ALTITUDE = 0;
 const PRODUCTION_VERSION = "1.0.162";
 const PRODUCTION_COMMIT = "284bd837";
 const POST_FIX_FROM = "2026-09-27T11:06:57.000Z";

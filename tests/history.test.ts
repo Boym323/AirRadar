@@ -22,6 +22,14 @@ describe("historical flight maintenance", () => {
 
     const upsert = vi.fn().mockResolvedValue({ id: 42 });
     const flightCreate = vi.fn().mockResolvedValue({ id: 8 });
+    const flightPositionWhere = vi.fn().mockImplementation(() => ({
+      orderBy: vi.fn().mockReturnValue({
+        limit: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }),
+        }),
+      }),
+      deleteAndCount: vi.fn().mockResolvedValue(0),
+    }));
     const flightWhere = vi.fn().mockImplementation((filter: Record<string, unknown>) => {
       if ("aircraftId" in filter) {
         return {
@@ -40,7 +48,7 @@ describe("historical flight maintenance", () => {
           Flight: { where: flightWhere, create: flightCreate },
           FlightPosition: {
             create: vi.fn().mockResolvedValue({ id: 99 }),
-            where: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) }),
+            where: flightPositionWhere,
           },
         },
       },

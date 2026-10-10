@@ -20,12 +20,6 @@ function SummaryMetric({ label, value, detail }: { label: string; value: string;
   return <div className={styles.metric}><span>{label}</span><strong>{value}</strong>{detail ? <small>{detail}</small> : null}</div>;
 }
 
-function healthLabel(state: CoverageIntelligenceResponse["intelligence"]["health"]["state"]): string {
-  if (state === "GOOD") return text.coverageHealthGood;
-  if (state === "DEGRADED") return text.coverageHealthDegraded;
-  return text.coverageHealthInsufficient;
-}
-
 function v2HealthLabel(state: CoverageIntelligenceResponse["intelligenceV2"]["health"]["state"]): string {
   if (state === "GOOD") return text.coverageV2HealthGood;
   if (state === "DEGRADED") return text.coverageV2HealthDegraded;

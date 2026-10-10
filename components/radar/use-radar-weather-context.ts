@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
-import type { WeatherRadarProduct } from "@/lib/server/weather-radar/types";
 
 export type RadarLayerDataStatus = "idle" | "loading" | "ready" | "stale" | "unavailable";
 

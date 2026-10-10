@@ -74,7 +74,7 @@ import {
 } from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
-import { WEATHER_RADAR_BOUNDS, type WeatherRadarProduct } from "@/lib/server/weather-radar/types";
+import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { LocaleKey } from "@/lib/i18n";
-import type { AlertHistoryEntry, AlertHistoryPage } from "@/lib/server/alert-history";
+import type { AlertHistoryPage } from "@/lib/server/alert-history";
 import type { PublicWatchlistRule } from "@/lib/server/watchlist-store";
 import { MetricCard, MetricStrip, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
 import styles from "./watchlist-intelligence-v2.module.css";
