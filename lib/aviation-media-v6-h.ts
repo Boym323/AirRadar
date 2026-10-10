@@ -7,7 +7,7 @@ export function mediaAirportKey(icao: string): string | null {
   return /^[A-Z0-9]{4}$/.test(cleaned) ? `airradar-v6-h-media:${cleaned}` : null;
 }
 
-/** Public HTTPS outbound links only. No embedded playback or server-side URL fetching. */
+/** Public HTTPS outbound links. Playback is exclusively via the allowlisted opt-in embed resolver. */
 export function sanitizeAirportMediaLink(value: unknown): AirportMediaLink | null {
   if (!value || typeof value !== "object") return null;
   const input = value as Partial<AirportMediaLink>;
@@ -44,4 +44,32 @@ export function addAirportMediaLink(current: readonly AirportMediaLink[], value:
   const link = sanitizeAirportMediaLink(value);
   if (!link || current.some((item) => item.url === link.url)) return [...current];
   return [...current.slice(0, AIRPORT_MEDIA_MAX_LINKS - 1), link];
+}
+
+/** An explicit publisher-enabled player only; never turn arbitrary URLs into iframes. */
+export interface AirportMediaEmbed {
+  provider: "youtube";
+  iframeUrl: string;
+}
+/** Official YouTube embeds work for live broadcasts when the video owner permits it.
+ * No scraping, stream re-hosting, audio extraction, playlists or channel live lookup.
+ */
+export function resolveAirportMediaEmbed(link: AirportMediaLink): AirportMediaEmbed | null {
+  const safe = sanitizeAirportMediaLink(link);
+  if (!safe) return null;
+  const url = new URL(safe.url);
+  const host = url.hostname.toLowerCase();
+  let videoId: string | null = null;
+  if (host === "youtu.be") {
+    if (!url.search || url.searchParams.has("t")) videoId = url.pathname.slice(1);
+  } else if (host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com") {
+    if (url.pathname === "/watch") videoId = url.searchParams.get("v");
+    else {
+      const match = url.pathname.match(/^\/(?:live|shorts|embed)\/([a-zA-Z0-9_-]{11})\/?$/);
+      if (match && !url.search) videoId = match[1]!;
+    }
+  }
+  if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) return null;
+  // Canonical fixed endpoint: never interpolate or trust user-supplied iframe hosts.
+  return { provider: "youtube", iframeUrl: `https://www.youtube-nocookie.com/embed/${videoId}` };
 }

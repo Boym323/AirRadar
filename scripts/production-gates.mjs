@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -988,6 +988,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
         { name: "airport-v5-operations-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "operations" },
         { name: "airport-v5-weather-desktop", path: "/airports/LKPR", selector: ".airport-weather-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "weather" },
+        { name: "airport-v6-media-embed-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockAirportV3: true, mockAviationEmbed: true },
+        { name: "airport-v6-media-embed-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 390, height: 844 }, fullPage: false, mockAirportV3: true, mockAviationEmbed: true },
         { name: "airport-v5-map-desktop", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map", verifyAirportMapShortcut: true },
         { name: "airport-v5-map-mobile", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map" },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
@@ -1066,6 +1068,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.mockSkyFavorites) {
             await visualPage.addInitScript(() => window.localStorage.setItem("airradar.my-sky-favorites.v1", JSON.stringify({ version: 1, icaoHexes: ["896139"] })));
+          }
+          if (target.mockAviationEmbed) {
+            await visualPage.addInitScript(() => window.localStorage.setItem("airradar-v6-h-media:LKPR", JSON.stringify([{
+              title: "Test airport live camera", url: "https://www.youtube.com/live/AbCdEf123_9", kind: "camera",
+            }])));
+            // Browser test exercises the official iframe DOM without external media traffic.
+            await visualPage.route("**/www.youtube-nocookie.com/embed/**", (route) =>
+              route.fulfill({ status: 200, contentType: "text/html", body: "<html><body>Media fixture</body></html>" }));
           }
           if (target.mockWeather) {
             const fixtureTime = "2026-10-04T07:30:00.000Z";
@@ -1449,6 +1459,19 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await control.getByRole("button", { name: /Presentation|Prezentace/i }).click();
             await visualPage.waitForFunction(() => document.querySelector(".radar-content")?.getAttribute("data-presentation-mode") === "true");
           }
+          if (target.mockAviationEmbed) {
+            const media = visualPage.getByTestId("airport-media-v6-h");
+            if (await media.locator("iframe").count()) throw new Error("V6-H loaded third-party media before consent");
+            await media.getByRole("button", { name: /Přehrát zde|Play here/ }).click();
+            const frame = media.getByTestId("airport-media-embed").locator("iframe");
+            await frame.waitFor({ state: "visible", timeout: 15_000 });
+            if (await frame.getAttribute("src") !== "https://www.youtube-nocookie.com/embed/AbCdEf123_9") {
+              throw new Error("V6-H iframe escaped the official approved video endpoint");
+            }
+            if (!await media.locator('a[href="https://www.youtube.com/live/AbCdEf123_9"]').count()) {
+              throw new Error("V6-H lost the original publisher fallback link");
+            }
+          }
           if (target.v6Terrain) {
             const layers = visualPage.locator(".map-layers");
             // A native <details> interaction must not wait for unrelated SSE-driven navigation.
@@ -1458,6 +1481,22 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const map = window.__airradarMapForDiagnostics;
               return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
             }, null, { timeout: 15_000 });
+            const sampleMeshes = await visualPage.evaluate(() => window.__airradarAircraft3dForDiagnostics?.injectSample() ?? null);
+            if (!sampleMeshes?.gpuReady || sampleMeshes.vertexCount < 100 || sampleMeshes.contextLost) {
+              throw new Error(`V6-D synthetic 3D models did not reach GPU: ${JSON.stringify(sampleMeshes)}`);
+            }
+            const gpu = await visualPage.evaluate(() => {
+              const map = window.__airradarMapForDiagnostics;
+              const gl = map?.getCanvas()?.getContext("webgl2");
+              if (!gl) return { webgl2: false };
+              const ext = gl.getExtension("WEBGL_debug_renderer_info");
+              return { webgl2: true, contextLost: gl.isContextLost(),
+                renderer: String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)),
+                maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE) };
+            });
+            if (!gpu.webgl2 || gpu.contextLost) throw new Error(`V6-D WebGL2 initialization failed: ${JSON.stringify(gpu)}`);
+            writeFileSync(resolve(visualSmokeDirectory, `${target.name}-gpu.json`),
+              JSON.stringify({ target: target.name, viewport: target.viewport, gpu, sampleMeshes, hardwareVerified: false }, null, 2) + "\n");
             await layers.evaluate((element) => { element.open = false; });
           }
           if (target.v6Appearance) {
@@ -1491,6 +1530,41 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible", timeout: 15_000 });
             await sidebar.locator(".aircraft-row").first().click();
             await visualPage.locator('[data-testid="aircraft-quick-detail"]').waitFor({ state: "visible", timeout: 15_000 });
+            // CSS overflow sweeps miss overlapping numbers inside the drawer.
+            // Measure the actual rendered glyph bounds on desktop/tablet/mobile.
+            const aircraftDrawerLayout = await sidebar.evaluate((drawer) => {
+              const cells = [...drawer.querySelectorAll(".aircraft-quick-header-hero .radar-traffic-hero-metrics > div")];
+              const actions = [...drawer.querySelectorAll(".aircraft-v5-quick-actions .aircraft-quick-action")];
+              const boxes = cells.map((cell) => cell.getBoundingClientRect());
+              const overflowingValues = cells.flatMap((cell, index) => {
+                const value = cell.querySelector("strong");
+                if (!value) return [index];
+                const range = document.createRange();
+                range.selectNodeContents(value);
+                const glyphs = range.getBoundingClientRect();
+                const tile = cell.getBoundingClientRect();
+                return glyphs.right > tile.right + 1 || glyphs.left < tile.left - 1 ? [index] : [];
+              });
+              const overflowingActions = actions.filter((action) => {
+                const style = getComputedStyle(action);
+                return style.overflowWrap === "anywhere" || action.scrollWidth > action.clientWidth + 2;
+              }).map((action) => action.textContent?.trim());
+              return {
+                metricCount: cells.length,
+                actionCount: actions.length,
+                twoMetricRows: boxes.length === 4
+                  && Math.abs(boxes[0].top - boxes[1].top) < 2
+                  && Math.abs(boxes[2].top - boxes[3].top) < 2
+                  && boxes[2].top > boxes[0].top + 2,
+                overflowingValues,
+                overflowingActions,
+              };
+            });
+            if (aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 6
+              || !aircraftDrawerLayout.twoMetricRows || aircraftDrawerLayout.overflowingValues.length
+              || aircraftDrawerLayout.overflowingActions.length) {
+              throw new Error(`Aircraft drawer geometry fails at ${target.viewport.width}px: ${JSON.stringify(aircraftDrawerLayout)}`);
+            }
             if (target.viewport.width <= 820) {
               const glance = await sidebar.boundingBox();
               if (!glance || glance.height > Math.min(target.viewport.height * 0.43, 390) + 3) {
