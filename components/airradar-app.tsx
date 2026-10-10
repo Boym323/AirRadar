@@ -719,7 +719,7 @@ export function AirRadarApp() {
       if (!menus.length) return;
       const first = menus[0];
       for (const menu of menus) menu.open = false;
-      first.querySelector<HTMLElement>("summary")?.focus();
+      first?.querySelector<HTMLElement>("summary")?.focus();
       event.preventDefault();
     };
     document.addEventListener("pointerdown", onPointerDown);
