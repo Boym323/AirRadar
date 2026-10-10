@@ -415,3 +415,8 @@ A dedicated map control enters fullscreen on user action and keeps the existing 
 ### V6-E: verified flight-status evidence
 
 Aircraft details already show on-demand FlightAware status, actual/estimated/scheduled flight phases, delays, gates and operational context when a paid, rate-limited provider lookup yields data. V6-E adds an explicit AeroAPI provenance/fetch-time banner and conservative freshness assessment (within 60 minutes versus older/unknown), and a clear unavailable state when no provider record exists. ADS-B positions and inferred routes are never relabeled as an airline schedule or official FIDS. No additional paid calls or background polling are introduced by this UI.
+
+
+### V6-D2–D5: bounded 3D airplane silhouettes and follow camera
+
+The optional 3D terrain mode can render up to 12 lightweight, geographic, altitude-anchored 3D airplane silhouettes. Meshes use confirmed positions, fresh observations and geometry altitude when available; barometric altitude is a less precise fallback. This is **not a verified type-specific GLTF model**; wing/fuselage shapes are schematic. In 3D mode the map menu also offers free camera or an optional selected-aircraft follow camera; the latter throttles movement to avoid constant animation. The extra WebGL2 custom layer is created only when 3D is enabled and is removed completely on return to 2D. No backend/stream queries or writes are added. The budget caps geometry/objects, skips offscreen playback and respects reduced-motion. True realistic GLTF fleet models, occlusion and camera-from-cockpit await separate physical-device GPU QA.

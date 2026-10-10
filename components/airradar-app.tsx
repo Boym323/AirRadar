@@ -150,6 +150,7 @@ import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBasemapReadability } from "@/lib/map-style";
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
 import { setRadar3dTerrain, type Radar3dMode } from "@/lib/radar/terrain-v6-d";
+import { createRadarAircraft3dRuntime, RADAR_AIRCRAFT_3D_LAYER_ID, type RadarAircraft3dRuntime } from "@/lib/radar/aircraft-3d-v6-d";
 import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
 import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
@@ -635,6 +636,9 @@ export function AirRadarApp() {
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
   const [radar3dMode, setRadar3dMode] = useState<Radar3dMode>("2d");
+  const [radar3dCamera, setRadar3dCamera] = useState<"free" | "follow">("free");
+  const aircraft3dRuntimeRef = useRef<RadarAircraft3dRuntime | null>(null);
+  const radar3dFollowAtRef = useRef(0);
   const [presentationMode, setPresentationMode] = useState(false);
   const [presentationPaused, setPresentationPaused] = useState(false);
   const [presentationScene, setPresentationScene] = useState<string | null>(null);
@@ -760,6 +764,45 @@ export function AirRadarApp() {
     const element = radarContentRef.current;
     if (element?.requestFullscreen) void element.requestFullscreen().catch(() => undefined);
   };
+  // D2/D4/D5: a single opt-in, capped 3D mesh layer reuses the existing map.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || radar3dMode !== "3d") return;
+    const runtime = createRadarAircraft3dRuntime();
+    aircraft3dRuntimeRef.current = runtime;
+    map.addLayer(runtime.layer);
+    return () => {
+      if (map.getLayer(RADAR_AIRCRAFT_3D_LAYER_ID)) map.removeLayer(RADAR_AIRCRAFT_3D_LAYER_ID);
+      if (aircraft3dRuntimeRef.current === runtime) aircraft3dRuntimeRef.current = null;
+    };
+  }, [mapReady, radar3dMode]);
+
+  useEffect(() => {
+    if (radar3dMode !== "3d" || !mapReady) return;
+    aircraft3dRuntimeRef.current?.setAircraft(snapshot.aircraft, selectedHex, document.hidden);
+  }, [mapReady, radar3dMode, selectedHex, snapshot.aircraft]);
+
+  // D3: follow camera is opt-in, separate from existing 2D single-aircraft follow.
+  useEffect(() => {
+    if (!mapReady || radar3dMode !== "3d" || radar3dCamera !== "follow" || !selectedHex || document.hidden) return;
+    const selected = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
+    if (!selected || selected.lat === null || selected.lon === null ||
+        selected.seenPosSeconds === null || selected.seenPosSeconds > 30 ||
+        !Number.isFinite(selected.lat) || !Number.isFinite(selected.lon)) return;
+    if (Date.now() - radar3dFollowAtRef.current < 2500) return;
+    radar3dFollowAtRef.current = Date.now();
+    const map = mapRef.current;
+    if (!map) return;
+    map.easeTo({
+      center: [selected.lon, selected.lat],
+      pitch: 65,
+      bearing: selected.track !== null && Number.isFinite(selected.track) ? selected.track : map.getBearing(),
+      zoom: Math.max(map.getZoom(), 9),
+      duration: 900,
+      essential: true,
+    });
+  }, [mapReady, radar3dMode, radar3dCamera, selectedHex, snapshot.aircraft]);
+
   const chooseMapAppearance = (value: RadarMapAppearance) => {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
@@ -3244,6 +3287,9 @@ export function AirRadarApp() {
               <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
                 radar3dMode={radar3dMode}
+                radar3dCamera={radar3dCamera}
+                onRadar3dCameraChange={(mode) => { setRadar3dCamera(mode); if (mode === "follow") setFollowSelected(false); }}
+                radar3dCameraAvailable={Boolean(selectedHex)}
                 onRadar3dModeChange={setRadar3dMode}
                 mapAppearance={mapAppearance}
                 onMapAppearanceChange={chooseMapAppearance}

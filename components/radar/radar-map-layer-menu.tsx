@@ -30,6 +30,9 @@ interface RadarFrameSummary {
 
 interface RadarMapLayerMenuProps {
   radar3dMode: Radar3dMode;
+  radar3dCamera: "free" | "follow";
+  radar3dCameraAvailable: boolean;
+  onRadar3dCameraChange: (mode: "free" | "follow") => void;
   onRadar3dModeChange: (mode: Radar3dMode) => void;
   mapAppearance: RadarMapAppearance;
   onMapAppearanceChange: (value: RadarMapAppearance) => void;
@@ -108,6 +111,9 @@ function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countL
 
 export function RadarMapLayerMenu({
   radar3dMode,
+  radar3dCamera,
+  radar3dCameraAvailable,
+  onRadar3dCameraChange,
   onRadar3dModeChange,
   mapAppearance,
   onMapAppearanceChange,
@@ -247,6 +253,12 @@ export function RadarMapLayerMenu({
             <option value="3d">{t.locale.startsWith("en") ? "3D terrain (beta)" : "3D terén (beta)"}</option>
           </select>
         </label>
+        {radar3dMode === "3d" && <label className="map-layer-mode" data-testid="radar-v6-d-camera"><span>{t.locale.startsWith("en") ? "3D camera" : "3D kamera"}</span>
+          <select value={radar3dCamera} onChange={(event) => onRadar3dCameraChange(event.target.value as "free" | "follow")}>
+            <option value="free">{t.locale.startsWith("en") ? "Free / map" : "Volná / mapa"}</option>
+            <option value="follow" disabled={!radar3dCameraAvailable}>{t.locale.startsWith("en") ? "Follow selected aircraft" : "Sledovat vybrané letadlo"}</option>
+          </select>
+        </label>}
         {radar3dMode === "3d" && <small>{t.locale.startsWith("en") ? "Elevation: Mapterhorn · DEM. Aircraft markers are map projections, not altitude-accurate 3D aircraft models." : "Výšková data: Mapterhorn · DEM. Ikony letadel jsou mapové značky, nikoli prostorové modely ve skutečné výšce."}</small>}
         {mapAppearance === "satellite" && <small>{t.locale.startsWith("en") ? "2020 non-live satellite mosaic · EOxCloudless · personal non-commercial use" : "Historický satelitní podklad 2020 · EOxCloudless · pouze nekomerční použití"}</small>}
         {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => onShowRangeRingsChange(event.target.checked)} /> {t.layers.rangeRings}</label>}

@@ -397,3 +397,8 @@ Ovládací prvek přepne radar na celou obrazovku, ale používá stávající �
 ### V6-E: důkaz původu a stáří stavu letu
 
 Detail letadla už zobrazuje na vyžádání načtená data FlightAware (stav, plánované/odhadované/skutečné časy, zpoždění, brány). V6-E přidává označení zdroje AeroAPI, čas získání a konzervativní hodnocení stáří (do 60 minut, starší, neznámé), případně jasnou informaci o nedostupnosti externích údajů. Polohy ADS-B ani odvozené trasy se nevydávají za oficiální letový plán či FIDS. Nové UI nevytváří žádné placené dotazy ani polling na pozadí.
+
+
+### V6-D2–D5: omezené 3D siluety a sledovací kamera
+
+Volitelný 3D terén vykreslí nejvýše 12 jednoduchých prostorových siluet letadel ve skutečných zeměpisných souřadnicích a přibližné výšce. Použije čerstvá pozorování a přednostně geometrickou výšku; barometrická výška je méně přesná náhrada. Jde o **schematický 3D tvar**, nikoli ověřený model konkrétního typu ve formátu GLTF. V menu je volná kamera nebo volitelná kamera sledující vybrané letadlo s omezenou frekvencí pohybů. Vrstva WebGL2 vzniká pouze při zapnutém 3D a při návratu do 2D se odstraní. Počet objektů i geometrie jsou omezené, skrytá záložka se neanimuje. Plné realistické modely a pohled z kabiny vyžadují další GPU testy na skutečných zařízeních.
