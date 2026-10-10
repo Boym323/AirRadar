@@ -173,15 +173,17 @@ describe("production release metadata gate", () => {
     expect(source).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
   });
 
-  it("tracks the Airport Live Board V8 production smoke contract while preserving V6/V7 panels", () => {
+  it("tracks the Airport V5 overview, operations and advanced analytics while preserving V6-V8 evidence", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('[data-product="airport-live-board-v8"]');
-    expect(source).toContain('[data-testid="airport-live-board-flow-pulse"]');
+    expect(source).toContain('switchAirportView("operations")');
+    expect(source).toContain('getByTestId("airport-live-board-flow-pulse")');
+    expect(source).toContain('switchAirportView("analytics")');
+    expect(source).toContain('const advanced = visualPage.getByTestId("airport-live-board-advanced")');
     for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow"]) {
       expect(source).toContain(`"${id}"`);
     }
-    expect(source).toContain("openAirportAdvanced");
-    expect(source).toContain('await advanced.locator("summary").click()');
+    expect(source).toContain('advanced.locator(`[data-testid="${id}"]`).waitFor');
     expect(source).not.toContain('[data-product="airport-live-board-v6"]');
     expect(source).not.toContain('[data-product="airport-live-board-v7"]');
   });

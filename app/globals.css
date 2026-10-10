@@ -6413,3 +6413,121 @@ button, input, select, textarea { color-scheme: dark; }
 .radar-quick-action[data-weather-state="loading"] .radar-quick-weather-state { color: var(--text-secondary); }
 .weather-radar-timeline-heading strong { display: inline-flex; align-items: center; gap: var(--space-2); }
 .weather-radar-stale-label { color: var(--warning); font-size: var(--font-size-2xs); font-weight: 700; }
+
+/* Visual System V5-C: map-first airport navigation. Content is mounted only
+ * in its selected view; existing aircraft/weather controllers remain shared. */
+.airport-v5-page { max-width: min(1440px, var(--page-width)); }
+.airport-v5-page .airport-page-header { margin-bottom: var(--space-4); }
+.airport-v5-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding: var(--space-2);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-interactive);
+}
+.airport-v5-tabs button {
+  flex: 1 0 auto;
+  min-height: var(--control-height-touch);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.airport-v5-tabs button:hover, .airport-v5-tabs button.active,
+.airport-v5-tabs button[aria-selected="true"] {
+  border-color: var(--border-accent);
+  color: var(--accent);
+  background: var(--surface-accent-soft);
+}
+.airport-v5-tabs button:focus-visible, .airport-v5-reference summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.airport-v5-panel { min-width: 0; }
+.airport-v5-standalone { max-width: 100%; }
+.airport-v5-two-column { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr); gap: var(--space-4); align-items: start; }
+.airport-v5-analytics-extras { display: grid; gap: var(--space-4); margin-top: var(--space-4); }
+.airport-v5-reference {
+  margin-top: var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.airport-v5-reference summary {
+  padding: var(--space-4);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+.airport-v5-reference-grid { padding: 0 var(--space-3) var(--space-4); }
+.airport-v5-reference-grid .airport-reference-grid { margin-top: var(--space-3); }
+@media (max-width: 820px) {
+  .airport-v5-tabs button { flex: 0 0 auto; }
+  .airport-v5-two-column { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* V5-C2: editorial arrivals/departures boards from bounded receiver observations. */
+.airport-v5-flights { min-width: 0; padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-card); }
+.airport-v5-flights-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: var(--space-3); }
+.airport-v5-flights-heading h2 { margin: var(--space-2) 0 0; color: var(--text-primary); font-size: clamp(22px, 3vw, 30px); }
+.airport-v5-flights-heading p { margin: var(--space-2) 0; color: var(--text-secondary); font-size: var(--font-size-sm); }
+.airport-v5-flights-count { padding: var(--space-2) var(--space-3); border: 1px solid var(--border-accent); border-radius: var(--radius-md); color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 700; }
+.airport-v5-filters { display: grid; grid-template-columns: minmax(0, 2fr) minmax(170px, 1fr); gap: var(--space-3); margin: var(--space-4) 0; }
+.airport-v5-filters label { display: grid; gap: var(--space-2); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: 700; }
+.airport-v5-filters input, .airport-v5-filters select { width: 100%; min-width: 0; min-height: var(--control-height-touch); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); background: var(--surface-interactive); color: var(--text-primary); }
+.airport-v5-filters :is(input,select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.airport-v5-updated { color: var(--text-muted); font-size: var(--font-size-xs); }
+.airport-v5-table-scroll { max-width: 100%; overflow-x: auto; }
+.airport-v5-flights table { width: 100%; border-collapse: collapse; min-width: 580px; text-align: left; font-size: var(--font-size-sm); }
+.airport-v5-flights thead { color: var(--text-muted); background: var(--surface-interactive); text-transform: uppercase; font-size: var(--font-size-xs); }
+.airport-v5-flights th, .airport-v5-flights td { padding: var(--space-3); border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+.airport-v5-flights td { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.airport-v5-flights td a { display: grid; gap: var(--space-1); color: var(--text-primary); text-decoration: none; }
+.airport-v5-flights td a:hover { color: var(--accent); }
+.airport-v5-flights td small { display: block; color: var(--text-muted); font-size: var(--font-size-xs); }
+.airport-v5-movement-pill { padding: var(--space-1) var(--space-2); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-interactive); color: var(--text-primary); white-space: nowrap; }
+@media (max-width: 600px) {
+  .airport-v5-flights { padding: var(--space-3); }
+  .airport-v5-filters { grid-template-columns: minmax(0, 1fr); }
+  .airport-v5-flights table { min-width: 540px; }
+}
+
+/* V5-C3/C4: operational views retain evidence and provenance, and are visually
+ * distinct from the glance/flight boards without adding another dashboard. */
+.airport-v5-section-intro {
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.airport-v5-section-intro h2 { margin: var(--space-2) 0; color: var(--text-primary); font-size: clamp(20px, 3vw, 28px); }
+.airport-v5-section-intro p { max-width: 68ch; margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm); line-height: var(--line-height-body); }
+.airport-v5-page .airport-v3-board { margin-top: 0; }
+.airport-v5-page .airport-v3-hero {
+  border-color: var(--border-accent);
+  background: linear-gradient(140deg, var(--surface-card), var(--surface-interactive));
+}
+.airport-v5-page .airport-v3-hero .airport-v3-metrics { gap: var(--space-2); }
+.airport-v5-page .airport-v3-hero .ui-metric-card { border-radius: var(--radius-md); }
+.airport-v5-page .airport-v3-hero h2 { font-size: clamp(20px, 3vw, 28px); }
+.airport-v5-page .airport-live-advanced { margin-top: 0; }
+.airport-v5-page .airport-live-advanced[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+@media (max-width: 600px) {
+  .airport-v5-page .airport-v3-heading { gap: var(--space-2); }
+  .airport-v5-page .airport-v3-hero { padding: var(--space-3); }
+  .airport-v5-page .airport-live-flow-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .airport-v5-page .airport-v3-grid { grid-template-columns: minmax(0,1fr); }
+}

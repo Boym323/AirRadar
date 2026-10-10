@@ -274,3 +274,40 @@ přihlášením k push. Při chybějící poloze je sledování nedostupné.
 Sdílení využívá jen prohlížeč a veřejný odkaz na detail; bez oprávnění
 hlásí srozumitelný přístupný stav. Akce jsou viditelné bez přepínání
 na záložku Let, s alespoň 44px dotykovým cílem a překlady.
+
+### V5-C1: přehledné členění letišť
+
+Detail letiště nabízí sedm přístupných pohledů (Přehled, Přílety, Odlety,
+Provoz, Počasí, Mapa, Analýzy), vodorovně posuvné dotykové záložky, ovládání
+šipkami/Home/End a stálé odkazy `#airport-view-*`. Controller provozu
+a živých letadel zůstává jediný a sdílený. Přehled obsahuje základní údaje,
+pozorované pohyby a počasí; referenční infrastruktura je v rozbalovací sekci.
+Mapu, podrobné počasí a historické analýzy načítáme jen v příslušném
+pohledu. Jde o pozorování či odvození z přijímače, ne oficiální zpoždění,
+gate nebo veřejný letový řád.
+
+### V5-C2: přílety a odlety
+
+Samostatné tabulky používají jen existující omezený přehled pozorovaných
+pohybů. Podporují hledání, filtr typu pohybu, míru jistoty, informace o
+dráze a odkaz do historie letu. Čas je **čas pozorování**, nikoliv letový
+řád či domyšlené ETA. Neúplná a chybějící data jsou označena; nevymýšlíme
+zpoždění, gate, oficiální stav letu ani neověřenou trasu. Obě tabulky
+využívají společný controller a vykreslí se jen na vlastní záložce.
+
+### V5-C3/C4: provoz a analýzy
+
+Provoz má vlastní přehled pozorovaného využití drah, časovou osu,
+krátkodobé indikátory příletového provozu, holding a go-around včetně
+upozornění, že jde o odhad přijímače. Úvodní Přehled již neopakuje
+celou rozšířenou analýzu tlaku provozu. Všechny modely V6–V9 a D2–D4,
+historické statistiky a pozorované pohyby jsou samostatně v Analýzách.
+Zachovává se informace o zdroji, míra jistoty a jediný controller.
+
+### V5-C ověření v CI
+
+Produkční browser gate nyní prochází všech sedm letištních záložek, testuje
+filtrování pozorovaných příletů/odletů, provoz drah a pokročilou analytiku,
+načtení mapy a počasí a vrací se na požadovaný snímek. Ukládá přehled na
+desktopu, mobilu 390 a 320 px, mobilní přílety a desktopovou analytiku.
+Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.

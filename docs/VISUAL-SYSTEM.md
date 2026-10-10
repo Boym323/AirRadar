@@ -281,3 +281,43 @@ without a position. Sharing sends only the canonical public aircraft-detail
 link from the user's browser; missing sharing permissions receive explicit
 accessible feedback. All actions are reachable without first entering the
 Flight tab, use >=44 px tap targets and localized labels.
+
+### V5-C1: airport information architecture
+
+Airport detail now has seven accessible views (overview, arrivals, departures,
+operations, weather, map, analytics), horizontal-scroll touch tabs, arrow/Home/End
+keyboard navigation, stable `#airport-view-*` deep links and shared airport
+operations/live-traffic controllers. The overview uses an airport hero, observed
+metrics, weather and live traffic; reference infrastructure remains in a native
+disclosure. Map, weather, background airport analytics and the airport nearby
+panel mount only in their selected view. Operational quantities are receiver-
+observed/inferred: no provider-sourced gates, official delays or fake schedules.
+
+### V5-C2: arrivals and departures
+
+These dedicated tables use the existing bounded airport movement snapshots
+only, with search, observed-movement filters, confidence, runway evidence and
+links to flight histories. The time column is **observation time**, not a
+scheduled arrival/departure or invented ETA. Missing and incomplete sources
+are explicitly disclosed; the table never invents delays, gate numbers,
+schedules, official flight status or route endpoints. The two lists share
+one airport controller and only render in their selected view.
+
+### V5-C3/C4: operations and analytics
+
+Operations has its own observed runway/timeline board, short-range flow
+signals, holding/go-around context and an explicit receiver-inference
+disclaimer. The default overview no longer repeats the complete flow pressure
+analytics. Analytics holds the existing V6-V9 and D2-D4 evidence, plus
+historical traffic and movements in a separate dedicated view. These models
+remain source-labeled and confidence-aware; switching views never creates a
+second airport operations controller.
+
+### V5-C CI verification
+
+The production browser gate now navigates all seven airport views, verifies
+receiver-based arrivals/departures filters and runway/flow/advanced contexts,
+checks weather and map mounts, then returns to the requested screenshot view.
+It captures the overview at desktop, 390 px and 320 px, a mobile arrivals
+board and the desktop advanced analytics view. No mock airport UI is accepted
+as a substitute for an actual Playwright-rendered view.

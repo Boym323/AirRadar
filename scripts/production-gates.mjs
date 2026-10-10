@@ -984,7 +984,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "command-search-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historické lety" },
         { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
-        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, openAirportAdvanced: true },
+        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
+        { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -1012,6 +1013,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW – provozní přehled" },
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-live-board-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
+        { name: "airport-v5-arrivals-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
+        { name: "airport-v5-overview-320", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 320, height: 568 }, fullPage: false, mockAirportV3: true },
         { name: "predictive-readiness-mobile", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 390, height: 844 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "predictive-eta-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockEtaAdvisory: "public" },
@@ -1232,35 +1235,41 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.locator('[data-testid="daily-intelligence-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockAirportV3) {
-            await visualPage.locator('[data-testid="airport-live-board"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-product="airport-live-board-v8"]').waitFor({ state: "visible", timeout: 15_000 });
-            const arrivals = visualPage.locator('[data-testid="airport-live-board-arrivals"]');
-            const departures = visualPage.locator('[data-testid="airport-live-board-departures"]');
-            const alerts = visualPage.locator('[data-testid="airport-live-board-alerts"]');
-            const runways = visualPage.locator('[data-testid="airport-live-board-runways"]');
-            const weather = visualPage.locator('[data-testid="airport-live-board-weather"]');
-            const activeInbound = visualPage.locator('[data-testid="airport-live-board-active-inbound"]');
-            const activeOutbound = visualPage.locator('[data-testid="airport-live-board-active-outbound"]');
+            const tabs = visualPage.getByTestId("airport-v5-tabs");
+            await tabs.waitFor({ state: "visible", timeout: 15_000 });
+            const switchAirportView = async (view) => {
+              await tabs.getByTestId(`airport-v5-tab-${view}`).click();
+              await visualPage.locator(`[data-testid="airport-v5-panel"][id="airport-v5-panel-${view}"]`).waitFor({ state: "visible", timeout: 15_000 });
+            };
+            await visualPage.locator('[data-testid="airport-live-board-weather"]').getByText("VFR", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="airport-live-board-active-inbound"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="airport-live-board-active-outbound"]').waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("arrivals");
+            const arrivals = visualPage.getByTestId("airport-v5-flights-table");
             await arrivals.getByText("CSA123", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await departures.getByText("AUA456", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await alerts.getByText("SWR88", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await runways.getByText("RWY 24", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await weather.getByText("VFR", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await activeInbound.waitFor({ state: "visible", timeout: 15_000 });
-            await activeOutbound.waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-testid="airport-live-board-flow-pulse"]').waitFor({ state: "visible", timeout: 15_000 });
-            const advanced = visualPage.locator('[data-testid="airport-live-board-advanced"]');
-            await advanced.locator("summary").waitFor({ state: "visible", timeout: 15_000 });
-            if (await advanced.locator('[data-testid="airport-live-board-v6-pressure"]').isVisible()) {
-              throw new Error("Airport advanced analysis must start collapsed");
+            await arrivals.getByTestId("airport-v5-flight-search").fill("NOT_A_REAL_CALLSIGN");
+            if (await arrivals.getByText("CSA123", { exact: true }).isVisible()) {
+              throw new Error("V5 airport arrival search did not filter nonmatches");
             }
-            if (target.openAirportAdvanced) {
-              await advanced.locator("summary").click();
-              for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"]) {
-                await advanced.locator(`[data-testid="${id}"]`).waitFor({ state: "visible", timeout: 15_000 });
-              }
+            await arrivals.getByTestId("airport-v5-flight-search").fill("");
+            await switchAirportView("departures");
+            await visualPage.getByTestId("airport-v5-flights-table").getByText("AUA456", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("operations");
+            await visualPage.getByTestId("airport-live-board-flow-pulse").waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByTestId("airport-live-board-runways").getByText("RWY 24", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByTestId("airport-v3-timeline").waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("analytics");
+            const advanced = visualPage.getByTestId("airport-live-board-advanced");
+            await advanced.waitFor({ state: "visible", timeout: 15_000 });
+            for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"]) {
+              await advanced.locator(`[data-testid="${id}"]`).waitFor({ state: "visible", timeout: 15_000 });
             }
-            await visualPage.locator('[data-testid="airport-v3-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("weather");
+            await visualPage.locator(".airport-weather-card").waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("map");
+            await visualPage.locator(".airport-map-card").waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView(target.airportCaptureView ?? "overview");
+            await visualPage.locator('[data-product="airport-live-board-v8"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveReadiness) {
             await visualPage.locator('[data-testid="predictive-readiness"]').waitFor({ state: "visible", timeout: 15_000 });

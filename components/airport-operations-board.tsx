@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
+import type { AirportOperationsView } from "@/lib/airport-v5-views";
+import { AirportFlightsTable } from "@/components/airport-v5-flights-table";
 import { aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import {
   buildAirportCorrelatedTrafficSnapshot,
@@ -320,11 +322,13 @@ export function AirportOperationsBoard({
   runways,
   controller,
   liveTraffic,
+  view = "overview",
 }: {
   airport: { icaoCode: string; name: string };
   runways: AirportRunway[];
   controller: AirportOperationsControllerState;
   liveTraffic: AirportLiveTrafficControllerState;
+  view?: AirportOperationsView;
 }) {
   const operations = controller.operations;
   const weather = controller.weather;
@@ -358,8 +362,9 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v8">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" data-view={view} aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v8">
     <div data-testid="airport-live-board">
+    {view === "overview" && <>
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
         <div>
@@ -408,6 +413,14 @@ export function AirportOperationsBoard({
       <span><small>{t.weather.qnh}</small><strong>{metar?.altimeterHpa === null || metar?.altimeterHpa === undefined ? "—" : `${formatNumber(metar.altimeterHpa, 0)} hPa`}</strong></span>
     </section>
 
+    </>}
+
+    {view === "operations" && <>
+    <header className="airport-v5-section-intro" data-testid="airport-v5-operations-heading">
+      <span className="ui-kicker">{t.airportV5.tabs.operations}</span>
+      <h2>{t.airport.liveBoardFlowTitle}</h2>
+      <p>{t.airportV5.operationsIntro}</p>
+    </header>
     <section className="airport-live-flow-pulse" data-testid="airport-live-board-flow-pulse" aria-labelledby="airport-live-flow-title">
       <div className="airport-live-flow-heading">
         <div><span className="ui-kicker">{t.airport.liveBoardFlowKicker}</span><h3 id="airport-live-flow-title">{t.airport.liveBoardFlowTitle}</h3></div>
@@ -435,6 +448,9 @@ export function AirportOperationsBoard({
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardFlowNoAttention}</p>}
     </section>
 
+    </>}
+
+    {view === "overview" && <>
     <div className="airport-live-active" data-testid="airport-live-board-active">
       <ActiveTrafficLane
         kicker={t.airport.liveBoardActiveInboundKicker}
@@ -471,7 +487,24 @@ export function AirportOperationsBoard({
       />
     </div>
 
-    <details className="airport-live-advanced" data-testid="airport-live-board-advanced">
+    </>}
+
+    {(view === "arrivals" || view === "departures") && <AirportFlightsTable
+      view={view}
+      movements={view === "arrivals" ? operations?.arrivals ?? [] : operations?.departures ?? []}
+      loading={controller.status === "loading"}
+      unavailable={operations === null}
+      incomplete={Boolean(operations && (!operations.complete || operations.truncated))}
+      lastUpdated={operations?.generatedAt ?? null}
+    />}
+
+    {view === "analytics" && <>
+    <header className="airport-v5-section-intro" data-testid="airport-v5-analytics-heading">
+      <span className="ui-kicker">{t.airportV5.tabs.analytics}</span>
+      <h2>{t.airport.liveBoardAdvancedLabel}</h2>
+      <p>{t.airportV5.analyticsIntro}</p>
+    </header>
+    <details className="airport-live-advanced" data-testid="airport-live-board-advanced" open>
       <summary>
         <span><strong>{t.airport.liveBoardAdvancedLabel}</strong><small>{t.airport.liveBoardAdvancedHint}</small></span>
         <span className="airport-live-advanced-chevron" aria-hidden="true">⌄</span>
@@ -798,8 +831,9 @@ export function AirportOperationsBoard({
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV9Disclaimer}</p>
     </section> : null}
     </details>
+    </>}
 
-    <div className="airport-v3-grid">
+    {view === "operations" && <div className="airport-v3-grid">
       <section className="airport-v3-panel airport-v3-runway" aria-labelledby="airport-v3-runway-title">
         <div className="airport-v3-panel-heading">
           <div>
@@ -875,7 +909,7 @@ export function AirportOperationsBoard({
               </ol>}
         <p className="airport-v3-disclaimer">{t.airport.movementDisclaimer}</p>
       </section>
-    </div>
+    </div>}
     </div>
   </section>;
 }
