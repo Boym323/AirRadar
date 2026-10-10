@@ -1481,6 +1481,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const map = window.__airradarMapForDiagnostics;
               return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
             }, null, { timeout: 15_000 });
+            const sampleMeshes = await visualPage.evaluate(() => window.__airradarAircraft3dForDiagnostics?.injectSample() ?? null);
+            if (!sampleMeshes?.gpuReady || sampleMeshes.vertexCount < 100 || sampleMeshes.contextLost) {
+              throw new Error(`V6-D synthetic 3D models did not reach GPU: ${JSON.stringify(sampleMeshes)}`);
+            }
             const gpu = await visualPage.evaluate(() => {
               const map = window.__airradarMapForDiagnostics;
               const gl = map?.getCanvas()?.getContext("webgl2");
@@ -1492,7 +1496,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             });
             if (!gpu.webgl2 || gpu.contextLost) throw new Error(`V6-D WebGL2 initialization failed: ${JSON.stringify(gpu)}`);
             writeFileSync(resolve(visualSmokeDirectory, `${target.name}-gpu.json`),
-              JSON.stringify({ target: target.name, viewport: target.viewport, gpu, hardwareVerified: false }, null, 2) + "\n");
+              JSON.stringify({ target: target.name, viewport: target.viewport, gpu, sampleMeshes, hardwareVerified: false }, null, 2) + "\n");
             await layers.evaluate((element) => { element.open = false; });
           }
           if (target.v6Appearance) {
