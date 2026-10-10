@@ -49,7 +49,7 @@ certified flight hazard product. The official Mercator EPSG:3857 extent is
 11.267°E–19.624°E, 48.047°N–51.458°N. Data are published every five minutes
 as ODIM HDF5 at `https://opendata.chmi.cz/meteorology/weather/radar/composite/echotop/hdf5/`.
 
-The separate opt-in provider validates the published timestamped filename,
+The optional provider discovers only the recent five-minute HDF files via up to eight allowlisted HEAD probes, avoiding ČHMÚ's growing oldest-first directory index. It validates the published timestamped filename,
 8 MiB HDF signature, strict ODIM product/quantity, gain/offset/no-data,
 projection, raster bounds and coordinates before a sandboxed converter returns
 an RGBA PNG. Both catalog and image caches are bounded. Failures never alter
