@@ -33,6 +33,7 @@ export const EMPTY_SIGMET_DATA: SigmetSnapshot = {
 interface UseRadarWeatherContextOptions {
   loadSigmet: boolean;
   showWeatherRadar: boolean;
+  radarProduct?: "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM";
   showMetar: boolean;
   showWind: boolean;
   windLevel: WindLevelHpa;
@@ -42,6 +43,7 @@ interface UseRadarWeatherContextOptions {
 export function useRadarWeatherContext({
   loadSigmet,
   showWeatherRadar,
+  radarProduct = "MAX_Z_MASKED",
   showMetar,
   showWind,
   windLevel,
@@ -89,7 +91,7 @@ export function useRadarWeatherContext({
     const load = async (): Promise<void> => {
       setRadarStatus((current) => current === "ready" || current === "stale" ? current : "loading");
       try {
-        const response = await fetch("/api/weather/radar/frames", { cache: "no-store" });
+        const response = await fetch(`/api/weather/radar/frames?product=${radarProduct}`, { cache: "no-store" });
         if (!response.ok) throw new Error("radar catalog unavailable");
         const catalog = await response.json() as WeatherRadarCatalogResponse;
         if (!active || generation !== radarGenerationRef.current) return;
@@ -126,7 +128,7 @@ export function useRadarWeatherContext({
       active = false;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [radarLatestMode, showWeatherRadar]);
+  }, [radarLatestMode, showWeatherRadar, radarProduct]);
 
   useEffect(() => {
     if (!showWeatherRadar || !radarPlaying || !radarCatalog?.frames.length) return;
