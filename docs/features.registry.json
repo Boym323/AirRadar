@@ -1120,6 +1120,28 @@
         "geomagnetic Kp",
         "planetary K index"
       ]
+    },
+    {
+      "id": "aladin-wind-compare",
+      "name": "ALADIN / ICON-EU Wind Comparison",
+      "category": "weather",
+      "status": "optional",
+      "introducedVersion": null,
+      "summary": "On-demand comparison of CHMI ALADIN Central Europe 2 km and DWD ICON-EU pressure-level winds near the receiver; disabled by default.",
+      "pages": [
+        "/weather"
+      ],
+      "apis": [
+        "/api/weather/wind/compare"
+      ],
+      "changelogScopes": [
+        "aladin-wind"
+      ],
+      "changelogKeywords": [
+        "ALADIN wind",
+        "ICON-EU comparison",
+        "regional wind model"
+      ]
     }
   ]
 }
