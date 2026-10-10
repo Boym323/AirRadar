@@ -24,7 +24,7 @@ describe("Visual refinement B: aircraft and mobile drawer", () => {
     expect(detail).toContain('t.radar.expandAircraftPanel');
     expect(detail).toContain('t.radar.collapseAircraftPanel');
     expect(style).toContain('.sidebar.drawer-aircraft.has-selection:has(.aircraft-quick-mobile-expand[aria-expanded="true"])');
-    expect(style).toContain("height: min(52svh, 490px)");
+    expect(style).toContain("height: min(43svh, 390px)");
     expect(style).toContain("height: min(80svh, 760px)");
     const gate = source("scripts/production-gates.mjs");
     expect(gate).toContain('"radar-mobile-selected-expanded"');
