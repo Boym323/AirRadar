@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'workflow_dispatch' && format('dispatch-{0}', github.ref) || 'production-main' }}
+  # Never let a newer docs-only push replace a queued deploy-bearing main run.
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'workflow_dispatch' && format('dispatch-{0}', github.ref) || format('main-sha-{0}', github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
 jobs:
@@ -306,6 +307,10 @@ jobs:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
     needs: [release-scope, release-validate]
+    # Only deploy-bearing runs enter this queue; docs-only changes cannot cancel them.
+    concurrency:
+      group: airradar-production-deploy
+      cancel-in-progress: false
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
     environment: production
