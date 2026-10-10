@@ -139,7 +139,7 @@ export class RadarAircraft3dRuntime {
   }
   private loadLicensedModels(): void {
     const generation = this.generation;
-    for (const type of new Set(this.candidates.slice(0, 4).map(item => item.aircraftType))) {
+    for (const type of new Set(this.candidates.slice(0, 2).map(item => item.aircraftType))) {
       void requestLicensedFaces(type, () => {
         if (this.licensedEnabled && generation === this.generation && this.map) this.updateMesh();
       });
