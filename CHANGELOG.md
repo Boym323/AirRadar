@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.394] - 2026-10-10
+
+Changes since v1.0.393.
+
+### Added
+
+- T5.6B private trail retention validation (#692) (c6bae665)
+
+### Maintenance
+
+- Sync generated repository metadata (#690) (4365d6b4)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#690) (4365d6b4)
+- feat(perf): T5.6B private trail retention validation (#692) (c6bae665)
+
+</details>
 ## [1.0.393] - 2026-10-10
 
 Changes since v1.0.392.
