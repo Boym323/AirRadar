@@ -363,7 +363,8 @@ describe("radar UI polish helpers", () => {
 
   it("keeps independent bounded SSE streams and does not add trail polling", () => {
     expect(`${appSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
-    expect(appSource).not.toContain("setInterval(");
+    // Legitimate RXW/FPN overlay timers must not be mistaken for trail polling.
+    expect(appSource).not.toMatch(/setInterval\(\s*(?:loadSelectedTrail|fetchSelectedTrail)/);
     expect(appSource).toContain("selected-trail-line");
     expect(appSource).toContain('geometry: { type: "LineString"');
   });
