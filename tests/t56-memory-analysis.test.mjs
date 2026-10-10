@@ -3,7 +3,7 @@ import { analyzeT56Samples, projectT56Sample } from "../scripts/t56-memory-analy
 
 const MB = 1024 * 1024;
 const start = Date.parse("2026-10-10T08:00:00Z");
-function sample(i, opts = {}) {
+function sample(i) {
   const at = new Date(start + i * 30000).toISOString();
   const gcTime = i >= 30 ? start + i * 30000 - 3000 : null;
   const status = {
