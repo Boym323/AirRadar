@@ -3,6 +3,7 @@ import { getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
 import { getDbTransactionDiagnostics, type DbTransactionDiagnosticsSnapshot } from "@/lib/server/db-transaction-diagnostics";
 import { getDbOperationDiagnostics, type DbOperationDiagnosticsSnapshot } from "@/lib/server/db-operation-diagnostics";
 import { getSystemStatusRequestDiagnostics } from "@/lib/server/system-status-request-diagnostics";
+import type { MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 
 export interface RuntimeDiagnostics {
   transactionAttribution?: DbTransactionDiagnosticsSnapshot;
@@ -53,6 +54,7 @@ export interface RuntimeDiagnostics {
   metadataFallbackCacheBytesLimit: number | null;
   providerCacheEntries: number | null;
   providerCacheLimit: number | null;
+  retentionAttribution: MemoryRetentionDiagnostics | null;
 }
 
 function nonNegative(value: number): number {
@@ -181,6 +183,7 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     metadataFallbackCacheBytesLimit: null,
     providerCacheEntries: null,
     providerCacheLimit: null,
+    retentionAttribution: null,
     ...extra,
   };
 }
