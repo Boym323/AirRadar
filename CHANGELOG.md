@@ -17,6 +17,20 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.401] - 2026-10-10
+
+Changes since v1.0.400.
+
+### Performance
+
+- Read-only 24-hour retention and event-loop soak sampler (#704) (50dcd2b9)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(T5.7C): read-only 24-hour retention and event-loop soak sampler (#704) (50dcd2b9)
+
+</details>
 ## [1.0.400] - 2026-10-10
 
 Changes since v1.0.399.
