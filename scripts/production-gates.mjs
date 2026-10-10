@@ -1003,6 +1003,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "more-menu-mobile-en-320", path: "/statistics", selector: ".statistics-page", viewport: { width: 320, height: 568 }, fullPage: false, openMore: "mobile", locale: "en" },
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
+        { name: "radar-mobile-320", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
         { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
@@ -1347,7 +1348,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await visualPage.getByText(target.commandExpected).first().waitFor({ state: "visible", timeout: 15_000 });
             }
           }
-          if (target.name === "radar-desktop" || target.name === "radar-mobile") {
+          if (target.name === "radar-desktop" || target.name === "radar-mobile" || target.name === "radar-mobile-320") {
             const quickActions = visualPage.getByTestId("radar-quick-actions");
             await quickActions.waitFor({ state: "visible", timeout: 15_000 });
             for (const key of ["search", "weather", "atc", "filters"]) {
@@ -1364,6 +1365,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") !== before,
                 { key: layer, before: original },
               );
+              if (layer === "weather") {
+                await visualPage.waitForFunction(() => {
+                  const state = document.querySelector('[data-testid="radar-weather-map-status"]')?.getAttribute("data-state");
+                  return state && ["loading", "ready", "stale", "unavailable"].includes(state);
+                });
+                if (!await visualPage.getByTestId("radar-weather-map-status").isVisible()) {
+                  throw new Error("V5 weather map status must be visible when enabled");
+                }
+              }
               await control.click();
               await visualPage.waitForFunction(
                 ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") === before,

@@ -230,3 +230,14 @@ letadel; duplicitní souhrnná karta se skryje. Dotykové prvky zachovávají
 44px cíle a tlačítko provozu má přístupný název, i když se jeho viditelný
 popisek při <=420 px nezobrazuje. Vyhledávání zůstává hlavním pružným
 prvkem horní lišty.
+
+### Implementace V5-A3: jednoznačný stav meteorologické vrstvy
+
+Zkratka počasí a časová osa používají jednotný stav vybraného snímku:
+vypnuto, načítání, připraveno, zastaralé nebo nedostupné. Starý snímek
+je jasně označen časem; starší nesouvisející snímky nemění aktuální stav.
+Selhání či prázdný katalog zahodí předchozí obrázek i jeho ID a zastaví
+animaci, takže stará data nevypadají jako aktuální počasí. Uložená volba,
+výběr snímků, cache a 60sekundová obnova zůstávají beze změny; žádný nový
+provider nepřibyl. Při nedostupnosti se zobrazuje přeložené upozornění.
+Etapy A2 a A3 musejí před vydáním projít browser testem a kontrolou snímků.

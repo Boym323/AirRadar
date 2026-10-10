@@ -6400,3 +6400,16 @@ button, input, select, textarea { color-scheme: dark; }
   .map-overlay-primary .traffic-trigger-label { display: none; }
   .map-overlay-primary .traffic-trigger { min-width: var(--control-height-touch); justify-content: center; }
 }
+
+/* V5-A3: the selected radar frame owns freshness; never silently reuse an
+ * old weather image after catalog failure. */
+.radar-quick-actions .radar-quick-action[data-weather-state="stale"] { border-color: var(--border-selected); }
+.radar-quick-actions .radar-quick-action[data-weather-state="unavailable"] { border-color: var(--border-default); }
+.radar-quick-weather-state {
+  color: var(--warning);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+}
+.radar-quick-action[data-weather-state="loading"] .radar-quick-weather-state { color: var(--text-secondary); }
+.weather-radar-timeline-heading strong { display: inline-flex; align-items: center; gap: var(--space-2); }
+.weather-radar-stale-label { color: var(--warning); font-size: var(--font-size-2xs); font-weight: 700; }

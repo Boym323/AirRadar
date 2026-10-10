@@ -233,3 +233,15 @@ traffic count; the independent redundant summary card is hidden. Touch
 controls retain 44px targets and the traffic trigger retains an accessible
 name even when its visible label is hidden at <=420px. Search remains the
 primary flexible topbar control.
+
+### V5-A3 implemented: trustworthy weather state
+
+The radar shortcut and timeline now expose a shared selected-frame state: off,
+loading, ready, stale or unavailable. An old frame is explicitly marked and
+timestamped; other stale catalog frames cannot mark the selected frame stale.
+A failed/empty catalog clears the previous image and frame ID and stops
+animation, so old radar pixels are not mistaken for current weather. Existing
+layer preference, frame selection, cache and 60-second polling are preserved,
+without any new provider. An unavailable layer displays localized feedback.
+Both A2 and A3 must pass the production browser gate and human screenshot
+review before a release.
