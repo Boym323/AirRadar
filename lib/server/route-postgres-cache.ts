@@ -90,7 +90,8 @@ export class PostgresRouteCache implements RouteCacheStore {
     if (!validPersistedRoute(route) || !routeMatchesCacheKey(key, route)
       || !Number.isFinite(ttlMs) || ttlMs <= 0) return;
     const routeJson = JSON.stringify(route);
-    if (routeJson.length > MAX_JSON_LENGTH) return;
+    const source = route.source;
+    if (!source || routeJson.length > MAX_JSON_LENGTH) return;
     const now = Date.now();
     const storedAt = BigInt(now);
     const expiresAt = BigInt(now + Math.floor(ttlMs));
@@ -98,7 +99,7 @@ export class PostgresRouteCache implements RouteCacheStore {
       await db.runtime().execute(db.raw.sql`
         INSERT INTO "public"."routeEnrichmentCache"
           ("cacheKey", "source", "routeJson", "storedAtMs", "expiresAtMs")
-        VALUES (${key}, ${route.source}, ${routeJson}, ${storedAt}, ${expiresAt})
+        VALUES (${key}, ${source}, ${routeJson}, ${storedAt}, ${expiresAt})
         ON CONFLICT ("cacheKey") DO UPDATE
         SET "source" = EXCLUDED."source", "routeJson" = EXCLUDED."routeJson",
             "storedAtMs" = EXCLUDED."storedAtMs", "expiresAtMs" = EXCLUDED."expiresAtMs"
