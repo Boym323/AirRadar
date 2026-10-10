@@ -198,7 +198,7 @@ export function RadarMapLayerMenu({
         <label><input type="checkbox" checked={showAircraft} onChange={(event) => onShowAircraftChange(event.target.checked)} /> {t.layers.aircraft}</label>
         <label><input type="checkbox" checked={showOgn} onChange={(event) => onShowOgnChange(event.target.checked)} /> {t.layers.ogn}</label>
         <label data-testid="map-layer-sondes"><input type="checkbox" checked={showSondes} onChange={(event) => onShowSondesChange(event.target.checked)} /> {t.locale.startsWith("cs") ? "Meteorologické sondy" : "Weather balloons"}{showSondes && sondesCount > 0 ? ` · ${formatNumber(sondesCount)}` : ""}</label>
-        {showSondes && <small className="map-layer-sublevel">{sondesStatus === "unavailable" ? (t.locale.startsWith("cs") ? "SondeHub není dostupný nebo povolený" : "SondeHub unavailable or not enabled") : sondesStatus === "loading" ? t.common.loading : t.locale.startsWith("cs") ? `SondeHub · ${sondesStatus === "stale" ? "starší snímek" : "časově označený snímek"} · CC BY-SA 2.0` : `SondeHub · ${sondesStatus === "stale" ? "stale snapshot" : "timestamped snapshot"} · CC BY-SA 2.0`}</small>
+        {showSondes && <small className="map-layer-sublevel">{sondesStatus === "unavailable" ? (t.locale.startsWith("cs") ? "SondeHub není dostupný nebo povolený" : "SondeHub unavailable or not enabled") : sondesStatus === "loading" ? t.common.loading : t.locale.startsWith("cs") ? `SondeHub · ${sondesStatus === "stale" ? "starší snímek" : "časově označený snímek"} · CC BY-SA 2.0` : `SondeHub · ${sondesStatus === "stale" ? "stale snapshot" : "timestamped snapshot"} · CC BY-SA 2.0`}</small>}
       </div>
       <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.aviation}</span>
