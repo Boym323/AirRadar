@@ -84,9 +84,13 @@ async function main() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   if (!token) throw new Error("authorization_missing");
   const base = new URL(process.env.T55_BASE_URL ?? "https://airradar.pomykal.cz");
-  if (base.protocol !== "https:" &&
-      !(base.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(base.hostname))) {
-    throw new Error("secure_endpoint_required");
+  const trustedProduction = base.protocol === "https:" &&
+    base.hostname === "airradar.pomykal.cz" && (base.port === "" || base.port === "443");
+  const localLoopback = base.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname);
+  if (base.username || base.password || (!trustedProduction && !localLoopback)) {
+    // Never send the admin token to an arbitrary T55_BASE_URL host.
+    throw new Error("trusted_endpoint_required");
   }
   const seconds = durationSetting("T55_SECONDS", 1800, 60, 3600);
   const interval = durationSetting("T55_INTERVAL_SECONDS", 30, 15, 120);
@@ -107,6 +111,8 @@ async function main() {
       rows.push(await collect(base, cookie));
     } catch {
       // Deliberately never stringify the thrown error (may contain URL/headers).
+      // Fail fast if credentials, schema v2, or runtime observation are absent.
+      if (i === 0) throw new Error("initial_diagnostic_sample_unavailable");
       unavailable.push({ at: new Date().toISOString(), reason: "read_only_sample_unavailable" });
     }
   }
