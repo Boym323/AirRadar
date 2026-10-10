@@ -5,7 +5,7 @@ import { AirRadarPageShell } from "@/components/airradar-shell";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getAircraftDetail, HistoryDatabaseUnavailableError, type AircraftDetailResponse } from "@/lib/server/history";
-import { enrichAircraftDetailView } from "@/lib/server/aircraft-detail-enrichment";
+import { getOnDemandEnrichmentService } from "@/lib/server/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ async function resolveAircraft(hex: string): Promise<{ detail: AircraftDetailRes
     const service = getAircraftStateService();
     // The radar/SSE path owns startup and polling. A standalone detail request
     // only reads the already-running RAM state and never starts another loop.
-    liveAircraft = await enrichAircraftDetailView(service.getAircraft(icaoHex), new Date());
+    liveAircraft = service.getAircraft(icaoHex);
   } catch {
     // A receiver or optional enrichment outage must not hide durable aircraft metadata/history.
   }
@@ -44,5 +44,5 @@ export default async function AircraftPage({ params }: { params: Promise<{ hex: 
   if (!icaoHex) notFound();
   const { detail, liveAircraft } = await resolveAircraft(icaoHex);
   if (!detail?.aircraft && !liveAircraft) notFound();
-  return <AirRadarPageShell><AircraftDetailV3 detail={detail} liveAircraft={liveAircraft} /></AirRadarPageShell>;
+  return <AirRadarPageShell><AircraftDetailV3 detail={detail} liveAircraft={liveAircraft} flightAwareEnabled={getOnDemandEnrichmentService().hasFlightPlanProvider} /></AirRadarPageShell>;
 }
