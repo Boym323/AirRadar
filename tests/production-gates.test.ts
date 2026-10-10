@@ -202,9 +202,9 @@ describe("production release metadata gate", () => {
 
   it("captures radar visual evidence only after basemap features are rendered", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain("map?.isStyleLoaded()");
+    expect(source).toContain("window.__airradarMapStyleLoadedForDiagnostics !== true");
     expect(source).toContain("map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer))");
-    expect(source).toContain('target.v6Appearance === "satellite" || target.v6Terrain === true');
+    expect(source).not.toContain("(!allowPendingRaster && !map.isStyleLoaded())");
     expect(source).toContain('missing basemap evidence:');
     expect(source).toContain('renderedVectorFeatures');
     expect(source).toContain('getLayoutProperty("radar-v6-satellite-layer", "visibility")');

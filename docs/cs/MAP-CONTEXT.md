@@ -32,6 +32,21 @@ persistovanou opacity (20–100 %, výchozí 65 %). V2 archivuje validované fra
 do persistentního omezeného adresáře a řeší nejnovější frame v nebo před
 Global Map Time.
 
+Vrstva meteorologického radaru nově podporuje druhý produkt **PseudoCAPPI 2 km**
+z oficiálního katalogu PNG ČHMÚ
+`https://opendata.chmi.cz/meteorology/weather/radar/composite/pseudocappi2km/png/`.
+Výchozí zůstává MAX_Z. API katalogů a obrázků povolují jen hodnoty
+`MAX_Z_MASKED` a `PSEUDOCAPPI_2KM`; poskytovatelé mají oddělené cache,
+konstrukci URL a přesnou kontrolu názvů `z_cappi020`.
+Výběr produktu se uchovává jen v prohlížeči. Historický Map Context nadále
+pracuje s archivem MAX_Z, dokud nebude hotový archiv pro více produktů.
+
+**Echo Top není PNG**. ČHMÚ tento produkt poskytuje jako ODIM HDF5 na
+`https://opendata.chmi.cz/meteorology/weather/radar/composite/echotop/hdf5/`.
+Dokud nevznikne bezpečné zpracování HDF5 s validací jednotek a projekce,
+nelze Echo Top vykreslovat stejnou PNG vrstvou ani ho vydávat za skutečnou
+výšku horní hranice oblaků.
+
 ## Mapa METAR
 
 METAR vrstva znovu používá `AviationWeatherProvider` a oficiální JSON API
