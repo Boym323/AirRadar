@@ -103,7 +103,11 @@ export async function analyzeFile(file) {
   const size = (await stat(file)).size;
   if (size > MAX_REPORT_BYTES) throw new Error("report_too_large");
   const content = await readFile(file, "utf8");
-  const lines = content.trim().split("\n");
+  // A hard termination can leave the final NDJSON write incomplete. Keep
+  // only newline-terminated records; never skip an invalid complete line.
+  const committed = content.endsWith("\n") ? content : content.slice(0, content.lastIndexOf("\n") + 1);
+  if (!committed.trim()) throw new Error("empty_t57_journal");
+  const lines = committed.trimEnd().split("\n");
   if (lines.length > 3000) throw new Error("too_many_t57_rows");
   const records = lines.map((line) => JSON.parse(line));
   const result = analyzeT57Soak(records);
