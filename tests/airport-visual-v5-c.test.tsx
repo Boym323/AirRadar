@@ -68,6 +68,9 @@ describe("Visual System V5-C airport UX", () => {
   });
   it("keeps D4 prose full-width and renders semantic mobile flight cards without cloning rows", () => {
     expect(board).toContain('className="airport-live-flight-list airport-d4-signals"');
+    expect(board).toContain('data-testid="airport-v5-evidence-details"');
+    expect(board).toContain('airportDCopy.evidenceUnavailable');
+    expect(css).toContain(".airport-v5-evidence-details > summary");
     expect(css).toContain(".airport-d4-signals > li");
     expect(css).toContain('grid-template-areas: "flight movement" "time time" "runway evidence"');
     expect(css).toContain(".airport-v5-flights td::before");
@@ -87,6 +90,8 @@ describe("Visual System V5-C airport UX", () => {
       "airport-v5-overview-tablet",
     ]) expect(gate).toContain('name: "' + target + '"');
     expect(gate).toContain('if (!["weather", "map"].includes(target.airportCaptureView))');
+    expect(gate).toContain('advanced.getByTestId("airport-v5-evidence-details")');
+    expect(gate).toContain('await evidence.locator("summary").click()');
   });
 
 });
