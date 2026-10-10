@@ -22,6 +22,7 @@ export function setRadar3dTerrain(map: MapLibreMap, mode: Radar3dMode): void {
       type: "raster-dem",
       url: RADAR_TERRAIN_TILEJSON,
       tileSize: 512,
+      encoding: "terrarium",
       attribution: RADAR_TERRAIN_ATTRIBUTION,
     });
   }
