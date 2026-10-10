@@ -1444,7 +1444,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.waitForFunction((appearance) => {
               const map = window.__airradarMapForDiagnostics;
               if (!map?.getLayer("map-tint")) return false;
-              if (appearance === "satellite") return map.getLayer("radar-v6-satellite-layer")?.layout?.visibility === "visible";
+              if (appearance === "satellite") return Boolean(map.getSource("radar-v6-satellite")) && Boolean(map.getLayer("radar-v6-satellite-layer")) && map.getLayoutProperty("radar-v6-satellite-layer", "visibility") === "visible";
               return !map.getLayer("radar-v6-satellite-layer") && map.getPaintProperty("map-tint", "fill-opacity") === 0;
             }, target.v6Appearance, { timeout: 15_000 });
             await layers.locator("summary").click();
@@ -1546,18 +1546,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             if ("fonts" in document) await document.fonts.ready;
           });
           if (target.path.includes("mapDiagnostics=1")) {
-            await visualPage.waitForFunction(() => {
+            await visualPage.waitForFunction((satelliteMode) => {
               const map = window.__airradarMapForDiagnostics;
               // Screenshot evidence is only useful once actual vector
               // basemap features have been rendered. A map instance alone
               // can still produce a featureless black visual baseline.
-              if (!map?.isStyleLoaded()) return false;
+              if (!map || (!satelliteMode && !map.isStyleLoaded())) return false;
               try {
                 return map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer));
               } catch {
                 return false;
               }
-            }, undefined, { timeout: 25_000 });
+            }, target.v6Appearance === "satellite", { timeout: 25_000 });
           }
           if (target.openMapCredits) {
             const attribution = visualPage.locator(".radar-content .maplibregl-ctrl-attrib");
