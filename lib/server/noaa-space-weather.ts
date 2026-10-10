@@ -71,9 +71,26 @@ export class NoaaSpaceWeatherProvider {
         if (!response.ok || !response.headers.get("content-type")?.includes("json")) throw new Error("NOAA not available");
         const contentLength = Number(response.headers.get("content-length"));
         if (Number.isFinite(contentLength) && contentLength > MAX_BYTES) throw new Error("NOAA body too large");
-        const body = await response.text();
-        if (new TextEncoder().encode(body).length > MAX_BYTES) throw new Error("NOAA body too large");
-        const observation = parseNoaaKp(JSON.parse(body) as unknown, this.clock());
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("NOAA empty response");
+        let received = 0;
+        const chunks: Uint8Array[] = [];
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            received += value.byteLength;
+            if (received > MAX_BYTES) throw new Error("NOAA body too large");
+            chunks.push(value);
+          }
+        } finally {
+          await reader.cancel().catch(() => undefined);
+          reader.releaseLock();
+        }
+        const combined = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) { combined.set(chunk, offset); offset += chunk.byteLength; }
+        const observation = parseNoaaKp(JSON.parse(new TextDecoder().decode(combined)) as unknown, this.clock());
         if (!observation) throw new Error("NOAA invalid measurements");
         this.cache = { observation, fetchedAt: this.clock() };
         return this.snapshot(false);
