@@ -30,7 +30,7 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
   const [tiltCorrection, setTiltCorrection] = useState(0);
   const [manualAltitudeMeters, setManualAltitudeMeters] = useState("");
   const cameraAltitudeMeters = resolveCameraObserverAltitude(observer?.altitudeMeters ?? null, manualAltitudeMeters);
-  const cameraObserver = observer && cameraAltitudeMeters !== null ? { ...observer, altitudeMeters: cameraAltitudeMeters } : null;
+  const cameraObserver = useMemo(() => observer && cameraAltitudeMeters !== null ? { ...observer, altitudeMeters: cameraAltitudeMeters } : null, [observer, cameraAltitudeMeters]);
   const videoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (!active || !visible) return;
