@@ -147,7 +147,7 @@ export function isSondeHubEnabled(): boolean {
   return process.env.SONDEHUB_ENABLED?.trim().toLowerCase() === "true";
 }
 
-async function readBoundedJson(fetcher: typeof fetch, url: URL, now: number, onLimit: () => void): Promise<unknown> {
+async function readBoundedJson(fetcher: typeof fetch, url: URL, onLimit: () => void): Promise<unknown> {
   const response = await fetcher(url, {
     cache: "no-store",
     signal: AbortSignal.timeout(8_000),
@@ -202,7 +202,7 @@ export class SondeHubProvider {
         url.searchParams.set("lon", String(lon));
         url.searchParams.set("distance", String(Math.round(radiusKm * 1_000)));
         url.searchParams.set("last", "7200");
-        const raw = await readBoundedJson(this.fetcher, url, now, () => this.backoff());
+        const raw = await readBoundedJson(this.fetcher, url, () => this.backoff());
         const value: SondeSnapshot = { ...unavailable, available: true, fetchedAt: new Date(now).toISOString(), sondes: normalizeLatestSondes(raw, lat, lon, radiusKm, now) };
         this.snapshots.delete(key);
         this.snapshots.set(key, { value, expires: now + SNAPSHOT_TTL_MS });
@@ -226,8 +226,8 @@ export class SondeHubProvider {
     const predictionUrl = new URL(BASE + "/predictions");
     predictionUrl.searchParams.set("vehicles", serial);
     const [trackResult, predictionResult] = await Promise.allSettled([
-      readBoundedJson(this.fetcher, tracksUrl, now, () => this.backoff()),
-      readBoundedJson(this.fetcher, predictionUrl, now, () => this.backoff()),
+      readBoundedJson(this.fetcher, tracksUrl, () => this.backoff()),
+      readBoundedJson(this.fetcher, predictionUrl, () => this.backoff()),
     ]);
     if (trackResult.status !== "fulfilled" && predictionResult.status !== "fulfilled") return cached?.value ?? null;
     const landing = predictionResult.status === "fulfilled" ? extractLandingPrediction(predictionResult.value, serial, now) : null;
