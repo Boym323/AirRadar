@@ -1527,7 +1527,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.name === "airport-v5-analytics-en-mobile") {
             await visualPage.getByText("Aircraft movement analytics", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("Runway usage", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Historical movements inferred from receiver observations.", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
           }
           await visualPage.addStyleTag({
             content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
