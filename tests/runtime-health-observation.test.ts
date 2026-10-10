@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getRuntimeHealthObservation, startRuntimeHealthObservation, stopRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
+import { getRuntimeHealthObservation, getV8HeapSpaces, startRuntimeHealthObservation, stopRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 
 describe("opt-in runtime health observation", () => {
   afterEach(() => stopRuntimeHealthObservation());
@@ -11,6 +11,18 @@ describe("opt-in runtime health observation", () => {
     expect(snapshot.heapUsedBytes).toBeGreaterThan(0);
     expect(snapshot.externalBytes).toBeGreaterThanOrEqual(0);
     expect(snapshot.arrayBuffersBytes).toBeGreaterThanOrEqual(0);
+    expect(snapshot.v8HeapSpaces).toEqual(getV8HeapSpaces());
+    expect(snapshot.v8HeapSpaces.length).toBeGreaterThan(0);
+    expect(snapshot.v8HeapSpaces.length).toBeLessThanOrEqual(16);
+    expect(snapshot.v8HeapSpaces.some((space) => space.name === "old_space")).toBe(true);
+    for (const space of snapshot.v8HeapSpaces) {
+      expect(space.name).toMatch(/^[a-z_]{1,48}$/);
+      expect(space.usedBytes).toBeGreaterThanOrEqual(0);
+      expect(space.sizeBytes).toBeGreaterThanOrEqual(0);
+      expect(space.physicalBytes).toBeGreaterThanOrEqual(0);
+    }
+    expect(snapshot.majorGcCount).toBe(0);
+    expect(snapshot.postMajorGc).toBeNull();
   });
 
   it("starts and stops idempotently without retaining observers", () => {
@@ -24,6 +36,8 @@ describe("opt-in runtime health observation", () => {
     expect(snapshot.cpuSystemTimeMs).toBeGreaterThanOrEqual(0);
     stopRuntimeHealthObservation();
     expect(getRuntimeHealthObservation().status).toBe("disabled");
+    expect(getRuntimeHealthObservation().majorGcCount).toBe(0);
+    expect(getRuntimeHealthObservation().postMajorGc).toBeNull();
   });
 
   it("shares observation state across separately evaluated module copies", async () => {
