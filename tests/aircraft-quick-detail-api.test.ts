@@ -87,12 +87,23 @@ describe("aircraft detail API modes", () => {
     expect(JSON.stringify(body)).not.toContain("recentFlights");
   });
 
-  it("keeps full mode on the existing detail and on-demand enrichment path", async () => {
+  it("keeps full mode free of implicit FlightAware calls", async () => {
     const response = await GET(request("full"), { params: Promise.resolve({ hex: "abc123" }) });
     const body = await response.json() as Record<string, unknown>;
 
     expect(response.status).toBe(200);
     expect(getAircraftDetail).toHaveBeenCalledWith("ABC123", { historyRange: "30d" });
+    expect(getOnDemandEnrichmentService).not.toHaveBeenCalled();
+    expect(flightAwareFetch).not.toHaveBeenCalled();
+    expect(flightAwareProvider.getDiagnostics()).toMatchObject({ requests: 0, estimatedCostTodayUsd: 0 });
+    expect(JSON.stringify(body)).not.toContain("DCT TEST");
+  });
+
+  it("loads billed FlightAware data only for the explicit flightaware mode", async () => {
+    const response = await GET(request("flightaware"), { params: Promise.resolve({ hex: "abc123" }) });
+    const body = await response.json() as Record<string, unknown>;
+    expect(response.status).toBe(200);
+    expect(getAircraftDetail).not.toHaveBeenCalled();
     expect(getOnDemandEnrichmentService).toHaveBeenCalledTimes(1);
     expect(flightAwareFetch).toHaveBeenCalledTimes(1);
     expect(flightAwareProvider.getDiagnostics()).toMatchObject({ requests: 1, estimatedCostTodayUsd: 0.005 });

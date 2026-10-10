@@ -51,9 +51,11 @@ export interface AircraftMetadataDiagnostics {
   fallbackCacheBytesLimit?: number;
 }
 
+export interface RouteLookupPosition { lat: number | null; lon: number | null; }
+
 export interface FlightRouteProvider {
   readonly name: string;
-  getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null>;
+  getRoute(callsign: string, observedAt: Date, position?: RouteLookupPosition): Promise<FlightRoute | null>;
 }
 
 export interface FlightPlanProvider {
@@ -80,6 +82,8 @@ export interface ProviderRegistry {
   initialAircraftMetadata?: AircraftMetadataProvider;
   aircraftMetadata?: AircraftMetadataProvider;
   flightRoute?: FlightRouteProvider;
+  /** Free optional fallback, queried only for missing/invalid primary routes. */
+  flightRouteFallback?: FlightRouteProvider;
   flightPlan?: FlightPlanProvider;
   atcSector?: AtcSectorProvider;
   atcActivity?: AtcActivityProvider;
