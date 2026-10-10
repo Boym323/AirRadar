@@ -14,6 +14,8 @@ export function AirportMediaLinks({ icao }: { icao: string }) {
   const [kind, setKind] = useState<AirportMediaKind>("camera");
   const [message, setMessage] = useState("");
   const [permission, setPermission] = useState(false);
+  const [nativeHls, setNativeHls] = useState(false);
+  useEffect(() => { setNativeHls(Boolean(document.createElement("video").canPlayType("application/vnd.apple.mpegurl"))); }, []);
   const [activeUrl, setActiveUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,10 +49,11 @@ export function AirportMediaLinks({ icao }: { icao: string }) {
     </label>}
     {loaded && (links.length ? <ul>{links.map(item => {
       const player = resolveAuthorizedPlayer(item.url, item.kind);
-      const active = activeUrl === item.url && permission && Boolean(player);
+      const playable = Boolean(player && (player.type !== "hls" || nativeHls));
+      const active = activeUrl === item.url && permission && playable;
       return <li key={item.url} className="airport-v6-media-item">
         <span><strong>{item.kind === "camera" ? copy.camera : copy.audio}:</strong> <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={`${copy.open}: ${item.title}`}>{item.title} ↗</a></span>
-        {player && <Button type="button" variant="secondary" size="compact" disabled={!permission} onClick={() => setActiveUrl(active ? null : item.url)}>{active ? copy.stop : copy.play}</Button>}
+        {playable && <Button type="button" variant="secondary" size="compact" disabled={!permission} onClick={() => setActiveUrl(active ? null : item.url)}>{active ? copy.stop : copy.play}</Button>}
         <Button type="button" variant="ghost" size="compact" onClick={() => save(links.filter(link => link.url !== item.url))}>{copy.remove}</Button>
         {active && player && <div className="airport-v6-player" data-testid="airport-v6-authorized-player">
           {player.type === "youtube" && <iframe title={item.title} src={player.src} loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
@@ -58,8 +61,9 @@ export function AirportMediaLinks({ icao }: { icao: string }) {
             style={{width:"100%", aspectRatio:"16 / 9", minHeight:225, border:0}} />}
           {(player.type === "audio" || player.type === "hls" && item.kind === "audio") && <audio controls preload="none" src={player.src} style={{width:"100%"}} />}
           {(player.type === "video" || player.type === "hls" && item.kind === "camera") && <video controls playsInline preload="none" src={player.src} style={{width:"100%", maxHeight:480}} />}
-          {player.type === "hls" && <small>{copy.hlsUnsupported}</small>}
+
         </div>}
+        {player?.type === "hls" && !nativeHls && <small>{copy.hlsUnsupported}</small>}
         {!player && <small>{copy.unsupported}</small>}
       </li>;
     })}</ul> : <p>{copy.empty}</p>)}
