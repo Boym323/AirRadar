@@ -1,5 +1,6 @@
 import {
   WEATHER_RADAR_BOUNDS,
+  WEATHER_RADAR_CAPPI_SOURCE_URL,
   WEATHER_RADAR_CATALOG_TTL_MS,
   WEATHER_RADAR_HORIZON_MS,
   WEATHER_RADAR_MAX_FRAMES,
@@ -10,9 +11,12 @@ import {
   type WeatherRadarCatalog,
   type WeatherRadarDiagnostics,
   type WeatherRadarFrame,
+  type WeatherRadarProduct,
 } from "./types";
 
 const FILE_PATTERN = /^pacz2gmaps3\.z_max3d\.(\d{8})\.(\d{4})\.0\.png$/i;
+const CAPPI_FILE_PATTERN = /^pacz2gmaps3\.z_cappi020\.(\d{8})\.(\d{4})\.0\.png$/i;
+const productSource = (product: WeatherRadarProduct) => product === "PSEUDOCAPPI_2KM" ? WEATHER_RADAR_CAPPI_SOURCE_URL : WEATHER_RADAR_SOURCE_URL;
 const FRAME_ID_PATTERN = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/;
 const MAX_PNG_BYTES = 12 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8_000;
@@ -30,8 +34,8 @@ function validDate(year: number, month: number, day: number, hour: number, minut
     && date.getUTCHours() === hour && date.getUTCMinutes() === minute ? date : null;
 }
 
-export function parseWeatherRadarFilename(filename: string, now = Date.now()): ParsedRadarFrame | null {
-  const match = filename.match(FILE_PATTERN);
+export function parseWeatherRadarFilename(filename: string, now = Date.now(), product: WeatherRadarProduct = WEATHER_RADAR_PRODUCT): ParsedRadarFrame | null {
+  const match = filename.match(product === "PSEUDOCAPPI_2KM" ? CAPPI_FILE_PATTERN : FILE_PATTERN);
   if (!match) return null;
   const date = validDate(Number(match[1].slice(0, 4)), Number(match[1].slice(4, 6)), Number(match[1].slice(6, 8)), Number(match[2].slice(0, 2)), Number(match[2].slice(2, 4)));
   if (!date || date.getTime() > now + FUTURE_TOLERANCE_MS) return null;
@@ -39,13 +43,13 @@ export function parseWeatherRadarFilename(filename: string, now = Date.now()): P
   return { id, observedAt: date.toISOString(), filename };
 }
 
-export function parseWeatherRadarCatalog(html: string, now = Date.now()): ParsedRadarFrame[] {
+export function parseWeatherRadarCatalog(html: string, now = Date.now(), product: WeatherRadarProduct = WEATHER_RADAR_PRODUCT): ParsedRadarFrame[] {
   const found = new Map<string, ParsedRadarFrame>();
   const hrefPattern = /(?:href|src)=["']([^"']+)["']/gi;
   let match: RegExpExecArray | null;
   while ((match = hrefPattern.exec(html)) !== null) {
     const filename = match[1].split("/").pop() ?? "";
-    const parsed = parseWeatherRadarFilename(filename, now);
+    const parsed = parseWeatherRadarFilename(filename, now, product);
     if (parsed) found.set(parsed.id, parsed);
   }
   return [...found.values()]
@@ -64,18 +68,19 @@ export function isValidWeatherRadarFrameId(id: string, now = Date.now()): boolea
   return date !== null && date.getTime() <= now + FUTURE_TOLERANCE_MS;
 }
 
-function filenameForFrameId(id: string): string {
+function filenameForFrameId(id: string, product: WeatherRadarProduct): string {
   if (!isValidWeatherRadarFrameId(id)) throw new Error("Invalid weather radar frame id");
-  return `pacz2gmaps3.z_max3d.${id.slice(0, 8)}.${id.slice(8, 12)}.0.png`;
+  const prefix = product === "PSEUDOCAPPI_2KM" ? "z_cappi020" : "z_max3d";
+  return `pacz2gmaps3.${prefix}.${id.slice(0, 8)}.${id.slice(8, 12)}.0.png`;
 }
 
-function frameFromParsed(parsed: ParsedRadarFrame, latestId: string | null, now: number): WeatherRadarFrame {
+function frameFromParsed(parsed: ParsedRadarFrame, latestId: string | null, now: number, product: WeatherRadarProduct): WeatherRadarFrame {
   return {
     id: parsed.id,
     observedAt: parsed.observedAt,
     provider: WEATHER_RADAR_PROVIDER,
-    product: WEATHER_RADAR_PRODUCT,
-    imageUrl: `/api/weather/radar/frame/${parsed.id}`,
+    product,
+    imageUrl: `/api/weather/radar/frame/${parsed.id}` + (product === "PSEUDOCAPPI_2KM" ? "?product=PSEUDOCAPPI_2KM" : ""),
     latest: parsed.id === latestId,
     stale: now - Date.parse(parsed.observedAt) > WEATHER_RADAR_STALE_AFTER_MS,
   };
@@ -95,7 +100,7 @@ export class WeatherRadarProvider {
   private hasAttempted = false;
   private lastSuccessAt: string | null = null;
 
-  constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now) {}
+  constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now, private readonly product: WeatherRadarProduct = WEATHER_RADAR_PRODUCT) {}
 
   async getFrames(): Promise<WeatherRadarCatalog> {
     const now = this.clock();
@@ -140,16 +145,16 @@ export class WeatherRadarProvider {
   private async loadCatalog(now: number): Promise<WeatherRadarCatalog> {
     this.hasAttempted = true;
     try {
-      const response = await this.fetcher(WEATHER_RADAR_SOURCE_URL, { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      const response = await this.fetcher(productSource(this.product), { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!response.ok) throw new Error(`CHMI catalog HTTP ${response.status}`);
       const html = await response.text();
-      const parsed = parseWeatherRadarCatalog(html, now);
+      const parsed = parseWeatherRadarCatalog(html, now, this.product);
       const latestId = parsed.at(-1)?.id ?? null;
       const value: WeatherRadarCatalog = {
         available: parsed.length > 0,
         provider: WEATHER_RADAR_PROVIDER,
-        product: WEATHER_RADAR_PRODUCT,
-        frames: parsed.map((frame) => frameFromParsed(frame, latestId, now)),
+        product: this.product,
+        frames: parsed.map((frame) => frameFromParsed(frame, latestId, now, this.product)),
         latestFrameId: latestId,
         bounds: WEATHER_RADAR_BOUNDS,
         generatedAt: new Date(now).toISOString(),
@@ -163,15 +168,15 @@ export class WeatherRadarProvider {
       this.consecutiveFailures += 1;
       this.lastFailureAt = new Date(this.clock()).toISOString();
       if (this.catalog) return this.catalog.value;
-      return { available: false, provider: WEATHER_RADAR_PROVIDER, product: WEATHER_RADAR_PRODUCT, frames: [], latestFrameId: null, bounds: WEATHER_RADAR_BOUNDS, generatedAt: new Date(now).toISOString() };
+      return { available: false, provider: WEATHER_RADAR_PROVIDER, product: this.product, frames: [], latestFrameId: null, bounds: WEATHER_RADAR_BOUNDS, generatedAt: new Date(now).toISOString() };
     }
   }
 
   private async loadFrame(id: string): Promise<Uint8Array> {
     this.hasAttempted = true;
     try {
-      const filename = filenameForFrameId(id);
-      const response = await this.fetcher(`${WEATHER_RADAR_SOURCE_URL}${filename}`, { cache: "force-cache", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      const filename = filenameForFrameId(id, this.product);
+      const response = await this.fetcher(`${productSource(this.product)}${filename}`, { cache: "force-cache", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!response.ok || !response.headers.get("content-type")?.toLowerCase().startsWith("image/png")) throw new Error("CHMI frame is not a PNG");
       const rawLength = response.headers.get("content-length");
       const length = rawLength === null ? Number.NaN : Number(rawLength);
@@ -192,3 +197,5 @@ export class WeatherRadarProvider {
 }
 
 export const defaultWeatherRadarProvider = new WeatherRadarProvider();
+/** Separate bounded caches ensure CAPPI cannot affect the existing MAX_Z radar. */
+export const defaultCappiRadarProvider = new WeatherRadarProvider(fetch, Date.now, "PSEUDOCAPPI_2KM");
