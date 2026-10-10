@@ -67,6 +67,13 @@ function markdown(s) {
     "- Network trail points p50/max: " + fmt(s.trails.networkPoints?.p50) + " / " + fmt(s.trails.networkPoints?.max),
     "- Local aircraft p50/max: " + fmt(s.trails.localAircraft?.p50) + " / " + fmt(s.trails.localAircraft?.max),
     "- Network aircraft p50/max: " + fmt(s.trails.networkAircraft?.p50) + " / " + fmt(s.trails.networkAircraft?.max),
+    "- Trail bounds aggregates available: " + s.trails.boundsDiagnosticsComplete,
+    "- Local max points per aircraft: " + fmt(s.trails.localMaxPerAircraft?.max),
+    "- Network max points per aircraft: " + fmt(s.trails.networkMaxPerAircraft?.max),
+    "- Local/network above-limit aircraft max: " + fmt(s.trails.localOverLimitAircraft?.max) +
+      " / " + fmt(s.trails.networkOverLimitAircraft?.max),
+    "- Local/network at-limit aircraft max: " + fmt(s.trails.localAtLimitAircraft?.max) +
+      " / " + fmt(s.trails.networkAtLimitAircraft?.max),
     "",
     "## Limitations",
     "",
