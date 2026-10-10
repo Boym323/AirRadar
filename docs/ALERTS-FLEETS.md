@@ -56,3 +56,8 @@ boundary crossing, and aircraft outside local coverage cannot trigger a live
 local alert. Pushover depends on external network/service availability.
 
 The Czech localization is [available here](cs/ALERTS-FLEETS.md).
+
+
+## Fleet Explorer V2 (V6-F first delivery)
+
+The existing bounded watchlist-backed fleet response remains canonical; V6-F adds zero-request client-side fleet exploration on the already returned at-most-100 aircraft: total/live/offline counts, 30-day observed flight totals (sum of existing per-aircraft counts, not distinct flights), search across ICAO/registration/operator/callsign/type, live/offline filtering, and stable sorting by last observation, 30-day count or registration. It never implies full worldwide fleet coverage and adds no SQL, stream, API, or provider query. Airport comparison and Airport Live Board are already separate production features; no parallel reimplementation is made here.

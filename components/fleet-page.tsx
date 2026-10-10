@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { buildFleetSummary, filterFleetAircraft, type FleetFilterMode, type FleetSort } from "@/lib/fleet-explorer-v6-f";
+import { fleetExplorerCopy } from "@/lib/i18n/fleet-explorer-v6-f";
 import { useLocale } from "@/components/locale-provider";
 import type { FleetAircraft, FleetResponse } from "@/lib/server/fleet";
 import { formatDateTime, formatNumber, getTranslations, type LocaleDictionary } from "@/lib/i18n";
@@ -75,6 +77,12 @@ function FleetCard({ aircraft, dictionary }: { aircraft: FleetAircraft; dictiona
 export function FleetPage({ data }: { data: FleetResponse }) {
   const { locale } = useLocale();
   const dictionary = getTranslations(locale);
+  const copy = fleetExplorerCopy(locale);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<FleetFilterMode>("all");
+  const [sort, setSort] = useState<FleetSort>("lastObserved");
+  const summary = useMemo(() => buildFleetSummary(data.aircraft), [data.aircraft]);
+  const visible = useMemo(() => filterFleetAircraft(data.aircraft, { query, filter, sort }), [data.aircraft, query, filter, sort]);
   return <main className="history-page fleet-page">
     <header className="history-page-header fleet-page-header">
       <div>
@@ -88,6 +96,24 @@ export function FleetPage({ data }: { data: FleetResponse }) {
       </nav>
     </header>
     {data.ignoredRuleCount > 0 && <p className="fleet-note">{dictionary.fleet.ignoredRules(data.ignoredRuleCount)}</p>}
-    {data.aircraft.length === 0 ? <section className="statistics-card fleet-empty"><h2>{dictionary.fleet.emptyTitle}</h2><p>{dictionary.fleet.emptyDescription}</p><Link className="primary-button" href="/watchlist">{dictionary.fleet.openWatchlist}</Link></section> : <div className="fleet-grid">{data.aircraft.map((aircraft) => <FleetCard key={aircraft.icaoHex} aircraft={aircraft} dictionary={dictionary} />)}</div>}
+    {data.aircraft.length > 0 && <section className="fleet-v6-tools statistics-card" data-testid="fleet-explorer-v6-f" aria-label={copy.title}>
+      <div className="fleet-v6-summary" aria-label={copy.summary}>
+        <span>{copy.total}: <strong>{summary.total}</strong></span>
+        <span>{copy.live}: <strong>{summary.live}</strong></span>
+        <span>{copy.offline}: <strong>{summary.offline}</strong></span>
+        <span>{copy.observations30d}: <strong>{formatNumber(summary.observations30d, 0, dictionary.locale)}</strong></span>
+      </div>
+      <div className="fleet-v6-filters">
+        <label>{copy.search}<input type="search" value={query} maxLength={100} onChange={(event) => setQuery(event.target.value)} placeholder={copy.searchPlaceholder} /></label>
+        <label>{copy.filter}<select value={filter} onChange={(event) => setFilter(event.target.value as FleetFilterMode)}>
+          <option value="all">{copy.all}</option><option value="live">{copy.live}</option><option value="offline">{copy.offline}</option>
+        </select></label>
+        <label>{copy.sort}<select value={sort} onChange={(event) => setSort(event.target.value as FleetSort)}>
+          <option value="lastObserved">{copy.mostRecent}</option><option value="observations30d">{copy.mostObserved}</option><option value="registration">{copy.registration}</option>
+        </select></label>
+      </div>
+      <small aria-live="polite">{copy.displayed(visible.length, summary.total)} · {copy.snapshotNote}</small>
+    </section>}
+    {data.aircraft.length === 0 ? <section className="statistics-card fleet-empty"><h2>{dictionary.fleet.emptyTitle}</h2><p>{dictionary.fleet.emptyDescription}</p><Link className="primary-button" href="/watchlist">{dictionary.fleet.openWatchlist}</Link></section> : visible.length > 0 ? <div className="fleet-grid">{visible.map((aircraft) => <FleetCard key={aircraft.icaoHex} aircraft={aircraft} dictionary={dictionary} />)}</div> : <p className="fleet-note" role="status">{copy.noMatches}</p>}
   </main>;
 }

@@ -6818,3 +6818,10 @@ button, input, select, textarea { color-scheme: dark; }
 .radar-content[data-presentation-mode="true"] .map-overlay { right: 64px; }
 .radar-content[data-presentation-mode="true"] .radar-quick-actions,
 .radar-content[data-presentation-mode="true"] [data-testid="radar-multi-aircraft"] { display: none; }
+
+/* V6-F Fleet Explorer: compact summary/filter row reusing card tokens. */
+.fleet-v6-tools { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.fleet-v6-summary, .fleet-v6-filters { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+.fleet-v6-summary span { padding: var(--space-2); background: var(--surface-overlay); border-radius: var(--radius-md); }
+.fleet-v6-filters label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
+.fleet-v6-filters :is(input,select) { min-height: var(--control-height-touch); padding-inline: var(--space-2); color: var(--text-primary); background: var(--surface-overlay); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
