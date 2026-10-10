@@ -312,3 +312,12 @@ analytics. Analytics holds the existing V6-V9 and D2-D4 evidence, plus
 historical traffic and movements in a separate dedicated view. These models
 remain source-labeled and confidence-aware; switching views never creates a
 second airport operations controller.
+
+### V5-C CI verification
+
+The production browser gate now navigates all seven airport views, verifies
+receiver-based arrivals/departures filters and runway/flow/advanced contexts,
+checks weather and map mounts, then returns to the requested screenshot view.
+It captures the overview at desktop, 390 px and 320 px, a mobile arrivals
+board and the desktop advanced analytics view. No mock airport UI is accepted
+as a substitute for an actual Playwright-rendered view.

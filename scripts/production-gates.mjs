@@ -984,7 +984,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "command-search-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historické lety" },
         { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
-        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, openAirportAdvanced: true },
+        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
+        { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -1012,6 +1013,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW – provozní přehled" },
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-live-board-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
+        { name: "airport-v5-arrivals-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
+        { name: "airport-v5-overview-320", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 320, height: 568 }, fullPage: false, mockAirportV3: true },
         { name: "predictive-readiness-mobile", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 390, height: 844 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "predictive-eta-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockEtaAdvisory: "public" },
@@ -1116,50 +1119,41 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             });
           }
           if (target.mockAirportV3) {
-            await visualPage.route("**/api/airports/LKPR/operations?period=24h", async (route) => {
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(airportOperationsFixture) });
-            });
-            await visualPage.route("**/api/weather/airport/LKPR", async (route) => {
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(airportWeatherFixture) });
-            });
-          }
-          if (target.mockCommandSearch) {
-            await visualPage.route("**/api/search?q=*", async (route) => {
-              const body = target.mockCommandSearch === "flight" ? commandSearchFlightFixture : commandSearchActionFixture;
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-            });
-          }
-          if (target.mockEtaAdvisory) {
-            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
-              const body = target.mockEtaAdvisory === "public" ? etaAdvisoryPublicFixture : etaAdvisoryAdminFixture;
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-            });
-          }
-          if (target.mockRunwayAdvisory) {
-            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
-              const body = target.mockRunwayAdvisory === "public" ? runwayAdvisoryPublicFixture : runwayAdvisoryAdminFixture;
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-            });
-          }
-          if (target.mockRunwayChangeAdvisory) {
-            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
-              const body = target.mockRunwayChangeAdvisory === "public" ? runwayChangeAdvisoryPublicFixture : runwayChangeAdvisoryAdminFixture;
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-            });
-          }
-          if (target.mockTrajectoryAdvisory) {
-            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
-              const body = target.mockTrajectoryAdvisory === "public" ? trajectoryAdvisoryPublicFixture : trajectoryAdvisoryAdminFixture;
-              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-            });
-          }
-          if (target.name === "system-desktop") {
-            // Acquire the real public snapshot outside Playwright routing.
-            // A second in-flight status response can be disposed when this
-            // screenshot page closes, leaving an unhandled route callback.
-            const upstream = await get("/api/system/status");
-            if (!upstream.ok) throw new Error(`System visual smoke status returned HTTP ${upstream.status}`);
-            systemStatusSnapshot = await upstream.json();
+            const tabs = visualPage.getByTestId("airport-v5-tabs");
+            await tabs.waitFor({ state: "visible", timeout: 15_000 });
+            const switchAirportView = async (view) => {
+              await tabs.getByTestId(`airport-v5-tab-${view}`).click();
+              await visualPage.locator(`[data-testid="airport-v5-panel"][id="airport-v5-panel-${view}"]`).waitFor({ state: "visible", timeout: 15_000 });
+            };
+            await visualPage.locator('[data-testid="airport-live-board-weather"]').getByText("VFR", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="airport-live-board-active-inbound"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="airport-live-board-active-outbound"]').waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("arrivals");
+            const arrivals = visualPage.getByTestId("airport-v5-flights-table");
+            await arrivals.getByText("CSA123", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await arrivals.getByTestId("airport-v5-flight-search").fill("NOT_A_REAL_CALLSIGN");
+            if (await arrivals.getByText("CSA123", { exact: true }).isVisible()) {
+              throw new Error("V5 airport arrival search did not filter nonmatches");
+            }
+            await arrivals.getByTestId("airport-v5-flight-search").fill("");
+            await switchAirportView("departures");
+            await visualPage.getByTestId("airport-v5-flights-table").getByText("AUA456", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("operations");
+            await visualPage.getByTestId("airport-live-board-flow-pulse").waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByTestId("airport-live-board-runways").getByText("RWY 24", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByTestId("airport-v3-timeline").waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("analytics");
+            const advanced = visualPage.getByTestId("airport-live-board-advanced");
+            await advanced.waitFor({ state: "visible", timeout: 15_000 });
+            for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"]) {
+              await advanced.locator(`[data-testid="${id}"]`).waitFor({ state: "visible", timeout: 15_000 });
+            }
+            await switchAirportView("weather");
+            await visualPage.locator(".airport-weather-card").waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView("map");
+            await visualPage.locator(".airport-map-card").waitFor({ state: "visible", timeout: 15_000 });
+            await switchAirportView(target.airportCaptureView ?? "overview");
+            await visualPage.locator('[data-product="airport-live-board-v8"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveReadiness) {
             if (!systemStatusSnapshot) throw new Error("Predictive visual smoke requires a successful real system status snapshot");

@@ -303,3 +303,11 @@ upozornění, že jde o odhad přijímače. Úvodní Přehled již neopakuje
 celou rozšířenou analýzu tlaku provozu. Všechny modely V6–V9 a D2–D4,
 historické statistiky a pozorované pohyby jsou samostatně v Analýzách.
 Zachovává se informace o zdroji, míra jistoty a jediný controller.
+
+### V5-C ověření v CI
+
+Produkční browser gate nyní prochází všech sedm letištních záložek, testuje
+filtrování pozorovaných příletů/odletů, provoz drah a pokročilou analytiku,
+načtení mapy a počasí a vrací se na požadovaný snímek. Ukládá přehled na
+desktopu, mobilu 390 a 320 px, mobilní přílety a desktopovou analytiku.
+Jde o skutečně vykreslené Playwright snímky, nikoli grafické makety.
