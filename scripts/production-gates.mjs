@@ -1053,7 +1053,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       // Share one real, validated system snapshot across admin readiness captures.
       // Repeated upstream calls late in the visual sweep can hit the public rate limit.
       let systemStatusSnapshot = null;
-      for (const target of visualTargets) {
+      // PR 3D GPU validation may target a small explicit visual subset; releases always run all.
+      const requestedVisualTargets = (process.env.AIRRADAR_VISUAL_TARGETS ?? "")
+        .split(",").map((name) => name.trim()).filter(Boolean);
+      const unknownVisualTargets = requestedVisualTargets.filter((name) => !visualTargets.some((target) => target.name === name));
+      if (unknownVisualTargets.length) throw new Error(`Unknown visual targets: ${unknownVisualTargets.join(", ")}`);
+      for (const target of visualTargets.filter((item) => requestedVisualTargets.length === 0 || requestedVisualTargets.includes(item.name))) {
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
           if (target.locale) {
