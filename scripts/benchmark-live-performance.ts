@@ -95,11 +95,65 @@ function detailLookupBenchmark(count: number) {
   return { count, iterations, beforeMs: Math.round(beforeMs * 100) / 100, afterMs: Math.round(afterMs * 100) / 100, speedup: Math.round((beforeMs / Math.max(afterMs, 0.001)) * 100) / 100 };
 }
 
+// T5.6C: exercise the complete local/network union, not just a single detail
+// lookup. Keep a fixed mix of overlapping and network-only identities and use
+// a fixed observation time so run-to-run traffic selection is deterministic.
+// Wall time is observational and must never become a CI threshold on shared
+// runners. Compare repeated runs on matched hardware/Node version instead.
+function sourceMergeBenchmark(count: number) {
+  const localAircraft = fixtureAircraft(count);
+  const half = Math.floor(count / 2);
+  const networkAircraft = fixtureAircraft(count).map((aircraft, index) => ({
+    ...aircraft,
+    icaoHex: index < half ? aircraft.icaoHex : (count + index + 1).toString(16).padStart(6, "0"),
+    origin: "adsblol" as const,
+  }));
+  const local = new Map(localAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+  const network = new Map(networkAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+  const options = {
+    localStaleAfterMs: 15_000,
+    networkStaleAfterMs: 60_000,
+    now: Date.parse(localAircraft[0]!.lastSeen),
+  };
+  const expected = count * 2 - half;
+  const run = (iterations: number) => {
+    const started = performance.now();
+    const cpuStarted = process.cpuUsage();
+    let observed = 0;
+    for (let iteration = 0; iteration < iterations; iteration += 1) {
+      const merged = mergeAircraftMaps(local, network, receiver, options);
+      observed = merged.length;
+    }
+    if (observed !== expected) throw new Error("source_merge_union_regression");
+    const cpu = process.cpuUsage(cpuStarted);
+    return { wallMs: performance.now() - started, cpuMs: (cpu.user + cpu.system) / 1000 };
+  };
+  run(3); // JIT warmup excluded from recorded samples.
+  const samples = Array.from({ length: 7 }, () => run(10));
+  const median = (values: number[]) => {
+    const sorted = values.slice().sort((a, b) => a - b);
+    return Math.round(sorted[Math.floor(sorted.length / 2)]! * 100) / 100;
+  };
+  return {
+    scenario: "source-merge-union",
+    count,
+    overlap: half,
+    merged: expected,
+    iterationsPerSample: 10,
+    samples: samples.length,
+    wallMsMedian: median(samples.map((sample) => sample.wallMs)),
+    cpuMsMedian: median(samples.map((sample) => sample.cpuMs)),
+    // Values include altitude-provenance logic and process-local diagnostics;
+    // they cannot attribute the entire cost to source arbitration.
+  };
+}
+
 // Keep these sizes aligned with the runtime audit contract. The benchmark is
 // intentionally report-only; hosted runner wall-clock values are informative.
 const counts = [100, 1_000, 5_000];
 const results = [
   ...counts.map(detailLookupBenchmark),
+  ...counts.map(sourceMergeBenchmark),
   ...counts.flatMap((count) => [fanoutBenchmark(count, 1, "local"), fanoutBenchmark(count, 20, "local")]),
   ...counts.map((count) => fanoutBenchmark(count, 20, "extended")),
   ...counts.map((count) => sseBenchmark(count, 20)),

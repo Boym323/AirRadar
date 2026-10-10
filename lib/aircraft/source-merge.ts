@@ -9,7 +9,6 @@ import type {
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { selectAircraftAltitude } from "@/lib/aircraft/altitude-provenance";
 
-const POSITION_TIE_MS = 1_000;
 const EMERGENCY_TIE_MS = 1_000;
 const SQUAWK_TIE_MS = 1_000;
 
@@ -107,8 +106,9 @@ export function selectPositionObservation(
   // that have no usable local position at all.
   if (local && hasUsablePosition(local)) return local;
 
-  const networkCandidates = network && isFreshPosition(network, options.networkStaleAfterMs, now) ? [network] : [];
-  return networkCandidates.sort((left, right) => compareObservationFreshness(left, right, now, POSITION_TIE_MS))[0];
+  // There is at most one network candidate. Avoid allocating and sorting an
+  // array for each aircraft in the extended-coverage merge.
+  return network && isFreshPosition(network, options.networkStaleAfterMs, now) ? network : undefined;
 }
 
 function nonEmpty<T>(local: T | null | undefined, network: T | null | undefined): T | null {
@@ -140,22 +140,18 @@ function selectedEmergencyObservation(
   options: { localStaleAfterMs: number; networkStaleAfterMs: number },
   now: number,
 ): Aircraft | undefined {
-  const fresh = [local, network]
-    .filter((item): item is Aircraft => item !== undefined
-      && isFreshObservation(item, staleAfterFor(item, options.localStaleAfterMs, options.networkStaleAfterMs), now)
-      && emergencyValue(item) !== null)
-    .sort((left, right) => compareObservationFreshness(left, right, now, EMERGENCY_TIE_MS));
-  return fresh[0];
-}
-
-function selectedEmergency(
-  local: Aircraft | undefined,
-  network: Aircraft | undefined,
-  options: { localStaleAfterMs: number; networkStaleAfterMs: number },
-  now: number,
-): string | null {
-  const selected = selectedEmergencyObservation(local, network, options, now);
-  return selected ? emergencyValue(selected) : null;
+  const localCandidate = local
+    && isFreshObservation(local, staleAfterFor(local, options.localStaleAfterMs, options.networkStaleAfterMs), now)
+    && emergencyValue(local) !== null ? local : undefined;
+  const networkCandidate = network
+    && isFreshObservation(network, staleAfterFor(network, options.localStaleAfterMs, options.networkStaleAfterMs), now)
+    && emergencyValue(network) !== null ? network : undefined;
+  if (localCandidate && networkCandidate) {
+    // Array.sort was stable: an exact tie must still prefer the local item.
+    return compareObservationFreshness(localCandidate, networkCandidate, now, EMERGENCY_TIE_MS) <= 0
+      ? localCandidate : networkCandidate;
+  }
+  return localCandidate ?? networkCandidate;
 }
 
 function squawkValue(aircraft: Aircraft): string | null {
@@ -177,12 +173,17 @@ function selectedSquawk(
   const emergencySquawk = emergencyObservation ? squawkValue(emergencyObservation) : null;
   if (isEmergencySquawk(emergencySquawk)) return emergencySquawk;
 
-  const fresh = [local, network]
-    .filter((item): item is Aircraft => item !== undefined
-      && isFreshObservation(item, staleAfterFor(item, options.localStaleAfterMs, options.networkStaleAfterMs), now)
-      && squawkValue(item) !== null)
-    .sort((left, right) => compareObservationFreshness(left, right, now, SQUAWK_TIE_MS));
-  return fresh[0] ? squawkValue(fresh[0]) : null;
+  const localCandidate = local
+    && isFreshObservation(local, staleAfterFor(local, options.localStaleAfterMs, options.networkStaleAfterMs), now)
+    && squawkValue(local) !== null ? local : undefined;
+  const networkCandidate = network
+    && isFreshObservation(network, staleAfterFor(network, options.localStaleAfterMs, options.networkStaleAfterMs), now)
+    && squawkValue(network) !== null ? network : undefined;
+  const selected = localCandidate && networkCandidate
+    ? (compareObservationFreshness(localCandidate, networkCandidate, now, SQUAWK_TIE_MS) <= 0
+      ? localCandidate : networkCandidate)
+    : localCandidate ?? networkCandidate;
+  return selected ? squawkValue(selected) : null;
 }
 
 function selectedTrail(position: Aircraft | undefined): TrailPoint[] {
@@ -247,7 +248,7 @@ export function mergeAircraftObservations(
     geomRate: kinematics.geomRate,
     squawk: selectedSquawk(selectedLocal, selectedNetwork, options, now, emergencyObservation),
     category: nonEmpty(selectedLocal?.category, selectedNetwork?.category),
-    emergency: selectedEmergency(selectedLocal, selectedNetwork, options, now),
+    emergency: emergencyObservation ? emergencyValue(emergencyObservation) : null,
     // RSSI, raw Beast signal and message counts are receiver-local
     // measurements. Network-only aircraft deliberately expose none of them.
     rssi: selectedLocal ? selectedLocal.rssi : null,
@@ -283,9 +284,12 @@ export function mergeAircraftMaps(
   receiver: ReceiverPosition,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number; sourcePreferences?: ReadonlyMap<string, "local" | "network"> },
 ): Aircraft[] {
-  const keys = new Set([...local.keys(), ...network.keys()]);
+  // Preserve local-first iteration order without materializing both key arrays.
+  const keys = new Set(local.keys());
+  for (const key of network.keys()) keys.add(key);
   const merged: Aircraft[] = [];
-  const mergedKeys = new Set<string>();
+  // This expensive invariant is useful in development only.
+  const mergedKeys = process.env.NODE_ENV !== "production" ? new Set<string>() : null;
   for (const key of keys) {
     const value = mergeAircraftObservations(local.get(key), network.get(key), receiver, {
       ...options,
@@ -293,10 +297,10 @@ export function mergeAircraftMaps(
     });
     if (value) {
       merged.push(value);
-      mergedKeys.add(key);
+      mergedKeys?.add(key);
     }
   }
-  if (process.env.NODE_ENV !== "production") {
+  if (mergedKeys) {
     const missingLocal = [...local.keys()].filter((key) => !mergedKeys.has(key));
     if (missingLocal.length) {
       console.error(`[aircraft-merge] local observations missing from extended result: ${missingLocal.join(",")}`);

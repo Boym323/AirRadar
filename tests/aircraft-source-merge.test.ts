@@ -303,6 +303,38 @@ describe("aircraft source merge", () => {
     expect(mergeAircraftObservations(local, normalNetwork, receiver, options)?.squawk).toBe("7600");
   });
 
+  it("preserves deterministic local-first emergency and squawk tie arbitration", () => {
+    const local = make("ABC123", "local", {
+      seen: 0.5, seen_pos: 0.5, emergency: "general", squawk: "1200",
+    });
+    const network = make("ABC123", "adsblol", {
+      seen: 0.5, seen_pos: 0.5, emergency: "medical", squawk: "2200",
+    });
+    const tied = mergeAircraftObservations(local, network, receiver, options);
+    expect(tied).toMatchObject({ emergency: "general", squawk: "1200" });
+
+    // Freshness wins when the gap exceeds the established one-second tie window.
+    const staleLocal = make("ABC123", "local", {
+      seen: 3, seen_pos: 3, emergency: "general", squawk: "1200",
+    });
+    const freshNetwork = make("ABC123", "adsblol", {
+      seen: 0.1, seen_pos: 0.1, emergency: "medical", squawk: "2200",
+    });
+    expect(mergeAircraftObservations(staleLocal, freshNetwork, receiver, options))
+      .toMatchObject({ emergency: "medical", squawk: "2200" });
+  });
+
+  it("ignores missing or stale source values without changing the selected live position", () => {
+    const local = make("ABC123", "local", {
+      seen: 0, seen_pos: 0, emergency: null, squawk: null, lon: 14.11,
+    });
+    const network = make("ABC123", "adsblol", {
+      seen: 31, seen_pos: 31, emergency: "general", squawk: "7700", lon: 14.12,
+    });
+    const merged = mergeAircraftObservations(local, network, receiver, options);
+    expect(merged).toMatchObject({ lon: 14.11, origin: "local", emergency: null, squawk: null });
+  });
+
   it("keeps local position provenance when network MLAT is fresher", () => {
     const local = make("ABC123", "local", { seen: 1, seen_pos: 20, type: "adsb_icao" });
     const network = make("ABC123", "adsblol", { seen: 2, seen_pos: 2, type: "mlat" });
