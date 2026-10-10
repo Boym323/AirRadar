@@ -636,6 +636,49 @@ function FlightStateSection({ aircraft }: { aircraft: AircraftView }) {
 
 function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
   const [advancedTelemetryOpen, setAdvancedTelemetryOpen] = useState(false);
+  // Short retention prevents transient sparse ADS-B snapshots from unmounting
+  // the expanded instrumentation. Retained values are visibly marked stale.
+  const [lastTelemetry, setLastTelemetry] = useState<{
+    hex: string;
+    seenAt: number;
+    adsbTelemetry: AircraftView["adsbTelemetry"];
+    targetState: AircraftView["targetState"];
+    operationalStatus: AircraftView["operationalStatus"];
+    provenance: AircraftView["provenance"];
+  } | null>(null);
+  const liveTelemetry = Boolean(aircraft.adsbTelemetry || aircraft.targetState || aircraft.operationalStatus);
+  useEffect(() => {
+    if (!advancedTelemetryOpen || !liveTelemetry) return;
+    setLastTelemetry({
+      hex: aircraft.icaoHex,
+      seenAt: Date.now(),
+      adsbTelemetry: aircraft.adsbTelemetry,
+      targetState: aircraft.targetState,
+      operationalStatus: aircraft.operationalStatus,
+      provenance: aircraft.provenance,
+    });
+  }, [advancedTelemetryOpen, aircraft.icaoHex, aircraft.adsbTelemetry, aircraft.targetState, aircraft.operationalStatus, aircraft.provenance, liveTelemetry]);
+  useEffect(() => {
+    if (!advancedTelemetryOpen || liveTelemetry || !lastTelemetry) return;
+    const remaining = Math.max(0, lastTelemetry.seenAt + 10_000 - Date.now());
+    const timer = window.setTimeout(() => setLastTelemetry(null), remaining);
+    return () => window.clearTimeout(timer);
+  }, [advancedTelemetryOpen, liveTelemetry, lastTelemetry]);
+  const retained = !liveTelemetry
+    && lastTelemetry?.hex === aircraft.icaoHex
+    && Date.now() - lastTelemetry.seenAt < 10_000
+    ? lastTelemetry : null;
+  const telemetryAircraft = liveTelemetry
+    ? aircraft
+    : retained
+      ? {
+        ...aircraft,
+        adsbTelemetry: retained.adsbTelemetry,
+        targetState: retained.targetState,
+        operationalStatus: retained.operationalStatus,
+        provenance: retained.provenance,
+      }
+      : null;
   const position = aircraft.lat === null || aircraft.lon === null ? null : `${formatCoordinate(aircraft.lat)}, ${formatCoordinate(aircraft.lon)}`;
   return <QuickSection id="aircraft-quick-telemetry-title" title={t.aircraft.detailSections.telemetry} className="aircraft-quick-telemetry">
     <div className="aircraft-quick-detail-grid">
@@ -654,7 +697,10 @@ function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
       onToggle={(event) => setAdvancedTelemetryOpen(event.currentTarget.open)}
     >
       <summary>{t.aircraft.advancedTelemetry}</summary>
-      {advancedTelemetryOpen && <AircraftAdsbTelemetry aircraft={aircraft} compact />}
+      {advancedTelemetryOpen && (telemetryAircraft ? <>
+        {retained && <p className="aircraft-quick-telemetry-stale" role="status">{t.intelligence.stale}</p>}
+        <AircraftAdsbTelemetry aircraft={telemetryAircraft} compact />
+      </> : <p className="aircraft-quick-telemetry-empty">{t.common.emptyValue}</p>)}
     </details>
   </QuickSection>;
 }
