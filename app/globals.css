@@ -6825,3 +6825,13 @@ button, input, select, textarea { color-scheme: dark; }
 .fleet-v6-summary span { padding: var(--space-2); background: var(--surface-overlay); border-radius: var(--radius-md); }
 .fleet-v6-filters label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
 .fleet-v6-filters :is(input,select) { min-height: var(--control-height-touch); padding-inline: var(--space-2); color: var(--text-primary); background: var(--surface-overlay); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+
+/* V6-H: privacy-safe airport media links, loaded only by explicit user click. */
+.airport-v6-media { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.airport-v6-media p { margin: 0; color: var(--text-secondary); }
+.airport-v6-media ul { display: grid; gap: var(--space-2); padding: 0; margin: 0; list-style: none; }
+.airport-v6-media li { display: flex; gap: var(--space-2); justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.airport-v6-media form { display: flex; align-items: end; gap: var(--space-2); flex-wrap: wrap; }
+.airport-v6-media label { display: grid; gap: var(--space-1); font-size: var(--font-size-sm); }
+.airport-v6-media :is(input,select) { min-height: var(--control-height-touch); padding: var(--space-2); border: 1px solid var(--border-default); color: var(--text-primary); border-radius: var(--radius-md); background: var(--surface-overlay); }
+.airport-v6-media input[type="url"] { width: min(100%, 330px); }

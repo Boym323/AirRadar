@@ -241,3 +241,8 @@ validation, desktop/mobile browser gates and exact-SHA production deployment.
 The change introduces no new API, provider request, polling loop, database
 migration, persistence, stream or auto-PUBLIC graduation. Engineering release
 success is not evidence of independently validated real-world accuracy.
+
+
+## V6-H: airport aviation media (external-link hub)
+
+Airport detail's overview now supports browser-local, per-airport lists of up to six externally hosted camera and aviation-audio pages. The user explicitly supplies the source name/HTTPS URL and opens links with noopener/noreferrer; no third-party media, iframe, tracking beacon or autoplay loads inside AirRadar, and URLs are checked for safe public HTTPS hosts before storage. These links are user-managed, **not official AirRadar-licensed live feeds, verified availability, or air-traffic-controller communications**. Storage is only localStorage; no database writes, provider calls or playback server. Embedded media and official licensing reviews remain outside this first delivery.
