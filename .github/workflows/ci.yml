@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, master]
   pull_request:
+    # A maintainer can opt into a full deploy-free rehearsal via the release-preview label.
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 concurrency:
@@ -159,7 +161,7 @@ jobs:
 
   release-scope:
     name: Release scope
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')
     runs-on: ubuntu-24.04
     outputs:
       deploy: ${{ steps.scope.outputs.deploy }}
@@ -172,6 +174,8 @@ jobs:
         with:
           # Evaluate every commit in a push, not just the immediate parent.
           fetch-depth: 0
+      # PR previews intentionally use unknown-scope fallback (all gates). There is
+      # no privileged runner or deploy job for pull_request events.
       - name: Detect release-required changes and gate plan
         id: scope
         shell: bash
@@ -208,7 +212,7 @@ jobs:
 
   release-validate:
     name: Release validation
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
     needs: release-scope
     runs-on: ubuntu-24.04
     steps:
@@ -317,7 +321,7 @@ jobs:
 
   release-tests:
     name: Release tests and typecheck
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
     needs: release-scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -355,7 +359,7 @@ jobs:
 
   release-performance:
     name: Release performance regression
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
     needs: release-scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -413,7 +417,7 @@ jobs:
 
   deploy:
     name: Deploy production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
     needs: [release-scope, release-validate, release-tests, release-performance]
     # Only deploy-bearing runs enter this queue; docs-only changes cannot cancel them.
     concurrency:
