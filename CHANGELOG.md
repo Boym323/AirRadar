@@ -17,26 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.421] - 2026-10-11
-
-Changes since v1.0.420.
-
-### Fixed
-
-- Respect optional admin auth in radar soak (a9e7ccce)
-
-### Maintenance
-
-- Sync generated repository metadata (#799) (58a69990)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#799) (58a69990)
-- fix(perf): respect optional admin auth in radar soak (a9e7ccce)
-
-</details>
-
 ## [1.0.420] - 2026-10-11
 
 Changes since v1.0.419.
@@ -60,6 +40,7 @@ Changes since v1.0.419.
 - test(system): match explicit timeline refresh key after dashboard UX update (#798) (962b00ac)
 
 </details>
+
 ## [1.0.419] - 2026-10-11
 
 Changes since v1.0.418.
@@ -86,6 +67,7 @@ Changes since v1.0.418.
 - feat(system): distinguish ADSB.lol routeset and Postgres cache failures (#793) (91b4576a)
 
 </details>
+
 ## [1.0.418] - 2026-10-11
 
 Changes since v1.0.417.
@@ -114,6 +96,7 @@ Changes since v1.0.417.
 - feat(config): enable AIRRADAR_ADMIN_AUTH by default in main configuration (b2fe1080)
 
 </details>
+
 ## [1.0.417] - 2026-10-11
 
 Changes since v1.0.416.
@@ -142,6 +125,7 @@ Changes since v1.0.416.
 - feat(system): RXW ACARS, ADSBHub and route integration diagnostics (#788) (3a246804)
 
 </details>
+
 ## [1.0.416] - 2026-10-11
 
 Changes since v1.0.415.
@@ -161,6 +145,7 @@ Changes since v1.0.415.
 - perf(T5.8A): remove per-event percentile sorting from runtime hot path (#783) (02208572)
 
 </details>
+
 ## [1.0.415] - 2026-10-10
 
 Changes since v1.0.414.
@@ -532,6 +517,7 @@ Changes since v1.0.412.
 - Merge pull request #767 from Boym323/feat/aircraft-drawer-telemetry-polish-20261010 (c0532b27)
 
 </details>
+
 ## [1.0.412] - 2026-10-10
 
 Changes since v1.0.411.
