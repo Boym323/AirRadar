@@ -1438,15 +1438,31 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const control = quickActions.getByTestId(`radar-quick-${layer}`);
               const original = await control.getAttribute("aria-pressed");
               await control.click();
-              await visualPage.waitForFunction(
+              const changed = async () => visualPage.waitForFunction(
                 ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") !== before,
                 { key: layer, before: original },
+                { timeout: 1_000 },
               );
+              try {
+                await changed();
+              } catch {
+                // The radar shell can become visible just before hydration
+                // attaches the click handler. Retry the same user action once
+                // instead of allowing a lost first click to consume the full
+                // Playwright default timeout.
+                await visualPage.waitForTimeout(500);
+                await control.click();
+                try {
+                  await changed();
+                } catch (error) {
+                  throw new Error(`Visual smoke ${target.name} quick action ${layer} did not toggle: ${String(error)}`);
+                }
+              }
               if (layer === "weather") {
                 await visualPage.waitForFunction(() => {
                   const state = document.querySelector('[data-testid="radar-weather-map-status"]')?.getAttribute("data-state");
                   return state && ["loading", "ready", "stale", "unavailable"].includes(state);
-                });
+                }, undefined, { timeout: 10_000 });
                 if (!await visualPage.getByTestId("radar-weather-map-status").isVisible()) {
                   throw new Error("V5 weather map status must be visible when enabled");
                 }
@@ -1455,6 +1471,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await visualPage.waitForFunction(
                 ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") === before,
                 { key: layer, before: original },
+                { timeout: 10_000 },
               );
             }
           }
