@@ -28,7 +28,7 @@ export async function GET(request: Request): Promise<Response> {
       cpuMs: item.cpuMs, waitMs: item.waitMs, windows: item.windows,
     } : null];
   }));
-  const hotPaths = Object.entries(metrics)
+  const paths = Object.entries(metrics)
     .filter(([name]) => !name.startsWith("health."))
     .map(([name, item]) => ({
       name,
@@ -42,12 +42,14 @@ export async function GET(request: Request): Promise<Response> {
       waitMs: item.waitMs,
       windows: item.windows,
       processedAircraft: item.processedAircraft,
-    }))
-    .sort((left, right) => right.totalMs - left.totalMs)
-    .slice(0, 12);
+    }));
+  const hotPaths = [...paths].sort((left, right) => right.totalMs - left.totalMs).slice(0, 12);
+  // Low-cost individual Twin validators may fall outside the top 12, despite
+  // the inclusive parent being slow. Export exactly these five separately.
+  const validatorPaths = paths.filter((path) => path.name.startsWith("twin.")).slice(0, 5);
   const runtime = getRuntimeHealthObservation();
   return Response.json({
-    schemaVersion: 2, scope: "process-local", phases, hotPaths,
+    schemaVersion: 2, scope: "process-local", phases, hotPaths, validatorPaths,
     runtime: {
       status: runtime.status,
       v8HeapSpaces: runtime.v8HeapSpaces,

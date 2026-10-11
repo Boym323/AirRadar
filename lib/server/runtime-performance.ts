@@ -1,7 +1,8 @@
 import { performance } from "node:perf_hooks";
 
 const MAX_SAMPLES = 128;
-const MAX_METRICS = 32;
+// Bounded headroom for dedicated Twin validator scopes alongside existing health metrics.
+const MAX_METRICS = 48;
 const WINDOW_MS = 60_000;
 const MAX_WINDOWS = 15;
 const MAX_WINDOW_SAMPLES = 64;

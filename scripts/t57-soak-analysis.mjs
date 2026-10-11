@@ -72,8 +72,12 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       retention.listeners].some((value) => safe(value) === null)) {
     throw new Error("t57_required_diagnostic_missing");
   }
-  const metricPaths = Array.isArray(metrics.hotPaths) ? metrics.hotPaths : [];
-  const hotPaths = metricPaths.slice(0, 12).flatMap((p) => {
+  const topPaths = Array.isArray(metrics.hotPaths) ? metrics.hotPaths.slice(0, 12) : [];
+  const twinPaths = Array.isArray(metrics.validatorPaths) ? metrics.validatorPaths.slice(0, 5) : [];
+  const metricPaths = [...new Map([...topPaths, ...twinPaths]
+    .filter((p) => typeof p?.name === "string")
+    .map((p) => [p.name, p])).values()];
+  const hotPaths = metricPaths.flatMap((p) => {
     const name = p?.name;
     if (typeof name !== "string" || name.length > 80 || !/^[A-Za-z0-9_.:-]+$/.test(name)) return [];
     return [{
@@ -199,7 +203,15 @@ export function analyzeT57Soak(records) {
       waitMs: rounded(samples.reduce((sum, v) => sum + v.waitMs, 0)),
       p99MsMax: series(samples, (v) => v.p99Ms)?.max ?? null,
     };
-  }).sort((a, b) => b.cpuMs - a.cpuMs).slice(0, 12);
+  }).sort((a, b) => b.cpuMs - a.cpuMs);
+  // Keep the five independently measured Twin validators even if they are
+  // not top-12 by inclusive CPU; do not double-count nested parent scopes.
+  const selected = pathResults.slice(0, 12);
+  for (const item of pathResults) {
+    if (item.name.startsWith("twin.") && !selected.some((x) => x.name === item.name)) {
+      selected.push(item);
+    }
+  }
   const overLimit = steady.some((r) => (r.localTrailOverLimitAircraft ?? 0) > 0 ||
     (r.networkTrailOverLimitAircraft ?? 0) > 0);
   const measuredEnough = stable && span >= header.seconds - header.intervalSeconds * 2 &&
@@ -251,7 +263,7 @@ export function analyzeT57Soak(records) {
       networkTrailPoints: comparison((r) => r.retention?.trails?.network?.points),
     },
     overLimit,
-    hotPathsByWindowCpuMs: pathResults,
+    hotPathsByWindowCpuMs: selected,
     caveats: [
       "Continuous clean windows and two major GC observations are required for evidence.",
       "A restart, changed commit, or insufficient coverage yields INSUFFICIENT_EVIDENCE.",

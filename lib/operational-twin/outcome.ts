@@ -344,37 +344,34 @@ function currentAltitude(aircraft: Aircraft): number | null {
 }
 
 function truthCandidate(aircraft: Aircraft, targetAt: number): TruthCandidate | null {
-  const candidates: TruthCandidate[] = [];
-  for (const point of aircraft.trail.slice(-20)) {
+  // Pending prediction horizons share an aircraft's last 20 points. Search
+  // those points in-place rather than allocating arrays and one object for
+  // every point on every refresh. Keep the original strict tie ordering:
+  // oldest trail candidate first, current position considered last.
+  let best: TruthCandidate | null = null;
+  let bestDelta = Number.POSITIVE_INFINITY;
+  for (let i = Math.max(0, aircraft.trail.length - 20); i < aircraft.trail.length; i += 1) {
+    const point = aircraft.trail[i]!;
     const at = Date.parse(point.recordedAt);
     if (!Number.isFinite(at)) continue;
-    candidates.push({
-      at,
-      lat: point.lat,
-      lon: point.lon,
-      altitudeFt: finite(point.altitude) ? point.altitude : null,
-    });
+    const delta = Math.abs(at - targetAt);
+    if (delta <= TRUTH_TOLERANCE_MS && delta < bestDelta) {
+      best = {
+        at,
+        lat: point.lat,
+        lon: point.lon,
+        altitudeFt: finite(point.altitude) ? point.altitude : null,
+      };
+      bestDelta = delta;
+    }
   }
-
   if (finite(aircraft.lat) && finite(aircraft.lon)) {
     const at = positionObservedAt(aircraft);
     if (at !== null) {
-      candidates.push({
-        at,
-        lat: aircraft.lat,
-        lon: aircraft.lon,
-        altitudeFt: currentAltitude(aircraft),
-      });
-    }
-  }
-
-  let best: TruthCandidate | null = null;
-  let bestDelta = Number.POSITIVE_INFINITY;
-  for (const candidate of candidates) {
-    const delta = Math.abs(candidate.at - targetAt);
-    if (delta <= TRUTH_TOLERANCE_MS && delta < bestDelta) {
-      best = candidate;
-      bestDelta = delta;
+      const delta = Math.abs(at - targetAt);
+      if (delta <= TRUTH_TOLERANCE_MS && delta < bestDelta) {
+        best = { at, lat: aircraft.lat, lon: aircraft.lon, altitudeFt: currentAltitude(aircraft) };
+      }
     }
   }
   return best;
