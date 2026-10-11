@@ -65,6 +65,11 @@ interface TimelineEvent {
 const WINDOW_MS = 60 * 60_000;
 const DB_LATENCY_SPIKE_MIN_MS = 100;
 const DB_LATENCY_SPIKE_FACTOR = 2;
+function sourceState(value: string, cs: boolean): string {
+  if (!cs) return value;
+  return ({ online: "připojeno", offline: "offline", connecting: "připojování", stale: "zastaralé",
+    degraded: "zhoršené", disabled: "vypnuto", ok: "v pořádku" } as Record<string, string>)[value] ?? value;
+}
 
 function formatTime(value: string, locale: string): string {
   const date = new Date(value);
@@ -116,15 +121,23 @@ function buildEvents(samples: RuntimeTelemetrySample[], cs: boolean): TimelineEv
   for (let index = 1; index < samples.length; index += 1) {
     const previous = samples[index - 1]!;
     const current = samples[index]!;
+    const combined = current.localProviderState !== previous.localProviderState
+      && current.networkProviderState !== previous.networkProviderState;
+    if (combined) {
+      add(current, "feed-transition",
+        cs ? "Souběžná změna stavů příjmu" : "Concurrent receiver/feed transition",
+        `ADS-B ${sourceState(previous.localProviderState, cs)} → ${sourceState(current.localProviderState, cs)} · NET ${sourceState(previous.networkProviderState, cs)} → ${sourceState(current.networkProviderState, cs)}`,
+        current.localProviderState === "online" && current.networkProviderState === "online" ? "success" : "warning");
+    }
 
-    if (current.localProviderState !== previous.localProviderState) {
+    if (!combined && current.localProviderState !== previous.localProviderState) {
       add(
         current,
         "receiver-state",
         current.localProviderState === "online"
           ? (cs ? "Lokální receiver online" : "Local receiver online")
           : (cs ? "Lokální receiver offline" : "Local receiver offline"),
-        `${previous.localProviderState} → ${current.localProviderState}`,
+        `${sourceState(previous.localProviderState, cs)} → ${sourceState(current.localProviderState, cs)}`,
         current.localProviderState === "online" ? "success" : "danger",
       );
     }
@@ -154,12 +167,12 @@ function buildEvents(samples: RuntimeTelemetrySample[], cs: boolean): TimelineEv
       );
     }
 
-    if (current.networkProviderState !== previous.networkProviderState) {
+    if (!combined && current.networkProviderState !== previous.networkProviderState) {
       add(
         current,
         "network-state",
         cs ? "Změna síťového příjmu" : "Network feed changed",
-        `${previous.networkProviderState} → ${current.networkProviderState}`,
+        `${sourceState(previous.networkProviderState, cs)} → ${sourceState(current.networkProviderState, cs)}`,
         networkVariant(current.networkProviderState),
       );
     }
@@ -217,9 +230,9 @@ function buildEvents(samples: RuntimeTelemetrySample[], cs: boolean): TimelineEv
       latest.aircraftCount === null
         ? null
         : `${latest.aircraftCount} ${cs ? "letadel" : "aircraft"}`,
-      `DB ${latest.databaseState}`,
-      `LOCAL ${latest.localProviderState}`,
-      `NET ${latest.networkProviderState}`,
+      `DB ${sourceState(latest.databaseState, cs)}`,
+      `ADS-B ${sourceState(latest.localProviderState, cs)}`,
+      `NET ${sourceState(latest.networkProviderState, cs)}`,
     ].filter(Boolean).join(" · "),
     latest.localProviderState === "online" && latest.databaseState === "ok"
       ? "success"
