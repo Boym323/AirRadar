@@ -24,10 +24,10 @@ function HourBar({ bucket, maximum, locale, labels }: {
   const ram = bucket.ramHit;
   const db = bucket.dbHit;
   const external = bucket.adsbdbLookup + bucket.adsblolLookup;
-  const label = new Intl.DateTimeFormat(locale, { hour: "2-digit", day: "2-digit", month: "2-digit", timeZone: "UTC" })
+  const label = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
     .format(new Date(bucket.hour));
   const scale = (value: number) => value === 0 ? "0%" : Math.max(1, (value / maximum) * 100).toFixed(2) + "%";
-  const full = label + " UTC — " + labels.chartRam + ": " + ram + ", " + labels.chartDb
+  const full = label + " — " + labels.chartRam + ": " + ram + ", " + labels.chartDb
     + ": " + db + ", " + labels.chartExternal + ": " + external;
   return <div className={styles.hour} title={full} role="img" aria-label={full}>
     <div className={styles.stacked} aria-hidden="true">
@@ -57,24 +57,33 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
       <span className={styles.mode}>{labels.cacheStatus}: {metrics.enabled ? labels.active : labels.inactive}</span>
     </div>
 
-    <dl className={styles.metrics}>
-      <Metric label={labels.ramHits} value={f(t.ramHit)} />
+    {t.adsblolBatch >= 3 && t.adsblolError >= t.adsblolBatch && <p className={styles.warning} role="status">{dictionary.locale.startsWith("cs") ? `Za posledních 24 hodin selhalo všech ${f(t.adsblolError)} zaznamenaných dávek tras ADSB.lol. To není stav celého síťového ADS-B příjmu; příčinu určí diagnostika integrací.` : `All ${f(t.adsblolError)} recorded ADSB.lol route batches failed in the last 24 hours. This does not imply a live ADS-B traffic outage.`}</p>}
+    <div className={styles.metricGroups}>
+      <section><h3>{dictionary.locale.startsWith("cs") ? "Paměťová cache" : "Memory cache"}</h3><dl className={styles.metrics}>
+        <Metric label={labels.ramHits} value={f(t.ramHit)} />
+        <Metric label={labels.savedLookups} value={f(metrics.estimatedSavedLookups)} />
+      </dl></section>
+      <section><h3>PostgreSQL</h3><dl className={styles.metrics}>
       <Metric label={labels.dbHits} value={f(t.dbHit)} />
       <Metric label={labels.dbMisses} value={f(t.dbMiss)} />
       <Metric label={labels.hitRate} value={metrics.databaseHitRate === null ? labels.notAvailable : formatNumber(metrics.databaseHitRate * 100, 1, dictionary.locale) + " %"} />
       <Metric label={labels.validRoutes} value={metrics.validEntries === null ? labels.notAvailable : f(metrics.validEntries)} />
       <Metric label={labels.dbWrites} value={f(t.dbWrite)} />
-      <Metric label={labels.adsbdbLookups} value={f(t.adsbdbLookup)} />
-      <Metric label={labels.adsblolBatches} value={f(t.adsblolBatch)} />
-      <Metric label={labels.adsblolLookups} value={f(t.adsblolLookup)} />
       <Metric label={labels.avgDbLatency} value={avg} />
       <Metric label={labels.dbErrors} value={f(t.dbError)} />
       <Metric label={labels.dbBypassed} value={f(t.dbBypassed)} />
+      </dl></section>
+      <section><h3>{dictionary.locale.startsWith("cs") ? "Externí dotazy" : "External lookups"}</h3><dl className={styles.metrics}>
+      <Metric label={labels.adsbdbLookups} value={f(t.adsbdbLookup)} />
+      <Metric label={labels.adsblolBatches} value={f(t.adsblolBatch)} />
+      <Metric label={labels.adsblolLookups} value={f(t.adsblolLookup)} />
       <Metric label={labels.adsblolErrors} value={f(t.adsblolError)} />
-      <Metric label={labels.savedLookups} value={f(metrics.estimatedSavedLookups)} />
-      <Metric label={labels.diskPersistence} value={metrics.telemetry.diskEnabled ? labels.diskOn : labels.diskOff} />
-      <Metric label={labels.persistErrors} value={f(metrics.telemetry.failures)} />
-    </dl>
+      </dl></section>
+      <section><h3>{dictionary.locale.startsWith("cs") ? "Ukládání metrik" : "Telemetry persistence"}</h3><dl className={styles.metrics}>
+        <Metric label={labels.diskPersistence} value={metrics.telemetry.diskEnabled ? labels.diskOn : labels.diskOff} />
+        <Metric label={labels.persistErrors} value={f(metrics.telemetry.failures)} />
+      </dl></section>
+    </div>
 
     <section aria-label={labels.chartTitle} className={styles.chartSection}>
       <div className={styles.chartHeader}>
@@ -90,8 +99,8 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
           maximum={maximum} locale={dictionary.locale} labels={labels} />)}
       </div>
       <div className={styles.axis}>
-        <span>{new Date(metrics.buckets[0]?.hour ?? "").toLocaleTimeString(dictionary.locale, { hour: "2-digit", timeZone: "UTC" })} UTC</span>
-        <span>{new Date(metrics.buckets[23]?.hour ?? "").toLocaleTimeString(dictionary.locale, { hour: "2-digit", timeZone: "UTC" })} UTC</span>
+        <span>{metrics.buckets[0] ? new Date(metrics.buckets[0].hour).toLocaleString(dictionary.locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
+        <span>{metrics.buckets[23] ? new Date(metrics.buckets[23].hour).toLocaleString(dictionary.locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
       </div>
       <p className={styles.note}>{totalSamples === 0 ? labels.notAvailable + ". " : ""}{labels.chartNote}</p>
     </section>
