@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.418] - 2026-10-11
+
+Changes since v1.0.417.
+
+**Features touched:** Navigation Integrity.
+
+### Added
+
+- Disable admin token by default, retain opt-in authentication (#791) (59b53870)
+- Enable AIRRADAR_ADMIN_AUTH by default in main configuration (b2fe1080)
+
+### Fixed
+
+- ADSBDB outage backoff and Navigation Integrity rejection attribution (#789) (34d2fd3b)
+
+### Maintenance
+
+- Sync generated repository metadata (#790) (2355d530)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: ADSBDB outage backoff and Navigation Integrity rejection attribution (#789) (34d2fd3b)
+- chore(metadata): sync generated repository metadata (#790) (2355d530)
+- feat(admin): disable admin token by default, retain opt-in authentication (#791) (59b53870)
+- feat(config): enable AIRRADAR_ADMIN_AUTH by default in main configuration (b2fe1080)
+
+</details>
 ## [1.0.417] - 2026-10-11
 
 Changes since v1.0.416.
