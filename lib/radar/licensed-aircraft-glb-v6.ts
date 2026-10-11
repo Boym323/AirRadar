@@ -26,7 +26,7 @@ export const MAX_GLB_FACES = 5000;
 export async function readBoundedLicensedAsset(response: Response): Promise<ArrayBuffer> {
   if (!response.ok || !response.body) throw new Error("GLB source unavailable");
   const length = response.headers.get("content-length");
-  if (length !== null && (!/^\\d+$/.test(length) || Number(length) > MAX_GLB_BYTES)) {
+  if (length !== null && (!/^\d+$/.test(length) || Number(length) > MAX_GLB_BYTES)) {
     throw new Error("GLB content length invalid or oversized");
   }
   const reader = response.body.getReader();
