@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.423] - 2026-10-11
+
+Changes since v1.0.422.
+
+**Features touched:** Navigation Integrity.
+
+### Fixed
+
+- Bounded Retry-After and resilient routeset backoff (#804) (dce724f6)
+
+### Maintenance
+
+- Sync generated repository metadata (#803) (b135e80e)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#803) (b135e80e)
+- fix(routes): bounded Retry-After and resilient routeset backoff (#804) (dce724f6)
+
+</details>
 ## [1.0.422] - 2026-10-11
 
 Changes since v1.0.421.
