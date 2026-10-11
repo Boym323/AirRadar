@@ -142,7 +142,7 @@ function orderedSamples(value: RuntimePerformanceMetricState): number[] {
   ];
 }
 
-export function getRuntimePerformanceDiagnostics(): Record<string, RuntimePerformanceMetric & { avgMs: number; p50Ms: number; p95Ms: number; p99Ms: number }> {
+export function getRuntimePerformanceDiagnostics(): Record<string, RuntimePerformanceMetric & { avgMs: number; p50Ms: number; p95Ms: number; p99Ms: number; cpuAttribution: "inclusive-process-overlap" }> {
   return Object.fromEntries([...metrics.entries()].map(([name, value]) => {
     const samplesMs = orderedSamples(value);
     const sortedSamples = [...samplesMs].sort((left, right) => left - right);
