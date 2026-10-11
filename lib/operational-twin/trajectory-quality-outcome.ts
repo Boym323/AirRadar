@@ -151,7 +151,9 @@ function truthAltitudeAt(aircraft: Aircraft, targetAt: number): number | null {
   let bestAltitude: number | null = null;
   let bestDelta = Number.POSITIVE_INFINITY;
 
-  for (const point of aircraft.trail.slice(-20)) {
+  // Do not allocate a new last-20 trail array for every pending outcome.
+  for (let i = Math.max(0, aircraft.trail.length - 20); i < aircraft.trail.length; i += 1) {
+    const point = aircraft.trail[i]!;
     const at = Date.parse(point.recordedAt);
     if (!Number.isFinite(at) || !finite(point.altitude)) continue;
     const delta = Math.abs(at - targetAt);
