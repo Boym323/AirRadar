@@ -135,6 +135,11 @@ model Flight {
 
   @@index([aircraftId, startTime])
   @@index([aircraftId, endTime, lastSeenAt])
+  // PostgreSQL can scan the second key backwards for the per-aircraft query.
+  // The operational SQL creates the production-tuned DESC physical index;
+  // the contract DSL records the same key coverage without sort-direction
+  // syntax, which this Prisma RC does not support.
+  @@index([aircraftId, lastSeenAt], map: "flight_aircraftId_lastSeenAt_desc_idx")
   @@index([startTime, origin])
   @@index([startTime, destination])
 }

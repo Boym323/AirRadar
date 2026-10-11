@@ -10,6 +10,7 @@ import {
   type ExistingAtcTransmitterRecord,
   type NormalizedAtcImport,
 } from "./import-format";
+import { invalidateAtcDataCache } from "@/lib/server/atc-data";
 
 export type AtcDatabase = ReturnType<typeof postgres<Contract>>;
 
@@ -124,6 +125,10 @@ export async function writeAtcImport(
       await schema.AtcTransmitter.where({ id }).update({ validTo: obsoleteEnd(row, obsoleteAt), updatedAt: Temporal.Instant.fromEpochMilliseconds(Date.now()) });
     }
   }), dataset.sectors.length + dataset.transmitters.length);
+  // Invalidate only after the transaction commits. The generation check in
+  // getStoredAtcData also prevents an in-flight pre-import read from being
+  // published after this point.
+  invalidateAtcDataCache();
 }
 
 export async function runAtcImport(dataset: NormalizedAtcImport, options: { dryRun: boolean; database?: AtcDatabase | null }): Promise<AtcImportPlan> {
