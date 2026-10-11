@@ -12,6 +12,8 @@ function millis(value: unknown): number {
 }
 
 class PositionCollection {
+  static orderByCalls = 0;
+
   constructor(private readonly rows: Position[], private readonly root: Position[]) {}
 
   where(filter: (fields: {
@@ -27,6 +29,7 @@ class PositionCollection {
   }
 
   orderBy(callback: (fields: { id: { asc(): string } }) => unknown): PositionCollection {
+    PositionCollection.orderByCalls += 1;
     callback({ id: { asc: () => "asc" } });
     return new PositionCollection([...this.rows].sort((a, b) => a.id - b.id), this.root);
   }
@@ -58,6 +61,16 @@ function database(rows: Position[]) {
 }
 
 describe("history retention v2", () => {
+  it("uses the recordedAt predicate without an unnecessary candidate sort", async () => {
+    PositionCollection.orderByCalls = 0;
+    const now = new Date("2026-09-26T00:00:00.000Z");
+    const rows: Position[] = [{ id: 1, recordedAt: new Date("2026-01-01T00:00:00.000Z") }];
+
+    await pruneHistoryRetention(database(rows) as never, now, { batchSize: 5, maxBatches: 1 });
+
+    expect(PositionCollection.orderByCalls).toBe(0);
+  });
+
   it("deletes old positions in bounded batches and reports diagnostics", async () => {
     const now = new Date("2026-09-26T00:00:00.000Z");
     const old = new Date("2026-01-01T00:00:00.000Z");
