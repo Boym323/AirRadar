@@ -417,7 +417,7 @@ jobs:
 
   deploy:
     name: Deploy production
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
     needs: [release-scope, release-validate, release-tests, release-performance]
     # Only deploy-bearing runs enter this queue; docs-only changes cannot cancel them.
     concurrency:
