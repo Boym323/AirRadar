@@ -114,6 +114,8 @@ On deploy-bearing pushes three jobs run in parallel after scope detection:
 
 Deployment requires **all three** successful jobs and uses only the pinned artifact from `release-validate`. Browser tests always exercise core health/SSE, with visual target and viewport selection only for proven narrowly scoped changes. Shared or unclassified code, configuration, and CI changes default to the complete browser and performance suite. The existing browser responsive sweep remains enabled when selecting multiple viewports.
 
+The nightly/manual `ci-heavy.yml` workflow runs the **complete browser/production regression and all radar performance scenarios** independently of the fast deployment path. Its full results are retained as GitHub Actions artifacts.
+
 `repository-metadata.yml` is triggered only for successful main CI runs and records a timing report in its GitHub Actions job summary. Compare several successful production deployments before drawing conclusions from timing changes. Do not trade away release identity, migration checks, or production health gates for speed.
 
 ## Exact release order
