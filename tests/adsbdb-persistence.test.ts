@@ -168,8 +168,7 @@ describe("persistent ADSBDB cache", () => {
       undefined,
       new AdsbDbPersistence(options(file, Date.now)),
     );
-    const aircraft = (hex: string) => ({ icaoHex: hex, callsign: null })
-      as Parameters<EnrichmentService["enrich"]>[0];
+    const aircraft = (hex: string) => ({ icaoHex: hex, callsign: null } as Parameters<EnrichmentService["enrich"]>[0]);
     await expect(enrichment.enrich(aircraft("ABC123"), new Date())).resolves.toMatchObject({
       metadata: { source: "tar1090-db" },
     });
