@@ -15,6 +15,7 @@ export function getIntegrationDiagnostics() {
     rxw: getRxwHubService().getDiagnostics(),
     adsbhub: getAircraftStateService().getNetworkDiagnostics().adsbhubLane ?? null,
     databaseLatency: databaseLatencySummary(getRuntimeTelemetryHistory().samples),
+    routeCacheLatency: getRouteEnrichmentTelemetry().getDbLatencyDistribution(),
     routeProviders: {
       routeset: getAdsbLolRoutesetRuntimeDiagnostics(),
       postgres: getRouteDbReasonDiagnostics(),
