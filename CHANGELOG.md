@@ -17,6 +17,37 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.426] - 2026-10-11
+
+Changes since v1.0.425.
+
+**Features touched:** System Observability.
+
+### Changed
+
+- Observe live routeset failures and DB percentiles without new provider calls (#813) (eec8bbfc)
+
+### Fixed
+
+- Shared HTTP 403 circuit breaker, fail-soft fallback and postdeploy evidence (#815) (b1670693)
+
+### Performance
+
+- Stage 4 safe browser concurrency and component-scoped gates (#807) (fcaa0e91)
+
+### Maintenance
+
+- Sync generated repository metadata (#814) (e2b582fe)
+
+<details>
+<summary>Technical commits</summary>
+
+- ops(system): observe live routeset failures and DB percentiles without new provider calls (#813) (eec8bbfc)
+- perf(ci): Stage 4 safe browser concurrency and component-scoped gates (#807) (fcaa0e91)
+- chore(metadata): sync generated repository metadata (#814) (e2b582fe)
+- fix(routes): shared HTTP 403 circuit breaker, fail-soft fallback and postdeploy evidence (#815) (b1670693)
+
+</details>
 ## [1.0.425] - 2026-10-11
 
 Changes since v1.0.424.
