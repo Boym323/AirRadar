@@ -2,6 +2,15 @@ name: Radar Soak
 
 on:
   workflow_dispatch:
+  # Run the expensive 3-density soak only when its instrumentation or harness
+  # changes. Routine releases keep the optimized fast validation path.
+  push:
+    branches: [main]
+    paths:
+      - "scripts/radar-performance-baseline.mjs"
+      - "scripts/radar-soak-statistics.mjs"
+      - "lib/radar/performance-diagnostics.ts"
+      - ".github/workflows/radar-soak.yml"
   schedule:
     - cron: "17 3 * * *"
 
