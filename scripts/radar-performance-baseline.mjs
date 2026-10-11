@@ -325,6 +325,26 @@ function evaluateSoakFootprint(before, after) {
 }
 
 async function createAdminSessionCookie() {
+  // The default deployment deliberately has open administration. Probe the
+  // effective runtime mode instead of treating a configured legacy token as
+  // proof that a login is required.
+  const modeResponse = await fetch(`${baseUrl}/api/watchlist/session`, {
+    cache: "no-store",
+  });
+  if (!modeResponse.ok) {
+    throw new Error(`Soak admin mode check failed with HTTP ${modeResponse.status}`);
+  }
+  let mode;
+  try {
+    mode = await modeResponse.json();
+  } catch {
+    throw new Error("Soak admin mode check returned invalid JSON");
+  }
+  if (mode.configured === false && mode.authenticated === true) return null;
+  if (mode.configured !== true) {
+    throw new Error("Soak admin diagnostics unavailable: authentication is enabled but no valid admin configuration is present");
+  }
+
   const response = await fetch(`${baseUrl}/api/watchlist/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -339,7 +359,7 @@ async function createAdminSessionCookie() {
 
 async function readAdminSystemStatus(cookie) {
   const response = await fetch(`${baseUrl}/api/system/status`, {
-    headers: { cookie },
+    headers: cookie ? { cookie } : {},
     cache: "no-store",
   });
   if (!response.ok) throw new Error(`System status failed with HTTP ${response.status}`);

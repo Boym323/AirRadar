@@ -23,8 +23,11 @@ describe("radar production soak", () => {
     expect(baselineSource).toContain('SSE clients leaked after churn');
   });
 
-  it("uses authenticated detailed diagnostics for the soak process", () => {
+  it("uses the effective optional admin-auth mode for detailed diagnostics", () => {
     expect(baselineSource).toContain('/api/watchlist/session');
+    expect(baselineSource).toContain('mode.configured === false && mode.authenticated === true');
+    expect(baselineSource).toContain('authentication is enabled but no valid admin configuration is present');
+    expect(baselineSource).toContain('headers: cookie ? { cookie } : {}');
     expect(baselineSource).toContain('payload.detailLevel !== "admin"');
     expect(baselineSource).toContain('WATCHLIST_ADMIN_TOKEN: soakMode ? soakAdminToken : ""');
   });
