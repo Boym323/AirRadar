@@ -61,6 +61,10 @@ export class RouteEnrichmentTelemetry {
   private lastSavedAt: string | null = null;
   private validEntries: number | null = null;
   private validEntriesCheckedAt: string | null = null;
+  // Fixed-size, process-local ring. O(1) recording on the route-cache hot path.
+  // Query-time distributions do not include failed/timed-out SQL operations.
+  private readonly recentDbQueries: { at: number; ms: number }[] = [];
+  private nextDbQuerySlot = 0;
 
   constructor(
     private readonly filePath: string | null = process.env.ROUTE_TELEMETRY_FILE?.trim()
@@ -106,8 +110,31 @@ export class RouteEnrichmentTelemetry {
 
   recordDbLatency(ms: number): void {
     if (!Number.isFinite(ms) || ms < 0) return;
+    const entry = { at: this.clock(), ms };
+    if (this.recentDbQueries.length < 1_024) this.recentDbQueries.push(entry);
+    else this.recentDbQueries[this.nextDbQuerySlot] = entry;
+    this.nextDbQuerySlot = (this.nextDbQuerySlot + 1) % 1_024;
     this.record("dbLatencySamples");
     this.record("dbLatencyTotalMs", ms === 0 ? 0.001 : ms);
+  }
+
+  /** Actual successful route-cache SQL timings over the last hour, not the once-per-minute health probe. */
+  getDbLatencyDistribution() {
+    const cutoff = this.clock() - 60 * 60_000;
+    const values = this.recentDbQueries.filter((entry) => entry.at >= cutoff)
+      .map((entry) => entry.ms).sort((a, b) => a - b);
+    const n = values.length;
+    const rank = (p: number) => n ? values[Math.ceil(n * p) - 1] ?? null : null;
+    return {
+      source: "successful-route-cache-sql" as const,
+      processLocal: true,
+      windowMinutes: 60,
+      sampleCapacity: 1_024,
+      sampleCount: n,
+      p50Ms: rank(0.5), p95Ms: rank(0.95), p99Ms: rank(0.99),
+      maxMs: n ? values[n - 1] ?? null : null,
+      averageMs: n ? values.reduce((sum, value) => sum + value, 0) / n : null,
+    };
   }
 
   setValidEntries(count: number): void {
