@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/airport-resolver";
 import type { FlightRouteProvider, RouteLookupPosition } from "@/lib/server/provider";
 import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
+import { readRoutesetRefusalCooldown, saveRoutesetRefusalCooldown, clearRoutesetRefusalCooldown } from "@/lib/server/routeset-refusal-persistence";
 
 /** Independent of the ADSB.lol traffic provider; route lookups are opt-in. */
 const ROUTESET_URL = "https://api.adsb.lol/api/0/routeset";
@@ -55,7 +56,7 @@ function runtimeDiagnostics(): RoutesetRuntimeDiagnostics {
   return routeDiagnosticsGlobal.airRadarRoutesetRuntime ??= {
     requests: 0, success: 0, failed: 0, lastFailureAt: null, lastSuccessAt: null,
     lastHttpStatus: null, nextAllowedAt: null,
-    blockedUntilAt: null, skippedBlocked: 0,
+    blockedUntilAt: readRoutesetRefusalCooldown(), skippedBlocked: 0,
     reasons: { http: 0, timeout: 0, network: 0, invalid_response: 0, other: 0 },
   };
 }
@@ -239,6 +240,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
       this.failureStreak = 0;
       diagnostics.nextAllowedAt = null;
       diagnostics.blockedUntilAt = null;
+      clearRoutesetRefusalCooldown();
       diagnostics.success += 1;
       diagnostics.lastSuccessAt = new Date().toISOString();
       results.forEach((result, index) => batch[index].resolve(result));
@@ -261,6 +263,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
       ));
       if (refused) {
         diagnostics.blockedUntilAt = new Date(this.nextAllowedAt).toISOString();
+        saveRoutesetRefusalCooldown(diagnostics.blockedUntilAt);
         // Reject already queued lookups immediately: hours-long timers would
         // retain pending promises and stall live aircraft enrichment.
         const dropped = this.pending.splice(0);
