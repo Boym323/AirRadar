@@ -2,13 +2,15 @@ import { describe, expect, it } from "vitest";
 import { summarizeIntegrationHealth } from "../scripts/integration-health-report.mjs";
 
 const fixture = (overrides = {}) => ({
-  routeProviders: { routeset: {
+  routeProviders: { postgres: { timeouts: 9, queryFailures: 2, connectionFailures: 1, bypassBackoff: 12, bypassConcurrency: 3, bypassUnconfigured: 0, lastErrorKind: "timeout" }, routeset: {
     enabled: true, requests: 4, success: 0, failed: 4,
     lastHttpStatus: 429, lastFailureAt: "2026-10-11T12:00:00.000Z",
     lastSuccessAt: null, reasons: { http: 4, timeout: 0, network: 0, invalid_response: 0, other: 0 },
     ...overrides,
   } },
   route: { dbError: 4, dbBypassed: 2 },
+  routeCacheLatency: { sampleCount: 26, p50Ms: 12, p95Ms: 310, p99Ms: 700 },
+  routeProvidersExtra: null,
   databaseLatency: { lastHour: { status: "measured", sampleCount: 3, failedSampleCount: 1, p50Ms: 4, p95Ms: 10, p99Ms: 10 } },
   callsign: "SENSITIVE-CALLSIGN", token: "secret-token",
 });
@@ -16,6 +18,7 @@ describe("publicly logged aggregate route health (no upstream probes)", () => {
   it("classifies degraded provider without leaking arbitrary payload fields", () => {
     const result = summarizeIntegrationHealth(fixture());
     expect(result).toMatchObject({ status: "DEGRADED", routeset: { failed: 4, lastHttpStatus: 429, reasons: { http: 4 } }, runtimeDbLatency: { lastHour: { p99Ms: 10 } } });
+    expect(result.routeCache).toMatchObject({ lastErrorKind: "timeout", reasonCountersSinceStart: { timeouts: 9, queryFailures: 2, connectionFailures: 1 }, sqlLatencyLastHour: { p95Ms: 310, sampleCount: 26 } });
     expect(JSON.stringify(result)).not.toContain("SENSITIVE-CALLSIGN");
     expect(JSON.stringify(result)).not.toContain("secret-token");
   });
