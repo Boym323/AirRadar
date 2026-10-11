@@ -63,6 +63,9 @@ jobs:
         run: |
           node scripts/docs-localization.mjs
           node scripts/changelog.mjs check
+      - name: Verify release gate planner
+        if: steps.scope.outputs.docs_only != 'true'
+        run: node --test tests/ci-release-plan.test.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
@@ -160,26 +163,48 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       deploy: ${{ steps.scope.outputs.deploy }}
+      browser: ${{ steps.scope.outputs.browser }}
+      visual_targets: ${{ steps.scope.outputs.visual_targets }}
+      viewports: ${{ steps.scope.outputs.viewports }}
+      performance_scenarios: ${{ steps.scope.outputs.performance_scenarios }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
-      - name: Detect release-required changes
+          # Evaluate every commit in a push, not just the immediate parent.
+          fetch-depth: 0
+      - name: Detect release-required changes and gate plan
         id: scope
         shell: bash
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
         run: |
           set -Eeuo pipefail
-          parent="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
-          if [[ -z "${parent}" ]]; then
-            echo "deploy=true" >> "${GITHUB_OUTPUT}"
-            exit 0
+          changes="$(mktemp)"
+          trap 'rm -f -- "$changes"' EXIT
+          if [[ "$PUSH_BEFORE" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$PUSH_BEFORE" =~ ^0{40}$ ]] \
+            && git cat-file -e "$PUSH_BEFORE^{commit}" \
+            && git merge-base --is-ancestor "$PUSH_BEFORE" "$GITHUB_SHA"; then
+            git diff --name-only -z "$PUSH_BEFORE" "$GITHUB_SHA" > "$changes"
+          else
+            # A missing/rewritten push base must fail closed.
+            printf '__unknown_change__\\0' > "$changes"
+            echo "::warning::Cannot verify push base: selecting full release gates"
           fi
-
-          scope_json="$(git diff --name-only -z "${parent}" "${GITHUB_SHA}" | node scripts/release-scope.mjs --stdin0)"
-          deploy="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
-          echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
-          echo "Release scope: ${scope_json}"
-
+          scope_json="$(node scripts/release-scope.mjs --stdin0 < "$changes")"
+          plan_json="$(node scripts/ci-release-plan.mjs --stdin0 < "$changes")"
+          deploy="$(RELEASE_SCOPE_JSON="$scope_json" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
+          for field in browser visualTargets viewports performanceScenarios; do
+            value="$(RELEASE_PLAN_JSON="$plan_json" RELEASE_PLAN_FIELD="$field" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_PLAN_JSON)[process.env.RELEASE_PLAN_FIELD]))')"
+            case "$field" in
+              visualTargets) field_out="visual_targets" ;;
+              performanceScenarios) field_out="performance_scenarios" ;;
+              *) field_out="$field" ;;
+            esac
+            echo "$field_out=$value" >> "$GITHUB_OUTPUT"
+          done
+          echo "Release scope: $scope_json"
+          echo "Release gates: $plan_json"
 
   release-validate:
     name: Release validation
@@ -293,6 +318,9 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
       - name: Production core and browser gates
+        env:
+          AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
+          PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
         run: npm run test:production:all
       - name: Upload visual system artifacts
         if: always()
