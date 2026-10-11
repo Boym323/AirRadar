@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.417] - 2026-10-11
+
+Changes since v1.0.416.
+
+**Features touched:** System Observability.
+
+### Added
+
+- RXW ACARS, ADSBHub and route integration diagnostics (#788) (3a246804)
+
+### Performance
+
+- Bound local enrichment and icon hydration batches (#784) (eee77b2a)
+- Isolate Operational Twin validator hot paths (#785) (6c0a35f0)
+
+### Maintenance
+
+- Sync generated repository metadata (#787) (abe156d4)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(T5.8B): bound local enrichment and icon hydration batches (#784) (eee77b2a)
+- perf(T5.8C): isolate Operational Twin validator hot paths (#785) (6c0a35f0)
+- chore(metadata): sync generated repository metadata (#787) (abe156d4)
+- feat(system): RXW ACARS, ADSBHub and route integration diagnostics (#788) (3a246804)
+
+</details>
 ## [1.0.416] - 2026-10-11
 
 Changes since v1.0.415.
