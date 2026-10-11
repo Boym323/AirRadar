@@ -7,7 +7,7 @@ const runtimeRoute = readFileSync(new URL("../app/api/system/runtime-history/rou
 
 describe("System & Receiver Timeline V1 boundary", () => {
   it("mounts the timeline only inside the admin detail surface", () => {
-    expect(statusPage).toContain('detailed && <SystemRuntimeTimeline locale={locale} />');
+    expect(statusPage).toContain('detailed && <SystemRuntimeTimeline locale={locale} refreshKey={refreshKey} />');
     expect(runtimeRoute).toContain("isWatchlistSessionValid");
     expect(runtimeRoute).toContain("Authentication required");
   });
