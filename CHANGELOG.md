@@ -17,6 +17,31 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.425] - 2026-10-11
+
+Changes since v1.0.424.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Real production DB and route-cache P50/P95/P99 from existing telemetry (#812) (382a6903)
+
+### Maintenance
+
+- Run full benchmark automatically after instrumentation changes, not every release (#809) (a3314ec9)
+- Sync generated repository metadata (#810) (222574dd)
+- Sync generated repository metadata (#811) (f88ba863)
+
+<details>
+<summary>Technical commits</summary>
+
+- ci(soak): run full benchmark automatically after instrumentation changes, not every release (#809) (a3314ec9)
+- chore(metadata): sync generated repository metadata (#810) (222574dd)
+- chore(metadata): sync generated repository metadata (#811) (f88ba863)
+- feat(system): real production DB and route-cache P50/P95/P99 from existing telemetry (#812) (382a6903)
+
+</details>
 ## [1.0.424] - 2026-10-11
 
 Changes since v1.0.423.
