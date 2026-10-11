@@ -26,7 +26,7 @@ export function readRoutesetRefusalCooldown(now = Date.now()): string | null {
     if (!value || typeof value !== "object"
       || (value as { version?: unknown }).version !== 1) return null;
     const raw = (value as { blockedUntilAt?: unknown }).blockedUntilAt;
-    if (typeof raw !== "string" || !/^\\d{4}-\\d{2}-\\d{2}T/.test(raw)) return null;
+    if (typeof raw !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(raw)) return null;
     const until = Date.parse(raw);
     return Number.isFinite(until) && until > now && until <= now + MAX_COOLDOWN_MS
       ? new Date(until).toISOString() : null;
