@@ -17,6 +17,50 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.432] - 2026-10-11
+
+Changes since v1.0.431.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Add Production Performance Verification V2 report (3417ce36)
+- Add SQL phase diagnostics and telemetry tracking (546930cf)
+
+### Fixed
+
+- Correct telemetry semantics (b5e38b00)
+
+### Performance
+
+- Clarify DB call timing semantics (3430f25f)
+- Prepare V3 production latency attribution (#831) (e36f07b8)
+
+### Documentation
+
+- Complete Czech V2 audit localization (1f918b72)
+- Document DB call timing boundary (a9efe507)
+
+### Maintenance
+
+- Sync generated repository metadata (#830) (72c4c874)
+- Update map-filters-panel positioning and background (7fc6e4bc)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#830) (72c4c874)
+- style(globals): update map-filters-panel positioning and background (7fc6e4bc)
+- feat(audits): add Production Performance Verification V2 report (3417ce36)
+- feat(enrichment): add SQL phase diagnostics and telemetry tracking (546930cf)
+- perf(route-cache): clarify DB call timing semantics (3430f25f)
+- docs(performance): complete Czech V2 audit localization (1f918b72)
+- docs(route-cache): document DB call timing boundary (a9efe507)
+- fix(route-cache): correct telemetry semantics (b5e38b00)
+- perf(route-cache): prepare V3 production latency attribution (#831) (e36f07b8)
+
+</details>
 ## [1.0.431] - 2026-10-11
 
 Changes since v1.0.430.
