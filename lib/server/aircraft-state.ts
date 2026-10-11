@@ -207,6 +207,10 @@ export class AircraftStateService {
   private refreshing = false;
   private networkRefreshing = false;
   private networkMetadataRefreshing = false;
+  // Optional provider work must not accumulate unbounded promises as local
+  // snapshot polls continue. Ingest, history and flight positions never wait.
+  private localMetadataRefreshing = false;
+  private localEnrichmentRefreshing = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private networkTimer: ReturnType<typeof setTimeout> | null = null;
   private initialRefresh: Promise<void> | null = null;
@@ -783,14 +787,19 @@ export class AircraftStateService {
 
         // Publish the live receiver snapshot before optional catalog work. A
         // slow metadata provider must not stop the readsb polling loop.
-        void this.hydrateInitialIconMetadata(localSnapshot.aircraft)
-          .then((aircraft) => {
-            if (!this.running) return;
-            this.applyInitialMetadata(aircraft);
-          })
-          .catch((error) => {
-            logger.debug({ error }, "AirRadar local metadata hydration skipped");
-          });
+        if (!this.localMetadataRefreshing && this.enrichment.hasInitialMetadataProvider) {
+          this.localMetadataRefreshing = true;
+          void this.hydrateInitialIconMetadata(localSnapshot.aircraft)
+            .then((aircraft) => {
+              if (this.running) this.applyInitialMetadata(aircraft);
+            })
+            .catch((error) => {
+              logger.debug({ error }, "AirRadar local metadata hydration skipped");
+            })
+            .finally(() => {
+              this.localMetadataRefreshing = false;
+            });
+        }
       } catch (error) {
         this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
         this.messagesPerSecond = null;
@@ -814,7 +823,19 @@ export class AircraftStateService {
       this.notify();
       if (localSnapshot && this.running) {
         this.queueHistory(localSnapshot);
-        void this.enrichSnapshot(localSnapshot);
+        // Limit enrichment to one pending batch, just like network icon
+        // metadata. Without this gate every poll can enqueue more provider
+        // promises, even though ProviderCache coalesces individual keys.
+        if (!this.localEnrichmentRefreshing && this.enrichment.hasProviders) {
+          this.localEnrichmentRefreshing = true;
+          void this.enrichSnapshot(localSnapshot)
+            .catch((error) => {
+              logger.debug({ error }, "AirRadar live enrichment skipped");
+            })
+            .finally(() => {
+              this.localEnrichmentRefreshing = false;
+            });
+        }
         void this.resolveAtc(localSnapshot).catch((error) => {
           // ATC is optional enrichment; a provider failure must never affect live tracking.
           logger.error({ error }, "AirRadar ATC resolution failed");
