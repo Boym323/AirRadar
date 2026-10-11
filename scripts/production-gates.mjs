@@ -1074,6 +1074,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       }
       const visualConcurrency = boundedConcurrency(process.env.AIRRADAR_VISUAL_CONCURRENCY);
       console.log(`[production-gates] visual targets=${selectedTargets.length} concurrency=${visualConcurrency}`);
+      const visualBatchStartedAt = performance.now();
       await runBoundedChecks(selectedTargets, visualConcurrency, async (target) => {
         const visualStartedAt = performance.now();
         const visualPage = await browser.newPage({ viewport: target.viewport });
@@ -1776,6 +1777,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           await closePage(visualPage);
         }
       });
+      console.log(`[production-gates] visual batch finished durationMs=${Math.round(performance.now() - visualBatchStartedAt)} targets=${selectedTargets.length}`);
     };
     const runResponsiveSweep = configuredViewport ? async () => {} : async () => {
       const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
@@ -1946,6 +1948,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     const orderedViewports = [...viewports].sort((left, right) =>
       Number(isProductionGateFullSmokeViewport(right)) - Number(isProductionGateFullSmokeViewport(left)));
     console.log(`[production-gates] browser viewport targets=${viewports.length} concurrency=${viewportConcurrency}`);
+    const viewportBatchStartedAt = performance.now();
     await runBoundedChecks(orderedViewports, viewportConcurrency, async (viewport) => {
       console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
       const fullSmoke = isProductionGateFullSmokeViewport(viewport);
@@ -2618,6 +2621,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           || contract.close !== 0 || !contract.imagesNamed || !contract.buttonsNamed) {
           throw new Error(`Responsive contract failed at ${viewport.width}px: ${JSON.stringify(contract)}`);
         }
+        console.log(`[production-gates] viewport ${viewport.width}x${viewport.height} contract durationMs=${Math.round(performance.now() - viewportStartedAt)}`);
         await closePage(page);
         return;
       }
@@ -2795,6 +2799,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       logViewportPhase("total", viewportStartedAt);
       await closePage(page);
     });
+    console.log(`[production-gates] viewport batch finished durationMs=${Math.round(performance.now() - viewportBatchStartedAt)} targets=${viewports.length}`);
   } finally {
     await browser.close();
   }
