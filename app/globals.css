@@ -512,7 +512,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .filter-button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 7px 10px; border: 1px solid rgba(55, 214, 192, .32); border-radius: 8px; background: rgba(55, 214, 192, .08); color: var(--text); font-size: 11px; font-weight: 700; cursor: pointer; }
 .filter-button:hover, .filter-button[aria-expanded="true"] { border-color: rgba(55, 214, 192, .62); background: rgba(55, 214, 192, .14); }
 .filter-active-dot { color: var(--mint); font-size: var(--font-size-2xs); }
-.map-filters-panel { position: absolute; z-index: 6; top: calc(100% + 7px); right: 0; width: min(340px, calc(100vw - 40px)); max-height: min(72vh, 620px); overflow-y: auto; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(8, 17, 29, .98); box-shadow: 0 14px 30px rgba(0, 0, 0, .38); color: var(--text); }
+.map-filters-panel { position: static; z-index: 6; width: auto; max-height: min(72vh, 620px); overflow-y: auto; margin-top: 7px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-overlay); box-shadow: 0 14px 30px rgba(0, 0, 0, .38); color: var(--text); }
 .map-filter-group { display: grid; gap: 8px; margin: 0; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(153, 181, 207, .12); }
 .map-filter-group:first-child { padding-top: 0; border-top: 0; }
 .map-filter-group legend { padding: 0; color: var(--mint); font-size: var(--font-size-2xs); font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
