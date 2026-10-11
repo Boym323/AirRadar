@@ -17,6 +17,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.424] - 2026-10-11
+
+Changes since v1.0.423.
+
+### Added
+
+- Radar Soak P50/P99 and sampled server CPU distributions (#805) (987818f1)
+
+### Fixed
+
+- Strict one-shot retry for transient third-party vector tiles (#806) (2c4022fd)
+
+### Maintenance
+
+- Sync generated repository metadata (#808) (cd6ee716)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(perf): Radar Soak P50/P99 and sampled server CPU distributions (#805) (987818f1)
+- chore(metadata): sync generated repository metadata (#808) (cd6ee716)
+- fix(browser): strict one-shot retry for transient third-party vector tiles (#806) (2c4022fd)
+
+</details>
 ## [1.0.423] - 2026-10-11
 
 Changes since v1.0.422.
