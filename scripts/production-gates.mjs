@@ -2805,6 +2805,7 @@ async function main() {
       AIRCRAFT_PHOTOS_ENABLED: "false",
       OGN_ENABLED: "false",
       FLIGHTAWARE_API_KEY: "",
+      AIRRADAR_ADMIN_AUTH_ENABLED: "true",
       WATCHLIST_ADMIN_TOKEN: "production-gate-token",
       AIRRADAR_CHANNEL: gateChannel === "rc" ? "release-candidate" : "production",
       AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
