@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { isAuthorizedYouTubeFrame } from "./v6-media-acceptance.mjs";
 
 export const STABLE_PRODUCTION_VERSION = "1.0.0";
 export const RELEASE_CANDIDATE_VERSION_PATTERN = /^1\.0\.0-rc\.[1-9]\d*$/;
@@ -1473,11 +1474,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const play = media.getByRole("button", { name: /Přehrát zde|Play here/ });
             if (await play.isEnabled()) throw new Error("V6-H play button enabled before consent");
             await permission.check();
+            await visualPage.waitForFunction(() => {
+              const root = document.querySelector('[data-testid="airport-media-v6-h"]');
+              return root?.getAttribute("data-consent-status") === "granted" &&
+                Array.from(root.querySelectorAll("button"))
+                  .some(button => /Přehrát zde|Play here/.test(button.textContent ?? "") && !button.disabled);
+            }, null, { timeout: 5_000 });
             await play.click();
             const frame = media.getByTestId("airport-v6-authorized-player").locator("iframe");
             await frame.waitFor({ state: "visible", timeout: 15_000 });
-            if (await frame.getAttribute("src") !== "https://www.youtube-nocookie.com/embed/AbCdEf123_9?controls=1&playsinline=1") {
-              throw new Error("V6-H iframe escaped the official approved video endpoint");
+            const src = await frame.getAttribute("src");
+            if (!isAuthorizedYouTubeFrame(src, "AbCdEf123_9")) {
+              throw new Error(`V6-H unapproved iframe endpoint for test video: ${String(src).slice(0, 200)}`);
             }
             if (!await media.locator('a[href="https://www.youtube.com/live/AbCdEf123_9"]').count()) {
               throw new Error("V6-H lost the original publisher fallback link");
@@ -1542,7 +1550,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const player = visualPage.getByTestId("airport-v6-authorized-player");
             await player.locator("iframe").waitFor({state:"visible",timeout:10_000});
             const src = await player.locator("iframe").getAttribute("src");
-            if (!src?.startsWith("https://www.youtube-nocookie.com/embed/M7lc1UVf-VE")) throw new Error("Unsafe embedded player URL");
+            if (!isAuthorizedYouTubeFrame(src, "M7lc1UVf-VE")) {
+              throw new Error(`V6-H unapproved iframe endpoint for test video: ${String(src).slice(0, 200)}`);
+            }
             await permission.uncheck();
             await player.waitFor({state:"detached",timeout:5_000});
           }
