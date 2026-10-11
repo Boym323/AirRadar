@@ -3,6 +3,8 @@ import { getRxwHubService } from "@/lib/server/rxw-hub-service";
 import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 import { getAdsbLolRoutesetRuntimeDiagnostics } from "@/lib/server/adsblol-route-provider";
 import { getRouteDbReasonDiagnostics } from "@/lib/server/route-postgres-cache";
+import { getRuntimeTelemetryHistory } from "@/lib/server/runtime-telemetry";
+import { databaseLatencySummary } from "@/lib/server/database-latency-statistics";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 
 /** Read-only, process-local status; never calls upstream, starts receivers or queries DB. */
@@ -12,6 +14,8 @@ export function getIntegrationDiagnostics() {
   return {
     rxw: getRxwHubService().getDiagnostics(),
     adsbhub: getAircraftStateService().getNetworkDiagnostics().adsbhubLane ?? null,
+    databaseLatency: databaseLatencySummary(getRuntimeTelemetryHistory().samples),
+    routeCacheLatency: getRouteEnrichmentTelemetry().getDbLatencyDistribution(),
     routeProviders: {
       routeset: getAdsbLolRoutesetRuntimeDiagnostics(),
       postgres: getRouteDbReasonDiagnostics(),

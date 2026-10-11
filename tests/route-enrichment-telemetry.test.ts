@@ -35,6 +35,24 @@ describe("route enrichment telemetry", () => {
     expect(metrics.getSnapshot().estimatedSavedLookups).toBe(0);
   });
 
+  it("reports real successful SQL latency P50/P95/P99 in bounded 60-minute windows", () => {
+    let now = Date.parse("2026-10-11T12:00:00.000Z");
+    const metrics = new RouteEnrichmentTelemetry(null, () => now);
+    for (let i = 1; i <= 100; i++) metrics.recordDbLatency(i);
+    expect(metrics.getDbLatencyDistribution()).toMatchObject({
+      processLocal: true, windowMinutes: 60, sampleCount: 100,
+      p50Ms: 50, p95Ms: 95, p99Ms: 99, maxMs: 100,
+    });
+    now += 61 * 60_000;
+    expect(metrics.getDbLatencyDistribution()).toMatchObject({
+      sampleCount: 0, p50Ms: null, p99Ms: null,
+    });
+    for (let i = 1; i <= 1200; i++) metrics.recordDbLatency(i);
+    expect(metrics.getDbLatencyDistribution()).toMatchObject({
+      sampleCount: 1024, p50Ms: 688, p95Ms: 1149, p99Ms: 1190,
+    });
+  });
+
   it("saves only bounded aggregate history and restores it without callsigns or positions", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "airradar-route-metrics-"));
     const file = path.join(directory, "history.json");
