@@ -52,6 +52,14 @@ export function summarizeIntegrationHealth(data) {
     routeCache: {
       dbError24h: Number.isSafeInteger(data.route?.dbError) ? data.route.dbError : null,
       dbBypassed24h: Number.isSafeInteger(data.route?.dbBypassed) ? data.route.dbBypassed : null,
+      reasonCountersSinceStart: Object.fromEntries([
+        "timeouts", "queryFailures", "connectionFailures",
+        "bypassBackoff", "bypassConcurrency", "bypassUnconfigured",
+      ].map((name) => [name, Number.isSafeInteger(data.routeProviders?.postgres?.[name])
+        && data.routeProviders.postgres[name] >= 0 ? data.routeProviders.postgres[name] : 0])),
+      lastErrorKind: ["timeout", "query", "connection"].includes(data.routeProviders?.postgres?.lastErrorKind)
+        ? data.routeProviders.postgres.lastErrorKind : null,
+      sqlLatencyLastHour: window(data.routeCacheLatency),
     },
     runtimeDbLatency: db ? { lastHour: window(db.lastHour), last24Hours: window(db.last24Hours) } : null,
   };
@@ -77,6 +85,7 @@ async function main() {
       `## AirRadar route health (observational)\n\n` +
       `Status: **${summary.status}**; requests: ${summary.routeset.requests}, success: ${summary.routeset.success}, failed: ${summary.routeset.failed}, last HTTP: ${summary.routeset.lastHttpStatus ?? "n/a"}.\n\n` +
       `Reason counters: ${JSON.stringify(summary.routeset.reasons)}.\n\n` +
+      `Route cache diagnostics: ${JSON.stringify(summary.routeCache)}.\n\n` +
       `DB health query P50/P95/P99: ${JSON.stringify(summary.runtimeDbLatency)}.\n\n` +
       `No ADSB.lol traffic/route API calls were made. Counters are process-local except where otherwise noted.\n`);
   }
