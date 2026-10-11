@@ -375,7 +375,9 @@ export class RegionalAttentionOutcomeValidator {
 
   observeTruth(local: ReadonlyMap<string, Aircraft>, now = Date.now()): void {
     if (!Number.isFinite(now)) return;
-    for (const sample of [...this.pending.values()]) {
+    // Deleting the current Map entry while iterating is safe; avoid copying
+    // every pending sample on each receiver refresh.
+    for (const sample of this.pending.values()) {
       if (now < sample.earlyAt) continue;
       if (now > sample.expiresAt) {
         this.resolveExpired(sample);
