@@ -1001,7 +1001,9 @@ export async function pruneHistoryRetention(
     while (batches < maxBatches) {
       const candidates = await schema.FlightPosition
         .where((position) => position.recordedAt.lt(cutoffInstant))
-        .orderBy((position) => position.id.asc())
+        // Retention has no ordering contract. Let PostgreSQL stop after the
+        // bounded batch on the existing recordedAt index instead of sorting
+        // all expired rows by id before selecting candidates.
         .limit(batchSize)
         .select("id")
         .all();
