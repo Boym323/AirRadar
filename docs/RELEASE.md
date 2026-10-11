@@ -102,6 +102,30 @@ already-existing GitHub Release for the resolved tag is treated as success,
 including rerun/race cases. Versioned stable/RC releases continue to use the
 normal command above.
 
+## Stage 4: Browser test throughput
+
+The browser gate keeps every assertion and screenshot. It runs up to two
+independent screenshot pages concurrently (`AIRRADAR_VISUAL_CONCURRENCY`)
+and up to two viewport scenarios concurrently
+(`AIRRADAR_VIEWPORT_CONCURRENCY`). Each setting is an integer from 1 to 3;
+the default and production release values are 2, and 1 is a safe diagnostic
+fallback if browser/GPU contention appears. Resource-intensive 3D terrain screenshots run exclusively (never simultaneously with another 3D terrain capture), as do the two full viewport interaction scenarios; lightweight checks can continue concurrently. A failing task prevents new work
+from starting but the runner awaits other active tasks before closing Chromium.
+
+A real public system snapshot is fetched once before screenshot workers start,
+so system-readiness screenshots no longer depend on screenshot ordering. The
+responsive width sweep still checks every original breakpoint, and the
+representative 375px and 821px interaction matrices remain mandatory; other
+viewport contracts are also retained. Logs include target and batch durations
+for timing comparisons.
+
+The release gate planner maps recognized isolated UI files (including feature
+CSS modules) to specific visual screenshot groups, with full test fallback for
+cross-feature, shared, or unrecognized files. Run a `release-preview` PR once
+with FULL gates before adopting the updated production release pipeline. Compare
+browser wall time and track any resource/rate-limit changes before raising
+concurrency above 2. Nightly full browser and radar regression stays enabled.
+
 ## CI/CD optimization and release scope
 
 The `release-scope` job inspects **all commits in a main push**, using `github.event.before`. If the base cannot be validated, deployment and the complete gates are required. Documentation-only updates retain their no-deploy behavior.

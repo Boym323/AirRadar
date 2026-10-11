@@ -1,96 +1,136 @@
 #!/usr/bin/env node
 /**
- * Conservative release gates based on the entire pushed diff.
- * Unknown/shared paths always receive full coverage.
+ * Conservative release gates computed from every file in the pushed diff.
+ * One known visual workstream may use a targeted smoke; shared code, multiple
+ * visual workstreams, and unclassified paths always require FULL coverage.
  */
 import { fileURLToPath } from "node:url";
 
 export const FAST_VISUAL_TARGETS = [
-  "radar-desktop",
-  "radar-mobile",
-  "system-desktop",
-  "airport-live-board-desktop",
-  "airport-live-board-mobile",
+  "radar-desktop", "radar-mobile", "system-desktop",
+  "airport-live-board-desktop", "airport-live-board-mobile",
   "aircraft-detail-mobile",
 ];
+
 const RADAR_TARGETS = [
-  "radar-desktop-selected", "radar-mobile-selected", "radar-v6-multiview-desktop",
-  "radar-v6-multiview-mobile", "radar-v6-d-3d-terrain", "radar-v6-d-3d-mobile",
+  "radar-desktop-selected", "radar-tablet-landscape-selected",
+  "radar-tablet-portrait-selected", "radar-mobile-selected",
+  "radar-mobile-selected-expanded", "radar-mobile-320", "radar-mobile-320-credits",
+  "radar-v6-multiview-desktop", "radar-v6-multiview-mobile",
+  "radar-v6-light-basemap", "radar-v6-satellite-basemap",
+  "radar-v6-d-3d-terrain", "radar-v6-d-3d-mobile", "radar-v6-g-presentation",
+  "radar-v5-map-focus-desktop", "radar-v5-map-focus-mobile",
 ];
 const AIRPORT_TARGETS = [
   "airport-v5-map-desktop", "airport-v5-map-mobile",
   "airport-v5-analytics-desktop", "airport-v5-analytics-mobile",
+  "airport-v5-analytics-en-mobile", "airport-v5-operations-desktop",
+  "airport-v5-weather-desktop", "airport-v5-arrivals-mobile",
+  "airport-v5-departures-mobile", "airport-v5-arrivals-320",
+  "airport-v5-overview-tablet", "airport-v5-overview-320",
+  "airport-v6-media-embed-desktop", "airport-v6-media-embed-mobile",
+  "airport-v6-h-authorized-media",
 ];
 const AIRCRAFT_TARGETS = [
-  "aircraft-detail-desktop", "aircraft-detail-telemetry-expanded",
-  "aircraft-detail-receiver",
+  "aircraft-detail-desktop", "aircraft-detail-tablet", "aircraft-detail-mobile",
+  "aircraft-detail-telemetry-expanded", "aircraft-detail-receiver",
+  "predictive-eta-public-desktop", "predictive-runway-public-desktop",
+  "predictive-runway-change-public-desktop", "predictive-trajectory-public-desktop",
+  "predictive-eta-admin-mobile", "predictive-runway-admin-mobile",
+  "predictive-runway-change-admin-mobile", "predictive-trajectory-admin-mobile",
 ];
+const FEATURE_TARGETS = {
+  radar: RADAR_TARGETS,
+  airport: AIRPORT_TARGETS,
+  aircraft: AIRCRAFT_TARGETS,
+  system: ["system-desktop", "predictive-readiness-desktop", "predictive-readiness-mobile"],
+  statistics: ["statistics-desktop", "statistics-mobile", "command-search-desktop", "command-search-mobile"],
+  weather: ["weather-data-desktop", "weather-empty-mobile"],
+  watchlist: ["watchlist-empty-desktop", "watchlist-empty-mobile"],
+  notifications: ["notifications-empty-desktop", "notifications-empty-mobile"],
+  receiver: ["receiver-unavailable-desktop", "receiver-unavailable-mobile"],
+  spotter: ["my-sky-focus-desktop", "my-sky-focus-mobile", "my-airradar-personal-mobile"],
+  recap: ["daily-intelligence-desktop", "daily-intelligence-mobile"],
+  operations: ["operations-center-desktop", "operations-center-mobile", "predictive-operations-public-desktop", "predictive-operations-admin-mobile"],
+};
+const FULL_PERFORMANCE_RUNTIME = /^lib\/server\/(?:aircraft-state|sse-capacity|runtime-diagnostics|source-reliability)/;
 const FAST_VIEWPORTS = "375x812,821x1000";
 const FAST_PERFORMANCE_SCENARIOS = "100,1000,3000";
-
-const backendOnly = [
-  /^app\/api\//, /^lib\/server\//, /^migrations\//, /^prisma\//,
-  /^tests\//,
-];
-const radarOnly = [/^components\/radar\//, /^lib\/radar\//];
-const airportOnly = [/^components\/airport[^/]*\//, /^components\/airport[^/]*\.[jt]sx?$/, /^app\/airports\//];
-const aircraftOnly = [/^app\/aircraft\//, /^components\/aircraft[^/]*\//, /^components\/aircraft[^/]*\.[jt]sx?$/];
-const nonRuntime = [
+const DOCUMENTATION = [
   /^docs\/.*\.md$/, /^README\.md$/, /^CHANGELOG\.md$/,
   /^docs\/metrics\/(?:code-history\.json|code-growth\.svg)$/,
 ];
+const RULES = [
+  { kind: "radar", paths: [/^components\/radar\//, /^lib\/radar\//] },
+  { kind: "airport", paths: [
+    /^app\/airports\//, /^components\/(?:airport[^/]*|airports-[^/]*|live-airport-network[^/]*)\.(?:[cm]?[jt]sx?|css)$/,
+    /^components\/airport[^/]*\//,
+  ] },
+  { kind: "aircraft", paths: [
+    /^app\/aircraft\//,
+    /^components\/(?:aircraft-(?:detail|observed-weather|communications|weather-fusion|weather-panel|adsb-telemetry|operational-twin)[^/]*|predictive-aircraft-advisories[^/]*)\.(?:[cm]?[jt]sx?|css)$/,
+  ] },
+  { kind: "system", paths: [/^app\/system\//, /^components\/system-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "statistics", paths: [/^app\/statistics\//, /^components\/statistics-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "weather", paths: [/^app\/weather\//, /^components\/weather-operations-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "watchlist", paths: [/^app\/watchlist\//, /^components\/watchlist-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "notifications", paths: [/^app\/notifications\//, /^components\/notification-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "receiver", paths: [/^app\/receiver\//, /^components\/receiver-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "spotter", paths: [
+    /^app\/(?:spotter|my-airradar)\//,
+    /^components\/(?:my-airradar-home|mobile-spotter-mode|spotter-camera-ar)[^/]*\.(?:[cm]?[jt]sx?|css)$/,
+  ] },
+  { kind: "recap", paths: [/^app\/recap\//, /^components\/recap-page\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "operations", paths: [/^app\/operations\//, /^components\/operations-dashboard[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
+];
+const BACKEND_ONLY = [/^app\/api\//, /^lib\/server\//, /^migrations\//, /^prisma\//, /^tests\//];
 
-function matchesAny(path, patterns) {
+function matches(path, patterns) {
   return patterns.some((pattern) => pattern.test(path));
 }
-
+function full(reason) {
+  return { browser: "full", visualTargets: "", viewports: "",
+    performance: "full", performanceScenarios: "", reason };
+}
 export function planReleaseGates(paths) {
-  // Empty/invalid input must never silently downgrade coverage.
   if (!Array.isArray(paths) || paths.length === 0) return full("missing change scope");
   const kinds = new Set();
   let fullPerformance = false;
   for (const path of paths) {
-    if (typeof path !== "string" || !path || path.includes("\0") || path.includes("\\")) {
+    if (typeof path !== "string" || !path || path.includes("\0") || path.includes("\\") || path.includes("../")) {
       return full("invalid changed path");
     }
-    if (matchesAny(path, nonRuntime)) continue;
-    if (matchesAny(path, radarOnly)) {
-      kinds.add("radar");
-      fullPerformance = true;
-    } else if (matchesAny(path, airportOnly)) {
-      kinds.add("airport");
-    } else if (matchesAny(path, aircraftOnly)) {
-      kinds.add("aircraft");
-    } else if (matchesAny(path, backendOnly)) {
+    if (matches(path, DOCUMENTATION)) continue;
+    const matchingRules = RULES.filter(({ paths: patterns }) => matches(path, patterns));
+    if (matchingRules.length === 1) {
+      kinds.add(matchingRules[0].kind);
+      if (matchingRules[0].kind === "radar") fullPerformance = true;
+    } else if (matchingRules.length > 1) {
+      return full(`ambiguous feature path: ${path}`);
+    } else if (matches(path, BACKEND_ONLY)) {
       kinds.add("backend");
-      if (/^lib\/server\/(?:aircraft-state|sse-capacity|runtime-diagnostics|source-reliability)/.test(path)) {
-        fullPerformance = true;
-      }
+      if (FULL_PERFORMANCE_RUNTIME.test(path)) fullPerformance = true;
     } else {
       return full(`shared or unclassified path: ${path}`);
     }
   }
-  if (kinds.size === 0) return full("no runtime changes");
   const visualKinds = [...kinds].filter((kind) => kind !== "backend");
+  if (visualKinds.length === 0) return kinds.size ? {
+    browser: "fast", visualTargets: FAST_VISUAL_TARGETS.join(","), viewports: FAST_VIEWPORTS,
+    performance: fullPerformance ? "full" : "fast",
+    performanceScenarios: fullPerformance ? "" : FAST_PERFORMANCE_SCENARIOS,
+    reason: [...kinds].sort().join(", "),
+  } : full("no runtime changes");
   if (visualKinds.length > 1) return full("cross-feature visual changes");
-  const targets = [...FAST_VISUAL_TARGETS];
-  if (kinds.has("radar")) targets.push(...RADAR_TARGETS);
-  if (kinds.has("airport")) targets.push(...AIRPORT_TARGETS);
-  if (kinds.has("aircraft")) targets.push(...AIRCRAFT_TARGETS);
-  const browser = visualKinds.length ? "targeted" : "fast";
+  const kind = visualKinds[0];
   return {
-    browser,
-    visualTargets: [...new Set(targets)].join(","),
+    browser: "targeted",
+    visualTargets: [...new Set([...FAST_VISUAL_TARGETS, ...FEATURE_TARGETS[kind]])].join(","),
     viewports: FAST_VIEWPORTS,
     performance: fullPerformance ? "full" : "fast",
     performanceScenarios: fullPerformance ? "" : FAST_PERFORMANCE_SCENARIOS,
     reason: [...kinds].sort().join(", "),
   };
-}
-
-function full(reason) {
-  return { browser: "full", visualTargets: "", viewports: "",
-    performance: "full", performanceScenarios: "", reason };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

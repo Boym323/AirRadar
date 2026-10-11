@@ -75,9 +75,11 @@ describe("production release metadata gate", () => {
 
   it("collects the system snapshot without a disposable Playwright response", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    const begin = source.indexOf('if (target.name === "system-desktop") {');
-    const block = source.slice(begin, source.indexOf("if (target.mockPredictiveReadiness)", begin));
+    const begin = source.indexOf('if (selectedTargets.some((target) => target.name === "system-desktop" || target.mockPredictiveReadiness)) {');
+    const workerStart = source.indexOf("await runBoundedChecks(selectedTargets", begin);
+    const block = source.slice(begin, workerStart);
     expect(begin).toBeGreaterThan(-1);
+    expect(workerStart).toBeGreaterThan(begin);
     expect(block).toContain('const upstream = await get("/api/system/status")');
     expect(block).toContain("systemStatusSnapshot = await upstream.json()");
     expect(block).not.toContain('visualPage.route("**/api/system/status"');

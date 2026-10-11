@@ -89,6 +89,28 @@ nasazení. Publikování release je idempotentní: už existující GitHub Relea
 vyřešený tag se považuje za úspěch, včetně případů rerun/race. Verzované
 stable/RC releasy nadále používají běžný příkaz výše.
 
+## Etapa 4: Zrychlení browser testů
+
+Produkční testy nadále obsahují všechna původní ověření a screenshoty.
+Souběžně se spouštějí maximálně dvě nezávislé stránky pro screenshoty
+(`AIRRADAR_VISUAL_CONCURRENCY`) a dva scénáře rozlišení
+(`AIRRADAR_VIEWPORT_CONCURRENCY`). Obě nastavení jsou celá čísla od 1 do 3,
+výchozí i produkční hodnota je 2. Při nestabilitě GPU nebo přetížení lze
+bez změny kódu nastavit 1. Náročné 3D terrain screenshoty a plné interakční scénáře rozlišení se vždy spouštějí výhradně po jednom; lehké kontroly mohou dál běžet souběžně. Při první chybě se nespouští další úlohy, ale
+již zahájené testy se dokončí před zavřením prohlížeče.
+
+Skutečný systémový snapshot se získá jednou ještě před spuštěním workerů.
+Zůstává kontrola všech původních responzivních hranic, náročných scénářů
+375 a 821 px i všech ostatních kontraktů rozlišení. Logy uvádějí doby
+jednotlivých snímků a celých testovacích sad.
+
+Plánovač vybírá u izolovaných změn UI odpovídající cílové screenshoty
+včetně změn CSS modulů. Neznámé, sdílené nebo souběžné změny různých
+funkčních oblastí vyžadují plné testování. Před nasazením ověřte
+`release-preview` s kompletním režimem FULL; noční plná regresní sada
+zůstává zachována. Navýšení souběžnosti nad 2 podmiňte měřením stabilního
+běhu a nepřítomnosti limitů API.
+
 ## Optimalizace CI/CD a rozsah vydání
 
 Úloha `release-scope` kontroluje **všechny commity v jednom pushi do main** podle `github.event.before`. Pokud nelze výchozí commit spolehlivě ověřit, musí proběhnout nasazení i všechny úplné kontroly. Změny pouze v dokumentaci nadále nespouštějí produkční nasazení.
