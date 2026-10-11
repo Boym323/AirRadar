@@ -53,6 +53,9 @@ describe("RXW bounded cache", () => {
     expect(store.ingest(message("first"), now)).toBe(false);
     expect(store.ingest(message("second", { timestamp: (now - 60_000) / 1000 }), now)).toBe(true);
     expect(store.list("4CA123", now).map((item) => item.uid)).toEqual(["first", "second"]);
+    expect(store.stats()).toMatchObject({ accepted: 2, rejectedDuplicate: 1, rejectedInvalid: 0 });
+    expect(store.ingest(null, now)).toBe(false);
+    expect(store.stats().rejectedInvalid).toBe(1);
     expect(store.list("4CA123", now + RXW_MESSAGE_TTL_MS + 1)).toEqual([]);
   });
 

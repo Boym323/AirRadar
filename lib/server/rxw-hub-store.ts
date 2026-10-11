@@ -131,12 +131,17 @@ export class RxwHubMessageStore {
   private readonly seen = new Map<string, number>();
   private readonly waypointPlans = new Map<string, RxwWaypointPlan>();
   private accepted = 0;
+  private rejectedInvalid = 0;
+  private rejectedDuplicate = 0;
+  private fpnAccepted = 0;
+  private fpnRejected = 0;
+  private lastAcceptedAt: string | null = null;
 
   ingest(input: unknown, now = Date.now()): boolean {
     const message = normalizeRxwCommunication(input, now);
-    if (!message) return false;
+    if (!message) { this.rejectedInvalid++; return false; }
     const key = message.stationId + ":" + message.uid;
-    if (this.seen.has(key)) return false;
+    if (this.seen.has(key)) { this.rejectedDuplicate++; return false; }
 
     this.seen.set(key, now);
     while (this.seen.size > RXW_MAX_SEEN_UIDS) {
@@ -163,7 +168,9 @@ export class RxwHubMessageStore {
         ? input as Record<string, unknown> : null;
       if (raw?.label === "H1") {
         const parsed = parseRxwH1Fpn(raw.text, raw.flight);
+        if (!parsed) this.fpnRejected++;
         if (parsed) {
+          this.fpnAccepted++;
           const seenAt = Date.parse(message.timestamp);
           const previousPlan = this.waypointPlans.get(message.icaoHex);
           if (!previousPlan || Date.parse(previousPlan.observedAt) <= seenAt) {
@@ -192,6 +199,7 @@ export class RxwHubMessageStore {
       }
     }
     this.accepted += 1;
+    this.lastAcceptedAt = new Date(now).toISOString();
     return true;
   }
 
@@ -236,8 +244,16 @@ export class RxwHubMessageStore {
     return available;
   }
 
-  stats(): { aircraft: number; accepted: number; uids: number; plans: number } {
-    return { aircraft: this.aircraft.size, accepted: this.accepted, uids: this.seen.size, plans: this.waypointPlans.size };
+  stats(): { aircraft: number; accepted: number; uids: number; plans: number;
+    rejectedInvalid: number; rejectedDuplicate: number; fpnAccepted: number; fpnRejected: number;
+    lastAcceptedAt: string | null } {
+    return {
+      aircraft: this.aircraft.size, accepted: this.accepted, uids: this.seen.size,
+      plans: this.waypointAvailability().length,
+      rejectedInvalid: this.rejectedInvalid, rejectedDuplicate: this.rejectedDuplicate,
+      fpnAccepted: this.fpnAccepted, fpnRejected: this.fpnRejected,
+      lastAcceptedAt: this.lastAcceptedAt,
+    };
   }
 
   clear(): void {
@@ -245,5 +261,10 @@ export class RxwHubMessageStore {
     this.seen.clear();
     this.waypointPlans.clear();
     this.accepted = 0;
+    this.rejectedInvalid = 0;
+    this.rejectedDuplicate = 0;
+    this.fpnAccepted = 0;
+    this.fpnRejected = 0;
+    this.lastAcceptedAt = null;
   }
 }

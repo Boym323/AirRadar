@@ -334,6 +334,20 @@ export interface NetworkProviderDiagnostics {
   bytesReceived?: number;
   linesPerSecond?: number;
   stale?: boolean;
+  /** Admin-only source lane summary; not included in public status projections. */
+  adsbhubLane?: {
+    enabled: boolean;
+    status: NetworkProviderStatus;
+    connected: boolean;
+    lastLineAt: string | null;
+    linesReceived: number;
+    linesParsed: number;
+    malformedLines: number;
+    invalidIcao: number;
+    invalidPosition: number;
+    reconnects: number;
+    activeTracks: number;
+  };
 }
 
 export interface SourceStatusSnapshot {
