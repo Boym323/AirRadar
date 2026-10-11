@@ -21,6 +21,10 @@ describe("publicly logged aggregate route health (no upstream probes)", () => {
   });
   it("does not label disabled or unmeasured providers as healthy", () => {
     expect(summarizeIntegrationHealth(fixture({ enabled: false })).status).toBe("DISABLED");
+    expect(summarizeIntegrationHealth(fixture({
+      blockedUntilAt: new Date(Date.now() + 6 * 60 * 60_000).toISOString(),
+      skippedBlocked: 120,
+    }))).toMatchObject({ status: "BLOCKED", routeset: { skippedBlocked: 120 } });
     expect(summarizeIntegrationHealth(fixture({ requests: 0, failed: 0 })).status).toBe("INSUFFICIENT_DATA");
     expect(summarizeIntegrationHealth(fixture({ success: 3, lastSuccessAt: "2026-10-11T12:02:00.000Z" })).status).toBe("OK");
     expect(summarizeIntegrationHealth(fixture({ success: 3, lastSuccessAt: "2026-10-11T11:59:00.000Z" })).status).toBe("INTERMITTENT");

@@ -40,6 +40,13 @@ describe("ADSB.lol routeset retry policy", () => {
 
 describe("ADSB.lol routeset batch provider", () => {
   afterEach(() => {
+    const globals = globalThis as typeof globalThis & {
+      airRadarRoutesetRuntime?: { blockedUntilAt?: string | null; nextAllowedAt?: string | null };
+    };
+    if (globals.airRadarRoutesetRuntime) {
+      globals.airRadarRoutesetRuntime.blockedUntilAt = null;
+      globals.airRadarRoutesetRuntime.nextAllowedAt = null;
+    }
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
@@ -79,6 +86,43 @@ describe("ADSB.lol routeset batch provider", () => {
     await vi.advanceTimersByTimeAsync(250);
     await expect(pending).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens one shared 6h circuit on upstream 403 and fails queued/new lookups without repeated fetch", async () => {
+    vi.useFakeTimers();
+    let upstreamStatus = 403;
+    const fetchMock = vi.fn(async () =>
+      upstreamStatus === 403
+        ? new Response("forbidden", { status: 403 })
+        : new Response(JSON.stringify([row("UAE139")]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new AdsbLolRouteProvider(resolver);
+    const queued = Array.from({ length: 21 }, (_, i) => provider.getRoute(
+      "UAE" + String(139 + i), observedAt, { lat: 49.2, lon: 17.7 },
+    ));
+    const settled = Promise.allSettled(queued);
+    await vi.advanceTimersByTimeAsync(250);
+    const results = await settled;
+    expect(results).toHaveLength(21);
+    expect(results.every((result) => result.status === "rejected")).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const after = getAdsbLolRoutesetRuntimeDiagnostics();
+    expect(after.lastHttpStatus).toBe(403);
+    expect(Date.parse(after.blockedUntilAt ?? "") - Date.now()).toBeGreaterThan(5 * 60 * 60_000);
+    expect(after.skippedBlocked).toBeGreaterThanOrEqual(1);
+
+    const otherProvider = new AdsbLolRouteProvider(resolver);
+    await expect(otherProvider.getRoute("UAE139", observedAt, { lat: 49.2, lon: 17.7 }))
+      .rejects.toThrow("retry suspended");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date(Date.now() + 6 * 60 * 60_000 + 1000));
+    upstreamStatus = 200;
+    const recovery = otherProvider.getRoute("UAE139", observedAt, { lat: 49.2, lon: 17.7 });
+    await vi.advanceTimersByTimeAsync(250);
+    await expect(recovery).resolves.toMatchObject({ origin: "OMDB", destination: "LKPR" });
+    expect(getAdsbLolRoutesetRuntimeDiagnostics().blockedUntilAt).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("rejects transport errors so the enrichment cache does not treat them as valid misses", async () => {

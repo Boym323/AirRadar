@@ -2,6 +2,11 @@ name: Integration Health
 
 on:
   workflow_dispatch:
+  # The post-CI event occurs AFTER the standard production deployment job,
+  # unlike a main-push probe that would inspect the previous release.
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
   push:
     branches: [main]
     paths:
@@ -19,6 +24,7 @@ concurrency:
 
 jobs:
   health:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
