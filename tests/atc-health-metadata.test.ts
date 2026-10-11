@@ -235,4 +235,21 @@ describe("ATC health metadata fast path", () => {
     expect(getAtcDatasetCacheDiagnostics().loadFailures).toBeGreaterThan(0);
     expect(getAtcDatasetCacheDiagnostics().entries).toBe(0);
   });
+
+  it("fails soft when both bounded consistency attempts observe an import", async () => {
+    const version = { value: "v1" };
+    const sector = { id: "RETRY", name: "Changing", polygonJson: JSON.stringify([[[14, 50], [15, 50], [15, 51], [14, 50]]]), lowerAltitudeFt: null, upperAltitudeFt: null, lowerAltitudeReference: null, upperAltitudeReference: null, atcCallsign: null, service: "APP", airspaceType: null, airspaceClass: null, remarks: null, primaryFrequencyMhz: 118.1, alternateFrequenciesJson: "[]", country: "CZ", source: "import", sourceReference: "test://retry", validFrom: null, validTo: null, lastVerifiedAt: "2026-10-09T12:00:00.000Z" };
+    let loads = 0;
+    const model = (records: unknown[], onLoad?: () => void) => ({
+      limit: () => ({ all: async () => { onLoad?.(); return records; } }),
+      select: (...fields: string[]) => ({ limit: () => ({ all: async () => records.map((record) => Object.fromEntries(fields.map((field) => [field, (record as Record<string, unknown>)[field]]))) }) }),
+    });
+    mocks.getPrisma.mockReturnValue(database({
+      AtcSector: model([sector], () => { loads += 1; version.value = loads === 1 ? "v2" : "v3"; }),
+      AtcTransmitter: model([]),
+    }, version));
+    await expect(getStoredAtcData()).resolves.toBeNull();
+    expect(loads).toBe(2);
+    expect(getAtcDatasetCacheDiagnostics().loadFailures).toBe(1);
+  });
 });

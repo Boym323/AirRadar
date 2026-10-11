@@ -488,7 +488,7 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
         if (generation !== (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0)) continue;
         setAtcDatasetCache(value, fingerprint, generation);
         const active = activeAtcData(value);
-    globalAtcMetadata.__airRadarAtcMetadata = { value: active.metadata, fingerprint, expiresAtMs: Date.now() + ATC_METADATA_CACHE_MS };
+        globalAtcMetadata.__airRadarAtcMetadata = { value: active.metadata, fingerprint, expiresAtMs: Date.now() + ATC_METADATA_CACHE_MS };
         return active;
       } catch (error) {
         datasetCacheDiagnostics().loadFailures += 1;
@@ -496,7 +496,9 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
         return null;
       }
     }
-    throw new Error("ATC dataset changed during bounded consistency check");
+    datasetCacheDiagnostics().loadFailures += 1;
+    console.error("AirRadar stored ATC data changed during bounded consistency check");
+    return null;
   })();
   globalAtcMetadata.__airRadarAtcDatasetFlight = flight;
   try { return cloneAtcData(await flight); }

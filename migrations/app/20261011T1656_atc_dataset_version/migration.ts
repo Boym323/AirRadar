@@ -38,19 +38,6 @@ export default class M extends Migration<Start, End> {
         }],
         postcheck: [],
       }),
-      rawSql({
-        id: 'index.flight.flight_aircraftId_lastSeenAt_desc_idx',
-        label: 'Ensure index "flight_aircraftId_lastSeenAt_desc_idx" exists',
-        operationClass: 'additive',
-        target: { id: 'postgres', details: { schema: 'public', objectType: 'index', name: 'flight_aircraftId_lastSeenAt_desc_idx', table: 'flight' } },
-        precheck: [],
-        execute: [{
-          description: 'Create the bounded flight history index if absent',
-          sql: 'CREATE INDEX IF NOT EXISTS "flight_aircraftId_lastSeenAt_desc_idx" ON "public"."flight" ("aircraftId", "lastSeenAt")',
-          params: [],
-        }],
-        postcheck: [],
-      }),
     ];
   }
 }
