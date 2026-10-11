@@ -557,6 +557,7 @@
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/runtime-performance",
+        "/api/system/integrations",
         "/api/system/status",
         "/api/system/stream",
         "/api/version"
