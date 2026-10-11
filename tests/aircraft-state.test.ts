@@ -159,7 +159,10 @@ describe("aircraft state service", () => {
     );
     services.push(service);
     await service.waitForReady();
-    const internal = service as unknown as { refresh: () => Promise<void> };
+    const internal = service as unknown as {
+      refresh: () => Promise<void>;
+      localEnrichmentRefreshing: boolean;
+    };
     // Optional enrichment can remain blocked while ingest keeps refreshing.
     expect(enrich).toHaveBeenCalledTimes(1);
     await internal.refresh();
@@ -167,10 +170,9 @@ describe("aircraft state service", () => {
     expect(getSnapshot.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(enrich).toHaveBeenCalledTimes(1);
     releaseFirst(null);
-    // Let .finally() clear the in-flight gate.
-    await vi.waitFor(() => expect(enrich).toHaveBeenCalledTimes(1));
-    await Promise.resolve();
-    await Promise.resolve();
+    // The async enrich loop resolves through Promise.allSettled and .finally.
+    // Explicitly wait for the gate, not for an already-true call count.
+    await vi.waitFor(() => expect(internal.localEnrichmentRefreshing).toBe(false));
     await internal.refresh();
     await vi.waitFor(() => expect(enrich).toHaveBeenCalledTimes(2));
   });
