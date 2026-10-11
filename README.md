@@ -287,6 +287,10 @@ polling. Configure them in the server-only `.env`; never use
 | ADSBDB metadata/routes | `ADSBDB_ENABLED=true` | Disabled |
 | ADSB.lol routeset fallback | `ADSBLOL_ROUTE_ENABLED=true` | Disabled; batched POST, only if ADSBDB route is missing or implausible |
 | Persistent verified-route cache | `ROUTE_DB_CACHE_ENABLED=true` | Disabled until the additive SQL table is installed; RAM → PostgreSQL → ADSBDB → ADSB.lol |
+| RXW Hub ACARS metadata and optional H1/FPN waypoints | `RXW_HUB_ENABLED=true`, optional `RXW_FPN_ENABLED=true` | Both disabled; requires RXW operator authorization and no local ACARS decoder |
+| SondeHub radiosonde map and live MQTT | `SONDEHUB_ENABLED=true`, optional `SONDEHUB_MQTT_ENABLED=true` | Disabled; external REST/MQTT live smoke required |
+| ČHMÚ Echo Top HGHT map | `CHMI_ECHOTOP_ENABLED=true` | Disabled; requires validated HDF5 conversion and Python dependencies |
+| NOAA space weather context | `SPACE_WEATHER_ENABLED=true` | Disabled; Kp is not proof of local GNSS interference |
 | tar1090 aircraft catalog | `AIRCRAFT_METADATA_URL` when using a tar1090 root | Best effort, daily conditional sync |
 | FlightAware flight plans | `FLIGHTAWARE_ENABLED=true` and `FLIGHTAWARE_API_KEY` | Disabled; paid data only after clicking **Load flight details** on the aircraft page; extra paid `/route` lookup requires `FLIGHTAWARE_ROUTE_FALLBACK_ENABLED=true` |
 | AviationWeather.gov METAR/TAF/SIGMET | No key; server-side AWC integration | Disabled; opt-in |
