@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 import { chromium } from "playwright";
 import { RADAR_PERFORMANCE_SCENARIOS, evaluateRadarPerformanceBaseline } from "./radar-performance-budget.mjs";
+import { startCpuSampler } from "./radar-soak-statistics.mjs";
 
 const host = "127.0.0.1";
 const port = Number(process.env.RADAR_PERF_PORT || 3299);
@@ -424,6 +425,7 @@ async function exerciseSseReconnects() {
 
 async function measureScenario(browser, scenario, serverPid) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  let cpuSampler = null;
   try {
     await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
       status: 200,
@@ -458,7 +460,11 @@ async function measureScenario(browser, scenario, serverPid) {
       browser: await browserFootprint(page),
       serverRssBytes: readProcessRssBytes(serverPid),
     } : null;
+    cpuSampler = soakMode ? startCpuSampler(serverPid) : null;
     await wait(measureMs);
+    // Keep CPU sampling scoped exactly to the measurement period, excluding forced GC.
+    const serverCpu = cpuSampler?.finish() ?? null;
+    cpuSampler = null;
 
     // Freeze timing/long-task diagnostics before browserFootprint() forces GC.
     // Footprint collection is intentionally outside the measured performance window.
@@ -493,7 +499,11 @@ async function measureScenario(browser, scenario, serverPid) {
       animation: {
         ...raw.snapshot.animation,
         averageMs: rounded(raw.snapshot.animation.averageMs),
+        p50Ms: rounded(raw.snapshot.animation.p50Ms),
         p95Ms: rounded(raw.snapshot.animation.p95Ms),
+        p99Ms: rounded(raw.snapshot.animation.p99Ms),
+        frameIntervalP50Ms: rounded(raw.snapshot.animation.frameIntervalP50Ms),
+        frameIntervalP99Ms: rounded(raw.snapshot.animation.frameIntervalP99Ms),
         maxMs: rounded(raw.snapshot.animation.maxMs),
         frameIntervalP95Ms: rounded(raw.snapshot.animation.frameIntervalP95Ms),
         markerWritesPerSecond: rounded(raw.snapshot.animation.markerWrites / durationSeconds),
@@ -501,19 +511,36 @@ async function measureScenario(browser, scenario, serverPid) {
       labelCollision: {
         ...raw.snapshot.labelCollision,
         averageMs: rounded(raw.snapshot.labelCollision.averageMs),
+        p50Ms: rounded(raw.snapshot.labelCollision.p50Ms),
         p95Ms: rounded(raw.snapshot.labelCollision.p95Ms),
+        p99Ms: rounded(raw.snapshot.labelCollision.p99Ms),
         maxMs: rounded(raw.snapshot.labelCollision.maxMs),
       },
       trafficList: raw.snapshot.trafficList,
       longTasks: {
         ...raw.snapshot.longTasks,
         totalMs: rounded(raw.snapshot.longTasks.totalMs),
+        p50Ms: rounded(raw.snapshot.longTasks.p50Ms),
         p95Ms: rounded(raw.snapshot.longTasks.p95Ms),
+        p99Ms: rounded(raw.snapshot.longTasks.p99Ms),
         maxMs: rounded(raw.snapshot.longTasks.maxMs),
       },
       webgl: raw.webgl,
       dom: raw.dom,
       footprint,
+      // Isolated synthetic runner intentionally has DATABASE_URL="".
+      // Reporting 0 ms here would incorrectly imply a successful database measurement.
+      distributions: {
+        serverCpu: serverCpu ? {
+          ...serverCpu,
+          mean: rounded(serverCpu.mean), p50: rounded(serverCpu.p50),
+          p95: rounded(serverCpu.p95), p99: rounded(serverCpu.p99), max: rounded(serverCpu.max),
+        } : null,
+        databaseLatency: {
+          available: false, sampleCount: 0, mean: null, p50: null, p95: null, p99: null, max: null,
+          reason: "Database deliberately disabled in isolated synthetic radar benchmark",
+        },
+      },
     };
     const soakViolations = soakMode ? evaluateSoakFootprint(soakBefore, soakAfter) : [];
     const violations = [...evaluateRadarPerformanceBaseline(result, scenario), ...soakViolations];
@@ -541,6 +568,7 @@ async function measureScenario(browser, scenario, serverPid) {
       violations,
     };
   } finally {
+    cpuSampler?.finish();
     await page.close();
   }
 }
@@ -559,6 +587,7 @@ function markdownReport(report) {
     `Generated: ${report.generatedAt}`,
     "",
     "Timing metrics are observational only. CI pass/fail is based on deterministic structural/instrumentation budgets so hosted-runner load does not create flaky failures.",
+    "P50/P95/P99 are nearest-rank percentiles of bounded recent samples (maximum 4096 in-browser, 1024 CPU); sample counts are disclosed. CPU percentage is per logical core; database latency is not measured in the isolated synthetic runner.",
     "",
     "| Aircraft | HTML markers | WebGL aircraft | Mounted rows | Animation avg/p95/max | Frame p95 | Writes/s | HTML collision avg/p95/max | Long tasks | Heap | DOM nodes | Status |",
     "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
@@ -580,6 +609,18 @@ function markdownReport(report) {
   );
 
   if (report.environment.soakMode) {
+    lines.push(
+      "## Measured distributions (nearest rank)",
+      "",
+      "| Aircraft | Animation samples / P50 / P95 / P99 (ms) | Frame interval samples / P50 / P95 / P99 (ms) | CPU samples / P50 / P95 / P99 (% of core) | DB samples / P50 / P95 / P99 |",
+      "| ---: | ---: | ---: | ---: | ---: |",
+    );
+    const display = (value) => value === null || value === undefined ? "n/a" : String(rounded(value));
+    for (const result of report.scenarios) {
+      const a = result.animation, cpu = result.distributions?.serverCpu, db = result.distributions?.databaseLatency;
+      lines.push(`| ${result.aircraft} | ${a.sampleCount} / ${display(a.p50Ms)} / ${display(a.p95Ms)} / ${display(a.p99Ms)} | ${a.frameIntervalSampleCount} / ${display(a.frameIntervalP50Ms)} / ${display(a.frameIntervalP95Ms)} / ${display(a.frameIntervalP99Ms)} | ${cpu?.sampleCount ?? 0} / ${display(cpu?.p50)} / ${display(cpu?.p95)} / ${display(cpu?.p99)} | ${db?.sampleCount ?? 0} / ${display(db?.p50)} / ${display(db?.p95)} / ${display(db?.p99)} |`);
+    }
+    lines.push("", "DB percentiles require a separate database-enabled run with measured queries. Synthetic mode does not run DB queries.", "");
     lines.push(
       "## Soak footprint",
       "",
