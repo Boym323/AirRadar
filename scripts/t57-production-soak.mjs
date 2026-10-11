@@ -141,6 +141,32 @@ async function collect(base, cookie) {
   return projectT57SoakSample(status, metrics);
 }
 
+// This check is intentionally also used by --preflight, before any 24h
+// journal exists. The expected SHA is operator-supplied from /api/version.
+export function verifyT57ExpectedCommit(commit, expectedCommit) {
+  if (expectedCommit && !commit.startsWith(expectedCommit)) {
+    throw new Error("unexpected_production_commit");
+  }
+}
+
+/** Read-only authenticated telemetry preflight; no journal, worker or restart. */
+async function preflight() {
+  const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
+  if (!token) throw new Error("authorization_missing");
+  const base = trustedBase();
+  const cookie = await login(base, token);
+  const observation = await collect(base, cookie);
+  verifyT57ExpectedCommit(observation.identity.commit, process.env.T57_EXPECTED_COMMIT?.trim());
+  return {
+    status: "TELEMETRY_READY",
+    version: observation.sample.version,
+    commit: observation.identity.commit,
+    // Deliberately exclude cookie, token, PID, process store ID and raw payload.
+    requiredSources: ["admin-system-status", "runtime-performance", "retention-attribution"],
+    reportCreated: false,
+  };
+}
+
 async function run() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   if (!token) throw new Error("authorization_missing");
@@ -155,9 +181,7 @@ async function run() {
   let authenticatedAt = Date.now();
   let initial = await collect(base, cookie);
   const expectedCommit = process.env.T57_EXPECTED_COMMIT?.trim();
-  if (expectedCommit && !initial.identity.commit.startsWith(expectedCommit)) {
-    throw new Error("unexpected_production_commit");
-  }
+  verifyT57ExpectedCommit(initial.identity.commit, expectedCommit);
   // mkdtemp atomically creates a private 0700 directory even though the
   // parent temporary directory is shared. Never place a predictable filename
   // directly in a world-writable directory.
@@ -223,7 +247,9 @@ async function run() {
 }
 
 async function main() {
-  if (process.argv[2] === "--analyze" && process.argv.length === 4) {
+  if (process.argv[2] === "--preflight" && process.argv.length === 3) {
+    process.stdout.write(JSON.stringify(await preflight(), null, 2) + "\n");
+  } else if (process.argv[2] === "--analyze" && process.argv.length === 4) {
     const report = await analyzeFile(process.argv[3]);
     process.stdout.write(JSON.stringify(report, null, 2) + "\n");
     if (report.verdict !== "PASS_WITH_LIMITATIONS") process.exitCode = 2;
