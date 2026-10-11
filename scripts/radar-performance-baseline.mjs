@@ -626,6 +626,7 @@ async function main() {
       OGN_ENABLED: "false",
       FLIGHTAWARE_API_KEY: "",
       AIRRADAR_CHANNEL: "production",
+      AIRRADAR_ADMIN_AUTH_ENABLED: soakMode ? "true" : "false",
       WATCHLIST_ADMIN_TOKEN: soakMode ? soakAdminToken : "",
       AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
       AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json"),
