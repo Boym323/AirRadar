@@ -2,12 +2,47 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   getRuntimePerformanceDiagnostics,
   measureRuntime,
+  measureRuntimeAsync,
   resetRuntimePerformanceDiagnosticsForTests,
 } from "@/lib/server/runtime-performance";
 
 describe("runtime performance diagnostics", () => {
   beforeEach(() => {
     resetRuntimePerformanceDiagnosticsForTests();
+  });
+
+  it("computes bounded window percentiles on read, not per hot-path call", () => {
+    for (let i = 0; i < 10_000; i += 1) {
+      measureRuntime("snapshot.trail-update", 1, () => i);
+    }
+    const entry = getRuntimePerformanceDiagnostics()["snapshot.trail-update"];
+    expect(entry.calls).toBe(10_000);
+    expect(entry.samplesMs).toHaveLength(128);
+    expect(entry.windows).toHaveLength(1);
+    expect(entry.windows[0]?.samplesMs.length).toBeLessThanOrEqual(64);
+    expect(entry.windows[0]?.p99Ms).toBeGreaterThanOrEqual(entry.windows[0]?.p95Ms ?? 0);
+    expect(entry.cpuAttribution).toBe("inclusive-process-overlap");
+  });
+
+  it("reports overlapping async operations without claiming exclusive process CPU", async () => {
+    const resolve: Array<() => void> = [];
+    const suspended = () => new Promise<void>((done) => resolve.push(done));
+    const first = measureRuntimeAsync("network.metadata", 1, suspended);
+    const second = measureRuntimeAsync("network.metadata", 1, suspended);
+    let running = getRuntimePerformanceDiagnostics()["network.metadata"];
+    expect(running.activeAsync).toBe(2);
+    expect(running.maxConcurrentAsync).toBe(2);
+    resolve[0]?.();
+    await first;
+    running = getRuntimePerformanceDiagnostics()["network.metadata"];
+    expect(running.activeAsync).toBe(1);
+    resolve[1]?.();
+    await second;
+    running = getRuntimePerformanceDiagnostics()["network.metadata"];
+    expect(running.activeAsync).toBe(0);
+    expect(running.maxConcurrentAsync).toBe(2);
+    expect(running.calls).toBe(2);
+    expect(running.cpuAttribution).toBe("inclusive-process-overlap");
   });
 
   it("keeps the sample window bounded without leaking ring-buffer internals", () => {
