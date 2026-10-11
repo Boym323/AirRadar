@@ -18,6 +18,9 @@ const ERROR_BACKOFF_MS = 30_000;
 const MAX_RESPONSE_BYTES = 512 * 1024;
 const REQUEST_TIMEOUT_MS = 3_500;
 const MAX_RETRY_BACKOFF_MS = 5 * 60_000;
+// 401/403 are explicit upstream refusals, not transient rate-limit timeouts.
+// One cross-instance recovery attempt after 6 hours, never per-flight retries.
+const UPSTREAM_REFUSAL_COOLDOWN_MS = 6 * 60 * 60_000;
 
 /** Compute a bounded retry delay without trusting arbitrary upstream headers. */
 export function routesetRetryDelayMs(status: number | null, retryAfter: string | null, consecutiveFailures: number, now = Date.now()): number {
@@ -43,6 +46,8 @@ type RoutesetRuntimeDiagnostics = {
   lastSuccessAt: string | null;
   lastHttpStatus: number | null;
   nextAllowedAt: string | null;
+  blockedUntilAt: string | null;
+  skippedBlocked: number;
   reasons: Record<RoutesetErrorKind, number>;
 };
 const routeDiagnosticsGlobal = globalThis as typeof globalThis & { airRadarRoutesetRuntime?: RoutesetRuntimeDiagnostics };
@@ -50,9 +55,15 @@ function runtimeDiagnostics(): RoutesetRuntimeDiagnostics {
   return routeDiagnosticsGlobal.airRadarRoutesetRuntime ??= {
     requests: 0, success: 0, failed: 0, lastFailureAt: null, lastSuccessAt: null,
     lastHttpStatus: null, nextAllowedAt: null,
+    blockedUntilAt: null, skippedBlocked: 0,
     reasons: { http: 0, timeout: 0, network: 0, invalid_response: 0, other: 0 },
   };
 }
+function upstreamRefusalActive(now = Date.now()): boolean {
+  const until = Date.parse(runtimeDiagnostics().blockedUntilAt ?? "");
+  return Number.isFinite(until) && now < until;
+}
+
 /** Process-local aggregate from the existing route requests; never initiates an HTTP call. */
 export function getAdsbLolRoutesetRuntimeDiagnostics() {
   const state = runtimeDiagnostics();
@@ -137,6 +148,10 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
   getRoute(callsign: string, observedAt: Date, position?: RouteLookupPosition): Promise<FlightRoute | null> {
     const normalized = normalizedCallsign(callsign);
     if (!normalized || !validPosition(position)) return Promise.resolve(null);
+    if (upstreamRefusalActive()) {
+      runtimeDiagnostics().skippedBlocked += 1;
+      return Promise.reject(new Error("ADSB.lol routeset upstream authorization refused; retry suspended"));
+    }
     if (this.pending.length >= MAX_PENDING) {
       this.rejected += 1;
       // Do not turn provider congestion into a permanent negative route cache.
@@ -167,6 +182,12 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
     if (this.processing) return;
     const batch = this.pending.splice(0, MAX_BATCH_SIZE);
     if (!batch.length) return;
+    if (upstreamRefusalActive()) {
+      const rejected = [...batch, ...this.pending.splice(0)];
+      runtimeDiagnostics().skippedBlocked += rejected.length;
+      rejected.forEach((lookup) => lookup.reject(new Error("ADSB.lol routeset upstream authorization refused; retry suspended")));
+      return;
+    }
     this.processing = true;
     this.nextAllowedAt = Date.now() + MIN_REQUEST_GAP_MS;
     const controller = new AbortController();
@@ -217,6 +238,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
       const diagnostics = runtimeDiagnostics();
       this.failureStreak = 0;
       diagnostics.nextAllowedAt = null;
+      diagnostics.blockedUntilAt = null;
       diagnostics.success += 1;
       diagnostics.lastSuccessAt = new Date().toISOString();
       results.forEach((result, index) => batch[index].resolve(result));
@@ -233,7 +255,18 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
       diagnostics.lastFailureAt = new Date().toISOString();
       diagnostics.lastHttpStatus = reason === "http" ? httpStatus : null;
       getRouteEnrichmentTelemetry().record("adsblolError");
-      this.nextAllowedAt = Math.max(this.nextAllowedAt, Date.now() + routesetRetryDelayMs(httpStatus, retryAfter, this.failureStreak));
+      const refused = httpStatus === 401 || httpStatus === 403;
+      this.nextAllowedAt = Math.max(this.nextAllowedAt, Date.now() + (
+        refused ? UPSTREAM_REFUSAL_COOLDOWN_MS : routesetRetryDelayMs(httpStatus, retryAfter, this.failureStreak)
+      ));
+      if (refused) {
+        diagnostics.blockedUntilAt = new Date(this.nextAllowedAt).toISOString();
+        // Reject already queued lookups immediately: hours-long timers would
+        // retain pending promises and stall live aircraft enrichment.
+        const dropped = this.pending.splice(0);
+        diagnostics.skippedBlocked += dropped.length;
+        dropped.forEach((lookup) => lookup.reject(error));
+      }
       diagnostics.nextAllowedAt = new Date(this.nextAllowedAt).toISOString();
       batch.forEach((lookup) => lookup.reject(error));
     } finally {
