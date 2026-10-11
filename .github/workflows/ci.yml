@@ -231,8 +231,6 @@ jobs:
           echo "tag=v${version}" >> "${GITHUB_OUTPUT}"
           echo "build_time=$(date --utc --iso-8601=seconds)" >> "${GITHUB_OUTPUT}"
       - run: npm ci --prefer-offline --no-audit --no-fund
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
       - name: Restore Next compiler cache
         uses: actions/cache@v6
         with:
@@ -241,22 +239,6 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
-      - name: Verify Prisma migration integrity
-        run: npx prisma migration check
-      - name: Run release typecheck and full Vitest in parallel
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          typecheck_status=0
-          test_status=0
-          npm run typecheck:prepared & typecheck_pid=$!
-          npm run test:full & test_pid=$!
-          wait "$typecheck_pid" || typecheck_status=$?
-          wait "$test_pid" || test_status=$?
-          if (( typecheck_status != 0 || test_status != 0 )); then
-            echo "Release validation failed (typecheck=$typecheck_status test=$test_status)"
-            exit 1
-          fi
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
@@ -332,8 +314,84 @@ jobs:
             artifacts/aircraft-icon-audit.json
             artifacts/visual-smoke/*.png
           if-no-files-found: ignore
+
+  release-tests:
+    name: Release tests and typecheck
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    needs: release-scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run prisma:generate
+      - name: Verify Prisma migration integrity
+        run: npx prisma migration check
+      - name: Verify release gate planner
+        run: node --test tests/ci-release-plan.test.mjs
+      - name: Run release typecheck and full Vitest in parallel
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          typecheck_status=0
+          test_status=0
+          npm run typecheck:prepared & typecheck_pid=$!
+          npm run test:full & test_pid=$!
+          wait "$typecheck_pid" || typecheck_status=$?
+          wait "$test_pid" || test_status=$?
+          if (( typecheck_status != 0 || test_status != 0 )); then
+            echo "Release validation failed (typecheck=$typecheck_status test=$test_status)"
+            exit 1
+          fi
+
+  release-performance:
+    name: Release performance regression
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    needs: release-scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm run prisma:generate
+      - name: Restore Next compiler cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: perf-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
+          restore-keys: |
+            perf-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+      - name: Build performance fixture
+        run: npm run build:prepared
+        env:
+          AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+      - name: Restore Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Prepare Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
       - name: Radar production performance baseline
         shell: bash
+        env:
+          RADAR_PERF_SCENARIOS: ${{ needs.release-scope.outputs.performance_scenarios }}
         run: |
           set -Eeuo pipefail
           benchmark_status=0
@@ -352,10 +410,11 @@ jobs:
             artifacts/radar-performance-baseline.md
           if-no-files-found: ignore
 
+
   deploy:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
-    needs: [release-scope, release-validate]
+    needs: [release-scope, release-validate, release-tests, release-performance]
     # Only deploy-bearing runs enter this queue; docs-only changes cannot cancel them.
     concurrency:
       group: airradar-production-deploy
