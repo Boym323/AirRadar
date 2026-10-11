@@ -57,3 +57,11 @@
 .foot { display: flex; gap: .75rem; justify-content: space-between; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: .65rem; }
 @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 420px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .metric { padding: .55rem; } .legend { gap: .45rem; } }
+
+.metricGroups { display: grid; gap: .8rem; }
+.metricGroups > section { min-width: 0; }
+.metricGroups h3 { margin: 0 0 .4rem; color: var(--text-primary); font-size: .82rem; font-weight: 700; }
+.warning { margin: 0; padding: .5rem .7rem; border-inline-start: 3px solid var(--warning); color: var(--text-primary); font-size: .8rem; line-height: 1.5; }
+@media print {
+  .card, .metricGroups, .metricGroups > section, .chartSection { content-visibility: visible !important; overflow: visible !important; }
+}

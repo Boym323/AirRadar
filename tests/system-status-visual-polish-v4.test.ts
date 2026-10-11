@@ -24,7 +24,7 @@ describe("System status V4 visual hierarchy", () => {
 
   it("keeps true outages prominent without mislabelling disabled/on-demand services", () => {
     expect(page).toContain('service.status === "degraded" || service.status === "offline"');
-    expect(page).toContain("if (!issues.length) return null");
+    expect(page).toContain("if (!issues.length && !failingRoutes && !failingDbCache) return null");
     expect(page).toContain("aria-label={dictionary.system.attentionTitle}");
     expect(page).toContain("<HealthSummary");
     expect(page).toContain("<SystemAttention");

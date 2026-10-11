@@ -71,3 +71,15 @@
     justify-self: start;
   }
 }
+
+.showMore {
+  justify-self: start;
+  min-height: 40px;
+  padding: .35rem .7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-interactive);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.showMore:hover { border-color: var(--border-accent); }
