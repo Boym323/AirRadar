@@ -17,6 +17,22 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.427] - 2026-10-11
+
+Changes since v1.0.426.
+
+**Features touched:** System Observability.
+
+### Changed
+
+- Expose production route-cache timeout and SQL failure attribution (#816) (813eabda)
+
+<details>
+<summary>Technical commits</summary>
+
+- ops(system): expose production route-cache timeout and SQL failure attribution (#816) (813eabda)
+
+</details>
 ## [1.0.426] - 2026-10-11
 
 Changes since v1.0.425.
