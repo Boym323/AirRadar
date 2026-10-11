@@ -1441,17 +1441,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const changed = async () => visualPage.waitForFunction(
                 ({ key, before }) => document.querySelector(`[data-testid="radar-quick-${key}"]`)?.getAttribute("aria-pressed") !== before,
                 { key: layer, before: original },
-                { timeout: 1_000 },
+                { timeout: 5_000 },
               );
               try {
                 await changed();
               } catch {
-                // The radar shell can become visible just before hydration
-                // attaches the click handler. Retry the same user action once
-                // instead of allowing a lost first click to consume the full
-                // Playwright default timeout.
+                // On a busy CI runner the initial click may precede hydration or
+                // its state update may arrive late. Do not undo a late first
+                // toggle by blindly issuing a second click.
                 await visualPage.waitForTimeout(500);
-                await control.click();
+                if (await control.getAttribute("aria-pressed") === original) {
+                  await control.click();
+                }
                 try {
                   await changed();
                 } catch (error) {

@@ -33,10 +33,23 @@ describe("production release metadata gate", () => {
 
   it("validates the complete checked-in migration chain", () => {
     const result = assertMigrationSource(process.cwd());
-    expect(result.directories).toHaveLength(19);
-    expect(result.directories.at(-1)).toBe("20261005T1530_operational_twin_calibration_persistence_v1");
+    expect(result.directories).toHaveLength(20);
+    expect(result.directories.at(-1)).toBe("20261011T1656_atc_dataset_version");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
+  it("waits for radar quick-action hydration without undoing a delayed toggle", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    const start = source.indexOf('for (const layer of ["weather", "atc"]) {');
+    const end = source.indexOf('if (layer === "weather") {', start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const quickActionSmoke = source.slice(start, end);
+    expect(quickActionSmoke).toContain("{ timeout: 5_000 }");
+    expect(quickActionSmoke).toContain('if (await control.getAttribute("aria-pressed") === original)');
+    expect(quickActionSmoke).toContain("await control.click()");
+    expect(quickActionSmoke).toContain("await changed()");
+  });
+
   it("retries the real command palette keyboard shortcut once after hydration", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source.match(/keyboard\.press\("Control\+K"\)/g)).toHaveLength(2);
