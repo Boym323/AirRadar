@@ -100,8 +100,9 @@ describe("ADSB.lol routeset batch provider", () => {
     const queued = Array.from({ length: 21 }, (_, i) => provider.getRoute(
       "UAE" + String(139 + i), observedAt, { lat: 49.2, lon: 17.7 },
     ));
+    const settled = Promise.allSettled(queued);
     await vi.advanceTimersByTimeAsync(250);
-    const results = await Promise.allSettled(queued);
+    const results = await settled;
     expect(results).toHaveLength(21);
     expect(results.every((result) => result.status === "rejected")).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
