@@ -18,13 +18,13 @@ test("first failure is propagated only after in-flight workers settle", async ()
   await assert.rejects(
     runBoundedChecks([0,1,2,3], 2, async (value) => {
       started++;
-      await new Promise((resolve) => setTimeout(resolve, value === 1 ? 5 : 1));
+      await new Promise((resolve) => setTimeout(resolve, value === 1 ? 1 : 20));
       settled++;
       if (value === 1) throw new Error("visual regression");
     }), /visual regression/,
   );
   assert.equal(started, settled);
-  assert.ok(started <= 3);
+  assert.equal(started, 2);
 });
 test("config is bounded and fail-closed", () => {
   assert.equal(boundedConcurrency(undefined), 2);
