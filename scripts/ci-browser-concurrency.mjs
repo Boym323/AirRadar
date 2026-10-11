@@ -12,20 +12,29 @@ export function boundedConcurrency(value, { fallback = 2, maximum = 3 } = {}) {
   return parsed;
 }
 
-export async function runBoundedChecks(items, concurrency, check) {
-  if (!Array.isArray(items) || typeof check !== "function") {
-    throw new TypeError("runBoundedChecks expects an array and callback");
+export async function runBoundedChecks(items, concurrency, check, { isExclusive = () => false } = {}) {
+  if (!Array.isArray(items) || typeof check !== "function" || typeof isExclusive !== "function") {
+    throw new TypeError("runBoundedChecks expects an array, callback, and optional exclusive classifier");
   }
   const limit = boundedConcurrency(concurrency);
-  let cursor = 0;
+  // An exclusive check (GPU-intensive basemap/3D, or the full interaction
+  // viewport matrix) never overlaps another exclusive check. Other workers
+  // can continue with inexpensive independent checks while it is active.
+  const pending = items.map((item, index) => ({ item, index, exclusive: Boolean(isExclusive(item)) }));
+  let exclusiveRunning = false;
   let firstFailure = null;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (!firstFailure && cursor < items.length) {
-      const current = cursor++;
+    while (!firstFailure) {
+      const position = pending.findIndex((work) => !work.exclusive || !exclusiveRunning);
+      if (position < 0) break;
+      const [work] = pending.splice(position, 1);
+      if (work.exclusive) exclusiveRunning = true;
       try {
-        await check(items[current], current);
+        await check(work.item, work.index);
       } catch (error) {
         if (!firstFailure) firstFailure = error;
+      } finally {
+        if (work.exclusive) exclusiveRunning = false;
       }
     }
   });
