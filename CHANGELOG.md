@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.428] - 2026-10-11
+
+Changes since v1.0.427.
+
+### Fixed
+
+- Preserve Postgres concurrency budget across timed-out SQL (#817) (415fd011)
+- Preserve upstream 403 circuit breaker across deployments (#820) (f8973492)
+
+### Maintenance
+
+- Sync generated repository metadata (#818) (4bfb1b22)
+- Sync generated repository metadata (#819) (914d9e68)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#818) (4bfb1b22)
+- fix(routes): preserve Postgres concurrency budget across timed-out SQL (#817) (415fd011)
+- chore(metadata): sync generated repository metadata (#819) (914d9e68)
+- fix(routes): preserve upstream 403 circuit breaker across deployments (#820) (f8973492)
+
+</details>
 ## [1.0.427] - 2026-10-11
 
 Changes since v1.0.426.
