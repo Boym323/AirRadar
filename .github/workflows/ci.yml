@@ -67,7 +67,7 @@ jobs:
           node scripts/changelog.mjs check
       - name: Verify release gate planner
         if: steps.scope.outputs.docs_only != 'true'
-        run: node --test tests/ci-release-plan.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
+        run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
@@ -307,6 +307,8 @@ jobs:
         env:
           AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
           PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
+          AIRRADAR_VISUAL_CONCURRENCY: '2'
+          AIRRADAR_VIEWPORT_CONCURRENCY: '2'
         run: npm run test:production:all
       - name: Upload visual system artifacts
         if: always()
@@ -341,7 +343,7 @@ jobs:
       - name: Verify Prisma migration integrity
         run: npx prisma migration check
       - name: Verify release gate planner
-        run: node --test tests/ci-release-plan.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
+        run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
       - name: Run release typecheck and full Vitest in parallel
         shell: bash
         run: |
