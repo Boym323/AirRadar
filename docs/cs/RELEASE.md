@@ -96,7 +96,7 @@ Souběžně se spouštějí maximálně dvě nezávislé stránky pro screenshot
 (`AIRRADAR_VISUAL_CONCURRENCY`) a dva scénáře rozlišení
 (`AIRRADAR_VIEWPORT_CONCURRENCY`). Obě nastavení jsou celá čísla od 1 do 3,
 výchozí i produkční hodnota je 2. Při nestabilitě GPU nebo přetížení lze
-bez změny kódu nastavit 1. Při první chybě se nespouští další úlohy, ale
+bez změny kódu nastavit 1. Náročné 3D terrain screenshoty a plné interakční scénáře rozlišení se vždy spouštějí výhradně po jednom; lehké kontroly mohou dál běžet souběžně. Při první chybě se nespouští další úlohy, ale
 již zahájené testy se dokončí před zavřením prohlížeče.
 
 Skutečný systémový snapshot se získá jednou ještě před spuštěním workerů.
