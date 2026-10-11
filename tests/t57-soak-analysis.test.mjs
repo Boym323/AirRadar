@@ -153,6 +153,31 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(analyzeT57Soak(partial).verdict).toBe("INSUFFICIENT_EVIDENCE");
   });
 
+  it("keeps Twin validator windows even when the top hot paths exclude them", () => {
+    const { status, metrics } = raw(1);
+    metrics.validatorPaths = [
+      "twin.outcome.truth", "twin.trajectoryQuality.truth",
+      "twin.trajectoryQualityV2.truth", "twin.eventOutcome.local",
+      "twin.regionalAttention.truth",
+    ].map((name) => ({
+      name, calls: 1, cpuMs: 0.5, waitMs: 0,
+      windows: [{ from: at(0), to: at(1), calls: 1, cpuMs: 0.5,
+        waitMs: 0, p95Ms: 0.5, p99Ms: 0.5 }],
+    }));
+    const sample = projectT57SoakSample(status, metrics, at(1)).sample;
+    for (const path of metrics.validatorPaths) {
+      expect(sample.hotPaths.some((value) => value.name === path.name)).toBe(true);
+    }
+    const stream = records(61);
+    for (const entry of stream) {
+      if (entry.type === "sample") {
+        entry.value.hotPaths.push(...sample.hotPaths.filter((p) => p.name.startsWith("twin.")));
+      }
+    }
+    const result = analyzeT57Soak(stream);
+    expect(result.hotPathsByWindowCpuMs.filter((p) => p.name.startsWith("twin."))).toHaveLength(5);
+  });
+
   it("reports limit breaches as failures without changing live retention", () => {
     const over = records();
     over[8].value.networkTrailOverLimitAircraft = 1;
