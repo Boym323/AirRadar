@@ -17,6 +17,37 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.429] - 2026-10-11
+
+Changes since v1.0.428.
+
+### Changed
+
+- Add guarded, opt-in flightPosition autovacuum tuning (de7fabf7)
+- Add read-only PostgreSQL tail-latency and autovacuum preflight (a24a8efc)
+- Add lock-bounded rollback for table vacuum tuning (95f992be)
+- Enhance visual smoke test reliability with retry logic and timeout adjustments (f9de49ef)
+
+### Documentation
+
+- Document measured evidence, preflight, rollout and rollback (20efa3a1)
+
+### Maintenance
+
+- Sync generated repository metadata (#823) (270cfd12)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#823) (270cfd12)
+- ops(db): add guarded, opt-in flightPosition autovacuum tuning (de7fabf7)
+- ops(db): add read-only PostgreSQL tail-latency and autovacuum preflight (a24a8efc)
+- ops(db): add lock-bounded rollback for table vacuum tuning (95f992be)
+- docs(db): document measured evidence, preflight, rollout and rollback (20efa3a1)
+- Merge pull request #824 from Boym323/ops/pg17-autovacuum-issue-822-20261011 (4502fb94)
+- ops(browser): enhance visual smoke test reliability with retry logic and timeout adjustments (f9de49ef)
+
+</details>
 ## [1.0.428] - 2026-10-11
 
 Changes since v1.0.427.
