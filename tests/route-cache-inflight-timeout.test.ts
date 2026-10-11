@@ -35,6 +35,38 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     finishQuery([]);
     await vi.advanceTimersByTimeAsync(0);
     expect(store.getDiagnostics().active).toBe(0);
+    expect(store.getDiagnostics().completedAfterCallerTimeout).toBe(1);
     expect(getRouteEnrichmentTelemetry().getDbLatencyDistribution().sampleCount).toBe(before + 1);
+    const snapshot = getRouteEnrichmentTelemetry().getSnapshot();
+    expect(snapshot.sql.callerTimeouts).toBeGreaterThanOrEqual(1);
+    expect(snapshot.sql.completedAfterCallerTimeout).toBeGreaterThanOrEqual(1);
+    expect(snapshot.sql.timing).toMatchObject({
+      measurement: "db_call_elapsed",
+      serverSideOnly: false,
+      includesPoolWait: true,
+      includesNetworkTime: true,
+      connectionAcquisition: "NOT MEASURED",
+    });
+  });
+
+  it("never admits more than four active DB calls and reports the fifth as rejected", async () => {
+    let finishQuery!: (rows: []) => void;
+    const pending = new Promise<[]>((resolve) => { finishQuery = resolve; });
+    const query = vi.fn(() => pending);
+    getPrismaMock.mockReturnValue({
+      raw: { sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }) },
+      runtime: () => ({ query }),
+    });
+    const store = new PostgresRouteCache();
+    const key = (n: number) => `flight-route:ABC12${n}:CSA123:2026-10-10`;
+    const requests = [1, 2, 3, 4].map((n) => store.get(key(n)));
+    await Promise.resolve();
+    await expect(store.get(key(5))).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(4);
+    expect(store.getDiagnostics()).toMatchObject({ active: 4, rejectedConcurrency: 1, maxActive: 4 });
+    finishQuery([]);
+    await Promise.all(requests);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(store.getDiagnostics().active).toBe(0);
   });
 });

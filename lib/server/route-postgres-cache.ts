@@ -92,6 +92,7 @@ export class PostgresRouteCache implements RouteCacheStore {
         openSince: this.circuitOpenedAt === null ? null : new Date(this.circuitOpenedAt).toISOString(),
         openDurationMs: this.circuitOpenedAt === null ? null : Math.max(0, now - this.circuitOpenedAt),
       },
+      circuitOpenUntilMs: this.retryAfter > now ? this.retryAfter : null,
     });
   }
 

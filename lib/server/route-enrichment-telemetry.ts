@@ -18,6 +18,7 @@ export type RouteMetricBucket = { hour: string } & Record<RouteMetricKey, number
 export interface RoutePhaseDistribution {
   measured: boolean;
   count: number;
+  sampleCount: number;
   errors: number;
   timeouts: number;
   p50Ms: number | null;
@@ -44,6 +45,13 @@ export interface RouteEnrichmentSnapshot {
     callerTimeouts: number;
     completedAfterCallerTimeout: number;
     circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
+    timing: {
+      measurement: "db_call_elapsed";
+      serverSideOnly: false;
+      includesPoolWait: true;
+      includesNetworkTime: true;
+      connectionAcquisition: "NOT MEASURED";
+    };
   };
   telemetry: { diskEnabled: boolean; loadedFromDisk: boolean; lastSavedAt: string | null; failures: number };
 }
@@ -62,7 +70,7 @@ function emptyPhaseSamples(): Record<RoutePhaseKey, number[]> {
 }
 function emptyPhaseDiagnostics(): RoutePhaseDiagnostics {
   return Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, {
-    measured: false, count: 0, errors: 0, timeouts: 0,
+    measured: false, count: 0, sampleCount: 0, errors: 0, timeouts: 0,
     p50Ms: null, p95Ms: null, p99Ms: null, maxMs: null,
   }])) as RoutePhaseDiagnostics;
 }
@@ -109,6 +117,7 @@ export class RouteEnrichmentTelemetry {
     active: 0, maxActive: 0, rejected: 0, callerTimeouts: 0, completedAfterCallerTimeout: 0,
     circuit: { state: "closed" as "closed" | "open", openSince: null as string | null, openDurationMs: null as number | null },
   };
+  private circuitOpenUntilMs: number | null = null;
 
   constructor(
     private readonly filePath: string | null = process.env.ROUTE_TELEMETRY_FILE?.trim()
@@ -180,7 +189,8 @@ export class RouteEnrichmentTelemetry {
       const rank = (p: number) => values.length ? values[Math.ceil(values.length * p) - 1] ?? null : null;
       result[key] = {
         measured: values.length > 0,
-        count: this.phaseCounts[key], errors: this.phaseErrors[key], timeouts: this.phaseTimeouts[key],
+        count: this.phaseCounts[key], sampleCount: values.length,
+        errors: this.phaseErrors[key], timeouts: this.phaseTimeouts[key],
         p50Ms: rank(0.5), p95Ms: rank(0.95), p99Ms: rank(0.99), maxMs: values.at(-1) ?? null,
       };
     }
@@ -191,6 +201,7 @@ export class RouteEnrichmentTelemetry {
     active: number; maxActive: number; rejected: number; callerTimeouts: number;
     completedAfterCallerTimeout: number;
     circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
+    circuitOpenUntilMs?: number | null;
   }): void {
     this.sqlDiagnostics = {
       active: Math.max(0, value.active), maxActive: Math.max(0, value.maxActive),
@@ -198,6 +209,7 @@ export class RouteEnrichmentTelemetry {
       completedAfterCallerTimeout: Math.max(0, value.completedAfterCallerTimeout),
       circuit: { ...value.circuit },
     };
+    this.circuitOpenUntilMs = value.circuitOpenUntilMs ?? null;
   }
 
   /** Actual successful route-cache SQL timings over the last hour, not the once-per-minute health probe. */
@@ -236,6 +248,10 @@ export class RouteEnrichmentTelemetry {
     const totals = emptyCounts();
     for (const bucket of buckets) for (const key of ROUTE_METRIC_KEYS) totals[key] += bucket[key];
     const lookups = totals.dbHit + totals.dbMiss;
+    const circuitOpen = this.circuitOpenUntilMs !== null && now < this.circuitOpenUntilMs;
+    const circuit = circuitOpen
+      ? { ...this.sqlDiagnostics.circuit, state: "open" as const, openDurationMs: this.sqlDiagnostics.circuit.openSince ? Math.max(0, now - Date.parse(this.sqlDiagnostics.circuit.openSince)) : null }
+      : { state: "closed" as const, openSince: null, openDurationMs: null };
     return {
       enabled: process.env.ROUTE_DB_CACHE_ENABLED?.trim().toLowerCase() === "true",
       windowHours: 24,
@@ -248,7 +264,17 @@ export class RouteEnrichmentTelemetry {
       validEntriesCheckedAt: this.validEntriesCheckedAt,
       databaseAverageLatencyMs: totals.dbLatencySamples ? totals.dbLatencyTotalMs / totals.dbLatencySamples : null,
       phases: this.getPhaseDiagnostics(),
-      sql: this.sqlDiagnostics,
+      sql: {
+        ...this.sqlDiagnostics,
+        circuit,
+        timing: {
+          measurement: "db_call_elapsed",
+          serverSideOnly: false,
+          includesPoolWait: true,
+          includesNetworkTime: true,
+          connectionAcquisition: "NOT MEASURED",
+        },
+      },
       telemetry: { diskEnabled: !!this.filePath, loadedFromDisk: this.loadedFromDisk, lastSavedAt: this.lastSavedAt, failures: this.failures },
     };
   }
