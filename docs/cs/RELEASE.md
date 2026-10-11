@@ -99,6 +99,8 @@ Po zjištění změn běží souběžně tři úlohy:
 - `release-tests` provede kompletní Vitest, TypeScript, audit závislostí, kontrolu migrací a testy plánovače CI.
 - `release-performance` nezávisle sestaví testovací verzi radaru a změří výkon (všechny scénáře při změnách radaru, kritického runtime nebo neznámých souborů; vybrané scénáře u známých backendových změn).
 
+Pro ověření bez nasazení přidejte k PR správcovský štítek `release-preview`. Událost `pull_request:labeled` spustí skutečné release sestavení, úplný Vitest/typecheck a výkonový test (konzervativně v plném režimu), ale `deploy` na vlastním produkčním runneru je povolen výhradně při `push` do `main`. Po kontrole štítek odeberte, aby se náročný režim znovu nespouštěl s dalšími commity.
+
 Nasazení je povolené až po **úspěchu všech tří úloh** a použije pouze ověřený artefakt z `release-validate`. Základní kontroly zdraví aplikace a SSE běží vždy; výběr vizuálních testů a rozlišení se používá pouze u bezpečně rozpoznaných změn. Neznámé a sdílené soubory automaticky spouštějí plné kontroly. Při výběru více rozlišení se zachovává i test responzivity.
 
 Noční a ručně spouštěný workflow `ci-heavy.yml` nezávisle provádí **úplné produkční a prohlížečové testování i všechny výkonové scénáře** mimo rychlou cestu nasazení. Kompletní výsledky se ukládají do artefaktů GitHub Actions.
