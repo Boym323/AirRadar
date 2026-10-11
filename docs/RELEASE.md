@@ -109,7 +109,7 @@ independent screenshot pages concurrently (`AIRRADAR_VISUAL_CONCURRENCY`)
 and up to two viewport scenarios concurrently
 (`AIRRADAR_VIEWPORT_CONCURRENCY`). Each setting is an integer from 1 to 3;
 the default and production release values are 2, and 1 is a safe diagnostic
-fallback if browser/GPU contention appears. A failing task prevents new work
+fallback if browser/GPU contention appears. Resource-intensive 3D terrain screenshots run exclusively (never simultaneously with another 3D terrain capture), as do the two full viewport interaction scenarios; lightweight checks can continue concurrently. A failing task prevents new work
 from starting but the runner awaits other active tasks before closing Chromium.
 
 A real public system snapshot is fetched once before screenshot workers start,
