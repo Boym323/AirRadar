@@ -356,6 +356,12 @@ model AtcTransmitter {
   updatedAt    DateTime @default(now())
 }
 
+model AtcDatasetVersion {
+  id        String   @id
+  version   String
+  updatedAt DateTime @default(now())
+}
+
 model FlightPosition {
   id           Int      @id @default(autoincrement())
   flightId     Int

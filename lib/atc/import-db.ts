@@ -1,4 +1,5 @@
 import "temporal-polyfill/full/global";
+import { randomUUID } from "node:crypto";
 import postgres from "@prisma/orm-postgres/runtime";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import contractJson from "../../generated/prisma8/contract.json" with { type: "json" };
@@ -124,6 +125,11 @@ export async function writeAtcImport(
       if (!row || (row.validTo !== null && row.validTo !== undefined && Date.parse(String(row.validTo)) <= obsoleteAt.epochMilliseconds)) continue;
       await schema.AtcTransmitter.where({ id }).update({ validTo: obsoleteEnd(row, obsoleteAt), updatedAt: Temporal.Instant.fromEpochMilliseconds(Date.now()) });
     }
+    await schema.AtcDatasetVersion.upsert({
+      conflictOn: { id: "atc" },
+      update: { version: randomUUID(), updatedAt: Temporal.Instant.fromEpochMilliseconds(Date.now()) },
+      create: { id: "atc", version: randomUUID(), updatedAt: Temporal.Instant.fromEpochMilliseconds(Date.now()) },
+    });
   }), dataset.sectors.length + dataset.transmitters.length);
   // Invalidate only after the transaction commits. The generation check in
   // getStoredAtcData also prevents an in-flight pre-import read from being

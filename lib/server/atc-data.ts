@@ -286,7 +286,6 @@ const ATC_DATASET_CACHE_MS = 5 * 60_000;
 const ATC_DATASET_ROW_LIMIT = 2000;
 
 type AtcDatasetRows = { sectors: AtcSector[]; transmitters: AtcTransmitter[] };
-type AtcDatasetVersionRow = { id: string; updatedAt: Temporal.Instant };
 
 export type AtcDatasetCacheDiagnostics = {
   scope: "process-local";
@@ -330,21 +329,15 @@ function setAtcDatasetCache(value: AtcDatasetRows, fingerprint: string, generati
   diagnostics.generation = generation;
 }
 
-function fingerprintRows(rows: readonly AtcDatasetVersionRow[]): string {
-  return rows
-    .map((row) => `${row.id}:${row.updatedAt?.toString() ?? "null"}`)
-    .sort()
-    .join("|");
-}
-
-async function readAtcDatasetFingerprint(database: NonNullable<ReturnType<typeof getPrisma>>): Promise<string> {
-  const [sectors, transmitters] = await Promise.all([
-    trackDbOperation("atc.dataset.version", async () => await database.orm.public.AtcSector
-      .select("id", "updatedAt").limit(ATC_DATASET_ROW_LIMIT).all()),
-    trackDbOperation("atc.dataset.version", async () => await database.orm.public.AtcTransmitter
-      .select("id", "updatedAt").limit(ATC_DATASET_ROW_LIMIT).all()),
-  ]);
-  return `s:${fingerprintRows(sectors)};t:${fingerprintRows(transmitters)}`;
+async function readAtcDatasetFingerprint(
+  database: NonNullable<ReturnType<typeof getPrisma>>,
+  schema = database.orm.public,
+): Promise<string> {
+  const rows = await trackDbOperation("atc.dataset.version", async () => await schema.AtcDatasetVersion
+    .where({ id: "atc" }).select("version").limit(1).all());
+  const version = rows[0]?.version;
+  if (!version) throw new Error("ATC dataset version row is missing");
+  return version;
 }
 
 export function invalidateAtcDataCache(): void {
@@ -463,29 +456,35 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
   if (globalAtcMetadata.__airRadarAtcDatasetFlight) return cloneAtcData(await globalAtcMetadata.__airRadarAtcDatasetFlight);
 
   const flight = (async () => {
-    // If an import commits while the query is in flight, discard that result
-    // and read again so no request can publish pre-import geometry.
-    for (;;) {
+    // A bounded two-attempt check prevents publishing rows from before an
+    // external import with that import's new version. The version row and all
+    // dataset rows are read in one transaction; the post-load read detects a
+    // commit between statements under READ COMMITTED.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       const generation = globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0;
       const database = getPrisma();
       if (!database) return null;
       try {
-        const [sectorRows, transmitterRows] = await Promise.all([
-          trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcSector.limit(ATC_DATASET_ROW_LIMIT).all()),
-          trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcTransmitter.limit(ATC_DATASET_ROW_LIMIT).all()),
-        ]);
-        const sectors = sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null);
-        const transmitters = transmitterRows.map((transmitter) => ({
-          id: transmitter.id, name: transmitter.name, latitude: transmitter.latitude,
-          longitude: transmitter.longitude, service: transmitter.service,
-          frequencyMhz: transmitter.frequencyMhz, notes: transmitter.notes,
-          source: transmitter.source, sourceReference: transmitter.sourceReference,
-          validFrom: transmitter.validFrom?.toString() ?? null,
-          validTo: transmitter.validTo?.toString() ?? null,
-          lastVerifiedAt: transmitter.lastVerifiedAt.toString(),
-        })).filter((transmitter) => isSupportedAtcFrequencyMhz(transmitter.frequencyMhz));
-        const value = { sectors, transmitters };
-        const fingerprint = await readAtcDatasetFingerprint(database);
+        const loaded = await database.transaction(async (transaction) => {
+          const before = await readAtcDatasetFingerprint(database, transaction.orm.public);
+          const [sectorRows, transmitterRows] = await Promise.all([
+            trackDbOperation("atc.dataset.load", async () => await transaction.orm.public.AtcSector.limit(ATC_DATASET_ROW_LIMIT).all()),
+            trackDbOperation("atc.dataset.load", async () => await transaction.orm.public.AtcTransmitter.limit(ATC_DATASET_ROW_LIMIT).all()),
+          ]);
+          const after = await readAtcDatasetFingerprint(database, transaction.orm.public);
+          return { before, after, sectors: sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null), transmitters: transmitterRows.map((transmitter) => ({
+            id: transmitter.id, name: transmitter.name, latitude: transmitter.latitude,
+            longitude: transmitter.longitude, service: transmitter.service,
+            frequencyMhz: transmitter.frequencyMhz, notes: transmitter.notes,
+            source: transmitter.source, sourceReference: transmitter.sourceReference,
+            validFrom: transmitter.validFrom?.toString() ?? null,
+            validTo: transmitter.validTo?.toString() ?? null,
+            lastVerifiedAt: transmitter.lastVerifiedAt.toString(),
+          })).filter((transmitter) => isSupportedAtcFrequencyMhz(transmitter.frequencyMhz)) };
+        });
+        if (loaded.before !== loaded.after) continue;
+        const value = { sectors: loaded.sectors, transmitters: loaded.transmitters };
+        const fingerprint = loaded.after;
         if (generation !== (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0)) continue;
         setAtcDatasetCache(value, fingerprint, generation);
         const active = activeAtcData(value);
@@ -497,6 +496,7 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
         return null;
       }
     }
+    throw new Error("ATC dataset changed during bounded consistency check");
   })();
   globalAtcMetadata.__airRadarAtcDatasetFlight = flight;
   try { return cloneAtcData(await flight); }
