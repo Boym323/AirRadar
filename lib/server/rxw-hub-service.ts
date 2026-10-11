@@ -29,6 +29,39 @@ export class RxwHubService {
   private socket: Socket | null = null;
   private connection: RxwHubConnectionState = "disabled";
   private lastReceivedAt: string | null = null;
+  private lastEventAt: string | null = null;
+  private receivedEvents = 0;
+  private receivedItems = 0;
+  private connectCount = 0;
+  private disconnectCount = 0;
+  private connectionErrors = 0;
+  private unsupportedPayloads = 0;
+
+  /** Administrator-safe counters only; never exposes message bodies or identities. */
+  getDiagnostics() {
+    const stats = this.store.stats();
+    return {
+      enabled: isRxwHubEnabled(),
+      fpnEnabled: isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true",
+      connection: this.connection,
+      connectCount: this.connectCount,
+      disconnectCount: this.disconnectCount,
+      connectionErrors: this.connectionErrors,
+      receivedEvents: this.receivedEvents,
+      receivedItems: this.receivedItems,
+      unsupportedPayloads: this.unsupportedPayloads,
+      lastEventAt: this.lastEventAt,
+      lastAcceptedAt: this.lastReceivedAt,
+      aircraft: stats.aircraft, accepted: stats.accepted,
+      rejectedInvalid: stats.rejectedInvalid, rejectedDuplicate: stats.rejectedDuplicate,
+      plans: stats.plans, fpnAccepted: stats.fpnAccepted, fpnRejected: stats.fpnRejected,
+    };
+  }
+
+  private ingest(item: unknown): void {
+    this.receivedItems++;
+    if (this.store.ingest(item)) this.lastReceivedAt = new Date().toISOString();
+  }
 
   start(): void {
     if (this.started) return;
@@ -56,28 +89,34 @@ export class RxwHubService {
       this.socket = socket;
       socket.on("connect", () => {
         this.connection = "connected";
+        this.connectCount++;
         logger.info({ component: "rxw-hub" }, "RXW Hub connected");
       });
       socket.on("disconnect", () => {
         this.connection = "disconnected";
+        this.disconnectCount++;
       });
       socket.on("connect_error", () => {
+        this.connectionErrors++;
         this.connection = "error";
       });
       socket.on("acars_msg", (payload: unknown) => {
         if (!this.started) return;
-        const wrapper = payload !== null && typeof payload === "object" ? payload as { msghtml?: unknown } : null;
-        if (this.store.ingest(wrapper?.msghtml)) this.lastReceivedAt = new Date().toISOString();
+        this.receivedEvents++;
+        this.lastEventAt = new Date().toISOString();
+        const wrapper = payload !== null && typeof payload === "object" && !Array.isArray(payload)
+          ? payload as { msghtml?: unknown } : null;
+        if (!wrapper || !("msghtml" in wrapper)) this.unsupportedPayloads++;
+        this.ingest(wrapper?.msghtml);
       });
       socket.on("acars_msg_batch", (payload: unknown) => {
         if (!this.started) return;
-        const wrapper = payload !== null && typeof payload === "object"
-          ? payload as { messages?: unknown }
-          : null;
-        if (!Array.isArray(wrapper?.messages)) return;
-        for (const item of wrapper.messages.slice(0, RXW_MAX_BATCH_ITEMS)) {
-          if (this.store.ingest(item)) this.lastReceivedAt = new Date().toISOString();
-        }
+        this.receivedEvents++;
+        this.lastEventAt = new Date().toISOString();
+        const wrapper = payload !== null && typeof payload === "object" && !Array.isArray(payload)
+          ? payload as { messages?: unknown } : null;
+        if (!Array.isArray(wrapper?.messages)) { this.unsupportedPayloads++; return; }
+        for (const item of wrapper.messages.slice(0, RXW_MAX_BATCH_ITEMS)) this.ingest(item);
       });
       socket.connect();
     } catch {
@@ -110,6 +149,7 @@ export class RxwHubService {
     this.socket = null;
     this.store.clear();
     this.lastReceivedAt = null;
+    this.lastEventAt = null;
     this.connection = "stopped";
   }
 }
