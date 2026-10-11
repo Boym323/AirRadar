@@ -177,3 +177,58 @@ Read-only opakování používá `/api/health`, `/api/system/status`,
 kontrola má používat read-only transakci, `pg_stat_statements`, activity/locks,
 indexy, `EXPLAIN (COSTS, SETTINGS, BUFFERS OFF)`, autovacuum, checkpointer, WAL a
 `pg_stat_io`. Statistiky neresetovat a retention nespouštět pouze kvůli měření.
+
+## Doplňující rozpad route cache
+
+Nová instrumentace rozlišuje elapsed čas celého Prisma DB callu od výsledného
+zpracování a od timeoutu volajícího. Hodnota označená jako SQL execution proto
+není čistý čas serverového SQL. Zahrnuje možné čekání na pool a síťový přenos;
+samostatné získání connection z použitého ORM rozhraní není k dispozici.
+
+| Fáze | Stav měření | Význam |
+| --- | --- | --- |
+| DB connection | NOT MEASURED | ORM neposkytuje samostatný acquisition timestamp |
+| SQL execution | MEASURED | Elapsed Prisma DB call, včetně pool/network času |
+| result processing | MEASURED | Validace a dekódování výsledku |
+| cache update | MEASURED | Elapsed zápisu/upsertu do DB cache |
+
+## Semantika timeoutu
+
+Caller timeout po 750 ms pouze ukončí čekání volajícího. Podkladový DB call
+zůstává aktivní a slot se uvolní až po jeho skutečném dokončení nebo chybě.
+Pozdní dokončení se vykazuje odděleně, aby nebylo započteno jako falešný
+úspěch s nulovou latencí.
+
+```text
+caller timeout -> fallback response
+underlying DB call -> remains active -> completion -> release slot
+```
+
+```text
+active calls <= 4
+fifth request -> bounded bypass
+```
+
+## Bounded telemetry
+
+Distribuce používá process-local ring buffer s pevnou kapacitou 1 024 vzorků
+pro fázi. `count` je celkový počet událostí v procesu, `sampleCount` je počet
+vzorků aktuálně v bounded bufferu. Percentily se počítají nad `sampleCount`,
+nikdy nad domnělými nebo dopočtenými hodnotami. Po restartu procesu se tyto
+diagnostiky vynulují; hodinové počítadla cache zůstávají samostatnou, malou
+persistovanou telemetrií.
+
+## Kontrolní kroky po nasazení
+
+1. Zapsat přesný commit, start procesu, PID a časové okno v UTC.
+2. Po jedné hodině uložit snapshot route-cache a PostgreSQL health P99.
+3. Po šesti hodinách zopakovat stejné čítače a ověřit čistotu okna.
+4. Po 24 hodinách uzavřít porovnání P50/P95/P99 a timeoutových sazeb.
+5. Připojit CPU, RSS, event-loop delay a databázové wait events ke stejnému oknu.
+6. Návrh V4 připravit pouze při shodném signálu z aplikace, PostgreSQL a hosta.
+
+Výsledky bez přesné identity procesu, commitu a hranic okna se nesmí vydávat
+za produkční before/after srovnání. Pokud bude vysoký pouze DB-call elapsed a
+PostgreSQL health zůstane nízký, další hypotéza je pool nebo síť. Pokud budou
+společně růst PostgreSQL P99, DB-call tail a hostitelská zátěž, je pravděpodobnější
+databázový nebo infrastrukturní bottleneck.
