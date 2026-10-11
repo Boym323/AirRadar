@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeLicensedGlb, resolveLicensedFamily, MAX_GLB_BYTES, MAX_GLB_FACES } from "@/lib/radar/licensed-aircraft-glb-v6";
+import { decodeLicensedGlb, readBoundedLicensedAsset, resolveLicensedFamily, MAX_GLB_BYTES, MAX_GLB_FACES } from "@/lib/radar/licensed-aircraft-glb-v6";
 
 function fixture(): ArrayBuffer {
   const positions=new Float32Array([0,0,0, 12,0,0, 0,0,6]);
@@ -35,6 +35,29 @@ describe("V6 CC-BY GLB asset parser",()=>{
     expect(faces.every(f=>f.slice(0,3).flat().every(Number.isFinite))).toBe(true);
     expect(faces.length).toBeLessThanOrEqual(MAX_GLB_FACES);
   });
+  it("bounds third-party GLB responses without relying on Content-Length", async () => {
+    const valid = new Uint8Array(fixture());
+    const bytes = await readBoundedLicensedAsset(new Response(valid));
+    expect(decodeLicensedGlb(bytes)).toHaveLength(1);
+    await expect(readBoundedLicensedAsset(new Response(valid, {
+      headers: { "content-length": String(MAX_GLB_BYTES + 1) },
+    }))).rejects.toThrow(/length/i);
+    await expect(readBoundedLicensedAsset(new Response(valid, {
+      headers: { "content-length": "malformed" },
+    }))).rejects.toThrow(/length/i);
+
+    // A chunked/misreported response must abort after exceeding the cap,
+    // before assembling or decoding the untrusted response.
+    const oversized = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(MAX_GLB_BYTES));
+        controller.enqueue(Uint8Array.of(1));
+        controller.close();
+      },
+    });
+    await expect(readBoundedLicensedAsset(new Response(oversized))).rejects.toThrow(/streaming byte limit/i);
+    await expect(readBoundedLicensedAsset(new Response(null))).rejects.toThrow(/unavailable/i);
+  });
   it("rejects malformed or oversized binary payloads",()=>{
     expect(()=>decodeLicensedGlb(new ArrayBuffer(MAX_GLB_BYTES+1))).toThrow();
     expect(()=>decodeLicensedGlb(new ArrayBuffer(40))).toThrow();
@@ -50,7 +73,7 @@ describe("licensed GLB source integration (explicit CI gate)", () => {
       const response = await fetch(`${root}${family}_nologo.glb`, { signal: AbortSignal.timeout(12_000) });
       expect(response.ok, `${family} source status`).toBe(true);
       expect(response.headers.get("access-control-allow-origin"), `${family} CORS`).toBe("*");
-      const bytes = await response.arrayBuffer();
+      const bytes = await readBoundedLicensedAsset(response);
       expect(bytes.byteLength).toBeLessThanOrEqual(MAX_GLB_BYTES);
       const faces = decodeLicensedGlb(bytes, family);
       expect(faces.length, `${family} faces`).toBeGreaterThan(20);
