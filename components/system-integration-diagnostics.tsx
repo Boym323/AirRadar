@@ -4,6 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui-primitives";
 
 interface Data {
+  routeProviders: {
+    routeset: {
+      enabled: boolean; requests: number; success: number; failed: number;
+      lastFailureAt: string | null; lastHttpStatus: number | null; nextAllowedAt: string | null;
+      reasons: { http: number; timeout: number; network: number; invalid_response: number; other: number };
+    };
+    postgres: {
+      timeouts: number; queryFailures: number; connectionFailures: number;
+      bypassBackoff: number; bypassConcurrency: number; bypassUnconfigured: number;
+      lastFailureAt: string | null; lastErrorKind: string | null;
+    };
+  };
   rxw: {
     enabled: boolean; fpnEnabled: boolean; connection: string;
     receivedEvents: number; receivedItems: number; accepted: number;
@@ -63,6 +75,11 @@ export function SystemIntegrationDiagnostics({ locale }: { locale: string }) {
       <div className="system-field"><dt>ADSBHub</dt><dd>{data.adsbhub ? (data.adsbhub.enabled ? data.adsbhub.status : (cs ? "Vypnuto" : "Disabled")) : "—"}</dd></div>
       {data.adsbhub && <div className="system-field"><dt>ADSBHub {cs ? "řádky / platné / chyby / restarty" : "lines / parsed / invalid / reconnects"}</dt><dd>{fmt(data.adsbhub.linesReceived)} / {fmt(data.adsbhub.linesParsed)} / {fmt(data.adsbhub.malformedLines + data.adsbhub.invalidIcao + data.adsbhub.invalidPosition)} / {fmt(data.adsbhub.reconnects)}</dd></div>}
       <div className="system-field"><dt>Route DB {cs ? "zásahy / chyby / přemostění" : "hits / errors / bypass"}</dt><dd>{fmt(data.route.dbHit)} / {fmt(data.route.dbError)} / {fmt(data.route.dbBypassed)}</dd></div>
+      <div className="system-field"><dt>ADSB.lol Routes · {cs ? "stav" : "status"}</dt><dd>{data.routeProviders.routeset.enabled ? (cs ? "Zapnuto" : "Enabled") : (cs ? "Vypnuto" : "Disabled")} · {fmt(data.routeProviders.routeset.success)} / {fmt(data.routeProviders.routeset.requests)} {cs ? "úspěšných dávek od startu" : "successful batches since startup"}</dd></div>
+      <div className="system-field"><dt>ADSB.lol Routes · {cs ? "příčiny chyb" : "failure causes"}</dt><dd>{cs ? "HTTP" : "HTTP"} {fmt(data.routeProviders.routeset.reasons.http)}{data.routeProviders.routeset.lastHttpStatus ? " (" + data.routeProviders.routeset.lastHttpStatus + ")" : ""} · timeout {fmt(data.routeProviders.routeset.reasons.timeout)} · {cs ? "síť" : "network"} {fmt(data.routeProviders.routeset.reasons.network)} · {cs ? "formát" : "format"} {fmt(data.routeProviders.routeset.reasons.invalid_response)} · {cs ? "jiné" : "other"} {fmt(data.routeProviders.routeset.reasons.other)}</dd></div>
+      <div className="system-field"><dt>ADSB.lol Routes · {cs ? "poslední chyba" : "last failure"}</dt><dd>{time(data.routeProviders.routeset.lastFailureAt)} · {cs ? "další pokus" : "retry"} {time(data.routeProviders.routeset.nextAllowedAt)}</dd></div>
+      <div className="system-field"><dt>PostgreSQL · {cs ? "příčiny chyb" : "failure causes"}</dt><dd>timeout {fmt(data.routeProviders.postgres.timeouts)} · {cs ? "dotaz" : "query"} {fmt(data.routeProviders.postgres.queryFailures)} · {cs ? "spojení" : "connection"} {fmt(data.routeProviders.postgres.connectionFailures)}</dd></div>
+      <div className="system-field"><dt>PostgreSQL · {cs ? "obejití: cooldown / limit / nenastaveno" : "bypass: cooldown / capacity / unavailable"}</dt><dd>{fmt(data.routeProviders.postgres.bypassBackoff)} / {fmt(data.routeProviders.postgres.bypassConcurrency)} / {fmt(data.routeProviders.postgres.bypassUnconfigured)}</dd></div>
       <div className="system-field"><dt>Navigation Integrity {cs ? "odmítnutí" : "rejections"}</dt><dd>{Object.entries(data.navigation.rejectionReasons).map(([k, v]) => k + ": " + fmt(v)).join(" · ") || "—"}</dd></div>
     </div>}
   </Card>;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AdsbLolRouteProvider } from "@/lib/server/adsblol-route-provider";
+import { AdsbLolRouteProvider, getAdsbLolRoutesetRuntimeDiagnostics } from "@/lib/server/adsblol-route-provider";
 import type { AirportResolverLike } from "@/lib/server/airport-resolver";
 
 const observedAt = new Date("2026-10-10T13:00:00Z");
@@ -73,11 +73,18 @@ describe("ADSB.lol routeset batch provider", () => {
   it("rejects transport errors so the enrichment cache does not treat them as valid misses", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", vi.fn(async () => new Response("unavailable", { status: 429 })));
+    const before = getAdsbLolRoutesetRuntimeDiagnostics();
     const provider = new AdsbLolRouteProvider(resolver);
     const pending = provider.getRoute("UAE139", observedAt, { lat: 49.2, lon: 17.7 });
     const assertion = expect(pending).rejects.toThrow("429");
     await vi.advanceTimersByTimeAsync(250);
     await assertion;
     expect(provider.getDiagnostics()).toMatchObject({ requests: 1, failures: 1 });
+    const after = getAdsbLolRoutesetRuntimeDiagnostics();
+    expect(after.failed).toBe(before.failed + 1);
+    expect(after.reasons.http).toBe(before.reasons.http + 1);
+    expect(after.lastHttpStatus).toBe(429);
+    expect(after.lastFailureAt).toBeTruthy();
+    expect(JSON.stringify(after)).not.toContain("UAE139");
   });
 });

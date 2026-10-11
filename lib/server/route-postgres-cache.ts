@@ -10,6 +10,27 @@ export interface RouteCacheStore {
 const MAX_JSON_LENGTH = 8_192;
 const TIMEOUT_MS = 750;
 const FAILURE_BACKOFF_MS = 30_000;
+
+/** Process-local, bounded reason counters. No query text, credentials, keys or IDs. */
+type DbRouteDiagnostics = {
+  timeouts: number; queryFailures: number; connectionFailures: number;
+  bypassBackoff: number; bypassConcurrency: number; bypassUnconfigured: number;
+  lastFailureAt: string | null; lastErrorKind: "timeout" | "query" | "connection" | null;
+};
+const globalRouteDb = globalThis as typeof globalThis & { airRadarRouteDbReasons?: DbRouteDiagnostics };
+export function getRouteDbReasonDiagnostics(): DbRouteDiagnostics {
+  const state = globalRouteDb.airRadarRouteDbReasons ??= {
+    timeouts: 0, queryFailures: 0, connectionFailures: 0,
+    bypassBackoff: 0, bypassConcurrency: 0, bypassUnconfigured: 0,
+    lastFailureAt: null, lastErrorKind: null,
+  };
+  return { ...state };
+}
+function routeDbReason(): DbRouteDiagnostics {
+  getRouteDbReasonDiagnostics();
+  return globalRouteDb.airRadarRouteDbReasons!;
+}
+
 const KEY = /^flight-route:[A-F0-9~]{6,7}:([A-Z0-9]{2,10}):\d{4}-\d{2}-\d{2}$/;
 const SOURCES = new Set(["adsbdb", "adsblol-routeset"]);
 
@@ -62,11 +83,23 @@ export class PostgresRouteCache implements RouteCacheStore {
   private async run<T>(
     fallback: T, query: (database: NonNullable<ReturnType<typeof getPrisma>>) => Promise<T>,
   ): Promise<T> {
-    if (Date.now() < this.retryAfter || this.active >= 4) { this.stats.bypassed++; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
+    if (Date.now() < this.retryAfter || this.active >= 4) {
+      const diagnostics = routeDbReason();
+      if (Date.now() < this.retryAfter) diagnostics.bypassBackoff += 1;
+      else diagnostics.bypassConcurrency += 1;
+      this.stats.bypassed++; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback;
+    }
     let db: ReturnType<typeof getPrisma>;
     try { db = getPrisma(); }
-    catch { this.stats.failures++; getRouteEnrichmentTelemetry().record("dbError"); this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback; }
-    if (!db) { getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
+    catch {
+      const diagnostics = routeDbReason();
+      diagnostics.connectionFailures += 1;
+      diagnostics.lastFailureAt = new Date().toISOString();
+      diagnostics.lastErrorKind = "connection";
+      this.stats.failures++; getRouteEnrichmentTelemetry().record("dbError");
+      this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback;
+    }
+    if (!db) { routeDbReason().bypassUnconfigured += 1; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
     this.active++;
     const started = Date.now();
     try {
@@ -74,7 +107,13 @@ export class PostgresRouteCache implements RouteCacheStore {
       getRouteEnrichmentTelemetry().recordDbLatency(Date.now() - started);
       return value;
     }
-    catch {
+    catch (error) {
+      const diagnostics = routeDbReason();
+      const timedOut = error instanceof Error && error.message === "route_db_timeout";
+      if (timedOut) diagnostics.timeouts += 1;
+      else diagnostics.queryFailures += 1;
+      diagnostics.lastFailureAt = new Date().toISOString();
+      diagnostics.lastErrorKind = timedOut ? "timeout" : "query";
       this.stats.failures++;
       getRouteEnrichmentTelemetry().record("dbError");
       this.retryAfter = Date.now() + FAILURE_BACKOFF_MS;
