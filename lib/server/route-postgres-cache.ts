@@ -128,6 +128,8 @@ export class PostgresRouteCache implements RouteCacheStore {
     this.syncTelemetry();
     const started = Date.now();
     let callerTimedOut = false;
+    // This elapsed interval is the Prisma DB-call boundary: it can include
+    // pool wait and network time. It is intentionally not server-side SQL time.
     // Promise.race timeout limits caller latency, NOT the underlying SQL
     // execution. Keep the concurrency slot occupied until the real query
     // settles, otherwise timed-out operations can silently exceed MAX_ACTIVE.
