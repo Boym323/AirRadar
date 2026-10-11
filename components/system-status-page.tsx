@@ -110,7 +110,7 @@ function HealthSummary({ data, dictionary, streamConnected }: { data: SystemStat
       </div>
       <StatusBadge status={data.status} dictionary={dictionary} />
     </div>
-    <p className="system-health-state">{dictionary.system.overviewSubtitle}</p>
+    <p className="system-health-state">{dictionary.system.overviewSubtitle} · {dictionary.locale.startsWith("cs") ? "Základní dostupnost služeb" : "Core service availability"}</p>
     <div className="system-health-services">
       {services.map((service) => <div className="system-health-service" key={service.label}>
         <span className={`system-health-dot ${statusBadgeVariant(service.status)}`} aria-hidden="true" />
@@ -128,13 +128,19 @@ function SystemAttention({ data, dictionary, streamConnected }: {
 }) {
   const issues = systemHealthServices(data, dictionary, streamConnected)
     .filter((service) => service.status === "degraded" || service.status === "offline");
-  if (!issues.length) return null;
+  // This is a 24h historical warning, NOT evidence of a currently failing feed.
+  const t = data.routeEnrichment?.totals;
+  const failingRoutes = !!t && t.adsblolBatch >= 3 && t.adsblolError >= t.adsblolBatch;
+  const failingDbCache = !!t && t.dbError >= 10;
+  if (!issues.length && !failingRoutes && !failingDbCache) return null;
   return <section className="system-attention" aria-label={dictionary.system.attentionTitle}>
     <div className="system-attention-copy">
       <strong>{dictionary.system.attentionTitle}</strong>
       <p>{dictionary.system.attentionDescription}</p>
     </div>
     <ul>
+      {failingRoutes && <li><a href="#system-data">{dictionary.locale.startsWith("cs") ? "ADSB.lol trasy: neúspěšné dávky za 24 hodin" : "ADSB.lol routes: failed batches over 24 hours"}</a><span>{formatNumber(t!.adsblolError, 0, dictionary.locale)} / {formatNumber(t!.adsblolBatch, 0, dictionary.locale)}</span></li>}
+      {failingDbCache && <li><a href="#system-data">{dictionary.locale.startsWith("cs") ? "Cache tras: chyby DB za 24 hodin" : "Route cache: DB errors over 24 hours"}</a><span>{formatNumber(t!.dbError, 0, dictionary.locale)}</span></li>}
       {issues.map((issue) => <li key={issue.label}>
         <span>{issue.label}</span>
         <StatusBadge status={issue.status} dictionary={dictionary} />
@@ -146,10 +152,10 @@ function SystemAttention({ data, dictionary, streamConnected }: {
 function SystemJumpNav({ dictionary }: { dictionary: LocaleDictionary }) {
   const links = [
     { href: "#system-overview", label: dictionary.system.sectionOverview },
-    { href: "#system-runtime", label: dictionary.system.sectionRuntime },
     { href: "#system-reception", label: dictionary.system.sectionReception },
     { href: "#system-data", label: dictionary.system.sectionData },
     { href: "#system-services", label: dictionary.system.sectionServices },
+    { href: "#system-runtime", label: dictionary.system.sectionRuntime },
   ];
   return <nav className="system-jump-nav" aria-label={dictionary.system.sectionNavigation}>
     <span>{dictionary.system.sections}</span>
@@ -587,6 +593,7 @@ export function SystemStatusPage() {
   const [streamConnected, setStreamConnected] = useState(false);
   const [predictiveReadiness, setPredictiveReadiness] = useState<PredictiveReadinessReport | null>(null);
   const [predictiveReadinessError, setPredictiveReadinessError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const applyStatus = useCallback((next: SystemStatusApiResponse) => {
     setData((current) => {
@@ -702,7 +709,7 @@ export function SystemStatusPage() {
           <span aria-hidden="true">●</span> {streamConnected ? dictionary.system.realtime : dictionary.system.reconnecting}
         </span>
       </div>
-      <Button variant="primary" className="primary-button" onClick={() => { void load(); if (data?.detailLevel === "admin") void loadPredictiveReadiness(); }} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
+      <Button variant="primary" className="primary-button" onClick={() => { setRefreshKey((k) => k + 1); void load(); if (data?.detailLevel === "admin") void loadPredictiveReadiness(); }} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
     </div>
 
     {loading && !data && <p className="system-message">{dictionary.system.loading}</p>}
@@ -712,68 +719,6 @@ export function SystemStatusPage() {
       <div id="system-overview" className="system-overview-anchor"><HealthSummary data={data} dictionary={dictionary} streamConnected={streamConnected} /></div>
       <SystemAttention data={data} dictionary={dictionary} streamConnected={streamConnected} />
       <SystemJumpNav dictionary={dictionary} />
-      <SystemSection id="system-runtime" title={dictionary.system.sectionRuntime} description={dictionary.system.sectionRuntimeDescription}>
-      {detailed && data.operationalHealth && <UiCard className="system-card" aria-label={operationalLabels.title}>
-        <div className="system-card-header">
-          <h2>{operationalLabels.title}</h2>
-          <strong>{operationalLabels.state[data.operationalHealth.state]}</strong>
-        </div>
-        <dl className="system-fields">
-          <Field label={operationalLabels.availability} value={data.operationalHealth.sourceAvailability} />
-          <Field label={operationalLabels.connections} value={`${formatNumber(data.operationalHealth.stream.activeClients, 0, dictionary.locale)} / ${formatNumber(data.operationalHealth.stream.capacity, 0, dictionary.locale)}`} />
-          <Field label={operationalLabels.denied} value={formatNumber(data.operationalHealth.stream.deniedSinceStart, 0, dictionary.locale)} />
-          <Field label={operationalLabels.coalesced} value={formatNumber(data.operationalHealth.stream.coalescedSnapshotsSinceStart, 0, dictionary.locale)} />
-          <Field label={operationalLabels.database} value={formatStatus(data.operationalHealth.databaseState, dictionary)} />
-          <Field label={operationalLabels.predictiveCapture} value={operationalLabels.predictiveState[data.operationalHealth.predictiveCapture]} />
-          <Field label={operationalLabels.reasonLabel} value={data.operationalHealth.reasons.map((code) => operationalLabels.reasons[code]).join(", ") || operationalLabels.noIssues} />
-        </dl>
-      </UiCard>}
-      <Card title={dictionary.system.application} status={data.application.status} dictionary={dictionary}>
-        <Field label={dictionary.system.applicationName} value={data.application.name} />
-        <Field label={dictionary.system.version} value={data.application.version ?? dictionary.system.notAvailable} />
-        <Field label={dictionary.system.commit} value={data.application.commit ?? dictionary.system.notAvailable} />
-        <Field label={dictionary.system.buildTime} value={formatDateTime(data.application.buildTime, dictionary)} />
-        <Field label={dictionary.system.channel} value={data.application.channel} />
-        <Field label={dictionary.system.uptime} value={formatUptime(data.application.uptimeSeconds, dictionary)} />
-        {detailed && <Field label={dictionary.system.node} value={data.application.nodeVersion} />}
-        {detailed && <Field label={dictionary.system.next} value={data.application.nextVersion ?? dictionary.system.notAvailable} />}
-        <Field label={dictionary.system.environment} value={data.application.environment} />
-        <Field label={dictionary.system.timezone} value={data.application.timezone} />
-        <Field label={dictionary.system.startTime} value={formatDateTime(data.application.startedAt, dictionary)} />
-      </Card>
-
-      {detailed && <Card title={dictionary.system.runtime} status={data.application.status} dictionary={dictionary}>
-        <Field label={dictionary.system.processRss} value={formatBytes(data.runtime.processRssBytes, dictionary)} />
-        <Field label={dictionary.system.heapUsed} value={formatBytes(data.runtime.heapUsedBytes, dictionary)} />
-        <Field label={dictionary.system.cgroupMemory} value={data.runtime.cgroupMemoryMaxBytes === null ? formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary) : `${formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary)} / ${formatBytes(data.runtime.cgroupMemoryMaxBytes, dictionary)}`} />
-        <Field label={dictionary.system.sseClients} value={`${formatNumber(data.runtime.activeSseClients, 0, dictionary.locale)} / ${formatNumber(data.runtime.sseClientLimit, 0, dictionary.locale)}`} />
-        <Field label={dictionary.system.aircraftState} value={formatCount(data.runtime.aircraftCount, dictionary)} />
-        <Field label={dictionary.system.trailPoints} value={formatCount(data.runtime.localTrailPointCount, dictionary)} />
-        <Field label={dictionary.system.trailMemory} value={formatBytes(data.runtime.trailEstimatedBytes, dictionary)} />
-        <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
-        <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
-      </Card>}
-
-      {detailed && <SystemRuntimeTimeline locale={locale} />}
-
-      {detailed && predictiveReadiness && <PredictiveReadinessPanel report={predictiveReadiness} dictionary={dictionary} />}
-      {detailed && predictiveReadinessError && !predictiveReadiness && <UiCard className="system-card system-predictive-readiness"><p className="system-message">{dictionary.system.predictiveReadinessUnavailable}</p></UiCard>}
-
-      {detailed && data.predictiveValidation && <Card title={dictionary.system.predictiveValidation} status={data.predictiveValidation.status === "no_data" ? "disabled" : data.predictiveValidation.status} dictionary={dictionary}>
-        <Field label={dictionary.system.enabled} value={data.predictiveValidation.enabled ? dictionary.system.configured : dictionary.system.disabled} />
-        <Field label={dictionary.system.observationsCaptured} value={formatNumber(data.predictiveValidation.observationsCaptured, 0, dictionary.locale)} />
-        <Field label={dictionary.system.observationsSkipped} value={formatNumber(data.predictiveValidation.invalid + data.predictiveValidation.dedupePending + data.predictiveValidation.dedupeDatabase, 0, dictionary.locale)} />
-        <Field label={dictionary.system.queueDepth} value={formatNumber(data.predictiveValidation.queueDepth, 0, dictionary.locale)} />
-        <Field label={dictionary.system.queueHighWaterMark} value={formatNumber(data.predictiveValidation.queueHighWaterMark, 0, dictionary.locale)} />
-        <Field label={dictionary.system.prospectivePersistenceFailures} value={formatNumber(data.predictiveValidation.persistenceFailures, 0, dictionary.locale)} />
-        <Field label={dictionary.system.prospectiveIntegrityRejects} value={formatNumber(data.predictiveValidation.integrityRejects, 0, dictionary.locale)} />
-        <Field label={dictionary.system.prospectivePersistenceSuspended} value={data.predictiveValidation.persistenceSuspended ? dictionary.system.yes : dictionary.system.no} />
-        {data.predictiveValidation.suspensionReason && <Field label={dictionary.system.prospectiveSuspensionReason} value={data.predictiveValidation.suspensionReason} />}
-        {data.predictiveValidation.lastFailureField && <Field label={dictionary.system.prospectiveLastFailureField} value={data.predictiveValidation.lastFailureField} />}
-        <Field label={dictionary.system.validationReadiness} value={`ETA ${data.predictiveValidation.readiness.ETA} · RUNWAY ${data.predictiveValidation.readiness.RUNWAY}`} />
-      </Card>}
-
-      </SystemSection>
       <SystemSection id="system-reception" title={dictionary.system.sectionReception} description={dictionary.system.sectionReceptionDescription}>
       <Card title={dictionary.system.receiver} status={data.receiver.readsb.status} dictionary={dictionary}>
         <Field label={dictionary.system.readsb} value={<StatusBadge status={data.receiver.readsb.status} dictionary={dictionary} />} />
@@ -978,7 +923,7 @@ export function SystemStatusPage() {
       </Card>
 
       {detailed && data.routeEnrichment && <RouteEnrichmentPanel metrics={data.routeEnrichment} dictionary={dictionary} />}
-      {detailed && <SystemIntegrationDiagnostics locale={dictionary.locale} />}
+      {detailed && <SystemIntegrationDiagnostics key={refreshKey} locale={dictionary.locale} />}
 
       <Card title={dictionary.system.statistics} status={data.statistics.status} dictionary={dictionary}>
         <Field label={dictionary.system.uniqueToday} value={formatNumber(data.statistics.uniqueAircraftToday, 0, dictionary.locale)} />
@@ -1090,6 +1035,68 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.ourAirports} value={<StatusBadge status={data.dataSources.ourAirports.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.enabled} value={data.dataSources.ourAirports.enabled ? dictionary.system.configured : dictionary.system.disabled} />
       </Card>
+      </SystemSection>
+      <SystemSection id="system-runtime" title={dictionary.system.sectionRuntime} description={dictionary.system.sectionRuntimeDescription}>
+      {detailed && data.operationalHealth && <UiCard className="system-card" aria-label={operationalLabels.title}>
+        <div className="system-card-header">
+          <h2>{operationalLabels.title}</h2>
+          <strong>{operationalLabels.state[data.operationalHealth.state]}</strong>
+        </div>
+        <dl className="system-fields">
+          <Field label={operationalLabels.availability} value={data.operationalHealth.sourceAvailability} />
+          <Field label={operationalLabels.connections} value={`${formatNumber(data.operationalHealth.stream.activeClients, 0, dictionary.locale)} / ${formatNumber(data.operationalHealth.stream.capacity, 0, dictionary.locale)}`} />
+          <Field label={operationalLabels.denied} value={formatNumber(data.operationalHealth.stream.deniedSinceStart, 0, dictionary.locale)} />
+          <Field label={operationalLabels.coalesced} value={formatNumber(data.operationalHealth.stream.coalescedSnapshotsSinceStart, 0, dictionary.locale)} />
+          <Field label={operationalLabels.database} value={formatStatus(data.operationalHealth.databaseState, dictionary)} />
+          <Field label={operationalLabels.predictiveCapture} value={operationalLabels.predictiveState[data.operationalHealth.predictiveCapture]} />
+          <Field label={operationalLabels.reasonLabel} value={data.operationalHealth.reasons.map((code) => operationalLabels.reasons[code]).join(", ") || operationalLabels.noIssues} />
+        </dl>
+      </UiCard>}
+      <Card title={dictionary.system.application} status={data.application.status} dictionary={dictionary}>
+        <Field label={dictionary.system.applicationName} value={data.application.name} />
+        <Field label={dictionary.system.version} value={data.application.version ?? dictionary.system.notAvailable} />
+        <Field label={dictionary.system.commit} value={data.application.commit ?? dictionary.system.notAvailable} />
+        <Field label={dictionary.system.buildTime} value={formatDateTime(data.application.buildTime, dictionary)} />
+        <Field label={dictionary.system.channel} value={data.application.channel} />
+        <Field label={dictionary.system.uptime} value={formatUptime(data.application.uptimeSeconds, dictionary)} />
+        {detailed && <Field label={dictionary.system.node} value={data.application.nodeVersion} />}
+        {detailed && <Field label={dictionary.system.next} value={data.application.nextVersion ?? dictionary.system.notAvailable} />}
+        <Field label={dictionary.system.environment} value={data.application.environment} />
+        <Field label={dictionary.system.timezone} value={data.application.timezone} />
+        <Field label={dictionary.system.startTime} value={formatDateTime(data.application.startedAt, dictionary)} />
+      </Card>
+
+      {detailed && <Card title={dictionary.system.runtime} status={data.application.status} dictionary={dictionary}>
+        <Field label={dictionary.system.processRss} value={formatBytes(data.runtime.processRssBytes, dictionary)} />
+        <Field label={dictionary.system.heapUsed} value={formatBytes(data.runtime.heapUsedBytes, dictionary)} />
+        <Field label={dictionary.system.cgroupMemory} value={data.runtime.cgroupMemoryMaxBytes === null ? formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary) : `${formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary)} / ${formatBytes(data.runtime.cgroupMemoryMaxBytes, dictionary)}`} />
+        <Field label={dictionary.system.sseClients} value={`${formatNumber(data.runtime.activeSseClients, 0, dictionary.locale)} / ${formatNumber(data.runtime.sseClientLimit, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.aircraftState} value={formatCount(data.runtime.aircraftCount, dictionary)} />
+        <Field label={dictionary.system.trailPoints} value={formatCount(data.runtime.localTrailPointCount, dictionary)} />
+        <Field label={dictionary.system.trailMemory} value={formatBytes(data.runtime.trailEstimatedBytes, dictionary)} />
+        <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
+        <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
+      </Card>}
+
+      {detailed && <SystemRuntimeTimeline locale={locale} refreshKey={refreshKey} />}
+
+      {detailed && predictiveReadiness && <PredictiveReadinessPanel report={predictiveReadiness} dictionary={dictionary} />}
+      {detailed && predictiveReadinessError && !predictiveReadiness && <UiCard className="system-card system-predictive-readiness"><p className="system-message">{dictionary.system.predictiveReadinessUnavailable}</p></UiCard>}
+
+      {detailed && data.predictiveValidation && <Card title={dictionary.system.predictiveValidation} status={data.predictiveValidation.status === "no_data" ? "disabled" : data.predictiveValidation.status} dictionary={dictionary}>
+        <Field label={dictionary.system.enabled} value={data.predictiveValidation.enabled ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.observationsCaptured} value={formatNumber(data.predictiveValidation.observationsCaptured, 0, dictionary.locale)} />
+        <Field label={dictionary.system.observationsSkipped} value={formatNumber(data.predictiveValidation.invalid + data.predictiveValidation.dedupePending + data.predictiveValidation.dedupeDatabase, 0, dictionary.locale)} />
+        <Field label={dictionary.system.queueDepth} value={formatNumber(data.predictiveValidation.queueDepth, 0, dictionary.locale)} />
+        <Field label={dictionary.system.queueHighWaterMark} value={formatNumber(data.predictiveValidation.queueHighWaterMark, 0, dictionary.locale)} />
+        <Field label={dictionary.system.prospectivePersistenceFailures} value={formatNumber(data.predictiveValidation.persistenceFailures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.prospectiveIntegrityRejects} value={formatNumber(data.predictiveValidation.integrityRejects, 0, dictionary.locale)} />
+        <Field label={dictionary.system.prospectivePersistenceSuspended} value={data.predictiveValidation.persistenceSuspended ? dictionary.system.yes : dictionary.system.no} />
+        {data.predictiveValidation.suspensionReason && <Field label={dictionary.system.prospectiveSuspensionReason} value={data.predictiveValidation.suspensionReason} />}
+        {data.predictiveValidation.lastFailureField && <Field label={dictionary.system.prospectiveLastFailureField} value={data.predictiveValidation.lastFailureField} />}
+        <Field label={dictionary.system.validationReadiness} value={`ETA ${data.predictiveValidation.readiness.ETA} · RUNWAY ${data.predictiveValidation.readiness.RUNWAY}`} />
+      </Card>}
+
       </SystemSection>
     </div>}
   </main>;
