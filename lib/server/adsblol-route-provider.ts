@@ -17,6 +17,22 @@ const MIN_REQUEST_GAP_MS = 1_500;
 const ERROR_BACKOFF_MS = 30_000;
 const MAX_RESPONSE_BYTES = 512 * 1024;
 const REQUEST_TIMEOUT_MS = 3_500;
+const MAX_RETRY_BACKOFF_MS = 5 * 60_000;
+
+/** Compute a bounded retry delay without trusting arbitrary upstream headers. */
+export function routesetRetryDelayMs(status: number | null, retryAfter: string | null, consecutiveFailures: number, now = Date.now()): number {
+  const exponential = Math.min(MAX_RETRY_BACKOFF_MS, ERROR_BACKOFF_MS * 2 ** Math.min(4, Math.max(0, consecutiveFailures - 1)));
+  let upstreamMs = 0;
+  if ((status === 429 || status === 503) && retryAfter) {
+    const trimmed = retryAfter.trim();
+    if (/^\d{1,6}$/.test(trimmed)) upstreamMs = Number(trimmed) * 1000;
+    else {
+      const date = Date.parse(trimmed);
+      if (Number.isFinite(date)) upstreamMs = Math.max(0, date - now);
+    }
+  }
+  return Math.min(MAX_RETRY_BACKOFF_MS, Math.max(exponential, upstreamMs));
+}
 
 type RoutesetErrorKind = "http" | "timeout" | "network" | "invalid_response" | "other";
 type RoutesetRuntimeDiagnostics = {
@@ -113,6 +129,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
   private nextAllowedAt = 0;
   private requests = 0;
   private failures = 0;
+  private failureStreak = 0;
   private rejected = 0;
 
   constructor(private readonly airportResolver: AirportResolverLike = defaultAirportResolver) {}
@@ -122,7 +139,8 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
     if (!normalized || !validPosition(position)) return Promise.resolve(null);
     if (this.pending.length >= MAX_PENDING) {
       this.rejected += 1;
-      return Promise.resolve(null);
+      // Do not turn provider congestion into a permanent negative route cache.
+      return Promise.reject(new Error("ADSB.lol routeset queue saturated"));
     }
 
     return new Promise<FlightRoute | null>((resolve, reject) => {
@@ -132,7 +150,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
   }
 
   getDiagnostics() {
-    return { requests: this.requests, failures: this.failures, pending: this.pending.length, rejected: this.rejected };
+    return { requests: this.requests, failures: this.failures, pending: this.pending.length, rejected: this.rejected, consecutiveFailures: this.failureStreak, nextAllowedAt: this.nextAllowedAt || null };
   }
 
   private schedule(): void {
@@ -154,6 +172,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     let httpStatus: number | null = null;
+    let retryAfter: string | null = null;
     try {
       this.requests += 1;
       runtimeDiagnostics().requests += 1;
@@ -171,6 +190,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
         })) }),
       });
       httpStatus = response.status;
+      retryAfter = response.headers.get("retry-after");
       if (!response.ok) throw new Error("ADSB.lol routeset HTTP " + response.status);
       const size = Number(response.headers.get("content-length"));
       if (Number.isFinite(size) && size > MAX_RESPONSE_BYTES) throw new Error("ADSB.lol routeset response too large");
@@ -195,11 +215,14 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
         return this.parseRoute(row ?? null, lookup);
       }));
       const diagnostics = runtimeDiagnostics();
+      this.failureStreak = 0;
+      diagnostics.nextAllowedAt = null;
       diagnostics.success += 1;
       diagnostics.lastSuccessAt = new Date().toISOString();
       results.forEach((result, index) => batch[index].resolve(result));
     } catch (error) {
       this.failures += 1;
+      this.failureStreak += 1;
       const reason: RoutesetErrorKind = httpStatus !== null && httpStatus >= 400
         ? "http" : controller.signal.aborted ? "timeout" : error instanceof SyntaxError
           || (error instanceof Error && /Invalid ADSB|response too large/.test(error.message))
@@ -210,7 +233,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
       diagnostics.lastFailureAt = new Date().toISOString();
       diagnostics.lastHttpStatus = reason === "http" ? httpStatus : null;
       getRouteEnrichmentTelemetry().record("adsblolError");
-      this.nextAllowedAt = Math.max(this.nextAllowedAt, Date.now() + ERROR_BACKOFF_MS);
+      this.nextAllowedAt = Math.max(this.nextAllowedAt, Date.now() + routesetRetryDelayMs(httpStatus, retryAfter, this.failureStreak));
       diagnostics.nextAllowedAt = new Date(this.nextAllowedAt).toISOString();
       batch.forEach((lookup) => lookup.reject(error));
     } finally {
