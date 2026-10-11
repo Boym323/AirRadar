@@ -16,12 +16,52 @@ FROM pg_index
 WHERE indexrelid = to_regclass('public."flight_aircraftId_lastSeenAt_desc_idx"');
 
 DO $safety$
+DECLARE
+  index_oid oid;
+  equivalent_count integer;
+  index_is_valid boolean;
+  index_is_ready boolean;
+  index_is_correct boolean;
 BEGIN
   IF current_database() <> 'airradar' THEN
     RAISE EXCEPTION 'Refusing history index migration: expected database airradar, got %', current_database();
   END IF;
   IF to_regclass('public."flight"') IS NULL THEN
     RAISE EXCEPTION 'Refusing history index migration: public.flight table not found';
+  END IF;
+
+  SELECT to_regclass('public."flight_aircraftId_lastSeenAt_desc_idx"') INTO index_oid;
+  IF index_oid IS NOT NULL THEN
+    SELECT i.indisvalid,
+           i.indisready,
+           i.indrelid = 'public."flight"'::regclass
+             AND i.indnkeyatts = 2
+             AND i.indkey[0] = a.attnum
+             AND i.indkey[1] = l.attnum
+             AND i.indoption[0] = 0
+             AND i.indoption[1] = 1
+      INTO index_is_valid, index_is_ready, index_is_correct
+    FROM pg_index AS i
+    JOIN pg_attribute AS a ON a.attrelid = i.indrelid AND a.attname = 'aircraftId'
+    JOIN pg_attribute AS l ON l.attrelid = i.indrelid AND l.attname = 'lastSeenAt'
+    WHERE i.indexrelid = index_oid;
+    IF NOT COALESCE(index_is_valid, false)
+       OR NOT COALESCE(index_is_ready, false)
+       OR NOT COALESCE(index_is_correct, false) THEN
+      RAISE EXCEPTION 'Refusing history index migration: existing index has wrong definition or is invalid';
+    END IF;
+  ELSE
+    SELECT count(*) INTO equivalent_count
+    FROM pg_index AS i
+    WHERE i.indrelid = 'public."flight"'::regclass
+      AND i.indnkeyatts = 2
+      AND i.indkey[0] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = 'aircraftId')
+      AND i.indkey[1] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = 'lastSeenAt')
+      AND i.indoption[0] = 0
+      AND i.indoption[1] = 1;
+    IF equivalent_count > 0 THEN
+      RAISE EXCEPTION 'Refusing history index migration: equivalent index exists under another name';
+    END IF;
   END IF;
 END
 $safety$;

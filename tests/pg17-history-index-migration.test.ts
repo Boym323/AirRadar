@@ -12,6 +12,8 @@ describe("PostgreSQL 17 flight history index migration", () => {
   it("uses an idempotent concurrent operational DDL statement", () => {
     expect(sql).toMatch(/CREATE INDEX CONCURRENTLY IF NOT EXISTS/);
     expect(sql).toContain('ON public."flight" ("aircraftId", "lastSeenAt" DESC)');
+    expect(sql).toContain("existing index has wrong definition or is invalid");
+    expect(sql).toContain("equivalent index exists under another name");
     expect(sql).not.toMatch(/^\s*BEGIN\s*;\s*$/m);
     expect(sql).not.toMatch(/^\s*COMMIT\s*;\s*$/m);
     expect(sql).toContain("MANUAL DBA CHANGE ONLY");
