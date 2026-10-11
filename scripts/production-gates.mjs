@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { isAuthorizedYouTubeFrame } from "./v6-media-acceptance.mjs";
+import { boundedConcurrency, runBoundedChecks } from "./ci-browser-concurrency.mjs";
 
 export const STABLE_PRODUCTION_VERSION = "1.0.0";
 export const RELEASE_CANDIDATE_VERSION_PATTERN = /^1\.0\.0-rc\.[1-9]\d*$/;
@@ -1057,15 +1058,24 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
 
-      // Share one real, validated system snapshot across admin readiness captures.
-      // Repeated upstream calls late in the visual sweep can hit the public rate limit.
+      // Snapshot must be fetched once, before parallel screenshot workers start.
+      // Predictive readiness fixtures depend on this real system response.
       let systemStatusSnapshot = null;
       // PR 3D GPU validation may target a small explicit visual subset; releases always run all.
       const requestedVisualTargets = (process.env.AIRRADAR_VISUAL_TARGETS ?? "")
         .split(",").map((name) => name.trim()).filter(Boolean);
       const unknownVisualTargets = requestedVisualTargets.filter((name) => !visualTargets.some((target) => target.name === name));
       if (unknownVisualTargets.length) throw new Error(`Unknown visual targets: ${unknownVisualTargets.join(", ")}`);
-      for (const target of visualTargets.filter((item) => requestedVisualTargets.length === 0 || requestedVisualTargets.includes(item.name))) {
+      const selectedTargets = visualTargets.filter((item) => requestedVisualTargets.length === 0 || requestedVisualTargets.includes(item.name));
+      if (selectedTargets.some((target) => target.name === "system-desktop" || target.mockPredictiveReadiness)) {
+        const upstream = await get("/api/system/status");
+        if (!upstream.ok) throw new Error(`System visual smoke status returned HTTP ${upstream.status}`);
+        systemStatusSnapshot = await upstream.json();
+      }
+      const visualConcurrency = boundedConcurrency(process.env.AIRRADAR_VISUAL_CONCURRENCY);
+      console.log(`[production-gates] visual targets=${selectedTargets.length} concurrency=${visualConcurrency}`);
+      await runBoundedChecks(selectedTargets, visualConcurrency, async (target) => {
+        const visualStartedAt = performance.now();
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
           if (target.locale) {
@@ -1201,14 +1211,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
-          if (target.name === "system-desktop") {
-            // Acquire the real public snapshot outside Playwright routing.
-            // A second in-flight status response can be disposed when this
-            // screenshot page closes, leaving an unhandled route callback.
-            const upstream = await get("/api/system/status");
-            if (!upstream.ok) throw new Error(`System visual smoke status returned HTTP ${upstream.status}`);
-            systemStatusSnapshot = await upstream.json();
-          }
+          // System status is fetched before worker startup, never mutated per target.
           if (target.mockPredictiveReadiness) {
             if (!systemStatusSnapshot) throw new Error("Predictive visual smoke requires a successful real system status snapshot");
             await visualPage.route("**/api/system/status", async (route) => {
@@ -1768,11 +1771,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             fullPage: target.fullPage,
             animations: "disabled",
           });
-          console.log(`[production-gates] visual smoke captured ${target.name}`);
+          console.log(`[production-gates] visual smoke captured ${target.name} durationMs=${Math.round(performance.now() - visualStartedAt)}`);
         } finally {
           await closePage(visualPage);
         }
-      }
+      });
     };
     const runResponsiveSweep = configuredViewport ? async () => {} : async () => {
       const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
@@ -1937,7 +1940,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (viewports.length !== (new Set(viewportNames)).size && viewportNames.length) {
       throw new Error(`Unknown or duplicate production browser viewport: ${viewportNames.join(",")}`);
     }
-    for (const viewport of viewports) {
+    // Run two independent viewport contexts concurrently; representative
+    // full-interaction viewports start first, all other widths still run.
+    const viewportConcurrency = boundedConcurrency(process.env.AIRRADAR_VIEWPORT_CONCURRENCY);
+    const orderedViewports = [...viewports].sort((left, right) =>
+      Number(isProductionGateFullSmokeViewport(right)) - Number(isProductionGateFullSmokeViewport(left)));
+    console.log(`[production-gates] browser viewport targets=${viewports.length} concurrency=${viewportConcurrency}`);
+    await runBoundedChecks(orderedViewports, viewportConcurrency, async (viewport) => {
       console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
       const fullSmoke = isProductionGateFullSmokeViewport(viewport);
       const markerSmoke = isProductionGateMarkerSmokeViewport(viewport);
@@ -2610,7 +2619,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           throw new Error(`Responsive contract failed at ${viewport.width}px: ${JSON.stringify(contract)}`);
         }
         await closePage(page);
-        continue;
+        return;
       }
 
       await page.locator("details.map-layers > summary").click();
@@ -2785,7 +2794,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       }
       logViewportPhase("total", viewportStartedAt);
       await closePage(page);
-    }
+    });
   } finally {
     await browser.close();
   }
