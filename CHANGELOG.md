@@ -17,6 +17,44 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.430] - 2026-10-11
+
+Changes since v1.0.429.
+
+**Features touched:** Aircraft & Flight Detail, ATC & ATS Intelligence.
+
+### Fixed
+
+- Detect external imports and refresh validity (8132be98)
+- Make migration and bounded loads fail safe (094d0098)
+
+### Performance
+
+- Cache ATC dataset and add safe flight history index (8fc914aa)
+- Use atomic dataset version for cache freshness (b28edf6f)
+
+### Maintenance
+
+- Sync generated repository metadata (#825) (f2e6941a)
+- Account for ATC dataset version migration (70482848)
+- Tolerate hydration latency without double-toggling radar layers (128c4383)
+- Guard radar layer retry against late state changes (43121722)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#825) (f2e6941a)
+- perf(db): cache ATC dataset and add safe flight history index (8fc914aa)
+- fix(atc): detect external imports and refresh validity (8132be98)
+- perf(atc): use atomic dataset version for cache freshness (b28edf6f)
+- fix(atc): make migration and bounded loads fail safe (094d0098)
+- Merge pull request #826 from Boym323/perf/pg17-history-atc-cache-navigation (19d44a99)
+- test(release): account for ATC dataset version migration (70482848)
+- test(browser): tolerate hydration latency without double-toggling radar layers (128c4383)
+- test(release): guard radar layer retry against late state changes (43121722)
+- Merge pull request #827 from Boym323/fix/main-release-gates-atc-migration (9f968359)
+
+</details>
 ## [1.0.429] - 2026-10-11
 
 Changes since v1.0.428.
