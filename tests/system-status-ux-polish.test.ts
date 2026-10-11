@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const page = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
 const timeline = readFileSync(new URL("../components/system-runtime-timeline.tsx", import.meta.url), "utf8");
 const routes = readFileSync(new URL("../components/route-enrichment-panel.tsx", import.meta.url), "utf8");
+const integrations = readFileSync(new URL("../components/system-integration-diagnostics.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
 describe("System status audit UX", () => {
@@ -24,6 +25,12 @@ describe("System status audit UX", () => {
     expect(timeline).toContain("Časová osa systému a přijímače");
     expect(timeline).toContain("Souběžná změna stavů příjmu");
     expect(timeline).not.toContain('title: "System & Receiver Timeline",\n    subtitle: "Admin-only runtime historie');
+  });
+  it("groups source diagnostics under meaningful headings", () => {
+    expect(integrations).toContain('RXW ACARS / FPN');
+    expect(integrations).toContain('Trasy a databázová cache');
+    expect(integrations).toContain('system-integration-groups');
+    expect(styles).toContain('.system-page .system-integration-group.routes');
   });
   it("groups route counters and uses browser local time for graph labels", () => {
     expect(routes).toContain("metricGroups");
