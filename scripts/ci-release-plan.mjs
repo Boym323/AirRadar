@@ -63,25 +63,25 @@ const DOCUMENTATION = [
 const RULES = [
   { kind: "radar", paths: [/^components\/radar\//, /^lib\/radar\//] },
   { kind: "airport", paths: [
-    /^app\/airports\//, /^components\/(?:airport[^/]*|airports-[^/]*|live-airport-network[^/]*)\.[cm]?[jt]sx?$/,
+    /^app\/airports\//, /^components\/(?:airport[^/]*|airports-[^/]*|live-airport-network[^/]*)\.(?:[cm]?[jt]sx?|css)$/,
     /^components\/airport[^/]*\//,
   ] },
   { kind: "aircraft", paths: [
     /^app\/aircraft\//,
-    /^components\/(?:aircraft-(?:detail|observed-weather|communications|weather-fusion|weather-panel|adsb-telemetry|operational-twin)[^/]*|predictive-aircraft-advisories[^/]*)\.[cm]?[jt]sx?$/,
+    /^components\/(?:aircraft-(?:detail|observed-weather|communications|weather-fusion|weather-panel|adsb-telemetry|operational-twin)[^/]*|predictive-aircraft-advisories[^/]*)\.(?:[cm]?[jt]sx?|css)$/,
   ] },
-  { kind: "system", paths: [/^app\/system\//, /^components\/system-[^/]+\.[cm]?[jt]sx?$/] },
-  { kind: "statistics", paths: [/^app\/statistics\//, /^components\/statistics-[^/]+\.[cm]?[jt]sx?$/] },
-  { kind: "weather", paths: [/^app\/weather\//, /^components\/weather-operations-center[^/]*\.[cm]?[jt]sx?$/] },
-  { kind: "watchlist", paths: [/^app\/watchlist\//, /^components\/watchlist-[^/]+\.[cm]?[jt]sx?$/] },
-  { kind: "notifications", paths: [/^app\/notifications\//, /^components\/notification-center[^/]*\.[cm]?[jt]sx?$/] },
-  { kind: "receiver", paths: [/^app\/receiver\//, /^components\/receiver-[^/]+\.[cm]?[jt]sx?$/] },
+  { kind: "system", paths: [/^app\/system\//, /^components\/system-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "statistics", paths: [/^app\/statistics\//, /^components\/statistics-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "weather", paths: [/^app\/weather\//, /^components\/weather-operations-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "watchlist", paths: [/^app\/watchlist\//, /^components\/watchlist-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "notifications", paths: [/^app\/notifications\//, /^components\/notification-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "receiver", paths: [/^app\/receiver\//, /^components\/receiver-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "spotter", paths: [
     /^app\/(?:spotter|my-airradar)\//,
-    /^components\/(?:my-airradar-home|mobile-spotter-mode|spotter-camera-ar)[^/]*\.[cm]?[jt]sx?$/,
+    /^components\/(?:my-airradar-home|mobile-spotter-mode|spotter-camera-ar)[^/]*\.(?:[cm]?[jt]sx?|css)$/,
   ] },
-  { kind: "recap", paths: [/^app\/recap\//, /^components\/recap-page\.[cm]?[jt]sx?$/] },
-  { kind: "operations", paths: [/^app\/operations\//, /^components\/operations-dashboard[^/]*\.[cm]?[jt]sx?$/] },
+  { kind: "recap", paths: [/^app\/recap\//, /^components\/recap-page\.(?:[cm]?[jt]sx?|css)$/] },
+  { kind: "operations", paths: [/^app\/operations\//, /^components\/operations-dashboard[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
 ];
 const BACKEND_ONLY = [/^app\/api\//, /^lib\/server\//, /^migrations\//, /^prisma\//, /^tests\//];
 
