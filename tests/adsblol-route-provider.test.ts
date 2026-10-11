@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AdsbLolRouteProvider, getAdsbLolRoutesetRuntimeDiagnostics } from "@/lib/server/adsblol-route-provider";
+import { AdsbLolRouteProvider, getAdsbLolRoutesetRuntimeDiagnostics, routesetRetryDelayMs } from "@/lib/server/adsblol-route-provider";
 import type { AirportResolverLike } from "@/lib/server/airport-resolver";
 
 const observedAt = new Date("2026-10-10T13:00:00Z");
@@ -26,6 +26,17 @@ const resolver: AirportResolverLike = {
 function row(callsign: string, plausible = true) {
   return { callsign, plausible, airport_codes: "OMDB-LKPR", _airports: airports, airline_code: "UAE" };
 }
+
+describe("ADSB.lol routeset retry policy", () => {
+  it("honors bounded Retry-After and exponential failure backoff", () => {
+    expect(routesetRetryDelayMs(429, "90", 1, 0)).toBe(90_000);
+    expect(routesetRetryDelayMs(503, "Thu, 01 Jan 1970 00:02:00 GMT", 1, 0)).toBe(120_000);
+    expect(routesetRetryDelayMs(429, "999999", 2, 0)).toBe(300_000);
+    expect(routesetRetryDelayMs(500, null, 3, 0)).toBe(120_000);
+    expect(routesetRetryDelayMs(429, "invalid", 1, 0)).toBe(30_000);
+    expect(routesetRetryDelayMs(200, "120", 1, 0)).toBe(30_000);
+  });
+});
 
 describe("ADSB.lol routeset batch provider", () => {
   afterEach(() => {
