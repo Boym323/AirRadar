@@ -14,8 +14,10 @@ export function summarizeIntegrationHealth(data) {
   const failed = Number.isSafeInteger(p.failed) && p.failed >= 0 ? p.failed : 0;
   const lastFailure = Date.parse(p.lastFailureAt ?? "");
   const lastSuccess = Date.parse(p.lastSuccessAt ?? "");
+  const blockedUntil = Date.parse(p.blockedUntilAt ?? "");
   let status;
   if (!p.enabled) status = "DISABLED";
+  else if (Number.isFinite(blockedUntil) && blockedUntil > Date.now()) status = "BLOCKED";
   else if (!requests) status = "INSUFFICIENT_DATA";
   else if (!success && failed > 0) status = "DEGRADED";
   else if (Number.isFinite(lastFailure) && (!Number.isFinite(lastSuccess) || lastFailure > lastSuccess))
@@ -43,6 +45,9 @@ export function summarizeIntegrationHealth(data) {
     routeset: { enabled: !!p.enabled, requests, success, failed, lastHttpStatus: http,
       lastFailureAt: typeof p.lastFailureAt === "string" ? p.lastFailureAt : null,
       lastSuccessAt: typeof p.lastSuccessAt === "string" ? p.lastSuccessAt : null,
+      blockedUntilAt: Number.isFinite(blockedUntil) && blockedUntil > Date.now()
+        ? new Date(blockedUntil).toISOString() : null,
+      skippedBlocked: Number.isSafeInteger(p.skippedBlocked) && p.skippedBlocked >= 0 ? p.skippedBlocked : 0,
       reasons },
     routeCache: {
       dbError24h: Number.isSafeInteger(data.route?.dbError) ? data.route.dbError : null,
@@ -75,7 +80,7 @@ async function main() {
       `DB health query P50/P95/P99: ${JSON.stringify(summary.runtimeDbLatency)}.\n\n` +
       `No ADSB.lol traffic/route API calls were made. Counters are process-local except where otherwise noted.\n`);
   }
-  if (summary.status === "DEGRADED") {
+  if (summary.status === "DEGRADED" || summary.status === "BLOCKED") {
     console.warn("[integration-health] ADSB.lol routeset is currently failing; radar and local cache may still work");
   }
 }
