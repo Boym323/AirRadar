@@ -1,6 +1,8 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getRxwHubService } from "@/lib/server/rxw-hub-service";
 import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
+import { getAdsbLolRoutesetRuntimeDiagnostics } from "@/lib/server/adsblol-route-provider";
+import { getRouteDbReasonDiagnostics } from "@/lib/server/route-postgres-cache";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 
 /** Read-only, process-local status; never calls upstream, starts receivers or queries DB. */
@@ -10,6 +12,10 @@ export function getIntegrationDiagnostics() {
   return {
     rxw: getRxwHubService().getDiagnostics(),
     adsbhub: getAircraftStateService().getNetworkDiagnostics().adsbhubLane ?? null,
+    routeProviders: {
+      routeset: getAdsbLolRoutesetRuntimeDiagnostics(),
+      postgres: getRouteDbReasonDiagnostics(),
+    },
     route: {
       enabled: route.enabled,
       dbHit: route.totals.dbHit,
