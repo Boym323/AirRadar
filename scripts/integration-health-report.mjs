@@ -59,7 +59,12 @@ export function summarizeIntegrationHealth(data) {
         && data.routeProviders.postgres[name] >= 0 ? data.routeProviders.postgres[name] : 0])),
       lastErrorKind: ["timeout", "query", "connection"].includes(data.routeProviders?.postgres?.lastErrorKind)
         ? data.routeProviders.postgres.lastErrorKind : null,
-      sqlLatencyLastHour: window(data.routeCacheLatency),
+      sqlLatencyLastHour: data.routeCacheLatency && typeof data.routeCacheLatency === "object" ? {
+        sampleCount: Number.isSafeInteger(data.routeCacheLatency.sampleCount) ? data.routeCacheLatency.sampleCount : 0,
+        p50Ms: Number.isFinite(data.routeCacheLatency.p50Ms) ? data.routeCacheLatency.p50Ms : null,
+        p95Ms: Number.isFinite(data.routeCacheLatency.p95Ms) ? data.routeCacheLatency.p95Ms : null,
+        p99Ms: Number.isFinite(data.routeCacheLatency.p99Ms) ? data.routeCacheLatency.p99Ms : null,
+      } : null,
     },
     runtimeDbLatency: db ? { lastHour: window(db.lastHour), last24Hours: window(db.last24Hours) } : null,
   };
