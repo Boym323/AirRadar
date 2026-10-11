@@ -102,10 +102,21 @@ export class PostgresRouteCache implements RouteCacheStore {
     if (!db) { routeDbReason().bypassUnconfigured += 1; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
     this.active++;
     const started = Date.now();
+    // Promise.race timeout limits caller latency, NOT the underlying SQL
+    // execution. Keep the concurrency slot occupied until the real query
+    // settles, otherwise timed-out operations can silently exceed MAX_ACTIVE.
+    // Record actual successful SQL latency even if its caller already fell
+    // back. No unhandled rejection can escape the tracking handler.
+    const operation = Promise.resolve().then(() => query(db));
+    void operation.then(
+      () => {
+        getRouteEnrichmentTelemetry().recordDbLatency(Date.now() - started);
+        this.active--;
+      },
+      () => { this.active--; },
+    );
     try {
-      const value = await bounded(query(db));
-      getRouteEnrichmentTelemetry().recordDbLatency(Date.now() - started);
-      return value;
+      return await bounded(operation);
     }
     catch (error) {
       const diagnostics = routeDbReason();
@@ -119,7 +130,6 @@ export class PostgresRouteCache implements RouteCacheStore {
       this.retryAfter = Date.now() + FAILURE_BACKOFF_MS;
       return fallback;
     }
-    finally { this.active--; }
   }
 
   async get(key: string): Promise<FlightRoute | null> {
