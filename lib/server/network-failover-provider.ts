@@ -87,6 +87,20 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
       publishedAircraftCount: this.lastAircraftCount,
       adsbPositionCount: Math.max(0, this.lastPositionedCount - values.reduce((sum, value) => sum + (value.mlatPositionCount ?? 0), 0)),
       mlatPositionCount: values.reduce((sum, value) => sum + (value.mlatPositionCount ?? 0), 0),
+      // Never substitute the aggregate healthy ADSB.lol lane for ADSBHub health.
+      adsbhubLane: {
+        enabled: hub.enabled,
+        status: hub.status,
+        connected: hub.connected === true,
+        lastLineAt: hub.lastLineAt ?? null,
+        linesReceived: hub.linesReceived ?? 0,
+        linesParsed: hub.linesParsed ?? 0,
+        malformedLines: hub.malformedLines ?? 0,
+        invalidIcao: hub.invalidIcao ?? 0,
+        invalidPosition: hub.invalidPosition ?? 0,
+        reconnects: hub.reconnects ?? 0,
+        activeTracks: hub.activeInternalTracks ?? 0,
+      },
     };
   }
   private lastAircraftCount = 0;
