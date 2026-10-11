@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, master]
   pull_request:
+    # A maintainer can opt into a full deploy-free rehearsal via the release-preview label.
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 concurrency:
@@ -63,6 +65,9 @@ jobs:
         run: |
           node scripts/docs-localization.mjs
           node scripts/changelog.mjs check
+      - name: Verify release gate planner
+        if: steps.scope.outputs.docs_only != 'true'
+        run: node --test tests/ci-release-plan.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
@@ -156,34 +161,58 @@ jobs:
 
   release-scope:
     name: Release scope
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')
     runs-on: ubuntu-24.04
     outputs:
       deploy: ${{ steps.scope.outputs.deploy }}
+      browser: ${{ steps.scope.outputs.browser }}
+      visual_targets: ${{ steps.scope.outputs.visual_targets }}
+      viewports: ${{ steps.scope.outputs.viewports }}
+      performance_scenarios: ${{ steps.scope.outputs.performance_scenarios }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
-      - name: Detect release-required changes
+          # Evaluate every commit in a push, not just the immediate parent.
+          fetch-depth: 0
+      # PR previews intentionally use unknown-scope fallback (all gates). There is
+      # no privileged runner or deploy job for pull_request events.
+      - name: Detect release-required changes and gate plan
         id: scope
         shell: bash
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
         run: |
           set -Eeuo pipefail
-          parent="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
-          if [[ -z "${parent}" ]]; then
-            echo "deploy=true" >> "${GITHUB_OUTPUT}"
-            exit 0
+          changes="$(mktemp)"
+          trap 'rm -f -- "$changes"' EXIT
+          if [[ "$PUSH_BEFORE" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$PUSH_BEFORE" =~ ^0{40}$ ]] \
+            && git cat-file -e "$PUSH_BEFORE^{commit}" \
+            && git merge-base --is-ancestor "$PUSH_BEFORE" "$GITHUB_SHA"; then
+            git diff --name-only -z "$PUSH_BEFORE" "$GITHUB_SHA" > "$changes"
+          else
+            # A missing/rewritten push base must fail closed.
+            printf '%s\0' '__unknown_change__' > "$changes"
+            echo "::warning::Cannot verify push base: selecting full release gates"
           fi
-
-          scope_json="$(git diff --name-only -z "${parent}" "${GITHUB_SHA}" | node scripts/release-scope.mjs --stdin0)"
-          deploy="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
-          echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
-          echo "Release scope: ${scope_json}"
-
+          scope_json="$(node scripts/release-scope.mjs --stdin0 < "$changes")"
+          plan_json="$(node scripts/ci-release-plan.mjs --stdin0 < "$changes")"
+          deploy="$(RELEASE_SCOPE_JSON="$scope_json" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
+          for field in browser visualTargets viewports performanceScenarios; do
+            value="$(RELEASE_PLAN_JSON="$plan_json" RELEASE_PLAN_FIELD="$field" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_PLAN_JSON)[process.env.RELEASE_PLAN_FIELD]))')"
+            case "$field" in
+              visualTargets) field_out="visual_targets" ;;
+              performanceScenarios) field_out="performance_scenarios" ;;
+              *) field_out="$field" ;;
+            esac
+            echo "$field_out=$value" >> "$GITHUB_OUTPUT"
+          done
+          echo "Release scope: $scope_json"
+          echo "Release gates: $plan_json"
 
   release-validate:
     name: Release validation
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
     needs: release-scope
     runs-on: ubuntu-24.04
     steps:
@@ -206,8 +235,6 @@ jobs:
           echo "tag=v${version}" >> "${GITHUB_OUTPUT}"
           echo "build_time=$(date --utc --iso-8601=seconds)" >> "${GITHUB_OUTPUT}"
       - run: npm ci --prefer-offline --no-audit --no-fund
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
       - name: Restore Next compiler cache
         uses: actions/cache@v6
         with:
@@ -216,22 +243,6 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
-      - name: Verify Prisma migration integrity
-        run: npx prisma migration check
-      - name: Run release typecheck and full Vitest in parallel
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          typecheck_status=0
-          test_status=0
-          npm run typecheck:prepared & typecheck_pid=$!
-          npm run test:full & test_pid=$!
-          wait "$typecheck_pid" || typecheck_status=$?
-          wait "$test_pid" || test_status=$?
-          if (( typecheck_status != 0 || test_status != 0 )); then
-            echo "Release validation failed (typecheck=$typecheck_status test=$test_status)"
-            exit 1
-          fi
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
@@ -293,6 +304,9 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
       - name: Production core and browser gates
+        env:
+          AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
+          PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
         run: npm run test:production:all
       - name: Upload visual system artifacts
         if: always()
@@ -304,8 +318,84 @@ jobs:
             artifacts/aircraft-icon-audit.json
             artifacts/visual-smoke/*.png
           if-no-files-found: ignore
+
+  release-tests:
+    name: Release tests and typecheck
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
+    needs: release-scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run prisma:generate
+      - name: Verify Prisma migration integrity
+        run: npx prisma migration check
+      - name: Verify release gate planner
+        run: node --test tests/ci-release-plan.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
+      - name: Run release typecheck and full Vitest in parallel
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          typecheck_status=0
+          test_status=0
+          npm run typecheck:prepared & typecheck_pid=$!
+          npm run test:full & test_pid=$!
+          wait "$typecheck_pid" || typecheck_status=$?
+          wait "$test_pid" || test_status=$?
+          if (( typecheck_status != 0 || test_status != 0 )); then
+            echo "Release validation failed (typecheck=$typecheck_status test=$test_status)"
+            exit 1
+          fi
+
+  release-performance:
+    name: Release performance regression
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
+    needs: release-scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm run prisma:generate
+      - name: Restore Next compiler cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: perf-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
+          restore-keys: |
+            perf-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+      - name: Build performance fixture
+        run: npm run build:prepared
+        env:
+          AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+      - name: Restore Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Prepare Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
       - name: Radar production performance baseline
         shell: bash
+        env:
+          RADAR_PERF_SCENARIOS: ${{ needs.release-scope.outputs.performance_scenarios }}
         run: |
           set -Eeuo pipefail
           benchmark_status=0
@@ -324,10 +414,11 @@ jobs:
             artifacts/radar-performance-baseline.md
           if-no-files-found: ignore
 
+
   deploy:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
-    needs: [release-scope, release-validate]
+    needs: [release-scope, release-validate, release-tests, release-performance]
     # Only deploy-bearing runs enter this queue; docs-only changes cannot cancel them.
     concurrency:
       group: airradar-production-deploy

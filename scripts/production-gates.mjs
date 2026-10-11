@@ -284,6 +284,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   };
   try {
     const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
+    const configuredViewports = (process.env.PRODUCTION_GATE_BROWSER_VIEWPORTS ?? "")
+      .split(",").map((value) => value.trim()).filter(Boolean);
+    if (configuredViewport && configuredViewports.length) throw new Error("Do not combine PRODUCTION_GATE_BROWSER_VIEWPORT with PRODUCTION_GATE_BROWSER_VIEWPORTS");
     const captureVisualSmoke = configuredViewport ? async () => {} : async () => {
       const visualSmokeDirectory = resolve("artifacts/visual-smoke");
       mkdirSync(visualSmokeDirectory, { recursive: true });
@@ -1927,10 +1930,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       { width: 1100, height: 900 },
       { width: 1920, height: 1080 },
     ];
-    const viewports = configuredViewport
-      ? browserViewports.filter((viewport) => `${viewport.width}x${viewport.height}` === configuredViewport)
+    const viewportNames = configuredViewport ? [configuredViewport] : configuredViewports;
+    const viewports = viewportNames.length
+      ? browserViewports.filter((viewport) => viewportNames.includes(`${viewport.width}x${viewport.height}`))
       : browserViewports;
-    if (configuredViewport && viewports.length !== 1) throw new Error(`Unknown PRODUCTION_GATE_BROWSER_VIEWPORT=${configuredViewport}`);
+    if (viewports.length !== (new Set(viewportNames)).size && viewportNames.length) {
+      throw new Error(`Unknown or duplicate production browser viewport: ${viewportNames.join(",")}`);
+    }
     for (const viewport of viewports) {
       console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
       const fullSmoke = isProductionGateFullSmokeViewport(viewport);

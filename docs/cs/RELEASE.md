@@ -89,6 +89,24 @@ nasazení. Publikování release je idempotentní: už existující GitHub Relea
 vyřešený tag se považuje za úspěch, včetně případů rerun/race. Verzované
 stable/RC releasy nadále používají běžný příkaz výše.
 
+## Optimalizace CI/CD a rozsah vydání
+
+Úloha `release-scope` kontroluje **všechny commity v jednom pushi do main** podle `github.event.before`. Pokud nelze výchozí commit spolehlivě ověřit, musí proběhnout nasazení i všechny úplné kontroly. Změny pouze v dokumentaci nadále nespouštějí produkční nasazení.
+
+Po zjištění změn běží souběžně tři úlohy:
+
+- `release-validate` sestaví artefakt pevně navázaný na konkrétní commit a spustí povinné provozní testy včetně prohlížeče.
+- `release-tests` provede kompletní Vitest, TypeScript, audit závislostí, kontrolu migrací a testy plánovače CI.
+- `release-performance` nezávisle sestaví testovací verzi radaru a změří výkon (všechny scénáře při změnách radaru, kritického runtime nebo neznámých souborů; vybrané scénáře u známých backendových změn).
+
+Pro ověření bez nasazení přidejte k PR správcovský štítek `release-preview`. Událost `pull_request:labeled` spustí skutečné release sestavení, úplný Vitest/typecheck a výkonový test (konzervativně v plném režimu), ale `deploy` na vlastním produkčním runneru je povolen výhradně při `push` do `main`. Po kontrole štítek odeberte, aby se náročný režim znovu nespouštěl s dalšími commity.
+
+Nasazení je povolené až po **úspěchu všech tří úloh** a použije pouze ověřený artefakt z `release-validate`. Základní kontroly zdraví aplikace a SSE běží vždy; výběr vizuálních testů a rozlišení se používá pouze u bezpečně rozpoznaných změn. Neznámé a sdílené soubory automaticky spouštějí plné kontroly. Při výběru více rozlišení se zachovává i test responzivity.
+
+Noční a ručně spouštěný workflow `ci-heavy.yml` nezávisle provádí **úplné produkční a prohlížečové testování i všechny výkonové scénáře** mimo rychlou cestu nasazení. Kompletní výsledky se ukládají do artefaktů GitHub Actions.
+
+`repository-metadata.yml` reaguje pouze na úspěšný CI běh větve main a zapisuje dobu jednotlivých kroků do přehledu GitHub Actions. Zrychlení je nutné vyhodnotit na několika skutečných produkčních nasazeních. Ochrany verzí, migrací a zdravotní kontroly produkce se nesmějí obejít.
+
 ## Přesné pořadí vydání
 
 `deploy/release.sh` provádí následující brány a mutace v tomto pořadí:
