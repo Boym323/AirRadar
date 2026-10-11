@@ -265,7 +265,7 @@ export function SystemRuntimeTimeline({ locale, refreshKey = 0 }: { locale: Loca
     source: "PROVOZNÍ TELEMETRIE",
   } : {
     title: "System & Receiver Timeline",
-    subtitle: "Admin-only runtime history for the last 60 minutes. Events are derived only from persisted minute-level telemetry samples.",
+    subtitle: "Last 60 minutes of persisted runtime telemetry. A transition during service startup does not necessarily indicate a receiver outage.",
     samples: "Samples / 60 min",
     peakAircraft: "Peak aircraft",
     maxDbLatency: "Max DB latency",
