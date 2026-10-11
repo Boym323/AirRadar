@@ -18,6 +18,33 @@ const ERROR_BACKOFF_MS = 30_000;
 const MAX_RESPONSE_BYTES = 512 * 1024;
 const REQUEST_TIMEOUT_MS = 3_500;
 
+type RoutesetErrorKind = "http" | "timeout" | "network" | "invalid_response" | "other";
+type RoutesetRuntimeDiagnostics = {
+  requests: number;
+  success: number;
+  failed: number;
+  lastFailureAt: string | null;
+  lastSuccessAt: string | null;
+  lastHttpStatus: number | null;
+  nextAllowedAt: string | null;
+  reasons: Record<RoutesetErrorKind, number>;
+};
+const routeDiagnosticsGlobal = globalThis as typeof globalThis & { airRadarRoutesetRuntime?: RoutesetRuntimeDiagnostics };
+function runtimeDiagnostics(): RoutesetRuntimeDiagnostics {
+  return routeDiagnosticsGlobal.airRadarRoutesetRuntime ??= {
+    requests: 0, success: 0, failed: 0, lastFailureAt: null, lastSuccessAt: null,
+    lastHttpStatus: null, nextAllowedAt: null,
+    reasons: { http: 0, timeout: 0, network: 0, invalid_response: 0, other: 0 },
+  };
+}
+/** Process-local aggregate from the existing route requests; never initiates an HTTP call. */
+export function getAdsbLolRoutesetRuntimeDiagnostics() {
+  const state = runtimeDiagnostics();
+  return { ...state, reasons: { ...state.reasons },
+    enabled: process.env.ADSBLOL_ROUTE_ENABLED?.trim().toLowerCase() === "true" };
+}
+
+
 interface PendingLookup {
   callsign: string;
   latitude: number;
@@ -126,8 +153,10 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
     this.nextAllowedAt = Date.now() + MIN_REQUEST_GAP_MS;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let httpStatus: number | null = null;
     try {
       this.requests += 1;
+      runtimeDiagnostics().requests += 1;
       getRouteEnrichmentTelemetry().record("adsblolBatch");
       getRouteEnrichmentTelemetry().record("adsblolLookup", batch.length);
       const response = await fetch(ROUTESET_URL, {
@@ -141,6 +170,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
           lng: lookup.longitude,
         })) }),
       });
+      httpStatus = response.status;
       if (!response.ok) throw new Error("ADSB.lol routeset HTTP " + response.status);
       const size = Number(response.headers.get("content-length"));
       if (Number.isFinite(size) && size > MAX_RESPONSE_BYTES) throw new Error("ADSB.lol routeset response too large");
@@ -164,11 +194,24 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
           : null);
         return this.parseRoute(row ?? null, lookup);
       }));
+      const diagnostics = runtimeDiagnostics();
+      diagnostics.success += 1;
+      diagnostics.lastSuccessAt = new Date().toISOString();
       results.forEach((result, index) => batch[index].resolve(result));
     } catch (error) {
       this.failures += 1;
+      const reason: RoutesetErrorKind = httpStatus !== null && httpStatus >= 400
+        ? "http" : controller.signal.aborted ? "timeout" : error instanceof SyntaxError
+          || (error instanceof Error && /Invalid ADSB|response too large/.test(error.message))
+          ? "invalid_response" : error instanceof TypeError ? "network" : "other";
+      const diagnostics = runtimeDiagnostics();
+      diagnostics.failed += 1;
+      diagnostics.reasons[reason] += 1;
+      diagnostics.lastFailureAt = new Date().toISOString();
+      diagnostics.lastHttpStatus = reason === "http" ? httpStatus : null;
       getRouteEnrichmentTelemetry().record("adsblolError");
       this.nextAllowedAt = Math.max(this.nextAllowedAt, Date.now() + ERROR_BACKOFF_MS);
+      diagnostics.nextAllowedAt = new Date(this.nextAllowedAt).toISOString();
       batch.forEach((lookup) => lookup.reject(error));
     } finally {
       clearTimeout(timeout);
