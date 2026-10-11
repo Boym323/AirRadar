@@ -30,7 +30,7 @@ const FAST_PERFORMANCE_SCENARIOS = "100,1000,3000";
 
 const backendOnly = [
   /^app\/api\//, /^lib\/server\//, /^migrations\//, /^prisma\//,
-  /^tests\//, /^scripts\/(?!production-gates|radar-performance|release-scope|ci-release-plan|prepare-standalone)/,
+  /^tests\//,
 ];
 const radarOnly = [/^components\/radar\//, /^lib\/radar\//];
 const airportOnly = [/^components\/airport[^/]*\//, /^components\/airport[^/]*\.[jt]sx?$/, /^app\/airports\//];
