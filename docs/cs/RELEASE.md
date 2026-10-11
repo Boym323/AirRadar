@@ -101,6 +101,8 @@ Po zjištění změn běží souběžně tři úlohy:
 
 Nasazení je povolené až po **úspěchu všech tří úloh** a použije pouze ověřený artefakt z `release-validate`. Základní kontroly zdraví aplikace a SSE běží vždy; výběr vizuálních testů a rozlišení se používá pouze u bezpečně rozpoznaných změn. Neznámé a sdílené soubory automaticky spouštějí plné kontroly. Při výběru více rozlišení se zachovává i test responzivity.
 
+Noční a ručně spouštěný workflow `ci-heavy.yml` nezávisle provádí **úplné produkční a prohlížečové testování i všechny výkonové scénáře** mimo rychlou cestu nasazení. Kompletní výsledky se ukládají do artefaktů GitHub Actions.
+
 `repository-metadata.yml` reaguje pouze na úspěšný CI běh větve main a zapisuje dobu jednotlivých kroků do přehledu GitHub Actions. Zrychlení je nutné vyhodnotit na několika skutečných produkčních nasazeních. Ochrany verzí, migrací a zdravotní kontroly produkce se nesmějí obejít.
 
 ## Přesné pořadí vydání
