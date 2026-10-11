@@ -4,9 +4,15 @@ export interface RadarPerformanceSnapshot {
   animation: {
     frames: number;
     averageMs: number;
+    p50Ms: number;
     p95Ms: number;
+    p99Ms: number;
+    sampleCount: number;
     maxMs: number;
+    frameIntervalP50Ms: number;
     frameIntervalP95Ms: number;
+    frameIntervalP99Ms: number;
+    frameIntervalSampleCount: number;
     markerWrites: number;
     activeJobs: number;
     maxActiveJobs: number;
@@ -14,7 +20,10 @@ export interface RadarPerformanceSnapshot {
   labelCollision: {
     runs: number;
     averageMs: number;
+    p50Ms: number;
     p95Ms: number;
+    p99Ms: number;
+    sampleCount: number;
     maxMs: number;
   };
   trafficList: {
@@ -25,7 +34,10 @@ export interface RadarPerformanceSnapshot {
   longTasks: {
     count: number;
     totalMs: number;
+    p50Ms: number;
     p95Ms: number;
+    p99Ms: number;
+    sampleCount: number;
     maxMs: number;
   };
 }
@@ -72,11 +84,14 @@ function recordSample(samples: number[], value: number): void {
   samples.push(value);
 }
 
-export function percentile95(samples: readonly number[]): number {
+/** Nearest-rank, bounded recent-sample percentile; snapshot-only (never on the render hot path). */
+export function diagnosticPercentile(samples: readonly number[], fraction: number): number {
   if (!samples.length) return 0;
   const sorted = [...samples].sort((a, b) => a - b);
-  const index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
-  return sorted[index] ?? 0;
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * fraction) - 1))] ?? 0;
+}
+export function percentile95(samples: readonly number[]): number {
+  return diagnosticPercentile(samples, 0.95);
 }
 
 let activeState: RadarPerformanceState | null = null;
@@ -115,9 +130,15 @@ function currentSnapshot(): RadarPerformanceSnapshot {
     animation: {
       frames: state.animationFrames,
       averageMs: state.animationFrames > 0 ? state.animationTotalMs / state.animationFrames : 0,
+      p50Ms: diagnosticPercentile(state.animationSamples, 0.5),
       p95Ms: percentile95(state.animationSamples),
+      p99Ms: diagnosticPercentile(state.animationSamples, 0.99),
+      sampleCount: state.animationSamples.length,
       maxMs: state.animationMaxMs,
+      frameIntervalP50Ms: diagnosticPercentile(state.frameIntervalSamples, 0.5),
       frameIntervalP95Ms: percentile95(state.frameIntervalSamples),
+      frameIntervalP99Ms: diagnosticPercentile(state.frameIntervalSamples, 0.99),
+      frameIntervalSampleCount: state.frameIntervalSamples.length,
       markerWrites: state.markerWrites,
       activeJobs: state.activeJobs,
       maxActiveJobs: state.maxActiveJobs,
@@ -125,7 +146,10 @@ function currentSnapshot(): RadarPerformanceSnapshot {
     labelCollision: {
       runs: state.collisionRuns,
       averageMs: state.collisionRuns > 0 ? state.collisionTotalMs / state.collisionRuns : 0,
+      p50Ms: diagnosticPercentile(state.collisionSamples, 0.5),
       p95Ms: percentile95(state.collisionSamples),
+      p99Ms: diagnosticPercentile(state.collisionSamples, 0.99),
+      sampleCount: state.collisionSamples.length,
       maxMs: state.collisionMaxMs,
     },
     trafficList: {
@@ -136,7 +160,10 @@ function currentSnapshot(): RadarPerformanceSnapshot {
     longTasks: {
       count: state.longTasks,
       totalMs: state.longTaskTotalMs,
+      p50Ms: diagnosticPercentile(state.longTaskSamples, 0.5),
       p95Ms: percentile95(state.longTaskSamples),
+      p99Ms: diagnosticPercentile(state.longTaskSamples, 0.99),
+      sampleCount: state.longTaskSamples.length,
       maxMs: state.longTaskMaxMs,
     },
   };
