@@ -6,8 +6,9 @@ const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta
 const job = (name) => {
   const start = workflow.indexOf(`  ${name}:\n`);
   assert.notEqual(start, -1, `missing job ${name}`);
-  const next = workflow.indexOf("\n  ", start + 3);
-  return workflow.slice(start, next < 0 ? undefined : next);
+  const tail = workflow.slice(start + name.length + 4);
+  const next = tail.search(/\n  [a-z][a-z-]*:\n/);
+  return next < 0 ? workflow.slice(start) : workflow.slice(start, start + name.length + 4 + next);
 };
 
 test("PR previews cannot trigger self-hosted production deploy", () => {
