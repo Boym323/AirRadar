@@ -210,8 +210,15 @@ function aircraftWeatherStatus(input: SystemStatusBuildInput["aircraftWeather"])
 function navigationIntegrityStatus(input: SystemStatusBuildInput["navigationIntegrity"]): SystemStatusResponse["navigationIntegrity"] {
   const observations = nonNegativeInteger(input?.observationsCreated ?? 0, 100_000_000);
   const rejected = nonNegativeInteger(input?.rejectedInvalidOrStale ?? 0, 100_000_000);
+  // Many live aircraft have no NIC/NAC/SIL fields, or are on the ground.
+  // These are ineligible for integrity analysis, not proof of degraded GNSS.
+  const routineIneligible = input?.rejectionReasons
+    ? ["no_position", "no_integrity_fields", "on_ground"]
+      .reduce((count, key) => count + nonNegativeInteger(input.rejectionReasons[key] ?? 0, 100_000_000), 0)
+    : 0;
+  const actionableRejected = Math.max(0, rejected - Math.min(rejected, routineIneligible));
   return {
-    status: rejected > observations && observations > 0 ? "degraded" : observations > 0 ? "ok" : "no_data",
+    status: actionableRejected > observations && observations > 0 ? "degraded" : observations > 0 ? "ok" : "no_data",
     observationsCreated: observations,
     persisted: nonNegativeInteger(input?.persisted ?? 0, 100_000_000),
     rejectedInvalidOrStale: rejected,

@@ -150,6 +150,32 @@ describe("persistent ADSBDB cache", () => {
     expect(loaded.get("route", "flight-route:ABC123:TEST123:2026-09-12")).toMatchObject({ fresh: false });
   });
 
+  it("preserves ADSBDB outage backoff when local tar1090 metadata satisfies the request", async () => {
+    const file = await cacheFile();
+    const providerCalls = vi.fn().mockResolvedValue({ ...metadata(), source: "tar1090-db" });
+    const provider = {
+      name: "adsbdb+tar1090-db",
+      getMetadata: providerCalls,
+      getAdsbDbDiagnostics: () => ({
+        providerStatus: "offline" as const,
+        lastSuccessAt: null,
+        lastFailureAt: new Date().toISOString(),
+        consecutiveFailures: 1,
+      }),
+    };
+    const enrichment = new EnrichmentService(
+      { aircraftMetadata: provider },
+      undefined,
+      new AdsbDbPersistence(options(file, Date.now)),
+    );
+    const aircraft = (hex: string) => ({ icaoHex: hex, callsign: null } as Parameters<EnrichmentService["enrich"]>[0]);
+    await expect(enrichment.enrich(aircraft("ABC123"), new Date())).resolves.toMatchObject({
+      metadata: { source: "tar1090-db" },
+    });
+    await expect(enrichment.enrich(aircraft("DEF456"), new Date())).resolves.toBeNull();
+    expect(providerCalls).toHaveBeenCalledTimes(1);
+  });
+
   it("uses stale ADSBDB data only for provider errors, not a valid miss", async () => {
     let now = Date.parse("2026-09-12T12:00:00.000Z");
     const file = await cacheFile();

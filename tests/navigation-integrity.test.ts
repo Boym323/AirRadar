@@ -6,6 +6,7 @@ import { detectNavigationIntegrityAnomalies } from "@/lib/navigation-integrity/d
 import type { NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { NavigationIntegrityService } from "@/lib/server/navigation-integrity";
+import { navigationIntegrityRejectionReason, observationFromAircraft } from "@/lib/navigation-integrity/observation";
 
 function observation(hex: string, lat: number, lon: number, nic = 8, nacP = 8): NavigationIntegrityObservation {
   const at = "2026-09-28T10:00:00.000Z";
@@ -15,6 +16,22 @@ function observation(hex: string, lat: number, lon: number, nic = 8, nacP = 8): 
     provenance: { origin: "local", positionObservedAt: at, fields: {} },
   };
 }
+
+describe("navigation integrity rejection attribution", () => {
+  it("distinguishes ineligible aircraft from stale position and valid integrity evidence", () => {
+    const now = new Date("2026-10-07T11:00:00Z");
+    const receiver = { lat: 49.2, lon: 16.6, name: "TEST" };
+    const valid = normalizeAircraft({
+      hex: "ABC010", lat: 49.2, lon: 16.6, alt_baro: 30000,
+      seen: 0, seen_pos: 0, nic: 8, nac_p: 8,
+    }, receiver, now)!;
+    expect(observationFromAircraft(valid, now)).not.toBeNull();
+    const ineligible = { ...valid, adsbTelemetry: null, operationalStatus: null };
+    expect(navigationIntegrityRejectionReason(ineligible, now)).toBe("no_integrity_fields");
+    expect(navigationIntegrityRejectionReason({ ...valid, onGround: true }, now)).toBe("on_ground");
+    expect(navigationIntegrityRejectionReason(valid, new Date(now.getTime() + 70_000))).toBe("stale_position");
+  });
+});
 
 describe("navigation integrity", () => {
   it("collects local and network observations independently at the same instant", () => {

@@ -4,7 +4,7 @@ import { cellCoordinate } from "@/lib/navigation-integrity/grid";
 import { buildBaseline } from "@/lib/navigation-integrity/baseline";
 import { classifyNavigationIntegrity } from "@/lib/navigation-integrity/classification";
 import { detectNavigationIntegrityAnomalies, summariseCells, NAVIGATION_INTEGRITY_DETECTOR } from "@/lib/navigation-integrity/detector";
-import { observationFromAircraft } from "@/lib/navigation-integrity/observation";
+import { navigationIntegrityRejectionReason, observationFromAircraft } from "@/lib/navigation-integrity/observation";
 import type { NavigationIntegrityAnomaly, NavigationIntegrityCurrentResponse, NavigationIntegrityDiagnostics, NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
@@ -336,7 +336,11 @@ export class NavigationIntegrityService {
     store.currentCache.clear();
     for (const item of aircraft) {
       const observation = observationFromAircraft(item, now);
-      if (!observation) { store.diagnostics.rejectedInvalidOrStale += 1; addRejection("invalid_or_stale_pair"); continue; }
+      if (!observation) {
+        store.diagnostics.rejectedInvalidOrStale += 1;
+        addRejection(navigationIntegrityRejectionReason(item, now));
+        continue;
+      }
       store.diagnostics.observationsCreated += 1;
       store.diagnostics.lastObservationAt = observation.observedAt;
       store.observations.push(observation);

@@ -34,6 +34,38 @@ function qualityFor(aircraft: Aircraft, fields: number, ages: number[]): "HIGH" 
   return "LOW";
 }
 
+/** Read-only classification of rejected candidates; no aircraft identity/position is persisted. */
+export function navigationIntegrityRejectionReason(
+  aircraft: Aircraft, receivedAt = new Date(),
+): "no_position" | "stale_position" | "unsupported_source" | "on_ground"
+  | "no_integrity_fields" | "stale_integrity" | "position_integrity_skew" | "invalid_telemetry" {
+  if (!hasUsablePosition(aircraft)) return "no_position";
+  const receivedMs = receivedAt.getTime();
+  const positionAt = positionObservedAt(aircraft);
+  if (positionAt === null || receivedMs - positionAt > NAVIGATION_INTEGRITY_LIMITS.maxPositionAgeMs) return "stale_position";
+  if (aircraft.origin !== "local" && aircraft.origin !== "adsblol" && !aircraft.provenance?.positionOrigin) return "unsupported_source";
+  if (aircraft.onGround) return "on_ground";
+  const operational = aircraft.operationalStatus;
+  const telemetry = aircraft.adsbTelemetry;
+  const names = [
+    ["nic", telemetry?.nic], ["nacP", telemetry?.nacP ?? operational?.nacp],
+    ["nacV", telemetry?.nacV], ["sil", telemetry?.sil ?? operational?.sil],
+    ["sda", telemetry?.sda], ["gva", telemetry?.gva],
+    ["adsbVersion", telemetry?.adsbVersion ?? operational?.adsbVersion],
+  ] as const;
+  const populated = names.filter(([, value]) => finite(value) !== null);
+  if (!populated.length) return "no_integrity_fields";
+  const fallback = aircraft.observationTimes?.extendedTelemetry ?? Date.parse(aircraft.lastSeen);
+  for (const [name] of populated) {
+    const sourceField = name === "nacP" && operational?.nacp !== null
+      && operational?.nacp !== undefined && telemetry?.nacP === null ? "operationalStatus" : name;
+    const timestamp = fieldAt(aircraft, sourceField, fallback);
+    if (!Number.isFinite(timestamp) || receivedMs - timestamp > NAVIGATION_INTEGRITY_LIMITS.maxIntegrityAgeMs) return "stale_integrity";
+    if (Math.abs(positionAt - timestamp) > NAVIGATION_INTEGRITY_LIMITS.maxPositionIntegritySkewMs) return "position_integrity_skew";
+  }
+  return "invalid_telemetry";
+}
+
 export function observationFromAircraft(aircraft: Aircraft, receivedAt = new Date()): NavigationIntegrityObservation | null {
   if (!hasUsablePosition(aircraft)) return null;
   const receivedMs = receivedAt.getTime();
