@@ -33,8 +33,8 @@ describe("production release metadata gate", () => {
 
   it("validates the complete checked-in migration chain", () => {
     const result = assertMigrationSource(process.cwd());
-    expect(result.directories).toHaveLength(19);
-    expect(result.directories.at(-1)).toBe("20261005T1530_operational_twin_calibration_persistence_v1");
+    expect(result.directories).toHaveLength(20);
+    expect(result.directories.at(-1)).toBe("20261011T1656_atc_dataset_version");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
   it("retries the real command palette keyboard shortcut once after hydration", () => {
