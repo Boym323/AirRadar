@@ -6,6 +6,7 @@ on:
       - CI
     types:
       - completed
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -40,6 +41,18 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
+
+      - name: Record main CI wall-clock timing
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMPLETED_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${COMPLETED_RUN_ID}/jobs?per_page=100" \
+            | node scripts/ci-timing-report.mjs >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Fetch release tags
         run: git fetch --force --tags origin
