@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-11T10:35:45.963Z",
+  "environment": {
+    "node": "v22.23.3",
+    "platform": "linux",
+    "arch": "x64",
+    "warmupMs": 2000,
+    "measureMs": 90000,
+    "deltaIntervalMs": 180,
+    "changedAircraftPerDelta": "all",
+    "soakMode": true
+  },
+  "sseReconnects": {
+    "rounds": 4,
+    "clientsPerRound": 20,
+    "violations": []
+  },
+  "scenarios": [
+    {
+      "aircraft": 1600,
+      "measuredMs": 91424,
+      "animation": {
+        "frames": 474,
+        "averageMs": 0.79,
+        "p95Ms": 1.7,
+        "maxMs": 6.4,
+        "frameIntervalP95Ms": 240.7,
+        "markerWrites": 758400,
+        "activeJobs": 1600,
+        "maxActiveJobs": 1600,
+        "markerWritesPerSecond": 8295.41
+      },
+      "labelCollision": {
+        "runs": 235,
+        "averageMs": 0.02,
+        "p95Ms": 0.1,
+        "maxMs": 0.2
+      },
+      "trafficList": {
+        "totalRows": 1600,
+        "renderedRows": 14,
+        "virtualized": true
+      },
+      "longTasks": {
+        "count": 476,
+        "totalMs": 87048,
+        "p95Ms": 224,
+        "maxMs": 337
+      },
+      "webgl": {
+        "aircraft": 1600
+      },
+      "dom": {
+        "aircraftMarkers": 0,
+        "markerHandles": 0,
+        "mountedTrafficRows": 14
+      },
+      "footprint": {
+        "browser": {
+          "jsHeapUsedBytes": 47006384,
+          "nodes": 1245,
+          "documents": 7,
+          "jsEventListeners": 549
+        },
+        "serverRssBytes": 235634688
+      },
+      "budget": {
+        "maxMountedTrafficRows": 36
+      },
+      "soak": {
+        "before": {
+          "browser": {
+            "jsHeapUsedBytes": 27697764,
+            "nodes": 1245,
+            "documents": 7,
+            "jsEventListeners": 593
+          },
+          "serverRssBytes": 269516800
+        },
+        "after": {
+          "browser": {
+            "jsHeapUsedBytes": 47006384,
+            "nodes": 1245,
+            "documents": 7,
+            "jsEventListeners": 549
+          },
+          "serverRssBytes": 235634688
+        },
+        "growth": {
+          "jsHeapUsedBytes": 19308620,
+          "nodes": 0,
+          "documents": 0,
+          "jsEventListeners": -44,
+          "serverRssBytes": -33882112
+        }
+      },
+      "violations": []
+    },
+    {
+      "aircraft": 3000,
+      "measuredMs": 91306,
+      "animation": {
+        "frames": 414,
+        "averageMs": 1.39,
+        "p95Ms": 3.5,
+        "maxMs": 12.9,
+        "frameIntervalP95Ms": 274.8,
+        "markerWrites": 1242000,
+        "activeJobs": 3000,
+        "maxActiveJobs": 3000,
+        "markerWritesPerSecond": 13602.61
+      },
+      "labelCollision": {
+        "runs": 203,
+        "averageMs": 0.02,
+        "p95Ms": 0.1,
+        "maxMs": 0.1
+      },
+      "trafficList": {
+        "totalRows": 3000,
+        "renderedRows": 14,
+        "virtualized": true
+      },
+      "longTasks": {
+        "count": 415,
+        "totalMs": 85067,
+        "p95Ms": 258,
+        "maxMs": 341
+      },
+      "webgl": {
+        "aircraft": 3000
+      },
+      "dom": {
+        "aircraftMarkers": 0,
+        "markerHandles": 0,
+        "mountedTrafficRows": 14
+      },
+      "footprint": {
+        "browser": {
+          "jsHeapUsedBytes": 68799016,
+          "nodes": 1245,
+          "documents": 7,
+          "jsEventListeners": 517
+        },
+        "serverRssBytes": 243888128
+      },
+      "budget": {
+        "maxMountedTrafficRows": 36
+      },
+      "soak": {
+        "before": {
+          "browser": {
+            "jsHeapUsedBytes": 37124784,
+            "nodes": 1245,
+            "documents": 7,
+            "jsEventListeners": 536
+          },
+          "serverRssBytes": 239489024
+        },
+        "after": {
+          "browser": {
+            "jsHeapUsedBytes": 68799016,
+            "nodes": 1245,
+            "documents": 7,
+            "jsEventListeners": 517
+          },
+          "serverRssBytes": 243888128
+        },
+        "growth": {
+          "jsHeapUsedBytes": 31674232,
+          "nodes": 0,
+          "documents": 0,
+          "jsEventListeners": -19,
+          "serverRssBytes": 4399104
+        }
+      },
+      "violations": []
+    },
+    {
+      "aircraft": 5000,
+      "measuredMs": 91627,
+      "animation": {
+        "frames": 342,
+        "averageMs": 2.53,
+        "p95Ms": 7.1,
+        "maxMs": 14.1,
+        "frameIntervalP95Ms": 354.8,
+        "markerWrites": 1710000,
+        "activeJobs": 5000,
+        "maxActiveJobs": 5000,
+        "markerWritesPerSecond": 18662.62
+      },
+      "labelCollision": {
+        "runs": 162,
+        "averageMs": 0.01,
+        "p95Ms": 0.1,
+        "maxMs": 0.1
+      },
+      "trafficList": {
+        "totalRows": 5000,
+        "renderedRows": 14,
+        "virtualized": true
+      },
+      "longTasks": {
+        "count": 351,
+        "totalMs": 84151,
+        "p95Ms": 326,
+        "maxMs": 450
+      },
+      "webgl": {
+        "aircraft": 5000
+      },
+      "dom": {
+        "aircraftMarkers": 0,
+        "markerHandles": 0,
+        "mountedTrafficRows": 14
+      },
+      "footprint": {
+        "browser": {
+          "jsHeapUsedBytes": 102347752,
+          "nodes": 1245,
+          "documents": 7,
+          "jsEventListeners": 523
+        },
+        "serverRssBytes": 244178944
+      },
+      "budget": {
+        "maxMountedTrafficRows": 36
+      },
+      "soak": {
+        "before": {
+          "browser": {
+            "jsHeapUsedBytes": 47713252,
+            "nodes": 1245,
+            "documents": 7,
+            "jsEventListeners": 534
+          },
+          "serverRssBytes": 244662272
+        },
+        "after": {
+          "browser": {
+            "jsHeapUsedBytes": 102347752,
+            "nodes": 1245,
+            "documents": 7,
+            "jsEventListeners": 523
+          },
+          "serverRssBytes": 244178944
+        },
+        "growth": {
+          "jsHeapUsedBytes": 54634500,
+          "nodes": 0,
+          "documents": 0,
+          "jsEventListeners": -11,
+          "serverRssBytes": -483328
+        }
+      },
+      "violations": []
+    }
+  ],
+  "passed": true
+}
