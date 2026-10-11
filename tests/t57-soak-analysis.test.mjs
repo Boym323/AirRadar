@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { analyzeT57Soak, newT57Windows, projectT57SoakSample } from "../scripts/t57-soak-analysis.mjs";
+import { verifyT57ExpectedCommit } from "../scripts/t57-production-soak.mjs";
 
 const MiB = 1024 * 1024;
 const epoch = Date.parse("2026-10-10T09:00:00Z");
 const at = (minute) => new Date(epoch + minute * 60_000).toISOString();
+
+describe("T5.7C preflight commit identity", () => {
+  it("accepts a full SHA or approved prefix and fails closed on a different production build", () => {
+    const sha = "fb61c491bc44da7891d988037401193ce4579bb3";
+    expect(() => verifyT57ExpectedCommit(sha, sha)).not.toThrow();
+    expect(() => verifyT57ExpectedCommit(sha, "fb61c491")).not.toThrow();
+    expect(() => verifyT57ExpectedCommit(sha, "0dd31137")).toThrow("unexpected_production_commit");
+  });
+});
 
 function raw(minute = 0) {
   const member = (count) => ({ count, oldestAgeMs: 10000, staleRetained: 0, points: count,
