@@ -100,6 +100,21 @@ function aircraftWeatherDiagnostics(overrides: Partial<AircraftWeatherDiagnostic
   };
 }
 
+describe("Production integration diagnostics boundary", () => {
+  it("requires an existing administrator session and does not start the RXW provider", () => {
+    const source = readFileSync(new URL("../app/api/system/integrations/route.ts", import.meta.url), "utf8");
+    const implementation = readFileSync(new URL("../lib/server/integration-diagnostics.ts", import.meta.url), "utf8");
+    const presentation = readFileSync(new URL("../components/system-integration-diagnostics.tsx", import.meta.url), "utf8");
+    expect(source).toContain('isWatchlistSessionValid(request)');
+    expect(source).toContain('status: 401');
+    expect(source).toContain('Cache-Control": "private, no-store"');
+    expect(implementation).not.toContain(".start(");
+    expect(implementation).not.toContain("fetch(");
+    expect(presentation).toContain("/api/system/integrations");
+    expect(presentation).not.toContain("SENSITIVE CONTENT");
+  });
+});
+
 describe("SYSTEM / RECEIVER STATUS V1", () => {
   it("limits route-enrichment metrics to administrator system status", () => {
     const telemetry = new RouteEnrichmentTelemetry(null, () => checkedAt.getTime());
