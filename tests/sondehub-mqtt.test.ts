@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mqttConnectPacket, mqttSubscribePacket, mqttPubAck, mqttPublishPayload, splitMqttPackets } from "@/lib/server/sondehub-mqtt";
+import { mqttConnectPacket, mqttSubscribePacket, mqttPubAck, mqttPublishPayload, splitMqttPackets, readAuthorizedSondeMqttUrl } from "@/lib/server/sondehub-mqtt";
 
 function framePublish(topic: string, data: string): Uint8Array {
   const t = new TextEncoder().encode(topic);
@@ -34,6 +34,30 @@ describe("SondeHub MQTT 3.1.1 batch protocol", () => {
     const combined = new Uint8Array(p.length*2);
     combined.set(p);combined.set(p,p.length);
     expect(splitMqttPackets(combined).packets).toHaveLength(2);
+  });
+  it("bounds signed WSS URL transport and rejects untrusted websocket destinations", async () => {
+    const url = "wss://abc-ats.iot.eu-central-1.amazonaws.com/mqtt?X-Amz-Signature=example";
+    await expect(readAuthorizedSondeMqttUrl(new Response(url))).resolves.toBe(url);
+    await expect(readAuthorizedSondeMqttUrl(new Response(url, {
+      headers: { "content-length": "999999" },
+    }))).rejects.toThrow(/oversized/i);
+    await expect(readAuthorizedSondeMqttUrl(new Response(url, {
+      headers: { "content-length": "bogus" },
+    }))).rejects.toThrow(/oversized/i);
+    await expect(readAuthorizedSondeMqttUrl(new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(4096));
+        controller.enqueue(Uint8Array.of(65));
+        controller.close();
+      },
+    })))).rejects.toThrow(/oversized/i);
+    for (const bad of [
+      "ws://abc-ats.iot.eu-central-1.amazonaws.com/mqtt",
+      "wss://fake-iot.example.com/mqtt",
+      "wss://abc-ats.iot.eu-central-1.amazonaws.com/other",
+      "wss://user:secret@abc-ats.iot.eu-central-1.amazonaws.com/mqtt",
+      "wss://abc-ats.iot.eu-central-1.amazonaws.com/mqtt#fragment",
+    ]) await expect(readAuthorizedSondeMqttUrl(new Response(bad))).rejects.toThrow();
   });
   it("fails closed on oversized packets", () => {
     expect(() => splitMqttPackets(Uint8Array.of(0x30, 0xff, 0xff, 0x7f))).toThrow();

@@ -22,6 +22,36 @@ const DIMENSIONS: Record<LicensedFamily,{length:number;span:number}> = {
 };
 export const MAX_GLB_BYTES = 1_500_000;
 export const MAX_GLB_FACES = 5000;
+/** Read third-party GLB bytes with a hard streaming limit, even when the server omits or lies about Content-Length. */
+export async function readBoundedLicensedAsset(response: Response): Promise<ArrayBuffer> {
+  if (!response.ok || !response.body) throw new Error("GLB source unavailable");
+  const length = response.headers.get("content-length");
+  if (length !== null && (!/^\d+$/.test(length) || Number(length) > MAX_GLB_BYTES)) {
+    throw new Error("GLB content length invalid or oversized");
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_GLB_BYTES) throw new Error("GLB exceeds streaming byte limit");
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes.buffer;
+}
+
 const models = new Map<LicensedFamily, readonly AirframeFace[]>();
 const inflight = new Map<LicensedFamily, Promise<void>>();
 const failedAt = new Map<LicensedFamily, number>();
@@ -161,9 +191,7 @@ export async function requestLicensedFaces(type: string | null | undefined, onRe
       const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),8000);
       try{
         const response=await fetch(ROOT+ASSETS[family],{signal:ctrl.signal,credentials:"omit",cache:"force-cache"});
-        const contentLength=Number(response.headers.get("content-length")||0);
-        if(!response.ok||contentLength>MAX_GLB_BYTES)throw Error("GLB unavailable or oversized");
-        const bytes=await response.arrayBuffer();
+        const bytes = await readBoundedLicensedAsset(response);
         models.set(family,decodeLicensedGlb(bytes,family));
         onReady();
       }catch{

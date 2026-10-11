@@ -2,14 +2,14 @@
 
 ## Implemented
 - Built-in **low-poly 3D models** (not licensed manufacturer CAD or photorealistic GLTF). Airbus A318–A321/A20N/A21N, Boeing 737/737 MAX/777/787/747, A330/A350/A380, regional jets, Cessna/Piper light aircraft and helicopters use bounded profile-based geometry. Real fuselage volume, swept and thick wings, wingtip devices, nacelles, cockpit/cabin glazing and tail differences; unknown ICAO types use a generic fallback.
-- Rendering remains opt-in and capped at 12 aircraft. No model downloads, texture atlases, database calls or new SSE streams.
+- Rendering remains opt-in and capped at 12 aircraft. Built-in low-poly meshes require no downloads. A separate explicit **GLB detail** opt-in may fetch five pinned CC BY 4.0 airframe assets (amvlab; A320, A350, A380, B737 and B787); failed or oversized assets fall back to local meshes. No database calls or new SSE streams are added.
 - Aviation Media uses official YouTube-nocookie **per-video** embedded players on a user click. Standard YouTube videos and live video IDs work only if the publisher allows embedding. Arbitrary player URLs, playlists, channels and other sites stay external links. AirRadar does not copy, restream or extract streams.
 - Supported embeds preserve the direct original link if a provider refuses third-party playback, blocks age-restricted content, or uses geographic controls. No autoplay before user interaction; only one player is mounted.
 - Real-world streaming availability/licensing is controlled by the original publisher. Verify each airport camera has a lawful source; a public URL alone does not establish a license.
 
 ## Automated QA (GitHub Actions)
 The targeted V6 PR Chromium gate exercises 1366px desktop and 390px mobile **emulation** (not physical devices):
-- Opt-in DEM and WebGL2 aircraft custom layer, GPU context availability, renderer identity and screenshot artifact.
+- Opt-in DEM and WebGL2 aircraft custom layer, GPU context availability, renderer identity and screenshot artifact. Explicit GLB asset testing must be enabled separately; emulation cannot establish real GPU performance.
 - Presentation Mode.
 - Explicit Aviation Media playback consent, exact trusted iframe endpoint, direct external fallback and screenshots without a network request to YouTube during tests.
 

@@ -2,13 +2,13 @@
 
 ## Implementováno
 - Vlastní **nízkopolygonové 3D modely**, nikoli oficiální CAD ani fotorealistické GLTF soubory. Různé tvary pro Airbus A318–A321/A20N/A21N, Boeing 737/737 MAX/777/787/747, A330/A350/A380, regionální tryskáče, lehká letadla a vrtulníky: objemný trup, profilovaná křídla, winglety, motory, okna, kokpit a ocasní plochy. Neznámý typ používá obecnou geometrii.
-- 3D je volitelné a vykresluje nejvýše 12 letadel. Žádné externí stahování modelů, textur, nové databázové dotazy ani SSE.
+- 3D je volitelné a vykresluje nejvýše 12 letadel. Základní nízkopolygonové modely nevyžadují stahování. Samostatný přepínač detailních **GLB modelů** volitelně stáhne pět licencovaných souborů od amvlab (CC BY 4.0, A320/A350/A380/B737/B787); nedostupný, neplatný nebo příliš velký model se nahradí lokální geometrií. Žádné nové databázové dotazy ani SSE.
 - Letecká média používají oficiální YouTube-nocookie iframe konkrétního videa **až po kliknutí**. I živá vysílání fungují jen v případě, že autor povoluje vložení. Jiná URL, playlisty nebo kanály zůstávají jako externí odkazy.
 - Pokud autor vložení blokuje nebo vyžaduje přehrání na YouTube, je stále dostupný původní odkaz. AirRadar nepřeposílá ani nevytěžuje streamy.
 - Veřejná URL automaticky neznamená povolení streamu; zdroj a práva je nutné ověřit.
 
 ## Automatické kontroly
-CI používá Chromium v desktopovém viewportu (1366 px) a mobilní **emulaci** (390 px). Kontroluje inicializaci WebGL2, 3D terén, vrstvu letadel, prezentační režim, výchozí nenačítání iframe a bezpečný adresář vloženého přehrávače; ukládá screenshoty a data o rendereru.
+CI používá Chromium v desktopovém viewportu (1366 px) a mobilní **emulaci** (390 px). Kontroluje inicializaci WebGL2, 3D terén, vrstvu letadel, prezentační režim, výchozí nenačítání iframe a schválenou adresu vloženého přehrávače; ukládá screenshoty a data o rendereru. Testy volitelného GLB stahování mají samostatnou aktivaci; emulace nenahrazuje měření skutečného GPU.
 
 **Zelené CI není test na skutečném telefonu ani důkaz hardwarové akcelerace.** CI může používat SwiftShader.
 

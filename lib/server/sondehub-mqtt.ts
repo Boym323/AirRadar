@@ -8,6 +8,44 @@ import { getReceiverPosition } from "@/lib/server/config";
 import { normalizeLatestSondes, type SondePoint } from "@/lib/server/sondehub-provider";
 
 const URL_ENDPOINT = "https://api.v2.sondehub.org/sondes/websocket";
+const MAX_SIGNED_URL_BYTES = 4096;
+
+/** Fail closed on oversized/untrusted signed WSS endpoint responses before WebSocket creation. */
+export async function readAuthorizedSondeMqttUrl(response: Response): Promise<string> {
+  if (!response.ok || !response.body) throw new Error("SondeHub websocket URL unavailable");
+  const declared = response.headers.get("content-length");
+  if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > MAX_SIGNED_URL_BYTES)) {
+    throw new Error("SondeHub websocket URL oversized");
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_SIGNED_URL_BYTES) throw new Error("SondeHub websocket URL oversized");
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  const data = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) { data.set(chunk, at); at += chunk.byteLength; }
+  const endpoint = new TextDecoder("utf-8", { fatal: true }).decode(data).trim();
+  if (endpoint.length < 20 || endpoint.length > MAX_SIGNED_URL_BYTES) throw new Error("SondeHub URL length invalid");
+  const url = new URL(endpoint);
+  if (url.protocol !== "wss:" || !url.hostname.endsWith(".amazonaws.com")
+      || !url.hostname.includes(".iot.") || url.port || url.username || url.password
+      || url.pathname !== "/mqtt" || url.hash) throw new Error("SondeHub websocket destination invalid");
+  return endpoint;
+}
+
 const MAX_MESSAGE = 1024 * 1024;
 const MAX_SONDES = 300;
 const MAX_AGE_MS = 15 * 60_000;
@@ -168,13 +206,7 @@ export class SondeMqttReceiver {
         cache: "no-store", signal: AbortSignal.timeout(8_000),
         headers: { Accept: "text/plain", "User-Agent": getAirRadarUserAgent("sondehub-mqtt") },
       });
-      if (!response.ok) throw new Error("SondeHub websocket URL unavailable");
-      const urlString = (await response.text()).trim();
-      if (urlString.length < 20 || urlString.length > 4096) throw new Error("SondeHub URL length invalid");
-      const url = new URL(urlString);
-      if (url.protocol !== "wss:" || !url.hostname.endsWith(".amazonaws.com")
-        || !url.hostname.includes(".iot.") || url.port || url.username || url.password
-        || url.pathname !== "/mqtt") throw new Error("SondeHub websocket destination invalid");
+      const urlString = await readAuthorizedSondeMqttUrl(response);
       if (session !== this.session || !isSondeMqttEnabled()) return;
       const socket = new WebSocket(urlString, ["mqtt"]);
       socket.binaryType = "arraybuffer";
