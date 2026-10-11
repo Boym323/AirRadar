@@ -17,6 +17,37 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.421] - 2026-10-11
+
+Changes since v1.0.420.
+
+### Added
+
+- Add radar performance soak artifacts and baseline metrics (7f308f84)
+
+### Fixed
+
+- Respect optional admin auth in radar soak (a9e7ccce)
+
+### Documentation
+
+- Update changelog for v1.0.421 (2303a2bb)
+
+### Maintenance
+
+- Sync generated repository metadata (#799) (58a69990)
+- Sync generated repository metadata (#800) (38c2386a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#799) (58a69990)
+- fix(perf): respect optional admin auth in radar soak (a9e7ccce)
+- docs: update changelog for v1.0.421 (2303a2bb)
+- chore(metadata): sync generated repository metadata (#800) (38c2386a)
+- feat(perf): add radar performance soak artifacts and baseline metrics (7f308f84)
+
+</details>
 ## [1.0.420] - 2026-10-11
 
 Changes since v1.0.419.
