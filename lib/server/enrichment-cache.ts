@@ -486,18 +486,21 @@ export class EnrichmentService {
         this.staleFallbackLogged.delete(`${kind}:${key}`);
       }
       if (isAdsbDb) {
-        this.adsbDbFailureStreak = 0;
-        this.adsbDbRetryAt = 0;
+        // A locally satisfied tar1090 fallback is NOT a successful ADSBDB
+        // response. CombinedMetadataProvider returns it even after an upstream
+        // rejection, so preserve the global retry budget on that path.
+        const provider = this.getAdsbDbProviderDiagnostics();
+        if ((provider?.consecutiveFailures ?? 0) > 0) {
+          this.noteAdsbDbFailure();
+        } else {
+          this.adsbDbFailureStreak = 0;
+          this.adsbDbRetryAt = 0;
+        }
       }
       return value as T | null;
     } catch {
       if (isAdsbDb) {
-        this.adsbDbFailureStreak += 1;
-        const retryMs = Math.min(
-          ADSBDB_RETRY_MAX_MS,
-          ADSBDB_RETRY_INITIAL_MS * 2 ** Math.min(this.adsbDbFailureStreak - 1, 10),
-        );
-        this.adsbDbRetryAt = Date.now() + retryMs;
+        this.noteAdsbDbFailure();
       }
       const stale = isAdsbDb ? this.adsbDbPersistence!.get(kind, key) : null;
       if (stale && !stale.fresh) {
@@ -511,6 +514,15 @@ export class EnrichmentService {
       }
       return null;
     }
+  }
+
+  private noteAdsbDbFailure(): void {
+    this.adsbDbFailureStreak += 1;
+    const retryMs = Math.min(
+      ADSBDB_RETRY_MAX_MS,
+      ADSBDB_RETRY_INITIAL_MS * 2 ** Math.min(this.adsbDbFailureStreak - 1, 10),
+    );
+    this.adsbDbRetryAt = Date.now() + retryMs;
   }
 
   private getAdsbDbProviderDiagnostics(): {
