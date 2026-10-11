@@ -7144,3 +7144,35 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-v6-media-item > span { min-width: 0; overflow-wrap: anywhere; }
 .airport-v6-media-item .airport-v6-player { flex: 0 0 100%; min-width: 0; display: grid; gap: var(--space-2); }
 .airport-v6-player :is(iframe, video, audio) { display: block; max-width: 100%; border-radius: var(--radius-md); }
+
+/* System status UX: alerts are actionable, fields remain readable at laptop widths. */
+.system-attention li a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-accent);
+  text-underline-offset: 3px;
+}
+.system-page .system-section .system-field dd {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.system-page .system-jump-nav a { scroll-margin-top: 88px; }
+.system-page .system-section-grid > .system-integrations-diagnostics {
+  grid-column: 1 / -1;
+}
+.system-page .system-integrations-diagnostics .system-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1200px) {
+  .system-page .system-integrations-diagnostics .system-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 680px) {
+  .system-page .system-integrations-diagnostics .system-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .system-page .system-field dt { font-size: var(--font-size-xs); }
+  .system-page .system-field dd { font-size: var(--font-size-sm); line-height: 1.5; }
+  .system-page .system-section-grid { grid-template-columns: minmax(0, 1fr); }
+}
