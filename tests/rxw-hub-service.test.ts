@@ -73,6 +73,13 @@ describe("RXW Hub adapter", () => {
     expect(snapshot.connection).toBe("connected");
     expect(snapshot.messages).toHaveLength(2);
     expect(snapshot.lastReceivedAt).not.toBeNull();
+    expect(hub.getDiagnostics()).toMatchObject({
+      receivedEvents: 3, receivedItems: 4, accepted: 2,
+      rejectedDuplicate: 1, rejectedInvalid: 1,
+      unsupportedPayloads: 0, connectCount: 1, fpnEnabled: false,
+    });
+    expect(hub.getDiagnostics().lastEventAt).not.toBeNull();
+    expect(JSON.stringify(hub.getDiagnostics())).not.toContain("SENSITIVE CONTENT");
     expect(JSON.stringify(snapshot)).not.toContain("SENSITIVE CONTENT");
     expect(hub.getSnapshot("~4CA123").messages).toEqual([]);
     hub.stop();
