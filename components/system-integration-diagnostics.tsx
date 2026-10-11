@@ -128,9 +128,9 @@ export function SystemIntegrationDiagnostics({ locale }: { locale: string }) {
         </dd></div>}
       <div className="system-field"><dt>PostgreSQL · {cs ? "příčiny chyb" : "failure causes"}</dt><dd>timeout {fmt(data.routeProviders.postgres.timeouts)} · {cs ? "dotaz" : "query"} {fmt(data.routeProviders.postgres.queryFailures)} · {cs ? "spojení" : "connection"} {fmt(data.routeProviders.postgres.connectionFailures)}</dd></div>
       <div className="system-field"><dt>PostgreSQL · {cs ? "obejití: cooldown / limit / nenastaveno" : "bypass: cooldown / capacity / unavailable"}</dt><dd>{fmt(data.routeProviders.postgres.bypassBackoff)} / {fmt(data.routeProviders.postgres.bypassConcurrency)} / {fmt(data.routeProviders.postgres.bypassUnconfigured)}</dd></div>
-      <div className="system-field"><dt>{cs ? "SQL operace route cache · P50/P95/P99" : "Route cache SQL operations · P50/P95/P99"}</dt><dd>{data.routeCacheLatency.sampleCount > 0
-        ? `${fmt(data.routeCacheLatency.p50Ms)} / ${fmt(data.routeCacheLatency.p95Ms)} / ${fmt(data.routeCacheLatency.p99Ms)} ms · ${fmt(data.routeCacheLatency.sampleCount)} ${cs ? "úspěšných operací od startu, max. 60 min" : "successful operations since startup, up to 60 min"}`
-        : (cs ? "Zatím žádné úspěšné SQL operace od startu" : "No successful SQL operations recorded since startup")}</dd></div>
+      <div className="system-field"><dt>Route cache · DB-call elapsed P50/P95/P99</dt><dd>{data.routeCacheLatency.sampleCount > 0
+        ? `${fmt(data.routeCacheLatency.p50Ms)} / ${fmt(data.routeCacheLatency.p95Ms)} / ${fmt(data.routeCacheLatency.p99Ms)} ms · ${fmt(data.routeCacheLatency.sampleCount)} ${cs ? "úspěšných DB-call vzorků, posledních 60 min; ne server-side SQL" : "successful DB-call samples, last 60 min; not server-side SQL"}`
+        : (cs ? "Zatím žádné úspěšné DB-call vzorky za posledních 60 min" : "No successful DB-call samples in the last 60 min")}</dd></div>
       </dl></section>
       <section className="system-integration-group routes"><h3>{cs ? "Odezva databáze · skutečné minutové vzorky" : "Database latency · real minute probes"}</h3><dl className="system-fields">
         <div className="system-field"><dt>{cs ? "Posledních 60 minut" : "Last 60 minutes"}</dt><dd>{dbSummary(data.databaseLatency.lastHour)}</dd></div>

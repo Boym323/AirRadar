@@ -9,14 +9,16 @@ export const ROUTE_METRIC_KEYS = [
   "dbLatencySamples", "dbLatencyTotalMs",
 ] as const;
 export const ROUTE_PHASE_KEYS = [
-  "request", "memoryCache", "concurrencyBudget", "dbConnection", "sqlExecution",
-  "resultProcessing", "cacheUpdate", "callerTimeout", "sqlCompletion",
+  "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
+  "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
 ] as const;
 export type RoutePhaseKey = (typeof ROUTE_PHASE_KEYS)[number];
 export type RouteMetricKey = (typeof ROUTE_METRIC_KEYS)[number];
 export type RouteMetricBucket = { hour: string } & Record<RouteMetricKey, number>;
 export interface RoutePhaseDistribution {
   measured: boolean;
+  scope: "process-local-recent-samples";
+  sampleCapacity: number;
   count: number;
   sampleCount: number;
   errors: number;
@@ -70,7 +72,8 @@ function emptyPhaseSamples(): Record<RoutePhaseKey, number[]> {
 }
 function emptyPhaseDiagnostics(): RoutePhaseDiagnostics {
   return Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, {
-    measured: false, count: 0, sampleCount: 0, errors: 0, timeouts: 0,
+    measured: false, scope: "process-local-recent-samples" as const, sampleCapacity: PHASE_SAMPLE_CAPACITY,
+    count: 0, sampleCount: 0, errors: 0, timeouts: 0,
     p50Ms: null, p95Ms: null, p99Ms: null, maxMs: null,
   }])) as RoutePhaseDiagnostics;
 }
@@ -188,7 +191,7 @@ export class RouteEnrichmentTelemetry {
       const values = this.phaseSamples[key].slice().sort((a, b) => a - b);
       const rank = (p: number) => values.length ? values[Math.ceil(values.length * p) - 1] ?? null : null;
       result[key] = {
-        measured: values.length > 0,
+        measured: values.length > 0, scope: "process-local-recent-samples", sampleCapacity: PHASE_SAMPLE_CAPACITY,
         count: this.phaseCounts[key], sampleCount: values.length,
         errors: this.phaseErrors[key], timeouts: this.phaseTimeouts[key],
         p50Ms: rank(0.5), p95Ms: rank(0.95), p99Ms: rank(0.99), maxMs: values.at(-1) ?? null,
@@ -212,7 +215,7 @@ export class RouteEnrichmentTelemetry {
     this.circuitOpenUntilMs = value.circuitOpenUntilMs ?? null;
   }
 
-  /** Actual successful route-cache SQL timings over the last hour, not the once-per-minute health probe. */
+  /** Successful route-cache DB-call elapsed timings over the last hour, not server-side SQL time. */
   getDbLatencyDistribution() {
     const cutoff = this.clock() - 60 * 60_000;
     const values = this.recentDbQueries.filter((entry) => entry.at >= cutoff)
@@ -220,7 +223,7 @@ export class RouteEnrichmentTelemetry {
     const n = values.length;
     const rank = (p: number) => n ? values[Math.ceil(n * p) - 1] ?? null : null;
     return {
-      source: "successful-route-cache-sql" as const,
+      source: "successful-route-cache-db-call-elapsed" as const,
       processLocal: true,
       windowMinutes: 60,
       sampleCapacity: 1_024,

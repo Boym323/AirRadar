@@ -353,16 +353,19 @@ export class EnrichmentService {
     const load = () => this.loadFreeRoute(aircraft, observedAt, key);
     const options = { ttlMs: ENRICHMENT_TTLS.routeMs, negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs };
     const memoryStarted = Date.now();
-    if (this.cache.hasFreshPositive(ramKey)) getRouteEnrichmentTelemetry().record("ramHit");
+    const memoryHit = this.cache.hasFreshPositive(ramKey);
+    getRouteEnrichmentTelemetry().recordPhase("memoryLookup", Date.now() - memoryStarted, "ok");
+    if (memoryHit) getRouteEnrichmentTelemetry().record("ramHit");
+    const loadStarted = Date.now();
     let result = await this.cache.get(ramKey, load, options);
-    getRouteEnrichmentTelemetry().recordPhase("memoryCache", Date.now() - memoryStarted, "ok");
+    if (!memoryHit) getRouteEnrichmentTelemetry().recordPhase("readThroughLoad", Date.now() - loadStarted, "ok");
     // Do not reuse a same-day callsign route after moving off its corridor.
     if (result && !routeMatchesAircraftPosition(aircraft, result)) {
       this.cache.invalidate(ramKey);
       result = await this.cache.get(ramKey, load, options);
     }
     const resolved = result && routeMatchesAircraftPosition(aircraft, result) ? result : null;
-    getRouteEnrichmentTelemetry().recordPhase("request", Date.now() - requestStarted, "ok");
+    getRouteEnrichmentTelemetry().recordPhase("routeResolution", Date.now() - requestStarted, "ok");
     return resolved;
   }
 

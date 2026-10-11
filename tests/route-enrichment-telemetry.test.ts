@@ -51,6 +51,25 @@ describe("route enrichment telemetry", () => {
     expect(metrics.getDbLatencyDistribution()).toMatchObject({
       sampleCount: 1024, p50Ms: 688, p95Ms: 1149, p99Ms: 1190,
     });
+    expect(metrics.getDbLatencyDistribution().source).toBe("successful-route-cache-db-call-elapsed");
+  });
+
+  it("keeps RAM lookup, read-through load, route resolution and PostgreSQL request metrics distinct", () => {
+    const metrics = new RouteEnrichmentTelemetry(null, () => Date.parse("2026-10-11T12:00:00.000Z"));
+    metrics.recordPhase("memoryLookup", 1);
+    metrics.recordPhase("readThroughLoad", 40);
+    metrics.recordPhase("routeResolution", 42);
+    metrics.recordPhase("postgresCacheRequest", 12);
+    const phases = metrics.getSnapshot().phases;
+    expect(phases.memoryLookup.p50Ms).toBe(1);
+    expect(phases.readThroughLoad.p50Ms).toBe(40);
+    expect(phases.routeResolution.p50Ms).toBe(42);
+    expect(phases.postgresCacheRequest.p50Ms).toBe(12);
+    expect(phases.memoryLookup.scope).toBe("process-local-recent-samples");
+    expect(phases.memoryLookup).toMatchObject({ sampleCapacity: 1_024 });
+    expect(phases.dbConnection).toMatchObject({ measured: false, p95Ms: null });
+    expect(metrics.getSnapshot().phases).not.toHaveProperty("sqlExecution");
+    expect(metrics.getSnapshot().phases).not.toHaveProperty("sqlCompletion");
   });
 
   it("saves only bounded aggregate history and restores it without callsigns or positions", async () => {

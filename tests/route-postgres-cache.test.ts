@@ -27,13 +27,15 @@ function fakeStore(get: RouteCacheStore["get"] = async () => null) {
 describe("Route Cache V2 read-through", () => {
   it("keeps phase distributions bounded and distinguishes unmeasured phases", () => {
     const telemetry = new RouteEnrichmentTelemetry(null, () => at.getTime());
-    for (let i = 0; i < 2_000; i++) telemetry.recordPhase("sqlExecution", i, i % 7 === 0 ? "timeout" : "ok");
+    for (let i = 0; i < 2_000; i++) telemetry.recordPhase("postgresCacheRequest", i, i % 7 === 0 ? "timeout" : "ok");
     telemetry.recordPhase("callerTimeout", 750, "timeout");
     const snapshot = telemetry.getSnapshot();
-    expect(snapshot.phases.sqlExecution).toMatchObject({ measured: true, count: 2_000, timeouts: 286, maxMs: 1_999 });
-    expect(snapshot.phases.sqlExecution.p95Ms).toBeGreaterThan(0);
+    expect(snapshot.phases.postgresCacheRequest).toMatchObject({ measured: true, count: 2_000, timeouts: 286, maxMs: 1_999, scope: "process-local-recent-samples", sampleCapacity: 1_024 });
+    expect(snapshot.phases.postgresCacheRequest.p95Ms).toBeGreaterThan(0);
     expect(snapshot.phases.dbConnection).toMatchObject({ measured: false, count: 0, p95Ms: null });
     expect(snapshot.phases.callerTimeout).toMatchObject({ measured: true, timeouts: 1, p50Ms: 750 });
+    expect(snapshot.phases).not.toHaveProperty("sqlExecution");
+    expect(snapshot.phases).not.toHaveProperty("sqlCompletion");
   });
 
   it("reuses a persisted ADSBDB route without querying either free upstream", async () => {

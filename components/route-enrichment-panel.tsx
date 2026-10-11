@@ -96,8 +96,10 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
         <Metric label={labels.callerTimeouts} value={f(metrics.sql.callerTimeouts)} />
         <Metric label={labels.completedAfterTimeout} value={f(metrics.sql.completedAfterCallerTimeout)} />
         <Metric label={labels.circuit} value={metrics.sql.circuit.state === "open" ? labels.circuitOpen : labels.circuitClosed} />
-        {phase("sqlExecution", labels.phaseExecution)}
-        {phase("sqlCompletion", labels.phaseCompletion)}
+        {phase("memoryLookup", labels.phaseMemoryLookup)}
+        {phase("readThroughLoad", labels.phaseReadThroughLoad)}
+        {phase("routeResolution", labels.phaseRouteResolution)}
+        {phase("postgresCacheRequest", labels.phasePostgresCacheRequest)}
         {phase("resultProcessing", labels.phaseProcessing)}
         {phase("cacheUpdate", labels.phaseCacheUpdate)}
       </dl></section>

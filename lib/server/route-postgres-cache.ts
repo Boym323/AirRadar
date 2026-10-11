@@ -140,17 +140,11 @@ export class PostgresRouteCache implements RouteCacheStore {
       () => {
         const elapsed = Date.now() - started;
         getRouteEnrichmentTelemetry().recordDbLatency(elapsed);
-        getRouteEnrichmentTelemetry().recordPhase("sqlExecution", elapsed, "ok");
-        getRouteEnrichmentTelemetry().recordPhase("sqlCompletion", elapsed, "ok");
         if (callerTimedOut) this.stats.completedAfterCallerTimeout++;
         this.active--;
         this.syncTelemetry();
       },
       () => {
-        const elapsed = Date.now() - started;
-        const outcome = callerTimedOut ? "timeout" : "error";
-        getRouteEnrichmentTelemetry().recordPhase("sqlExecution", elapsed, outcome);
-        getRouteEnrichmentTelemetry().recordPhase("sqlCompletion", elapsed, outcome);
         if (callerTimedOut) this.stats.completedAfterCallerTimeout++;
         this.active--; this.syncTelemetry();
       },
@@ -174,9 +168,11 @@ export class PostgresRouteCache implements RouteCacheStore {
 
   async get(key: string): Promise<FlightRoute | null> {
     if (!KEY.test(key)) return null;
-    const requestStarted = Date.now();
     let queried = false;
+    let postgresAttempted = false;
+    const postgresRequestStarted = Date.now();
     const raw = await this.run<string | null>(null, async (db) => {
+      postgresAttempted = true;
       const rows = await db.runtime().query(db.raw.sql`
         SELECT "routeJson" FROM "public"."routeEnrichmentCache"
         WHERE "cacheKey" = ${key} AND "expiresAtMs" > ${BigInt(Date.now())}
@@ -185,6 +181,7 @@ export class PostgresRouteCache implements RouteCacheStore {
       queried = true;
       return rows[0]?.routeJson ?? null;
     });
+    if (postgresAttempted) getRouteEnrichmentTelemetry().recordPhase("postgresCacheRequest", Date.now() - postgresRequestStarted, queried ? "ok" : "error");
     const processingStarted = Date.now();
     const route = raw ? decodeCachedRoute(raw, key) : null;
     getRouteEnrichmentTelemetry().recordPhase("resultProcessing", Date.now() - processingStarted, "ok");
@@ -193,7 +190,6 @@ export class PostgresRouteCache implements RouteCacheStore {
       else { this.stats.misses++; getRouteEnrichmentTelemetry().record("dbMiss"); }
       this.refreshCount();
     }
-    getRouteEnrichmentTelemetry().recordPhase("request", Date.now() - requestStarted, queried ? "ok" : "error");
     return route;
   }
 
