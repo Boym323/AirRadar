@@ -1814,7 +1814,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         } finally {
           await closePage(visualPage);
         }
-      });
+      }, { isExclusive: (target) => target.v6Terrain === true });
       console.log(`[production-gates] visual batch finished durationMs=${Math.round(performance.now() - visualBatchStartedAt)} targets=${selectedTargets.length}`);
     };
     const runResponsiveSweep = configuredViewport ? async () => {} : async () => {
@@ -2836,7 +2836,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       }
       logViewportPhase("total", viewportStartedAt);
       await closePage(page);
-    });
+    }, { isExclusive: isProductionGateFullSmokeViewport });
     console.log(`[production-gates] viewport batch finished durationMs=${Math.round(performance.now() - viewportBatchStartedAt)} targets=${viewports.length}`);
   } finally {
     await browser.close();
