@@ -37,3 +37,30 @@ test("config is bounded and fail-closed", () => {
 test("empty worklist has no checks", async () => {
   await runBoundedChecks([], 2, () => { throw new Error("unexpected"); });
 });
+
+test("GPU-exclusive checks never overlap while regular checks can progress", async () => {
+  const work = [
+    { name: "gpu1", exclusive: true }, { name: "gpu2", exclusive: true },
+    { name: "light1", exclusive: false }, { name: "light2", exclusive: false },
+    { name: "gpu3", exclusive: true },
+  ];
+  let activeGPU = 0, maxGPU = 0, concurrentLight = 0; const seen = [];
+  await runBoundedChecks(work, 2, async (item) => {
+    if (item.exclusive) { activeGPU++; maxGPU = Math.max(maxGPU, activeGPU); }
+    else if (activeGPU) concurrentLight++;
+    await new Promise((resolve) => setTimeout(resolve, item.exclusive ? 8 : 2));
+    seen.push(item.name);
+    if (item.exclusive) activeGPU--;
+  }, { isExclusive: (item) => item.exclusive });
+  assert.equal(maxGPU, 1);
+  assert.ok(concurrentLight >= 1);
+  assert.deepEqual(seen.sort(), work.map((item) => item.name).sort());
+});
+test("exclusive-only work drains after idle worker exits", async () => {
+  const done = [];
+  await runBoundedChecks([1,2,3], 3, async (item) => {
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    done.push(item);
+  }, { isExclusive: () => true });
+  assert.deepEqual(done, [1,2,3]);
+});
