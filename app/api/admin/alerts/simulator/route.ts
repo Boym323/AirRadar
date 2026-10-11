@@ -1,11 +1,12 @@
 import { simulateAlertRules } from "@/lib/server/alert-rule-simulator";
-import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { requireWatchlistMutation } from "@/lib/server/watchlist-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
-  if (!isWatchlistSessionValid(request)) return Response.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  const denied = requireWatchlistMutation(request);
+  if (denied) return denied;
   try {
     return Response.json(await simulateAlertRules(await request.json()), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

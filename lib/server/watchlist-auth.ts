@@ -2,6 +2,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { getWatchlistAdminToken } from "@/lib/server/config";
 
 export const WATCHLIST_SESSION_COOKIE = "airradar_watchlist_session";
+
+/**
+ * The private receiver deployment uses open administration by default.
+ * Opt in to signed admin sessions explicitly (and configure WATCHLIST_ADMIN_TOKEN).
+ * This governs all callers of isWatchlistSessionValid, including /system diagnostics.
+ */
+export function isAdminAuthEnabled(): boolean {
+  return process.env.AIRRADAR_ADMIN_AUTH_ENABLED?.trim().toLowerCase() === "true";
+}
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 
 function signature(value: string, secret: string): string {
@@ -48,20 +57,23 @@ function validSession(request: Request, secret: string, now = Date.now()): boole
 }
 
 export function isWatchlistAuthConfigured(): boolean {
-  return getWatchlistAdminToken() !== null;
+  return isAdminAuthEnabled() && getWatchlistAdminToken() !== null;
 }
 
 export function isWatchlistSessionValid(request: Request, now = Date.now()): boolean {
+  if (!isAdminAuthEnabled()) return true;
   const secret = getWatchlistAdminToken();
   return Boolean(secret && validSession(request, secret, now));
 }
 
 export function requireWatchlistMutation(request: Request): Response | null {
-  if (!isWatchlistAuthConfigured()) {
-    return Response.json({ error: "Watchlist authentication is not configured", code: "auth_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
-  }
+  // Preserve origin checks for edits even when no admin login is required.
   if (!sameOrigin(request)) {
     return Response.json({ error: "Cross-origin watchlist mutation rejected", code: "csrf_rejected" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+  if (!isAdminAuthEnabled()) return null;
+  if (!isWatchlistAuthConfigured()) {
+    return Response.json({ error: "Watchlist authentication is not configured", code: "auth_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
   if (!isWatchlistSessionValid(request)) {
     return Response.json({ error: "Watchlist authentication required", code: "auth_required" }, { status: 401, headers: { "Cache-Control": "no-store" } });
@@ -83,6 +95,7 @@ export function clearWatchlistSessionCookie(request: Request): string {
 }
 
 export function verifyWatchlistAdminToken(candidate: unknown): boolean {
+  if (!isAdminAuthEnabled()) return false;
   const secret = getWatchlistAdminToken();
   return typeof candidate === "string" && Boolean(secret) && sameSecret(candidate.trim(), secret!);
 }
