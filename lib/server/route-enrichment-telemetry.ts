@@ -8,8 +8,24 @@ export const ROUTE_METRIC_KEYS = [
   "adsbdbLookup", "adsblolBatch", "adsblolLookup", "adsblolError",
   "dbLatencySamples", "dbLatencyTotalMs",
 ] as const;
+export const ROUTE_PHASE_KEYS = [
+  "request", "memoryCache", "concurrencyBudget", "dbConnection", "sqlExecution",
+  "resultProcessing", "cacheUpdate", "callerTimeout", "sqlCompletion",
+] as const;
+export type RoutePhaseKey = (typeof ROUTE_PHASE_KEYS)[number];
 export type RouteMetricKey = (typeof ROUTE_METRIC_KEYS)[number];
 export type RouteMetricBucket = { hour: string } & Record<RouteMetricKey, number>;
+export interface RoutePhaseDistribution {
+  measured: boolean;
+  count: number;
+  errors: number;
+  timeouts: number;
+  p50Ms: number | null;
+  p95Ms: number | null;
+  p99Ms: number | null;
+  maxMs: number | null;
+}
+export type RoutePhaseDiagnostics = Record<RoutePhaseKey, RoutePhaseDistribution>;
 export interface RouteEnrichmentSnapshot {
   enabled: boolean;
   windowHours: 24;
@@ -20,17 +36,36 @@ export interface RouteEnrichmentSnapshot {
   validEntries: number | null;
   validEntriesCheckedAt: string | null;
   databaseAverageLatencyMs: number | null;
+  phases: RoutePhaseDiagnostics;
+  sql: {
+    active: number;
+    maxActive: number;
+    rejected: number;
+    callerTimeouts: number;
+    completedAfterCallerTimeout: number;
+    circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
+  };
   telemetry: { diskEnabled: boolean; loadedFromDisk: boolean; lastSavedAt: string | null; failures: number };
 }
 const HOUR_MS = 3_600_000;
 const CHECKPOINT_MS = 5 * 60_000;
 const MAX_FILE_BYTES = 64 * 1024;
 const MAX_COUNT = 1_000_000_000;
+const PHASE_SAMPLE_CAPACITY = 1_024;
 function hourAt(ms: number): string { return new Date(Math.floor(ms / HOUR_MS) * HOUR_MS).toISOString(); }
 function emptyCounts(): Record<RouteMetricKey, number> {
   return Object.fromEntries(ROUTE_METRIC_KEYS.map(k => [k, 0])) as Record<RouteMetricKey, number>;
 }
 function createBucket(hour: string): RouteMetricBucket { return { hour, ...emptyCounts() }; }
+function emptyPhaseSamples(): Record<RoutePhaseKey, number[]> {
+  return Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, []])) as unknown as Record<RoutePhaseKey, number[]>;
+}
+function emptyPhaseDiagnostics(): RoutePhaseDiagnostics {
+  return Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, {
+    measured: false, count: 0, errors: 0, timeouts: 0,
+    p50Ms: null, p95Ms: null, p99Ms: null, maxMs: null,
+  }])) as RoutePhaseDiagnostics;
+}
 function validBucket(value: unknown, now: number): RouteMetricBucket | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Partial<RouteMetricBucket>;
@@ -65,6 +100,15 @@ export class RouteEnrichmentTelemetry {
   // Query-time distributions do not include failed/timed-out SQL operations.
   private readonly recentDbQueries: { at: number; ms: number }[] = [];
   private nextDbQuerySlot = 0;
+  private readonly phaseSamples = emptyPhaseSamples();
+  private readonly phaseNextSlots = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
+  private readonly phaseCounts = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
+  private readonly phaseErrors = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
+  private readonly phaseTimeouts = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
+  private sqlDiagnostics = {
+    active: 0, maxActive: 0, rejected: 0, callerTimeouts: 0, completedAfterCallerTimeout: 0,
+    circuit: { state: "closed" as "closed" | "open", openSince: null as string | null, openDurationMs: null as number | null },
+  };
 
   constructor(
     private readonly filePath: string | null = process.env.ROUTE_TELEMETRY_FILE?.trim()
@@ -118,6 +162,44 @@ export class RouteEnrichmentTelemetry {
     this.record("dbLatencyTotalMs", ms === 0 ? 0.001 : ms);
   }
 
+  recordPhase(key: RoutePhaseKey, ms: number, outcome: "ok" | "error" | "timeout" = "ok"): void {
+    if (!Number.isFinite(ms) || ms < 0) return;
+    const samples = this.phaseSamples[key];
+    if (samples.length < PHASE_SAMPLE_CAPACITY) samples.push(ms);
+    else { samples[this.phaseNextSlots[key]] = ms; }
+    this.phaseNextSlots[key] = (this.phaseNextSlots[key] + 1) % PHASE_SAMPLE_CAPACITY;
+    this.phaseCounts[key] = Math.min(MAX_COUNT, this.phaseCounts[key] + 1);
+    if (outcome === "error") this.phaseErrors[key] = Math.min(MAX_COUNT, this.phaseErrors[key] + 1);
+    if (outcome === "timeout") this.phaseTimeouts[key] = Math.min(MAX_COUNT, this.phaseTimeouts[key] + 1);
+  }
+
+  getPhaseDiagnostics(): RoutePhaseDiagnostics {
+    const result = emptyPhaseDiagnostics();
+    for (const key of ROUTE_PHASE_KEYS) {
+      const values = this.phaseSamples[key].slice().sort((a, b) => a - b);
+      const rank = (p: number) => values.length ? values[Math.ceil(values.length * p) - 1] ?? null : null;
+      result[key] = {
+        measured: values.length > 0,
+        count: this.phaseCounts[key], errors: this.phaseErrors[key], timeouts: this.phaseTimeouts[key],
+        p50Ms: rank(0.5), p95Ms: rank(0.95), p99Ms: rank(0.99), maxMs: values.at(-1) ?? null,
+      };
+    }
+    return result;
+  }
+
+  setSqlDiagnostics(value: {
+    active: number; maxActive: number; rejected: number; callerTimeouts: number;
+    completedAfterCallerTimeout: number;
+    circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
+  }): void {
+    this.sqlDiagnostics = {
+      active: Math.max(0, value.active), maxActive: Math.max(0, value.maxActive),
+      rejected: Math.max(0, value.rejected), callerTimeouts: Math.max(0, value.callerTimeouts),
+      completedAfterCallerTimeout: Math.max(0, value.completedAfterCallerTimeout),
+      circuit: { ...value.circuit },
+    };
+  }
+
   /** Actual successful route-cache SQL timings over the last hour, not the once-per-minute health probe. */
   getDbLatencyDistribution() {
     const cutoff = this.clock() - 60 * 60_000;
@@ -165,6 +247,8 @@ export class RouteEnrichmentTelemetry {
       validEntries: this.validEntries,
       validEntriesCheckedAt: this.validEntriesCheckedAt,
       databaseAverageLatencyMs: totals.dbLatencySamples ? totals.dbLatencyTotalMs / totals.dbLatencySamples : null,
+      phases: this.getPhaseDiagnostics(),
+      sql: this.sqlDiagnostics,
       telemetry: { diskEnabled: !!this.filePath, loadedFromDisk: this.loadedFromDisk, lastSavedAt: this.lastSavedAt, failures: this.failures },
     };
   }

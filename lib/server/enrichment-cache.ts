@@ -347,18 +347,23 @@ export class EnrichmentService {
   /** Read-through: RAM -> PostgreSQL -> ADSBDB -> ADSB.lol, without paid providers. */
   private async resolveFreeRoute(aircraft: Aircraft, observedAt: Date): Promise<FlightRoute | null> {
     if (!aircraft.callsign) return null;
+    const requestStarted = Date.now();
     const key = routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex);
     const ramKey = "free-route:" + key;
     const load = () => this.loadFreeRoute(aircraft, observedAt, key);
     const options = { ttlMs: ENRICHMENT_TTLS.routeMs, negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs };
+    const memoryStarted = Date.now();
     if (this.cache.hasFreshPositive(ramKey)) getRouteEnrichmentTelemetry().record("ramHit");
     let result = await this.cache.get(ramKey, load, options);
+    getRouteEnrichmentTelemetry().recordPhase("memoryCache", Date.now() - memoryStarted, "ok");
     // Do not reuse a same-day callsign route after moving off its corridor.
     if (result && !routeMatchesAircraftPosition(aircraft, result)) {
       this.cache.invalidate(ramKey);
       result = await this.cache.get(ramKey, load, options);
     }
-    return result && routeMatchesAircraftPosition(aircraft, result) ? result : null;
+    const resolved = result && routeMatchesAircraftPosition(aircraft, result) ? result : null;
+    getRouteEnrichmentTelemetry().recordPhase("request", Date.now() - requestStarted, "ok");
+    return resolved;
   }
 
   private rememberVerifiedRoute(key: string, route: FlightRoute): FlightRoute {

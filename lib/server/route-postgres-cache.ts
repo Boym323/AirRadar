@@ -77,17 +77,39 @@ export class PostgresRouteCache implements RouteCacheStore {
   private active = 0;
   private lastCleanup = 0;
   private lastCountAttempt = 0;
-  private readonly stats = { hits: 0, misses: 0, writes: 0, failures: 0, bypassed: 0 };
-  getDiagnostics() { return { ...this.stats, active: this.active, retryAfter: this.retryAfter }; }
+  private readonly stats = { hits: 0, misses: 0, writes: 0, failures: 0, bypassed: 0, rejectedConcurrency: 0, callerTimeouts: 0, completedAfterCallerTimeout: 0, maxActive: 0 };
+  private circuitOpenedAt: number | null = null;
+  getDiagnostics() { return { ...this.stats, active: this.active, retryAfter: this.retryAfter, circuitOpenedAt: this.circuitOpenedAt }; }
+
+  private syncTelemetry(): void {
+    const now = Date.now();
+    getRouteEnrichmentTelemetry().setSqlDiagnostics({
+      active: this.active, maxActive: this.stats.maxActive, rejected: this.stats.rejectedConcurrency,
+      callerTimeouts: this.stats.callerTimeouts,
+      completedAfterCallerTimeout: this.stats.completedAfterCallerTimeout,
+      circuit: {
+        state: this.retryAfter > now ? "open" : "closed",
+        openSince: this.circuitOpenedAt === null ? null : new Date(this.circuitOpenedAt).toISOString(),
+        openDurationMs: this.circuitOpenedAt === null ? null : Math.max(0, now - this.circuitOpenedAt),
+      },
+    });
+  }
 
   private async run<T>(
     fallback: T, query: (database: NonNullable<ReturnType<typeof getPrisma>>) => Promise<T>,
   ): Promise<T> {
+    if (this.retryAfter > 0 && Date.now() >= this.retryAfter) {
+      this.retryAfter = 0;
+      this.circuitOpenedAt = null;
+      this.syncTelemetry();
+    }
     if (Date.now() < this.retryAfter || this.active >= 4) {
       const diagnostics = routeDbReason();
       if (Date.now() < this.retryAfter) diagnostics.bypassBackoff += 1;
       else diagnostics.bypassConcurrency += 1;
-      this.stats.bypassed++; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback;
+      this.stats.bypassed++;
+      if (this.active >= 4 && Date.now() >= this.retryAfter) this.stats.rejectedConcurrency++;
+      getRouteEnrichmentTelemetry().record("dbBypassed"); this.syncTelemetry(); return fallback;
     }
     let db: ReturnType<typeof getPrisma>;
     try { db = getPrisma(); }
@@ -97,11 +119,14 @@ export class PostgresRouteCache implements RouteCacheStore {
       diagnostics.lastFailureAt = new Date().toISOString();
       diagnostics.lastErrorKind = "connection";
       this.stats.failures++; getRouteEnrichmentTelemetry().record("dbError");
-      this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; return fallback;
+      this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; this.circuitOpenedAt ??= Date.now(); this.syncTelemetry(); return fallback;
     }
     if (!db) { routeDbReason().bypassUnconfigured += 1; getRouteEnrichmentTelemetry().record("dbBypassed"); return fallback; }
     this.active++;
+    this.stats.maxActive = Math.max(this.stats.maxActive, this.active);
+    this.syncTelemetry();
     const started = Date.now();
+    let callerTimedOut = false;
     // Promise.race timeout limits caller latency, NOT the underlying SQL
     // execution. Keep the concurrency slot occupied until the real query
     // settles, otherwise timed-out operations can silently exceed MAX_ACTIVE.
@@ -110,10 +135,22 @@ export class PostgresRouteCache implements RouteCacheStore {
     const operation = Promise.resolve().then(() => query(db));
     void operation.then(
       () => {
-        getRouteEnrichmentTelemetry().recordDbLatency(Date.now() - started);
+        const elapsed = Date.now() - started;
+        getRouteEnrichmentTelemetry().recordDbLatency(elapsed);
+        getRouteEnrichmentTelemetry().recordPhase("sqlExecution", elapsed, "ok");
+        getRouteEnrichmentTelemetry().recordPhase("sqlCompletion", elapsed, "ok");
+        if (callerTimedOut) this.stats.completedAfterCallerTimeout++;
         this.active--;
+        this.syncTelemetry();
       },
-      () => { this.active--; },
+      () => {
+        const elapsed = Date.now() - started;
+        const outcome = callerTimedOut ? "timeout" : "error";
+        getRouteEnrichmentTelemetry().recordPhase("sqlExecution", elapsed, outcome);
+        getRouteEnrichmentTelemetry().recordPhase("sqlCompletion", elapsed, outcome);
+        if (callerTimedOut) this.stats.completedAfterCallerTimeout++;
+        this.active--; this.syncTelemetry();
+      },
     );
     try {
       return await bounded(operation);
@@ -121,19 +158,20 @@ export class PostgresRouteCache implements RouteCacheStore {
     catch (error) {
       const diagnostics = routeDbReason();
       const timedOut = error instanceof Error && error.message === "route_db_timeout";
-      if (timedOut) diagnostics.timeouts += 1;
+      if (timedOut) { diagnostics.timeouts += 1; callerTimedOut = true; this.stats.callerTimeouts++; getRouteEnrichmentTelemetry().recordPhase("callerTimeout", TIMEOUT_MS, "timeout"); }
       else diagnostics.queryFailures += 1;
       diagnostics.lastFailureAt = new Date().toISOString();
       diagnostics.lastErrorKind = timedOut ? "timeout" : "query";
       this.stats.failures++;
       getRouteEnrichmentTelemetry().record("dbError");
-      this.retryAfter = Date.now() + FAILURE_BACKOFF_MS;
+      this.retryAfter = Date.now() + FAILURE_BACKOFF_MS; this.circuitOpenedAt ??= Date.now(); this.syncTelemetry();
       return fallback;
     }
   }
 
   async get(key: string): Promise<FlightRoute | null> {
     if (!KEY.test(key)) return null;
+    const requestStarted = Date.now();
     let queried = false;
     const raw = await this.run<string | null>(null, async (db) => {
       const rows = await db.runtime().query(db.raw.sql`
@@ -144,12 +182,15 @@ export class PostgresRouteCache implements RouteCacheStore {
       queried = true;
       return rows[0]?.routeJson ?? null;
     });
+    const processingStarted = Date.now();
     const route = raw ? decodeCachedRoute(raw, key) : null;
+    getRouteEnrichmentTelemetry().recordPhase("resultProcessing", Date.now() - processingStarted, "ok");
     if (queried) {
       if (route) { this.stats.hits++; getRouteEnrichmentTelemetry().record("dbHit"); }
       else { this.stats.misses++; getRouteEnrichmentTelemetry().record("dbMiss"); }
       this.refreshCount();
     }
+    getRouteEnrichmentTelemetry().recordPhase("request", Date.now() - requestStarted, queried ? "ok" : "error");
     return route;
   }
 
@@ -162,6 +203,7 @@ export class PostgresRouteCache implements RouteCacheStore {
     const now = Date.now();
     const storedAt = BigInt(now);
     const expiresAt = BigInt(now + Math.floor(ttlMs));
+    const requestStarted = Date.now();
     const wrote = await this.run(false, async (db) => {
       await db.runtime().execute(db.raw.sql`
         INSERT INTO "public"."routeEnrichmentCache"
@@ -173,6 +215,7 @@ export class PostgresRouteCache implements RouteCacheStore {
       `.affectedCount().build());
       return true;
     });
+    getRouteEnrichmentTelemetry().recordPhase("cacheUpdate", Date.now() - requestStarted, wrote ? "ok" : "error");
     if (!wrote) return;
     this.stats.writes++;
     getRouteEnrichmentTelemetry().record("dbWrite");

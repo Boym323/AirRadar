@@ -47,6 +47,12 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
     : formatNumber(metrics.databaseAverageLatencyMs, 1, dictionary.locale) + " " + labels.latencyUnit;
   const totalSamples = metrics.buckets.reduce((sum, b) => sum + b.ramHit + b.dbHit + b.adsbdbLookup + b.adsblolLookup, 0);
   const maximum = Math.max(1, ...metrics.buckets.map(b => b.ramHit + b.dbHit + b.adsbdbLookup + b.adsblolLookup));
+  const phase = (key: keyof RouteEnrichmentSnapshot["phases"], label: string) => {
+    const value = metrics.phases[key];
+    if (!value.measured) return <Metric label={label} value={labels.notMeasured} />;
+    const p95 = value.p95Ms === null ? "—" : formatNumber(value.p95Ms, 1, dictionary.locale) + " " + labels.latencyUnit;
+    return <Metric label={label} value={`P95 ${p95} · ${f(value.count)}`} />;
+  };
 
   return <Card className={styles.card} data-testid="route-enrichment-panel">
     <div className={styles.heading}>
@@ -82,6 +88,18 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
       <section><h3>{dictionary.locale.startsWith("cs") ? "Ukládání metrik" : "Telemetry persistence"}</h3><dl className={styles.metrics}>
         <Metric label={labels.diskPersistence} value={metrics.telemetry.diskEnabled ? labels.diskOn : labels.diskOff} />
         <Metric label={labels.persistErrors} value={f(metrics.telemetry.failures)} />
+      </dl></section>
+      <section><h3>{labels.diagnosticsTitle}</h3><dl className={styles.metrics}>
+        <Metric label={labels.activeSql} value={f(metrics.sql.active)} />
+        <Metric label={labels.maxActiveSql} value={f(metrics.sql.maxActive)} />
+        <Metric label={labels.rejectedRequests} value={f(metrics.sql.rejected)} />
+        <Metric label={labels.callerTimeouts} value={f(metrics.sql.callerTimeouts)} />
+        <Metric label={labels.completedAfterTimeout} value={f(metrics.sql.completedAfterCallerTimeout)} />
+        <Metric label={labels.circuit} value={metrics.sql.circuit.state === "open" ? labels.circuitOpen : labels.circuitClosed} />
+        {phase("sqlExecution", labels.phaseExecution)}
+        {phase("sqlCompletion", labels.phaseCompletion)}
+        {phase("resultProcessing", labels.phaseProcessing)}
+        {phase("cacheUpdate", labels.phaseCacheUpdate)}
       </dl></section>
     </div>
 

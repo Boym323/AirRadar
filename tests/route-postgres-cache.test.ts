@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { ENRICHMENT_TTLS, EnrichmentService } from "@/lib/server/enrichment-cache";
 import { decodeCachedRoute, validPersistedRoute, type RouteCacheStore } from "@/lib/server/route-postgres-cache";
+import { RouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 import type { FlightRoute } from "@/lib/aircraft/types";
 
 const at = new Date("2026-10-10T13:00:00Z");
@@ -24,6 +25,17 @@ function fakeStore(get: RouteCacheStore["get"] = async () => null) {
 }
 
 describe("Route Cache V2 read-through", () => {
+  it("keeps phase distributions bounded and distinguishes unmeasured phases", () => {
+    const telemetry = new RouteEnrichmentTelemetry(null, () => at.getTime());
+    for (let i = 0; i < 2_000; i++) telemetry.recordPhase("sqlExecution", i, i % 7 === 0 ? "timeout" : "ok");
+    telemetry.recordPhase("callerTimeout", 750, "timeout");
+    const snapshot = telemetry.getSnapshot();
+    expect(snapshot.phases.sqlExecution).toMatchObject({ measured: true, count: 2_000, timeouts: 286, maxMs: 1_999 });
+    expect(snapshot.phases.sqlExecution.p95Ms).toBeGreaterThan(0);
+    expect(snapshot.phases.dbConnection).toMatchObject({ measured: false, count: 0, p95Ms: null });
+    expect(snapshot.phases.callerTimeout).toMatchObject({ measured: true, timeouts: 1, p50Ms: 750 });
+  });
+
   it("reuses a persisted ADSBDB route without querying either free upstream", async () => {
     const stored = route("adsbdb");
     const store = fakeStore(async () => stored);
