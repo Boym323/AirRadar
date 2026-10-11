@@ -1742,9 +1742,28 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               // style.load event completed and the missing piece is rendered
               // vector features. The second attempt must satisfy the same
               // strict nonblank basemap evidence; never turn a blank map green.
-              if (evidence.styleEventLoaded === true && evidence.renderedVectorFeatures === 0 && evidence.tilesLoaded === false) {
+              if (evidence.styleEventLoaded === true && evidence.renderedVectorFeatures === 0 && evidence.tilesLoaded === false
+                && !target.v6Terrain && !target.v6Presentation && !target.enableV6Multi
+                && !target.enableMapFocus && !target.selectAircraft && !target.openMapCredits) {
                 console.warn(`[production-gates] transient vector tile readiness on ${target.name}; one strict fresh-navigation retry`);
                 await visualPage.reload({ waitUntil: "domcontentloaded" });
+                // Preserve custom V6 basemap modes; otherwise a retry could
+                // silently screenshot the default dark style under a light/
+                // satellite filename despite passing vector-feature checks.
+                if (target.v6Appearance) {
+                  const layers = visualPage.locator(".map-layers");
+                  await layers.locator("summary").click();
+                  await visualPage.getByTestId("map-appearance-v6").locator("select").selectOption(target.v6Appearance);
+                  await visualPage.waitForFunction((appearance) => {
+                    const map = window.__airradarMapForDiagnostics;
+                    if (!map?.getLayer("map-tint")) return false;
+                    if (appearance === "satellite") return Boolean(map.getSource("radar-v6-satellite"))
+                      && Boolean(map.getLayer("radar-v6-satellite-layer"))
+                      && map.getLayoutProperty("radar-v6-satellite-layer", "visibility") === "visible";
+                    return !map.getLayer("radar-v6-satellite-layer") && map.getPaintProperty("map-tint", "fill-opacity") === 0;
+                  }, target.v6Appearance, { timeout: 15_000 });
+                  await layers.locator("summary").click();
+                }
                 try {
                   await visualPage.waitForFunction(() => {
                     const map = window.__airradarMapForDiagnostics;
