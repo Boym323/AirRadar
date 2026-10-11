@@ -1,0 +1,66 @@
+[
+  {
+    "id": "table.atcDatasetVersion",
+    "label": "Create table \"atcDatasetVersion\"",
+    "summary": "Creates table \"atcDatasetVersion\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "atcDatasetVersion"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"atcDatasetVersion\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcDatasetVersion\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"atcDatasetVersion\"",
+        "sql": "CREATE TABLE \"public\".\"atcDatasetVersion\" (\n  \"id\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"version\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"atcDatasetVersion\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcDatasetVersion\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data.atcDatasetVersion.bootstrap",
+    "label": "Bootstrap ATC dataset version",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "atcDatasetVersion"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Insert the initial ATC dataset version",
+        "sql": "INSERT INTO \"public\".\"atcDatasetVersion\" (\"id\", \"version\") VALUES ($1, $2)",
+        "params": [
+          "atc",
+          "bootstrap"
+        ]
+      }
+    ],
+    "postcheck": []
+  }
+]

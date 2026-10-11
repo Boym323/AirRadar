@@ -271,15 +271,129 @@ function metadataFromRows(
 }
 
 const globalAtcMetadata = globalThis as typeof globalThis & {
-  __airRadarAtcMetadata?: { value: AtcDatasetMetadata; expiresAtMs: number };
+  __airRadarAtcMetadata?: { value: AtcDatasetMetadata; fingerprint: string; expiresAtMs: number };
   __airRadarAtcMetadataFlight?: Promise<AtcDatasetMetadata | null>;
+  __airRadarAtcDataset?: { value: AtcDatasetRows; fingerprint: string; expiresAtMs: number; generation: number };
+  __airRadarAtcDatasetFlight?: Promise<AtcDataResponse | null>;
+  __airRadarAtcDatasetGeneration?: number;
+  __airRadarAtcDatasetDiagnostics?: AtcDatasetCacheDiagnostics;
 };
 const ATC_METADATA_CACHE_MS = 30_000;
+// Imported ATC data changes on publication/import boundaries, not per request.
+// The import path invalidates this cache explicitly; the TTL is a second line
+// of defence for out-of-process/manual changes. Never serve stale geometry.
+const ATC_DATASET_CACHE_MS = 5 * 60_000;
+const ATC_DATASET_ROW_LIMIT = 2000;
+
+type AtcDatasetRows = { sectors: AtcSector[]; transmitters: AtcTransmitter[] };
+
+export type AtcDatasetCacheDiagnostics = {
+  scope: "process-local";
+  hits: number;
+  misses: number;
+  invalidations: number;
+  loadFailures: number;
+  entries: number;
+  inFlight: boolean;
+  ttlMs: number;
+  generation: number;
+};
+
+function datasetCacheDiagnostics(): AtcDatasetCacheDiagnostics {
+  return globalAtcMetadata.__airRadarAtcDatasetDiagnostics ??= {
+    scope: "process-local", hits: 0, misses: 0, invalidations: 0, loadFailures: 0,
+    entries: 0, inFlight: false, ttlMs: ATC_DATASET_CACHE_MS,
+    generation: globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0,
+  };
+}
+
+function cloneAtcData(value: AtcDataResponse | null): AtcDataResponse | null {
+  if (value === null) return null;
+  // The cached value remains process-owned; callers must not be able to
+  // mutate polygon/frequency data for subsequent requests.
+  return structuredClone(value);
+}
+
+function activeAtcData(value: AtcDatasetRows, observedAtMs = Date.now()): AtcDataResponse {
+  const sectors = value.sectors.filter((sector) => isAtcValidityValid(sector.validFrom, sector.validTo, observedAtMs));
+  const transmitters = value.transmitters.filter((transmitter) => isAtcValidityValid(transmitter.validFrom, transmitter.validTo, observedAtMs));
+  return { sectors, transmitters, metadata: datasetMetadata(sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters) };
+}
+
+function setAtcDatasetCache(value: AtcDatasetRows, fingerprint: string, generation: number): void {
+  globalAtcMetadata.__airRadarAtcDataset = {
+    value, fingerprint, expiresAtMs: Date.now() + ATC_DATASET_CACHE_MS, generation,
+  };
+  const diagnostics = datasetCacheDiagnostics();
+  diagnostics.entries = 1;
+  diagnostics.generation = generation;
+}
+
+async function readAtcDatasetFingerprint(
+  database: NonNullable<ReturnType<typeof getPrisma>>,
+  schema = database.orm.public,
+): Promise<string> {
+  const rows = await trackDbOperation("atc.dataset.version", async () => await schema.AtcDatasetVersion
+    .where({ id: "atc" }).select("version").limit(1).all());
+  const version = rows[0]?.version;
+  if (!version) throw new Error("ATC dataset version row is missing");
+  return version;
+}
+
+export function invalidateAtcDataCache(): void {
+  const generation = (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0) + 1;
+  globalAtcMetadata.__airRadarAtcDatasetGeneration = generation;
+  delete globalAtcMetadata.__airRadarAtcDataset;
+  delete globalAtcMetadata.__airRadarAtcMetadata;
+  const diagnostics = datasetCacheDiagnostics();
+  diagnostics.invalidations += 1;
+  diagnostics.entries = 0;
+  diagnostics.generation = generation;
+}
+
+export function getAtcDatasetCacheDiagnostics(): AtcDatasetCacheDiagnostics {
+  const diagnostics = datasetCacheDiagnostics();
+  diagnostics.inFlight = Boolean(globalAtcMetadata.__airRadarAtcDatasetFlight);
+  diagnostics.entries = globalAtcMetadata.__airRadarAtcDataset ? 1 : 0;
+  diagnostics.generation = globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0;
+  return { ...diagnostics };
+}
 
 /** Health-only projection: it deliberately never selects or parses polygon geometry. */
 export async function getStoredAtcMetadata(): Promise<AtcDatasetMetadata | null> {
+  const dataset = globalAtcMetadata.__airRadarAtcDataset;
+  if (dataset && dataset.expiresAtMs > Date.now() && dataset.generation === (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0)) {
+    const database = getPrisma();
+    if (database) {
+      try {
+        const fingerprint = await readAtcDatasetFingerprint(database);
+        if (globalAtcMetadata.__airRadarAtcDataset === dataset && fingerprint === dataset.fingerprint) {
+          datasetCacheDiagnostics().hits += 1;
+          return activeAtcData(dataset.value).metadata;
+        }
+        invalidateAtcDataCache();
+      } catch (error) {
+        datasetCacheDiagnostics().loadFailures += 1;
+        console.error("AirRadar stored ATC metadata freshness unavailable", error);
+        invalidateAtcDataCache();
+      }
+    }
+  }
   const cached = globalAtcMetadata.__airRadarAtcMetadata;
-  if (cached && cached.expiresAtMs > Date.now()) return cached.value;
+  if (cached && cached.expiresAtMs > Date.now()) {
+    const database = getPrisma();
+    if (database) {
+      try {
+        const fingerprint = await readAtcDatasetFingerprint(database);
+        if (globalAtcMetadata.__airRadarAtcMetadata === cached && fingerprint === cached.fingerprint) return cached.value;
+        invalidateAtcDataCache();
+      } catch (error) {
+        datasetCacheDiagnostics().loadFailures += 1;
+        console.error("AirRadar stored ATC metadata freshness unavailable", error);
+        invalidateAtcDataCache();
+      }
+    }
+  }
   if (globalAtcMetadata.__airRadarAtcMetadataFlight) return globalAtcMetadata.__airRadarAtcMetadataFlight;
 
   const flight = (async () => {
@@ -293,7 +407,8 @@ export async function getStoredAtcMetadata(): Promise<AtcDatasetMetadata | null>
           .select("source", "sourceReference", "validFrom", "validTo", "lastVerifiedAt", "frequencyMhz").limit(2000).all()),
       ]));
       const metadata = metadataFromRows(sectorRows, transmitterRows);
-      globalAtcMetadata.__airRadarAtcMetadata = { value: metadata, expiresAtMs: Date.now() + ATC_METADATA_CACHE_MS };
+      const fingerprint = await readAtcDatasetFingerprint(database);
+      globalAtcMetadata.__airRadarAtcMetadata = { value: metadata, fingerprint, expiresAtMs: Date.now() + ATC_METADATA_CACHE_MS };
       return metadata;
     } catch (error) {
       console.error("AirRadar stored ATC metadata unavailable", error);
@@ -307,35 +422,88 @@ export async function getStoredAtcMetadata(): Promise<AtcDatasetMetadata | null>
 export function resetAtcMetadataCacheForTests(): void {
   delete globalAtcMetadata.__airRadarAtcMetadata;
   delete globalAtcMetadata.__airRadarAtcMetadataFlight;
+  delete globalAtcMetadata.__airRadarAtcDataset;
+  delete globalAtcMetadata.__airRadarAtcDatasetFlight;
+  globalAtcMetadata.__airRadarAtcDatasetGeneration = 0;
+  delete globalAtcMetadata.__airRadarAtcDatasetDiagnostics;
 }
 
 export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
-  const database = getPrisma();
-  if (!database) return null;
-  try {
-    const [sectorRows, transmitterRows] = await Promise.all([
-      trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcSector.limit(2000).all()),
-      trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcTransmitter.limit(2000).all()),
-    ]);
-    const sectors = sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null && isAtcValidityValid(sector.validFrom, sector.validTo));
-    const transmitters = transmitterRows.map((transmitter) => ({
-        id: transmitter.id,
-        name: transmitter.name,
-        latitude: transmitter.latitude,
-        longitude: transmitter.longitude,
-        service: transmitter.service,
-        frequencyMhz: transmitter.frequencyMhz,
-        notes: transmitter.notes,
-        source: transmitter.source,
-        sourceReference: transmitter.sourceReference,
-        validFrom: transmitter.validFrom?.toString() ?? null,
-        validTo: transmitter.validTo?.toString() ?? null,
-        lastVerifiedAt: transmitter.lastVerifiedAt.toString(),
-    })).filter((transmitter) => isSupportedAtcFrequencyMhz(transmitter.frequencyMhz) && isAtcValidityValid(transmitter.validFrom, transmitter.validTo));
-    return { sectors, transmitters, metadata: datasetMetadata(sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters) };
-  } catch (error) {
-    console.error("AirRadar stored ATC data unavailable", error);
+  const cached = globalAtcMetadata.__airRadarAtcDataset;
+  const now = Date.now();
+  if (cached && cached.expiresAtMs > now && cached.generation === (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0)) {
+    const database = getPrisma();
+    if (database) {
+      try {
+        const fingerprint = await readAtcDatasetFingerprint(database);
+        if (globalAtcMetadata.__airRadarAtcDataset === cached && fingerprint === cached.fingerprint) {
+          datasetCacheDiagnostics().hits += 1;
+          return cloneAtcData(activeAtcData(cached.value, now));
+        }
+        invalidateAtcDataCache();
+      } catch (error) {
+        datasetCacheDiagnostics().loadFailures += 1;
+        console.error("AirRadar stored ATC dataset freshness unavailable", error);
+        invalidateAtcDataCache();
+      }
+    }
+  }
+  if (cached) {
+    delete globalAtcMetadata.__airRadarAtcDataset;
+    datasetCacheDiagnostics().entries = 0;
+  }
+  datasetCacheDiagnostics().misses += 1;
+  if (globalAtcMetadata.__airRadarAtcDatasetFlight) return cloneAtcData(await globalAtcMetadata.__airRadarAtcDatasetFlight);
+
+  const flight = (async () => {
+    // A bounded two-attempt check prevents publishing rows from before an
+    // external import with that import's new version. The version row and all
+    // dataset rows are read in one transaction; the post-load read detects a
+    // commit between statements under READ COMMITTED.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const generation = globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0;
+      const database = getPrisma();
+      if (!database) return null;
+      try {
+        const loaded = await database.transaction(async (transaction) => {
+          const before = await readAtcDatasetFingerprint(database, transaction.orm.public);
+          const [sectorRows, transmitterRows] = await Promise.all([
+            trackDbOperation("atc.dataset.load", async () => await transaction.orm.public.AtcSector.limit(ATC_DATASET_ROW_LIMIT).all()),
+            trackDbOperation("atc.dataset.load", async () => await transaction.orm.public.AtcTransmitter.limit(ATC_DATASET_ROW_LIMIT).all()),
+          ]);
+          const after = await readAtcDatasetFingerprint(database, transaction.orm.public);
+          return { before, after, sectors: sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null), transmitters: transmitterRows.map((transmitter) => ({
+            id: transmitter.id, name: transmitter.name, latitude: transmitter.latitude,
+            longitude: transmitter.longitude, service: transmitter.service,
+            frequencyMhz: transmitter.frequencyMhz, notes: transmitter.notes,
+            source: transmitter.source, sourceReference: transmitter.sourceReference,
+            validFrom: transmitter.validFrom?.toString() ?? null,
+            validTo: transmitter.validTo?.toString() ?? null,
+            lastVerifiedAt: transmitter.lastVerifiedAt.toString(),
+          })).filter((transmitter) => isSupportedAtcFrequencyMhz(transmitter.frequencyMhz)) };
+        });
+        if (loaded.before !== loaded.after) continue;
+        const value = { sectors: loaded.sectors, transmitters: loaded.transmitters };
+        const fingerprint = loaded.after;
+        if (generation !== (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0)) continue;
+        setAtcDatasetCache(value, fingerprint, generation);
+        const active = activeAtcData(value);
+        globalAtcMetadata.__airRadarAtcMetadata = { value: active.metadata, fingerprint, expiresAtMs: Date.now() + ATC_METADATA_CACHE_MS };
+        return active;
+      } catch (error) {
+        datasetCacheDiagnostics().loadFailures += 1;
+        console.error("AirRadar stored ATC data unavailable", error);
+        return null;
+      }
+    }
+    datasetCacheDiagnostics().loadFailures += 1;
+    console.error("AirRadar stored ATC data changed during bounded consistency check");
     return null;
+  })();
+  globalAtcMetadata.__airRadarAtcDatasetFlight = flight;
+  try { return cloneAtcData(await flight); }
+  finally {
+    if (globalAtcMetadata.__airRadarAtcDatasetFlight === flight) delete globalAtcMetadata.__airRadarAtcDatasetFlight;
   }
 }
 
