@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.420] - 2026-10-11
+
+Changes since v1.0.419.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Integrated UX polish after route and PDF fixes (#796) (bc26ecdf)
+
+### Maintenance
+
+- Sync generated repository metadata (#797) (3c91b1b8)
+- Match explicit timeline refresh key after dashboard UX update (#798) (962b00ac)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(system): integrated UX polish after route and PDF fixes (#796) (bc26ecdf)
+- chore(metadata): sync generated repository metadata (#797) (3c91b1b8)
+- test(system): match explicit timeline refresh key after dashboard UX update (#798) (962b00ac)
+
+</details>
 ## [1.0.419] - 2026-10-11
 
 Changes since v1.0.418.
