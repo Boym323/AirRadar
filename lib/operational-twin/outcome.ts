@@ -345,7 +345,10 @@ function currentAltitude(aircraft: Aircraft): number | null {
 
 function truthCandidate(aircraft: Aircraft, targetAt: number): TruthCandidate | null {
   const candidates: TruthCandidate[] = [];
-  for (const point of aircraft.trail.slice(-20)) {
+  // Avoid slicing and allocating a temporary candidate object per trail
+  // point for each pending horizon on every receiver refresh.
+  for (let i = Math.max(0, aircraft.trail.length - 20); i < aircraft.trail.length; i += 1) {
+    const point = aircraft.trail[i]!;
     const at = Date.parse(point.recordedAt);
     if (!Number.isFinite(at)) continue;
     candidates.push({
