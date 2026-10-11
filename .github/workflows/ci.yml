@@ -187,7 +187,7 @@ jobs:
             git diff --name-only -z "$PUSH_BEFORE" "$GITHUB_SHA" > "$changes"
           else
             # A missing/rewritten push base must fail closed.
-            printf '__unknown_change__\\0' > "$changes"
+            printf '%s\0' '__unknown_change__' > "$changes"
             echo "::warning::Cannot verify push base: selecting full release gates"
           fi
           scope_json="$(node scripts/release-scope.mjs --stdin0 < "$changes")"
