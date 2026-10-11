@@ -23,3 +23,52 @@ jobs:
       - run: npm run prisma:generate
       - name: Production-scale metadata catalog
         run: npm run test:scale
+
+  full-browser:
+    name: Scheduled full production/browser and performance regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm run prisma:generate
+      - name: Restore Next compiler cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: heavy-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+      - name: Build full regression fixture
+        run: npm run build:prepared
+        env:
+          AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+          AIRRADAR_CHANNEL: production
+      - name: Restore Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Prepare Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Full browser/production smoke
+        run: npm run test:production:all
+      - name: Full radar performance baseline
+        run: npm run benchmark:radar
+      - name: Upload full regression evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scheduled-full-regression-${{ github.sha }}
+          path: |
+            artifacts/visual-smoke/*.png
+            artifacts/radar-performance-baseline.json
+            artifacts/radar-performance-baseline.md
+          if-no-files-found: warn
+          retention-days: 7
