@@ -112,6 +112,8 @@ On deploy-bearing pushes three jobs run in parallel after scope detection:
 - `release-tests` runs the complete Vitest suite, TypeScript check, dependency audit, migration integrity, and release-planner unit tests.
 - `release-performance` independently builds and checks a radar performance fixture (full scenarios for radar/runtime or unknown changes; selected scenarios for known backend/airport changes).
 
+For a deployment-free rehearsal, add the maintainer-controlled `release-preview` label to a PR. The `pull_request:labeled` run exercises the real release build, full Vitest/typecheck and performance jobs (fail-closed full browser/performance scope), but the self-hosted `deploy` job remains strictly limited to `push` on `main`. Remove the label after validation to avoid repeating expensive preview jobs on later commits.
+
 Deployment requires **all three** successful jobs and uses only the pinned artifact from `release-validate`. Browser tests always exercise core health/SSE, with visual target and viewport selection only for proven narrowly scoped changes. Shared or unclassified code, configuration, and CI changes default to the complete browser and performance suite. The existing browser responsive sweep remains enabled when selecting multiple viewports.
 
 The nightly/manual `ci-heavy.yml` workflow runs the **complete browser/production regression and all radar performance scenarios** independently of the fast deployment path. Its full results are retained as GitHub Actions artifacts.
