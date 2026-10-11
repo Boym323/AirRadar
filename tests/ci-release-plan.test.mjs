@@ -7,6 +7,7 @@ test("unknown and missing scopes fail closed", () => {
   assert.equal(planReleaseGates(["lib/i18n/cs.ts"]).browser, "full");
   assert.equal(planReleaseGates(["components/ui-primitives.tsx"]).browser, "full");
   assert.equal(planReleaseGates([".github/workflows/ci.yml"]).browser, "full");
+  assert.equal(planReleaseGates(["scripts/sync-maplibre-worker.mjs"]).browser, "full");
   assert.equal(planReleaseGates(["app/api/health/route.ts", "../unknown"]).browser, "full");
   assert.equal(planReleaseGates(["app\\api\\health"]).browser, "full");
 });
