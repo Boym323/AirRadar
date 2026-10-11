@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.419] - 2026-10-11
+
+Changes since v1.0.418.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Distinguish ADSB.lol routeset and Postgres cache failures (#793) (91b4576a)
+
+### Fixed
+
+- Eliminate blank/stretching cards in full-page capture and PDF (#792) (cef8a468)
+
+### Maintenance
+
+- Sync generated repository metadata (#794) (ae347b9f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#794) (ae347b9f)
+- fix(system): eliminate blank/stretching cards in full-page capture and PDF (#792) (cef8a468)
+- feat(system): distinguish ADSB.lol routeset and Postgres cache failures (#793) (91b4576a)
+
+</details>
 ## [1.0.418] - 2026-10-11
 
 Changes since v1.0.417.
