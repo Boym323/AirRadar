@@ -12,6 +12,17 @@ const systemSource = readFileSync(new URL("../lib/server/system-status.ts", impo
 const pageSource = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
 const stylesSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
+describe("system page full-page and print rendering", () => {
+  it("does not virtualize cards or stretch paired dashboard columns", () => {
+    expect(stylesSource).not.toContain(".system-page .system-card { content-visibility: auto");
+    expect(stylesSource).toMatch(/\.system-section-grid > \.system-card\s*\{\s*height: auto;/);
+    expect(stylesSource).toContain("@media print");
+    expect(stylesSource).toContain("content-visibility: visible !important");
+    expect(stylesSource).toContain("overflow: visible !important");
+  });
+});
+
+
 function snapshot(readsbOnline = true, provider = "readsb"): StateSnapshot {
   return {
     aircraft: [{

@@ -1862,7 +1862,9 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .system-health-dot.success { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 14%, transparent); }
 .system-health-dot.stale, .system-health-dot.warning { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 14%, transparent); }
 .system-health-dot.danger { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }
-.system-page .system-card { content-visibility: auto; contain-intrinsic-size: 160px; }
+/* Keep diagnostic cards fully rendered for full-page screenshots and print/PDF.
+ * content-visibility:auto skipped off-screen content in tall system exports. */
+.system-page .system-card { content-visibility: visible; contain-intrinsic-size: none; }
 .system-page .system-field dd { line-height: 1.35; }
 
 @media (max-width: 820px) {
@@ -7031,7 +7033,8 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 .system-section-grid > .system-card {
-  height: 100%;
+  height: auto;
+  align-self: start;
 }
 
 .system-section .system-card-header h2 {
@@ -7144,3 +7147,26 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-v6-media-item > span { min-width: 0; overflow-wrap: anywhere; }
 .airport-v6-media-item .airport-v6-player { flex: 0 0 100%; min-width: 0; display: grid; gap: var(--space-2); }
 .airport-v6-player :is(iframe, video, audio) { display: block; max-width: 100%; border-radius: var(--radius-md); }
+
+/* Full-page system audit export: no virtualized or stretched blank cards. */
+@media print {
+  .system-page .system-card,
+  .system-page .system-section,
+  .system-page .system-section-grid,
+  .system-page .system-grid {
+    content-visibility: visible !important;
+    contain: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .system-page .system-section-grid,
+  .system-page .system-grid { display: block; }
+  .system-page .system-section,
+  .system-page .system-card { margin-block-end: 12px; }
+  .system-page .system-section-grid > .system-card { break-inside: auto; }
+  .system-page .system-card :is(dd, dt, h2, h3) { overflow-wrap: anywhere; }
+  .system-page .system-jump-nav,
+  .system-page .system-toolbar button { display: none !important; }
+  .system-page { max-width: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
