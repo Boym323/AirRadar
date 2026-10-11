@@ -133,6 +133,48 @@ describe("aircraft state service", () => {
       .toEqual(metadataAircraft.map(() => "/aircraft-icons-tar1090/A320.svg"));
   });
 
+  it("coalesces in-flight local enrichment batches while continuing aircraft polls", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    let releaseFirst!: (value: null) => void;
+    const observed = new Date();
+    const aircraft = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50.2, lon: 14.3, seen: 0, seen_pos: 0 },
+      receiver, observed,
+    );
+    if (!aircraft) throw new Error("missing test aircraft");
+    const getSnapshot = vi.fn(async (): Promise<ProviderSnapshot> => ({
+      aircraft: [{ ...aircraft, lastSeen: new Date().toISOString() }],
+      receiver, fetchedAt: new Date().toISOString(), provider: "coalesce-local",
+    }));
+    const enrichment = new EnrichmentService({
+      aircraftMetadata: { name: "metadata", getMetadata: vi.fn(async () => null) },
+    });
+    const enrich = vi.spyOn(enrichment, "enrich")
+      .mockImplementationOnce(() => new Promise<null>((resolve) => { releaseFirst = resolve; }))
+      .mockResolvedValue(null);
+    const service = new AircraftStateService(
+      { name: "coalesce-local", getSnapshot },
+      enrichment,
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+    );
+    services.push(service);
+    await service.waitForReady();
+    const internal = service as unknown as { refresh: () => Promise<void> };
+    // Optional enrichment can remain blocked while ingest keeps refreshing.
+    expect(enrich).toHaveBeenCalledTimes(1);
+    await internal.refresh();
+    await internal.refresh();
+    expect(getSnapshot.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(enrich).toHaveBeenCalledTimes(1);
+    releaseFirst(null);
+    // Let .finally() clear the in-flight gate.
+    await vi.waitFor(() => expect(enrich).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    await Promise.resolve();
+    await internal.refresh();
+    await vi.waitFor(() => expect(enrich).toHaveBeenCalledTimes(2));
+  });
+
   it("patches network metadata without reapplying network positions", () => {
     vi.useFakeTimers();
     const observedAt = new Date("2026-10-07T12:00:00.000Z");
