@@ -160,4 +160,23 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     await Promise.all([first, second]);
     expect(store.getDiagnostics()).toMatchObject({ active: 0, activeWrites: 0, maxActive: 3 });
   });
+
+  it("does not open the foreground circuit when optional COUNT maintenance fails", async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("synthetic_count_failure"));
+    getPrismaMock.mockReturnValue({
+      raw: { sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }) },
+      runtime: () => ({ query }),
+    });
+    const store = new PostgresRouteCache();
+    await expect(store.get("flight-route:ABC123:CSA123:2026-10-10")).resolves.toBeNull();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(store.getDiagnostics()).toMatchObject({
+      retryAfter: 0, active: 0, failureStreak: 0, failures: 1,
+    });
+    await expect(store.get("flight-route:ABC124:CSA123:2026-10-10")).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(3);
+  });
 });
