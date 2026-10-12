@@ -127,7 +127,8 @@ export class PostgresRouteCache implements RouteCacheStore {
   ): Promise<T> {
     const now = Date.now();
     const recovering = this.retryAfter !== 0 && now >= this.retryAfter;
-    const unavailable = now < this.retryAfter || this.halfOpenProbe || (recovering && this.active > 0);
+    const unavailable = now < this.retryAfter || this.halfOpenProbe
+      || (recovering && (this.active > 0 || kind === "maintenance"));
     const saturated = this.active >= MAX_ACTIVE
       || (kind === "write" && this.activeWrites >= MAX_ACTIVE_WRITES)
       || (kind === "maintenance" && this.active > 0);
@@ -198,7 +199,7 @@ export class PostgresRouteCache implements RouteCacheStore {
         this.halfOpenProbe = false;
       }
       // Reset exponential backoff only after a timely successful call.
-      this.failureStreak = 0;
+      if (recovering || this.retryAfter === 0) this.failureStreak = 0;
       this.syncTelemetry();
       return result;
     } catch (error) {
@@ -259,7 +260,10 @@ export class PostgresRouteCache implements RouteCacheStore {
     const storedAt = BigInt(now);
     const expiresAt = BigInt(now + Math.floor(ttlMs));
     const requestStarted = Date.now();
+    let attempted = false;
+    let timedOut = false;
     const wrote = await this.run(false, async (db) => {
+      attempted = true;
       await db.runtime().execute(db.raw.sql`
         INSERT INTO "public"."routeEnrichmentCache"
           ("cacheKey", "source", "routeJson", "storedAtMs", "expiresAtMs")
@@ -269,8 +273,12 @@ export class PostgresRouteCache implements RouteCacheStore {
             "storedAtMs" = EXCLUDED."storedAtMs", "expiresAtMs" = EXCLUDED."expiresAtMs"
       `.affectedCount().build());
       return true;
-    }, "write");
-    getRouteEnrichmentTelemetry().recordPhase("cacheUpdate", Date.now() - requestStarted, wrote ? "ok" : "error");
+    }, "write", () => { timedOut = true; });
+    // A circuit/concurrency bypass is not a failed SQL write: distinguish it
+    // from a real attempted operation when interpreting soak telemetry.
+    if (attempted) getRouteEnrichmentTelemetry().recordPhase(
+      "cacheUpdate", Date.now() - requestStarted, timedOut ? "timeout" : (wrote ? "ok" : "error"),
+    );
     if (!wrote) return;
     this.stats.writes++;
     getRouteEnrichmentTelemetry().record("dbWrite");
