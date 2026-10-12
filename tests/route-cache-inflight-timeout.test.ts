@@ -69,4 +69,95 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(store.getDiagnostics().active).toBe(0);
   });
+
+  it("admits only one recovery probe after backoff and waits for late SQL to release its slot", async () => {
+    vi.useFakeTimers();
+    let finishSlow!: (rows: []) => void;
+    let finishProbe!: (rows: []) => void;
+    const slow = new Promise<[]>((resolve) => { finishSlow = resolve; });
+    const probe = new Promise<[]>((resolve) => { finishProbe = resolve; });
+    const query = vi.fn().mockImplementationOnce(() => slow).mockImplementationOnce(() => probe);
+    getPrismaMock.mockReturnValue({
+      raw: { sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }) },
+      runtime: () => ({ query }),
+    });
+    const store = new PostgresRouteCache();
+    const key = (n: number) => `flight-route:ABC12${n}:CSA123:2026-10-10`;
+    const first = store.get(key(1));
+    await vi.advanceTimersByTimeAsync(751);
+    await expect(first).resolves.toBeNull();
+    expect(store.getDiagnostics()).toMatchObject({ active: 1, callerTimeouts: 1, failureStreak: 1 });
+
+    await vi.advanceTimersByTimeAsync(30_001);
+    // Expired cooldown must not launch fresh SQL while an older query remains active.
+    await expect(store.get(key(2))).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(1);
+    finishSlow([]);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const recovering = store.get(key(2));
+    await Promise.resolve();
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(store.getDiagnostics()).toMatchObject({ probeAttempts: 1, halfOpenProbe: true });
+    await expect(store.get(key(3))).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(2);
+
+    finishProbe([]);
+    await expect(recovering).resolves.toBeNull();
+    expect(store.getDiagnostics()).toMatchObject({
+      active: 0, probeAttempts: 1, probeFailures: 0, retryAfter: 0, halfOpenProbe: false, failureStreak: 0,
+    });
+  });
+
+  it("backs off repeated recovery failures exponentially without leaking SQL calls", async () => {
+    vi.useFakeTimers();
+    const query = vi.fn(async () => { throw new Error("synthetic_db_error"); });
+    getPrismaMock.mockReturnValue({
+      raw: { sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }) },
+      runtime: () => ({ query }),
+    });
+    const store = new PostgresRouteCache();
+    const key = "flight-route:ABC123:CSA123:2026-10-10";
+    await expect(store.get(key)).resolves.toBeNull();
+    expect(store.getDiagnostics().retryAfter - Date.now()).toBe(30_000);
+    await expect(store.get(key)).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(30_001);
+    await expect(store.get(key)).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(store.getDiagnostics()).toMatchObject({ failureStreak: 2, probeAttempts: 1, probeFailures: 1 });
+    expect(store.getDiagnostics().retryAfter - Date.now()).toBe(60_000);
+  });
+
+  it("reserves foreground query capacity when concurrent cache writes saturate", async () => {
+    let releaseWrites!: () => void;
+    const writes = new Promise<void>((resolve) => { releaseWrites = resolve; });
+    const execute = vi.fn(() => writes);
+    const query = vi.fn(async () => []);
+    getPrismaMock.mockReturnValue({
+      raw: { sql: () => ({
+        returnsRow: () => ({ build: () => ({}) }),
+        affectedCount: () => ({ build: () => ({}) }),
+      }) },
+      runtime: () => ({ execute, query }),
+    });
+    const store = new PostgresRouteCache();
+    const route = {
+      callsign: "CSA123", origin: "LKPR", destination: "LZIB", source: "adsbdb",
+      originAirport: { icaoCode: "LKPR", latitude: 50, longitude: 14 },
+      destinationAirport: { icaoCode: "LZIB", latitude: 48, longitude: 17 },
+    } as Parameters<typeof store.put>[1];
+    const key = (n: number) => `flight-route:ABC12${n}:CSA123:2026-10-10`;
+    const first = store.put(key(1), route, 60_000);
+    const second = store.put(key(2), route, 60_000);
+    await Promise.resolve();
+    await store.put(key(3), route, 60_000);
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(store.getDiagnostics()).toMatchObject({ activeWrites: 2, rejectedConcurrency: 1 });
+    await expect(store.get(key(4))).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(1);
+    releaseWrites();
+    await Promise.all([first, second]);
+    expect(store.getDiagnostics()).toMatchObject({ active: 0, activeWrites: 0, maxActive: 3 });
+  });
 });
