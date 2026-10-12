@@ -263,7 +263,11 @@ export class RouteEnrichmentTelemetry {
     const totals = emptyCounts();
     for (const bucket of buckets) for (const key of ROUTE_METRIC_KEYS) totals[key] += bucket[key];
     const lookups = totals.dbHit + totals.dbMiss;
-    const circuitOpen = this.circuitOpenUntilMs !== null && now < this.circuitOpenUntilMs;
+    // The elapsed cooldown permits ONE probe; it does not close the circuit.
+    // Keep reporting OPEN until that probe succeeds or the DB is unconfigured.
+    const circuitOpen = this.sqlDiagnostics.failureStreak > 0
+      || this.sqlDiagnostics.halfOpenProbe
+      || (this.circuitOpenUntilMs !== null && now < this.circuitOpenUntilMs);
     const circuit = circuitOpen
       ? { ...this.sqlDiagnostics.circuit, state: "open" as const, openDurationMs: this.sqlDiagnostics.circuit.openSince ? Math.max(0, now - Date.parse(this.sqlDiagnostics.circuit.openSince)) : null }
       : { state: "closed" as const, openSince: null, openDurationMs: null };
