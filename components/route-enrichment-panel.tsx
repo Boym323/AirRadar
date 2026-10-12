@@ -91,7 +91,10 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
       </dl></section>
       <section><h3>{labels.diagnosticsTitle}</h3><dl className={styles.metrics}>
         <Metric label={labels.activeSql} value={f(metrics.sql.active)} />
+        <Metric label={labels.activeDbWrites} value={f(metrics.sql.activeWrites)} />
         <Metric label={labels.maxActiveSql} value={f(metrics.sql.maxActive)} />
+        <Metric label={labels.recoveryProbes} value={`${f(metrics.sql.probeAttempts)} / ${f(metrics.sql.probeFailures)}`} />
+        <Metric label={labels.recoveryStreak} value={f(metrics.sql.failureStreak)} />
         <Metric label={labels.rejectedRequests} value={f(metrics.sql.rejected)} />
         <Metric label={labels.callerTimeouts} value={f(metrics.sql.callerTimeouts)} />
         <Metric label={labels.completedAfterTimeout} value={f(metrics.sql.completedAfterCallerTimeout)} />
