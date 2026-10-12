@@ -3610,6 +3610,36 @@ button, input, select, textarea { color-scheme: dark; }
   gap: var(--space-2);
 }
 
+/* Shared page primitives stay readable when a section has both a long
+ * description and controls. Let the content establish the vertical rhythm
+ * instead of allowing the action cluster to squeeze the heading at narrow
+ * widths. */
+@media (max-width: 620px) {
+  .ui-page-header-actions,
+  .ui-section-actions {
+    width: 100%;
+  }
+
+  .ui-page-header-actions {
+    margin-top: var(--space-3);
+  }
+
+  .ui-page-header-actions > *,
+  .ui-section-actions > * {
+    max-width: 100%;
+  }
+
+  .ui-section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .ui-section-actions {
+    justify-content: flex-start;
+  }
+}
+
 .ui-metric-card {
   min-width: 0;
   padding: var(--space-4);

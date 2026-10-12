@@ -73,11 +73,12 @@
 }
 
 .windTabs button {
+  min-height: 36px;
+  padding: .34rem .58rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-elevated);
   color: var(--text-secondary);
-  padding: .34rem .58rem;
   cursor: pointer;
 }
 
@@ -176,6 +177,15 @@
   .reportList,
   .windMetrics {
     grid-template-columns: 1fr;
+  }
+
+  .windTabs {
+    width: 100%;
+  }
+
+  .windTabs button {
+    flex: 1;
+    min-height: var(--control-height-touch);
   }
 }
 
