@@ -95,4 +95,22 @@ describe("route enrichment telemetry", () => {
     }
   });
 
+
+  it("exposes recovery probes, write pressure and half-open circuit separately from SQL call elapsed", () => {
+    const metrics = new RouteEnrichmentTelemetry(null, () => Date.parse("2026-10-12T12:00:00Z"));
+    metrics.setSqlDiagnostics({
+      active: 3, activeWrites: 2, maxActive: 4, rejected: 7,
+      callerTimeouts: 4, completedAfterCallerTimeout: 3,
+      probeAttempts: 2, probeFailures: 1, failureStreak: 2, halfOpenProbe: true,
+      circuit: { state: "open", openSince: "2026-10-12T11:59:00Z", openDurationMs: 60_000 },
+      circuitOpenUntilMs: Date.parse("2026-10-12T12:01:00Z"),
+    });
+    const { sql } = metrics.getSnapshot();
+    expect(sql).toMatchObject({
+      active: 3, activeWrites: 2, maxActive: 4, rejected: 7,
+      probeAttempts: 2, probeFailures: 1, failureStreak: 2, halfOpenProbe: true,
+      circuit: { state: "open" },
+      timing: { measurement: "db_call_elapsed", serverSideOnly: false },
+    });
+  });
 });
