@@ -95,7 +95,10 @@ export class PostgresRouteCache implements RouteCacheStore {
   private syncTelemetry(): void {
     const now = Date.now();
     getRouteEnrichmentTelemetry().setSqlDiagnostics({
-      active: this.active, maxActive: this.stats.maxActive, rejected: this.stats.rejectedConcurrency,
+      active: this.active, activeWrites: this.activeWrites, maxActive: this.stats.maxActive,
+      rejected: this.stats.rejectedConcurrency,
+      probeAttempts: this.stats.probeAttempts, probeFailures: this.stats.probeFailures,
+      failureStreak: this.failureStreak, halfOpenProbe: this.halfOpenProbe,
       callerTimeouts: this.stats.callerTimeouts,
       completedAfterCallerTimeout: this.stats.completedAfterCallerTimeout,
       circuit: {
