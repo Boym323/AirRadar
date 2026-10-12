@@ -158,6 +158,9 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     expect(query).toHaveBeenCalledTimes(1);
     releaseWrites();
     await Promise.all([first, second]);
+    // A successful foreground GET may schedule a best-effort COUNT on the
+    // next microtask. Its independent SQL slot is released asynchronously.
+    await new Promise<void>((resolve) => setImmediate(resolve));
     expect(store.getDiagnostics()).toMatchObject({ active: 0, activeWrites: 0, maxActive: 3 });
   });
 
