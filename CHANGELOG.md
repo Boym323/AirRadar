@@ -17,6 +17,33 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.433] - 2026-10-12
+
+Changes since v1.0.432.
+
+**Features touched:** Navigation Integrity.
+
+### Performance
+
+- Resilient SQL circuit recovery after 12h soak (#838) (ec5d8c72)
+
+### Maintenance
+
+- Sync generated repository metadata (#832) (eb589d23)
+- Bump vite from 8.3.2 to 8.3.4 (3a35f04c)
+- Bump postcss from 8.5.28 to 8.5.29 (e6347474)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#832) (eb589d23)
+- build(deps-dev): bump vite from 8.3.2 to 8.3.4 (3a35f04c)
+- build(deps-dev): bump postcss from 8.5.28 to 8.5.29 (e6347474)
+- perf(route-cache): resilient SQL circuit recovery after 12h soak (#838) (ec5d8c72)
+- Merge pull request #837 from Boym323/dependabot/npm_and_yarn/postcss-8.5.29 (1f5121c4)
+- Merge pull request #834 from Boym323/dependabot/npm_and_yarn/vite-8.3.4 (58d2cb13)
+
+</details>
 ## [1.0.432] - 2026-10-11
 
 Changes since v1.0.431.
