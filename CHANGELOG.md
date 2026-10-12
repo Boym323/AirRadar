@@ -17,6 +17,24 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.434] - 2026-10-12
+
+Changes since v1.0.433.
+
+### Maintenance
+
+- Bump eslint-config-next from 16.3.8 to 16.4.0 (#833) (98159772)
+- Sync generated repository metadata (#839) (d15bad80)
+- Bump eslint from 9.39.5 to 10.12.0 (#835) (3b1edac1)
+
+<details>
+<summary>Technical commits</summary>
+
+- build(deps-dev): bump eslint-config-next from 16.3.8 to 16.4.0 (#833) (98159772)
+- chore(metadata): sync generated repository metadata (#839) (d15bad80)
+- build(deps-dev): bump eslint from 9.39.5 to 10.12.0 (#835) (3b1edac1)
+
+</details>
 ## [1.0.433] - 2026-10-12
 
 Changes since v1.0.432.
