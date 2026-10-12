@@ -10,7 +10,7 @@
   "overrides": {
     "@mapbox/jsonlint-lines-primitives": "2.0.2",
     "deepmerge-ts": "8.0.0",
-    "postcss": "8.5.28",
+    "postcss": "8.5.29",
     "sharp": "0.35.5"
   },
   "scripts": {
@@ -126,7 +126,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.8",
     "playwright": "^1.63.0",
-    "postcss": "8.5.28",
+    "postcss": "8.5.29",
     "prisma": "8.0.0-rc.13",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
