@@ -162,7 +162,10 @@ export class PostgresRouteCache implements RouteCacheStore {
       this.stats.failures++;
       if (recovering) this.stats.probeFailures++;
       getRouteEnrichmentTelemetry().record("dbError");
-      this.openCircuit();
+      // COUNT/prune are optional housekeeping; their failure must not disable
+      // otherwise healthy foreground route-cache reads.
+      if (kind !== "maintenance") this.openCircuit();
+      else this.syncTelemetry();
       return fallback;
     }
     if (!db) {
@@ -218,7 +221,10 @@ export class PostgresRouteCache implements RouteCacheStore {
       this.stats.failures++;
       if (recovering) this.stats.probeFailures++;
       getRouteEnrichmentTelemetry().record("dbError");
-      this.openCircuit();
+      // COUNT/prune are optional housekeeping; their failure must not disable
+      // otherwise healthy foreground route-cache reads.
+      if (kind !== "maintenance") this.openCircuit();
+      else this.syncTelemetry();
       return fallback;
     }
   }
