@@ -42,8 +42,13 @@ export interface RouteEnrichmentSnapshot {
   phases: RoutePhaseDiagnostics;
   sql: {
     active: number;
+    activeWrites: number;
     maxActive: number;
     rejected: number;
+    probeAttempts: number;
+    probeFailures: number;
+    failureStreak: number;
+    halfOpenProbe: boolean;
     callerTimeouts: number;
     completedAfterCallerTimeout: number;
     circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
@@ -117,7 +122,9 @@ export class RouteEnrichmentTelemetry {
   private readonly phaseErrors = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
   private readonly phaseTimeouts = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
   private sqlDiagnostics = {
-    active: 0, maxActive: 0, rejected: 0, callerTimeouts: 0, completedAfterCallerTimeout: 0,
+    active: 0, activeWrites: 0, maxActive: 0, rejected: 0,
+    probeAttempts: 0, probeFailures: 0, failureStreak: 0, halfOpenProbe: false,
+    callerTimeouts: 0, completedAfterCallerTimeout: 0,
     circuit: { state: "closed" as "closed" | "open", openSince: null as string | null, openDurationMs: null as number | null },
   };
   private circuitOpenUntilMs: number | null = null;
@@ -203,12 +210,17 @@ export class RouteEnrichmentTelemetry {
   setSqlDiagnostics(value: {
     active: number; maxActive: number; rejected: number; callerTimeouts: number;
     completedAfterCallerTimeout: number;
+    activeWrites?: number; probeAttempts?: number; probeFailures?: number;
+    failureStreak?: number; halfOpenProbe?: boolean;
     circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
     circuitOpenUntilMs?: number | null;
   }): void {
     this.sqlDiagnostics = {
-      active: Math.max(0, value.active), maxActive: Math.max(0, value.maxActive),
-      rejected: Math.max(0, value.rejected), callerTimeouts: Math.max(0, value.callerTimeouts),
+      active: Math.max(0, value.active), activeWrites: Math.max(0, value.activeWrites ?? 0),
+      maxActive: Math.max(0, value.maxActive), rejected: Math.max(0, value.rejected),
+      probeAttempts: Math.max(0, value.probeAttempts ?? 0), probeFailures: Math.max(0, value.probeFailures ?? 0),
+      failureStreak: Math.max(0, value.failureStreak ?? 0), halfOpenProbe: value.halfOpenProbe ?? false,
+      callerTimeouts: Math.max(0, value.callerTimeouts),
       completedAfterCallerTimeout: Math.max(0, value.completedAfterCallerTimeout),
       circuit: { ...value.circuit },
     };
