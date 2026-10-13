@@ -1610,15 +1610,22 @@ export class AircraftStateService {
     this.atcResolutionInFlight = true;
     const firstResolution = measureRuntimeAsync("atc.resolve", snapshot.aircraft.length, () => this.resolveAtcCore(snapshot));
     this.atcResolutionDrain = (async () => {
-      await firstResolution;
-      this.atcResolutionFirstCallSettled = true;
-      this.atcResolutionInFlight = false;
-      while (this.pendingAtcResolutionSnapshot && !this.shuttingDown) {
+      let resolution = firstResolution;
+      while (true) {
+        try {
+          await resolution;
+        } catch (error) {
+          // A failed optional lookup must release the lane, but the newest
+          // queued snapshot still deserves one bounded attempt.
+          logger.error({ error }, "AirRadar ATC resolution drain failed");
+        }
+        this.atcResolutionFirstCallSettled = true;
+        this.atcResolutionInFlight = false;
+        if (!this.pendingAtcResolutionSnapshot || this.shuttingDown) break;
         const next = this.pendingAtcResolutionSnapshot;
         this.pendingAtcResolutionSnapshot = null;
         this.atcResolutionInFlight = true;
-        await measureRuntimeAsync("atc.resolve", next.aircraft.length, () => this.resolveAtcCore(next));
-        this.atcResolutionInFlight = false;
+        resolution = measureRuntimeAsync("atc.resolve", next.aircraft.length, () => this.resolveAtcCore(next));
       }
     })().finally(() => {
       this.atcResolutionInFlight = false;

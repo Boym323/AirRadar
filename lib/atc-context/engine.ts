@@ -235,15 +235,29 @@ async function rebuildAtcContextDataset(): Promise<PreparedAtcContextDataset | n
   return cachedDataset;
 }
 
-function atcContextDatasetIdentity(
+export function atcContextDatasetIdentity(
   sectors: readonly AtcSector[],
   routeDocuments: readonly AtcContextDataset["routeDocuments"][number][],
 ): string {
-  // Dataset imports update version/timestamps; include the structural keys as
-  // a defensive fallback for providers that do not expose an import version.
-  const sectorIdentity = sectors.map((sector) => [sector.id, sector.validFrom, sector.validTo, sector.lastVerifiedAt, sector.sourceReference].join("|")).join(";");
-  const routeIdentity = routeDocuments.map((document) => [document.source.reference, document.source.effectiveDate, document.source.lastVerifiedAt, document.counts.segments, document.counts.points].join("|")).join(";");
-  return `${sectorIdentity}#${routeIdentity}`;
+  // This runs only at the bounded dataset refresh boundary, never per
+  // aircraft lookup. Include geometry and route payloads so an importer that
+  // keeps metadata/timestamps unchanged still invalidates the prepared grid.
+  return JSON.stringify({
+    sectors: sectors.map((sector) => ({
+      id: sector.id,
+      name: sector.name,
+      validFrom: sector.validFrom,
+      validTo: sector.validTo,
+      lastVerifiedAt: sector.lastVerifiedAt,
+      sourceReference: sector.sourceReference,
+      polygons: sector.polygons,
+      lowerAltitudeFt: sector.lowerAltitudeFt,
+      upperAltitudeFt: sector.upperAltitudeFt,
+      lowerAltitudeReference: sector.lowerAltitudeReference,
+      upperAltitudeReference: sector.upperAltitudeReference,
+    })),
+    routes: routeDocuments,
+  });
 }
 
 let cachedDataset: PreparedAtcContextDataset | null = null;
