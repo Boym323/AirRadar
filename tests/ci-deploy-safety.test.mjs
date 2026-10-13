@@ -30,3 +30,11 @@ test("release browser throughput remains within the tested bounded scheduler", (
   assert.match(release, /AIRRADAR_VIEWPORT_CONCURRENCY: '3'/);
   assert.match(release, /npm run test:production:all/);
 });
+
+test("production release logs stream live with pipefail and retain flock retry detection", () => {
+  const deploy = job("deploy");
+  assert.match(deploy, /set -Eeuo pipefail/);
+  assert.match(deploy, /--commit "\$\{GITHUB_SHA\}" 2>&1 \| tee "\$\{output\}"/);
+  assert.match(deploy, /if grep -Fq 'Another AirRadar release is already running\.'/);
+  assert.match(deploy, /exit "\$\{result\}"/);
+});
