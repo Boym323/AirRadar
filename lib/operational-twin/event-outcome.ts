@@ -100,7 +100,10 @@ interface TruthPoint {
   onGround: boolean;
 }
 
-type SectorTruthCache = WeakMap<PreparedAtcContextDataset, Map<number, ReadonlySet<string>>>;
+type SectorTruthCache = WeakMap<
+  PreparedAtcContextDataset,
+  WeakMap<Aircraft, Map<number, ReadonlySet<string>>>
+>;
 
 interface WaypointTruthDescriptor {
   kind: "WAYPOINT";
@@ -725,14 +728,20 @@ function altitudeMatches(lowerFt: number | null, upperFt: number | null, altitud
 }
 
 function sectorIdsAtPoint(
+  aircraft: Aircraft,
   point: TruthPoint,
   dataset: PreparedAtcContextDataset,
   cache: SectorTruthCache,
 ): ReadonlySet<string> {
-  let byTimestamp = cache.get(dataset);
+  let byAircraft = cache.get(dataset);
+  if (!byAircraft) {
+    byAircraft = new WeakMap();
+    cache.set(dataset, byAircraft);
+  }
+  let byTimestamp = byAircraft.get(aircraft);
   if (!byTimestamp) {
     byTimestamp = new Map();
-    cache.set(dataset, byTimestamp);
+    byAircraft.set(aircraft, byTimestamp);
   }
   const cached = byTimestamp.get(point.at);
   if (cached) return cached;
@@ -755,7 +764,12 @@ function sectorIdsAtPoint(
   return ids;
 }
 
-function spatialTruthMatches(pending: PendingEventOutcome, point: TruthPoint, sectorCache: SectorTruthCache): boolean {
+function spatialTruthMatches(
+  pending: PendingEventOutcome,
+  aircraft: Aircraft,
+  point: TruthPoint,
+  sectorCache: SectorTruthCache,
+): boolean {
   switch (pending.descriptor.kind) {
     case "WAYPOINT":
       return haversineDistanceKm(
@@ -765,7 +779,7 @@ function spatialTruthMatches(pending: PendingEventOutcome, point: TruthPoint, se
         pending.descriptor.lon,
       ) / KM_PER_NM <= WAYPOINT_RADIUS_NM;
     case "ATC_SECTOR_ENTRY": {
-      return sectorIdsAtPoint(point, pending.descriptor.dataset, sectorCache).has(pending.descriptor.sectorId);
+      return sectorIdsAtPoint(aircraft, point, pending.descriptor.dataset, sectorCache).has(pending.descriptor.sectorId);
     }
     case "SIGMET_INTERSECTION":
       return sigmetValidAt(pending.descriptor.feature, point.at)
@@ -876,7 +890,7 @@ export class OperationalTwinEventOutcomeValidator {
         for (const point of points) {
           if (point.at < pending.earlyAt || point.at > pending.expiresAt) continue;
           this.updateContinuity(pending, point.at);
-          if (spatialTruthMatches(pending, point, sectorCache)) {
+          if (spatialTruthMatches(pending, aircraft, point, sectorCache)) {
             this.resolveObserved(pending, point.at);
             break;
           }

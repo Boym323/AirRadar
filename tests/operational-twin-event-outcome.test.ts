@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Aircraft } from "@/lib/aircraft/types";
-import { prepareAtcContextDataset } from "@/lib/atc-context/engine";
+import { computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import {
   OperationalTwinEventOutcomeValidator,
@@ -9,6 +9,11 @@ import {
   type OperationalTwinSituation,
 } from "@/lib/operational-twin";
 import type { SigmetSnapshot } from "@/lib/weather/types";
+
+vi.mock("@/lib/atc-context/engine", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/atc-context/engine")>();
+  return { ...actual, computeAtcContext: vi.fn(actual.computeAtcContext) };
+});
 
 const baseNow = Date.parse("2026-10-05T10:00:00.000Z");
 
@@ -287,6 +292,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     });
     const predictedAt = baseNow + 5 * 60_000;
     const validator = new OperationalTwinEventOutcomeValidator();
+    vi.mocked(computeAtcContext).mockClear();
     validator.capture(situation([
       event("ATC_SECTOR_ENTRY", 5, { id: `sector:A:${predictedAt}`, title: "A", lat: 49, lon: 17.5 }),
       event("ATC_SECTOR_ENTRY", 5, { id: `sector:B:${predictedAt}`, title: "B", lat: 49, lon: 17.5 }),
@@ -296,6 +302,65 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     validator.observeLocal(new Map([[truth.icaoHex, truth]]), predictedAt + 21_000);
 
     expect(validator.report(new Date(predictedAt + 21_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(2);
+    expect(computeAtcContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not share sector truth between aircraft at the same timestamp", () => {
+    const dataset = prepareAtcContextDataset({
+      sectors: [
+        {
+          id: "WEST",
+          name: "West",
+          atcCallsign: "WEST",
+          airspaceType: "CTA_SECTOR",
+          airspaceClass: "C",
+          polygons: [[[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]]],
+          lowerAltitudeFt: 0,
+          upperAltitudeFt: 40000,
+          frequencies: [], validFrom: null, validTo: null, country: "CZ",
+          source: "test", sourceReference: "test", lastVerifiedAt: new Date(baseNow).toISOString(),
+        },
+        {
+          id: "EAST",
+          name: "East",
+          atcCallsign: "EAST",
+          airspaceType: "CTA_SECTOR",
+          airspaceClass: "C",
+          polygons: [[[18.4, 48.9], [18.6, 48.9], [18.6, 49.1], [18.4, 49.1], [18.4, 48.9]]],
+          lowerAltitudeFt: 0,
+          upperAltitudeFt: 40000,
+          frequencies: [], validFrom: null, validTo: null, country: "CZ",
+          source: "test", sourceReference: "test", lastVerifiedAt: new Date(baseNow).toISOString(),
+        },
+      ],
+      routeDocuments: [],
+    });
+    const predictedAt = baseNow + 5 * 60_000;
+    const west = situation([
+      event("ATC_SECTOR_ENTRY", 5, { id: `sector:WEST:${predictedAt}`, title: "West", lat: 49, lon: 17.5 }),
+    ]);
+    west.aircraft.icaoHex = "WEST01";
+    const east = situation([
+      event("ATC_SECTOR_ENTRY", 5, { id: `sector:EAST:${predictedAt}`, title: "East", lat: 49, lon: 18.5 }),
+    ]);
+    east.aircraft.icaoHex = "EAST01";
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(west, { atcDataset: dataset, sigmets: null, destination: null });
+    validator.capture(east, { atcDataset: dataset, sigmets: null, destination: null });
+    vi.mocked(computeAtcContext).mockClear();
+
+    const westTruth = aircraft(predictedAt + 20_000, 49, 17.5);
+    westTruth.icaoHex = "WEST01";
+    const eastTruth = aircraft(predictedAt + 20_000, 49, 18.5);
+    eastTruth.icaoHex = "EAST01";
+    validator.observeLocal(new Map([
+      [westTruth.icaoHex, westTruth],
+      [eastTruth.icaoHex, eastTruth],
+    ]), predictedAt + 21_000);
+
+    const report = validator.report(new Date(predictedAt + 21_000));
+    expect(report.byType.ATC_SECTOR_ENTRY.observed).toBe(2);
+    expect(computeAtcContext).toHaveBeenCalledTimes(2);
   });
 
   it("validates a predicted SIGMET intersection against captured geometry and LOCAL truth", () => {
