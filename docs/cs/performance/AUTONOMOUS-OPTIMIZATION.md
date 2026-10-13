@@ -17,7 +17,7 @@ záznamy systemd.
 
 Výchozí soak byl pořízen na verzi `1.0.437`, commitu `3596e96e`. Během šetření
 produkce přešla přes `1.0.438`; potvrzená oprava je nyní nasazena jako verze
-`1.0.439`, commit `954fab24`, build z `2026-10-13T12:23:12Z`. Produkce stále
+`1.0.440`, commit `d6831804`, build z `2026-10-13T12:36:09Z`. Produkce stále
 běží jako `airradar.service` v jednom Node procesu s politikou
 `Restart=on-failure` a bez limitu `MemoryMax` pro službu; tlak na paměť a
 zaznamenané OOM nastaly v obklopujícím `system.slice`.
@@ -81,20 +81,22 @@ s body trailu, pokud se časové okno výsledku nemůže překrývat s aktuáln�
 Vyřešení, expirace, kapacitní evikce i reset odstraňují záznamy z obou map a
 zachovávají původní omezený kontrakt fronty.
 
-Změna byla sloučena v PR #847 (`f4bbf269`) a vydána s opravou identity release
-v PR #848 (`954fab24`). CI prošlo úplným Vitest/typecheck gate, prepared
+Změna byla sloučena v PR #847 (`f4bbf269`) a vydána s opravami identity release
+v PR #848 (`954fab24`) a #851 (`d6831804`). CI prošlo úplným Vitest/typecheck gate, prepared
 buildem, kritickým runtime smoke testem, produkční browser bránou,
 výkonnostní regresí a CodeQL. Syntetický benchmark event-outcome proběhl jako
 regresní kontrola, ale jeho scénář nebyl použit jako důkaz produkčního zrychlení.
 
-Post-release důkaz v 2026-10-13 14:29 CEST: veřejný health vrátil `200`,
+Post-release důkaz v 2026-10-13 14:42 CEST: veřejný health vrátil `200`,
 databáze i local-beast zdroj byly zdravé, `/api/version` vrátil
-`1.0.439` / `954fab24` / `production`, služba byla aktivní s `NRestarts=0` a
-nový proces měl přibližně 0,7 GiB residentní paměti. Jde o první pozorování po
-restartu, nikoli o důkaz, že otázka úniku je uzavřena. Historický tag
+`1.0.440` / `d6831804` / `production`, služba byla aktivní s `NRestarts=0` a
+nový proces měl přibližně 0,7 GiB residentní paměti. Tag `v1.0.440` ukazuje na
+přesný plný commit artefaktu `d683180489e063164e511bb1e7fd31b3fe1b7399`.
+Jde o první pozorování po restartu, nikoli o důkaz, že otázka úniku je uzavřena.
+Historický tag
 `v1.0.439` ukazuje na `f4bbf269`, protože vznikl prvním automatizovaným
 nasazením před sloučením opravy release identity; záměrně se nepřepisuje.
-Následný PR #851 před přijetím existujícího nebo nově vytvořeného tagu vyřeší a
+PR #851 nyní před přijetím existujícího nebo nově vytvořeného tagu vyřeší a
 ověří cíl z validovaného manifestu artefaktu.
 
 Incident ledger používá stabilní identifikátory `runtime-cpu`,
