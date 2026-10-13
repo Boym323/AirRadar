@@ -74,7 +74,7 @@ function markdown(report) {
       fmt(report.eventLoopWindowP99Ms?.p50) + " / " + fmt(report.eventLoopWindowP99Ms?.p95) +
       " / " + fmt(report.eventLoopWindowP99Ms?.max) + " ms",
     "",
-    "## Route Cache V4",
+    "## Route Cache V4/V5",
     "",
     "- Measured: " + (report.routeCache?.measured ? "yes" : "NOT MEASURED"),
     "- Phase latency P50/P95/P99 (ms): " + JSON.stringify(report.routeCache?.phaseLatencyMs ?? null),
@@ -82,6 +82,11 @@ function markdown(report) {
     "- Circuit OPEN samples/ratio: " + fmt(report.routeCache?.circuitOpenSamples) + " / " + fmt(report.routeCache?.circuitOpenSampleRatio),
     "- DB active max / writes max / rejected max: " + fmt(report.routeCache?.maxActiveDbOperations) + " / " + fmt(report.routeCache?.maxActiveDbWrites) + " / " + fmt(report.routeCache?.maxRejectedConcurrencyCounter),
     "- Caller timeouts delta / completed after timeout delta: " + fmt(report.routeCache?.callerTimeoutsDelta) + " / " + fmt(report.routeCache?.completedAfterCallerTimeoutDelta),
+    "- Timer overshoot (process-local recent sample distributions): " + JSON.stringify(report.routeCache?.phaseLatencyMs?.callerTimeoutOvershoot ?? null),
+    "- Event-loop utilization during timed-out calls, P95% series P50/P95/max: " +
+      fmt(report.routeCache?.eventLoopAtTimeout?.p95Percent?.p50) + " / " +
+      fmt(report.routeCache?.eventLoopAtTimeout?.p95Percent?.p95) + " / " +
+      fmt(report.routeCache?.eventLoopAtTimeout?.p95Percent?.max),
     "- SQL latency scope: " + fmt(report.routeCache?.sqlLatencyMeasurement),
     "",
     "## Retention",
