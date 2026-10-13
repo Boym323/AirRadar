@@ -93,7 +93,8 @@ export async function login(base, token) {
 }
 
 export async function fetchJson(base, path, cookie) {
-  const response = await request(base, path, { headers: { Cookie: cookie } });
+  const headers = cookie ? { Cookie: cookie } : undefined;
+  const response = await request(base, path, headers ? { headers } : {});
   if (!response.ok) throw new Error("Diagnostic request " + path + " HTTP " + response.status);
   return response.json();
 }

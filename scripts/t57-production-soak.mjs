@@ -11,6 +11,7 @@
  * job still leaves evidence.
  */
 import { constants } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, open, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -72,6 +73,16 @@ function markdown(report) {
     "- Completed 60-second event-loop p99 P50/P95/max: " +
       fmt(report.eventLoopWindowP99Ms?.p50) + " / " + fmt(report.eventLoopWindowP99Ms?.p95) +
       " / " + fmt(report.eventLoopWindowP99Ms?.max) + " ms",
+    "",
+    "## Route Cache V4",
+    "",
+    "- Measured: " + (report.routeCache?.measured ? "yes" : "NOT MEASURED"),
+    "- Phase latency P50/P95/P99 (ms): " + JSON.stringify(report.routeCache?.phaseLatencyMs ?? null),
+    "- Counter deltas: " + JSON.stringify(report.routeCache?.countersDelta ?? null),
+    "- Circuit OPEN samples/ratio: " + fmt(report.routeCache?.circuitOpenSamples) + " / " + fmt(report.routeCache?.circuitOpenSampleRatio),
+    "- DB active max / writes max / rejected max: " + fmt(report.routeCache?.maxActiveDbOperations) + " / " + fmt(report.routeCache?.maxActiveDbWrites) + " / " + fmt(report.routeCache?.maxRejectedConcurrencyCounter),
+    "- Caller timeouts delta / completed after timeout delta: " + fmt(report.routeCache?.callerTimeoutsDelta) + " / " + fmt(report.routeCache?.completedAfterCallerTimeoutDelta),
+    "- SQL latency scope: " + fmt(report.routeCache?.sqlLatencyMeasurement),
     "",
     "## Retention",
     "",
@@ -141,6 +152,16 @@ async function collect(base, cookie) {
   return projectT57SoakSample(status, metrics);
 }
 
+async function establishSession(base, token) {
+  // Production may intentionally run with open admin diagnostics. In that
+  // mode the GET is the read-only capability check and no synthetic login is
+  // attempted (the POST endpoint correctly returns 503 when auth is off).
+  const session = await fetchJson(base, "/api/watchlist/session", null);
+  if (session?.configured === false) return null;
+  if (!token) throw new Error("authorization_missing");
+  return login(base, token);
+}
+
 // This check is intentionally also used by --preflight, before any 24h
 // journal exists. The expected SHA is operator-supplied from /api/version.
 export function verifyT57ExpectedCommit(commit, expectedCommit) {
@@ -152,9 +173,8 @@ export function verifyT57ExpectedCommit(commit, expectedCommit) {
 /** Read-only authenticated telemetry preflight; no journal, worker or restart. */
 async function preflight() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
-  if (!token) throw new Error("authorization_missing");
   const base = trustedBase();
-  const cookie = await login(base, token);
+  const cookie = await establishSession(base, token);
   const observation = await collect(base, cookie);
   verifyT57ExpectedCommit(observation.identity.commit, process.env.T57_EXPECTED_COMMIT?.trim());
   return {
@@ -169,7 +189,6 @@ async function preflight() {
 
 async function run() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
-  if (!token) throw new Error("authorization_missing");
   const base = trustedBase();
   const seconds = durationSetting("T57_SECONDS", 86400, 3600, 86400);
   const intervalSeconds = durationSetting("T57_INTERVAL_SECONDS", 60, 30, 120);
@@ -177,7 +196,7 @@ async function run() {
   if (warmupSeconds > seconds / 2) throw new Error("warmup_too_long");
 
   // Preflight: fail closed before creating the output file.
-  let cookie = await login(base, token);
+  let cookie = await establishSession(base, token);
   let authenticatedAt = Date.now();
   let initial = await collect(base, cookie);
   const expectedCommit = process.env.T57_EXPECTED_COMMIT?.trim();
@@ -198,11 +217,15 @@ async function run() {
   const write = async (record) => handle.writeFile(JSON.stringify(record) + "\n");
   let previousIdentity = initial.identity;
   let segment = 1, failures = 0, written = 0;
+  let checkpointValid = 0, checkpointUnavailable = 0, nextCheckpoint = 3600;
+  const measurementId = randomUUID();
   const cursors = new Map();
   const started = performance.now();
   const count = Math.ceil(seconds / intervalSeconds) + 1;
   try {
-    await write({ type: "header", schemaVersion: 1, startedAt: new Date().toISOString(),
+    const startedAt = new Date();
+    await write({ type: "header", schemaVersion: 1, measurementId,
+      startedAt: startedAt.toISOString(), plannedEndAt: new Date(startedAt.getTime() + seconds * 1000).toISOString(),
       seconds, intervalSeconds, warmupSeconds });
     for (let i = 0; i < count && !stopped; i++) {
       const delay = started + i * intervalSeconds * 1000 - performance.now();
@@ -210,7 +233,7 @@ async function run() {
       if (stopped) break;
       try {
         if (Date.now() - authenticatedAt > SESSION_REFRESH_MS) {
-          cookie = await login(base, token);
+          cookie = await establishSession(base, token);
           authenticatedAt = Date.now();
         }
         const observation = i === 0 ? initial : await collect(base, cookie);
@@ -223,10 +246,24 @@ async function run() {
         previousIdentity = identity;
         const sample = newT57Windows({ ...observation.sample, segment }, cursors);
         await write({ type: "sample", value: sample });
-        written++;
+        written++; checkpointValid++;
+        const elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+        if (elapsedSeconds >= nextCheckpoint || (elapsedSeconds >= seconds && nextCheckpoint <= seconds)) {
+          await write({ type: "checkpoint", value: {
+            measurementId, at: new Date().toISOString(), elapsedSeconds,
+            validSamples: checkpointValid, unavailableSamples: checkpointUnavailable,
+            commit: sample.commit, version: sample.version, health: sample.health,
+            aircraftCount: sample.aircraftCount, activeSseClients: sample.activeSseClients,
+            cpuPercent: sample.cpuPercent, rssBytes: sample.rssBytes,
+            routeCache: sample.routeCache,
+          } });
+          while (nextCheckpoint <= elapsedSeconds) nextCheckpoint += 3600;
+          checkpointValid = 0; checkpointUnavailable = 0;
+        }
       } catch {
         if (i === 0) throw new Error("initial_t57_sample_unavailable");
         failures++;
+        checkpointUnavailable++;
         await write({ type: "unavailable", at: new Date().toISOString() });
         // The 8-hour admin cookie may expire or be invalidated; reauthenticate
         // on the next poll without writing credentials or error details.

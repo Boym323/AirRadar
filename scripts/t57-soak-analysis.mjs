@@ -8,6 +8,15 @@ const AUXILIARY_NAMES = [
   "sourcePreferences", "sourcePreferenceMissingSince", "lastHistorySample",
   "predictiveEvaluatedAt", "atcResolutionKeys", "atcShadowPredictionKeys",
 ];
+const ROUTE_METRIC_NAMES = [
+  "ramHit", "dbHit", "dbMiss", "dbWrite", "dbError", "dbBypassed",
+  "adsbdbLookup", "adsblolBatch", "adsblolLookup", "adsblolError",
+  "dbLatencySamples", "dbLatencyTotalMs",
+];
+const ROUTE_PHASE_NAMES = [
+  "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
+  "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
+];
 const safe = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null;
 const stamp = (x) => typeof x === "string" && Number.isFinite(Date.parse(x)) ? x : null;
 const rounded = (x) => x === null ? null : Number(x.toFixed(3));
@@ -91,6 +100,34 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
   const oldSpace = Array.isArray(runtime.v8HeapSpaces)
     ? runtime.v8HeapSpaces.find((s) => s?.name === "old_space") : null;
   const gc = runtime.postMajorGc;
+  const route = status?.routeEnrichment;
+  const routeCache = route && typeof route === "object" ? {
+    enabled: route.enabled === true,
+    windowHours: safe(route.windowHours),
+    buckets: Array.isArray(route.buckets) ? route.buckets.slice(-25).map((bucket) => ({
+      hour: stamp(bucket?.hour),
+      ...Object.fromEntries(ROUTE_METRIC_NAMES.map((name) => [name, safe(bucket?.[name])])),
+    })) : [],
+    totals: Object.fromEntries(ROUTE_METRIC_NAMES.map((name) => [name, safe(route.totals?.[name])])),
+    databaseHitRate: typeof route.databaseHitRate === "number" && Number.isFinite(route.databaseHitRate) ? route.databaseHitRate : null,
+    databaseAverageLatencyMs: safe(route.databaseAverageLatencyMs),
+    phases: Object.fromEntries(ROUTE_PHASE_NAMES.map((name) => [name, route.phases?.[name] ? {
+      measured: route.phases[name].measured === true,
+      count: safe(route.phases[name].count), sampleCount: safe(route.phases[name].sampleCount),
+      errors: safe(route.phases[name].errors), timeouts: safe(route.phases[name].timeouts),
+      p50Ms: safe(route.phases[name].p50Ms), p95Ms: safe(route.phases[name].p95Ms),
+      p99Ms: safe(route.phases[name].p99Ms), maxMs: safe(route.phases[name].maxMs),
+    } : null])),
+    sql: route.sql ? {
+      active: safe(route.sql.active), activeWrites: safe(route.sql.activeWrites),
+      maxActive: safe(route.sql.maxActive), rejected: safe(route.sql.rejected),
+      probeAttempts: safe(route.sql.probeAttempts), probeFailures: safe(route.sql.probeFailures),
+      failureStreak: safe(route.sql.failureStreak), halfOpenProbe: route.sql.halfOpenProbe === true,
+      callerTimeouts: safe(route.sql.callerTimeouts), completedAfterCallerTimeout: safe(route.sql.completedAfterCallerTimeout),
+      circuit: { state: route.sql.circuit?.state === "open" ? "open" : "closed", openSince: stamp(route.sql.circuit?.openSince), openDurationMs: safe(route.sql.circuit?.openDurationMs) },
+      timing: { measurement: "db_call_elapsed", serverSideOnly: false },
+    } : null,
+  } : null;
   return {
     // Identity MUST remain in memory; do not write this object to disk.
     identity: {
@@ -123,6 +160,13 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       },
       eventLoopWindows: windows(runtime.eventLoopLagWindows, "loop"),
       hotPaths,
+      routeCache,
+      health: {
+        application: typeof status.status === "string" ? status.status : null,
+        database: typeof status.database?.status === "string" ? status.database.status : null,
+        receiver: typeof status.receiver?.status === "string" ? status.receiver.status : null,
+        readsb: typeof status.receiver?.readsb?.status === "string" ? status.receiver.readsb.status : null,
+      },
     },
   };
 }
@@ -151,6 +195,11 @@ export function newT57Windows(sample, cursors) {
 
 function series(samples, project) {
   return stats(samples.map(project));
+}
+
+function routeCounterDelta(first, last, name) {
+  const a = first?.routeCache?.totals?.[name], b = last?.routeCache?.totals?.[name];
+  return safe(a) === null || safe(b) === null || b < a ? null : b - a;
 }
 
 export function analyzeT57Soak(records) {
@@ -225,6 +274,21 @@ export function analyzeT57Soak(records) {
     const a = median(firstTen.map(project)), b = median(lastTen.map(project));
     return a === null || b === null ? null : rounded(b - a);
   };
+  const routeSamples = steady.map((r) => r.routeCache).filter(Boolean);
+  const firstRoute = routeSamples[0], lastRoute = routeSamples.at(-1);
+  const routePhase = Object.fromEntries(ROUTE_PHASE_NAMES.map((name) => [name, {
+    measured: routeSamples.some((r) => r.phases?.[name]?.measured === true),
+    p50Ms: series(routeSamples, (r) => r.phases?.[name]?.p50Ms),
+    p95Ms: series(routeSamples, (r) => r.phases?.[name]?.p95Ms),
+    p99Ms: series(routeSamples, (r) => r.phases?.[name]?.p99Ms),
+    maxMs: series(routeSamples, (r) => r.phases?.[name]?.maxMs),
+  }]));
+  const routeOpenSamples = routeSamples.filter((r) => r.sql?.circuit?.state === "open").length;
+  const routeMaxActive = series(routeSamples, (r) => r.sql?.maxActive)?.max ?? null;
+  const routeMaxActiveWrites = series(routeSamples, (r) => r.sql?.activeWrites)?.max ?? null;
+  const routeMaxActiveNow = series(routeSamples, (r) => r.sql?.active)?.max ?? null;
+  const routeMaxRejected = series(routeSamples, (r) => r.sql?.rejected)?.max ?? null;
+  const routeMaxProbe = series(routeSamples, (r) => r.sql?.halfOpenProbe === true ? 1 : 0)?.max ?? null;
   return {
     verdict, stableProcessAndCommit: stable,
     segments: segmentIds.size,
@@ -263,6 +327,28 @@ export function analyzeT57Soak(records) {
       networkTrailPoints: comparison((r) => r.retention?.trails?.network?.points),
     },
     overLimit,
+    routeCache: routeSamples.length === 0 ? {
+      measured: false,
+      reason: "NOT_MEASURED",
+    } : {
+      measured: true,
+      phaseLatencyMs: routePhase,
+      countersDelta: Object.fromEntries(ROUTE_METRIC_NAMES.map((name) => [name, routeCounterDelta(firstRoute, lastRoute, name)])),
+      databaseHitRateLast: lastRoute?.databaseHitRate ?? null,
+      databaseAverageLatencyMsLast: lastRoute?.databaseAverageLatencyMs ?? null,
+      circuitOpenSamples: routeOpenSamples,
+      circuitOpenSampleRatio: steady.length ? routeOpenSamples / steady.length : null,
+      maxActiveDbOperations: routeMaxActive,
+      maxActiveDbWrites: routeMaxActiveWrites,
+      maxObservedActiveDbOperations: routeMaxActiveNow,
+      maxRejectedConcurrencyCounter: routeMaxRejected,
+      maxRecoveryProbeInFlight: routeMaxProbe,
+      callerTimeoutsDelta: routeCounterDelta(firstRoute, lastRoute, "dbError") === null ? null :
+        (lastRoute?.sql?.callerTimeouts ?? 0) - (firstRoute?.sql?.callerTimeouts ?? 0),
+      completedAfterCallerTimeoutDelta: routeSamples.length && firstRoute?.sql && lastRoute?.sql ?
+        (lastRoute.sql.completedAfterCallerTimeout ?? 0) - (firstRoute.sql.completedAfterCallerTimeout ?? 0) : null,
+      sqlLatencyMeasurement: "db_call_elapsed; server-side SQL latency NOT MEASURED",
+    },
     hotPathsByWindowCpuMs: selected,
     caveats: [
       "Continuous clean windows and two major GC observations are required for evidence.",
