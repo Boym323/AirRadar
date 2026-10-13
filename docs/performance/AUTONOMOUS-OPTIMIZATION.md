@@ -121,6 +121,14 @@ merged; it is intentionally not rewritten. PR #851 now makes automated release
 publishing resolve and verify the validated artifact target before accepting an
 existing or newly created tag.
 
+At 2026-10-13 14:43 CEST, the first persisted post-restart sample recorded
+`twin.eventOutcome.local` p95 `0.231 ms`, Operational Twin p95 `0.414 ms`,
+and process RSS `754 MiB`, compared with the affected-segment hot-path p95 of
+about `5.21–5.38 s`. The same sample still showed route/DB degradation
+(`databaseCallP95Ms` `2.54 s`, route circuit open), so the runtime index fix
+addresses the confirmed Twin hot path without claiming to resolve independent
+database/provider pressure. The 24-hour soak remains open.
+
 ## Verification and follow-up
 
 Focused tests cover the health probe, watchdog stale/recent behavior, monitor
