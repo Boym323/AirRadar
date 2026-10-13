@@ -70,7 +70,7 @@ jobs:
           node scripts/changelog.mjs check
       - name: Verify release gate planner
         if: steps.scope.outputs.docs_only != 'true'
-        run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
+        run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
@@ -396,7 +396,7 @@ jobs:
           npm run icons:audit
           npm run changelog:check
       - name: Verify release gate planner
-        run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
+        run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs
       - name: Run release typecheck and verified-preview-aware Vitest
         shell: bash
         env:
