@@ -200,6 +200,37 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(report.decision).toBe("WAIT");
   });
 
+  it("keeps the local-truth index bounded when pending outcomes outlive observations", () => {
+    const validator = new OperationalTwinEventOutcomeValidator();
+    for (let index = 0; index < 200; index += 1) {
+      const current = situation([
+        event("WAYPOINT", 5, {
+          id: `waypoint:VLM-${index}:${new Date(baseNow + index).toISOString()}`,
+          title: `VLM-${index}`,
+          lat: 49 + index / 10_000,
+          lon: 17.5,
+        }),
+      ]);
+      current.aircraft.icaoHex = (0xabc000 + index).toString(16).toUpperCase();
+      validator.capture(current, { atcDataset: null, sigmets: null, destination: null });
+    }
+
+    const internals = validator as unknown as {
+      pending: Map<string, unknown>;
+      pendingByAircraft: Map<string, Set<string>>;
+    };
+    expect(internals.pending.size).toBe(200);
+    expect(internals.pendingByAircraft.size).toBe(200);
+
+    validator.observeLocal(new Map(), baseNow + 60_000);
+    expect(internals.pending.size).toBe(200);
+    expect(internals.pendingByAircraft.size).toBe(200);
+
+    validator.observeLocal(new Map(), baseNow + 14 * 60_000);
+    expect(internals.pending.size).toBe(0);
+    expect(internals.pendingByAircraft.size).toBe(0);
+  });
+
   it("validates a predicted ATC sector entry against published geometry and LOCAL position", () => {
     const dataset = prepareAtcContextDataset({
       sectors: [{
