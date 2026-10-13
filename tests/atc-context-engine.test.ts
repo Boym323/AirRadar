@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
+import { atcContextDatasetIdentity, computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
 import { pointInPolygon } from "@/lib/atc-context/geometry";
 import type { AtcContextDataset } from "@/lib/atc-context/types";
 import type { AtcSector } from "@/lib/atc/types";
@@ -54,6 +54,14 @@ describe("ATC Context Engine", () => {
     expect(result.primaryAirspace?.id).toBe("CZ-TMA");
     expect(diagnostics.atcBboxCandidates).toBe(2);
     expect(diagnostics.atcExactPolygonTests).toBe(2);
+  });
+
+  it("invalidates prepared dataset identity when geometry changes without metadata changes", () => {
+    const original = sector();
+    const moved = sector({ polygons: [[[14.2, 49], [15.2, 49], [15.2, 50], [14.2, 50], [14.2, 49]]] });
+    expect(moved.lastVerifiedAt).toBe(original.lastVerifiedAt);
+    expect(moved.sourceReference).toBe(original.sourceReference);
+    expect(atcContextDatasetIdentity([original], [])).not.toBe(atcContextDatasetIdentity([moved], []));
   });
 
   it("predicts a stable next sector with distance and ETA", () => {

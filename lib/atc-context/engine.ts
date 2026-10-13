@@ -221,10 +221,45 @@ async function rebuildAtcContextDataset(): Promise<PreparedAtcContextDataset | n
   const atc = await getAtcData();
   const routeDocuments = [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()].filter((doc): doc is NonNullable<typeof doc> => doc !== null);
   if (!atc && !routeDocuments.length) return null;
+  const identity = atcContextDatasetIdentity(atc?.sectors ?? [], routeDocuments);
+  // getAtcData() deliberately revalidates the source on its own bounded TTL.
+  // Reuse the expensive owned clone, bboxes and grids when that source version
+  // is unchanged; the 30s freshness check remains the invalidation boundary.
+  if (cachedDataset && cachedDatasetIdentity === identity) {
+    cachedDatasetAt = Date.now();
+    return cachedDataset;
+  }
   cachedDataset = prepareAtcContextDataset({ sectors: atc?.sectors ?? [], routeDocuments });
+  cachedDatasetIdentity = identity;
   cachedDatasetAt = Date.now();
   return cachedDataset;
 }
 
+export function atcContextDatasetIdentity(
+  sectors: readonly AtcSector[],
+  routeDocuments: readonly AtcContextDataset["routeDocuments"][number][],
+): string {
+  // This runs only at the bounded dataset refresh boundary, never per
+  // aircraft lookup. Include geometry and route payloads so an importer that
+  // keeps metadata/timestamps unchanged still invalidates the prepared grid.
+  return JSON.stringify({
+    sectors: sectors.map((sector) => ({
+      id: sector.id,
+      name: sector.name,
+      validFrom: sector.validFrom,
+      validTo: sector.validTo,
+      lastVerifiedAt: sector.lastVerifiedAt,
+      sourceReference: sector.sourceReference,
+      polygons: sector.polygons,
+      lowerAltitudeFt: sector.lowerAltitudeFt,
+      upperAltitudeFt: sector.upperAltitudeFt,
+      lowerAltitudeReference: sector.lowerAltitudeReference,
+      upperAltitudeReference: sector.upperAltitudeReference,
+    })),
+    routes: routeDocuments,
+  });
+}
+
 let cachedDataset: PreparedAtcContextDataset | null = null;
 let cachedDatasetAt = 0;
+let cachedDatasetIdentity: string | null = null;
