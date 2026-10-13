@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import type { FlightRoute } from "@/lib/aircraft/types";
 import { getPrisma } from "@/lib/server/db";
 import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
@@ -66,11 +67,15 @@ export function decodeCachedRoute(json: string, key: string): FlightRoute | null
     return validPersistedRoute(parsed) && routeMatchesCacheKey(key, parsed) ? parsed : null;
   } catch { return null; }
 }
-async function bounded<T>(operation: Promise<T>, onTimeout: () => void): Promise<T> {
+async function bounded<T>(operation: Promise<T>, onTimeout: (lateByMs: number) => void): Promise<T> {
+  const started = performance.now();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([operation, new Promise<never>((_, reject) => {
-      timeout = setTimeout(() => { onTimeout(); reject(new Error("route_db_timeout")); }, TIMEOUT_MS);
+      timeout = setTimeout(() => {
+        onTimeout(Math.max(0, performance.now() - started - TIMEOUT_MS));
+        reject(new Error("route_db_timeout"));
+      }, TIMEOUT_MS);
       timeout.unref?.();
     })]);
   } finally { if (timeout) clearTimeout(timeout); }
@@ -184,21 +189,42 @@ export class PostgresRouteCache implements RouteCacheStore {
     if (kind === "write") this.activeWrites++;
     this.stats.maxActive = Math.max(this.stats.maxActive, this.active);
     this.syncTelemetry();
-    const started = Date.now();
+    const started = performance.now();
+    const eventLoopBaseline = performance.eventLoopUtilization();
     let callerTimedOut = false;
     // DB-call elapsed includes pool acquisition and network delay, not only SQL.
     // A Promise.race timeout is NOT SQL cancellation.
     const operation = Promise.resolve().then(() => query(db));
     const complete = (successful: boolean) => {
-      if (successful) getRouteEnrichmentTelemetry().recordDbLatency(Date.now() - started);
-      if (callerTimedOut) this.stats.completedAfterCallerTimeout++;
+      const elapsedMs = Math.max(0, performance.now() - started);
+      const telemetry = getRouteEnrichmentTelemetry();
+      // Unlike successful DB latency, settlement includes failed calls and
+      // underlying SQL that continues executing after its caller timed out.
+      // It still INCLUDES pool acquisition and network time; it is NOT SQL-only.
+      telemetry.recordPhase("dbCallSettlement", elapsedMs, successful ? "ok" : "error");
+      if (successful) telemetry.recordDbLatency(elapsedMs);
+      if (callerTimedOut) {
+        this.stats.completedAfterCallerTimeout++;
+        telemetry.recordPhase("dbLateSettlement", Math.max(0, elapsedMs - TIMEOUT_MS), successful ? "ok" : "error");
+      }
       this.active--;
       if (kind === "write") this.activeWrites--;
       this.syncTelemetry();
     };
     void operation.then(() => complete(true), () => complete(false));
     try {
-      const result = await bounded(operation, () => { callerTimedOut = true; onTimeout?.(); });
+      const result = await bounded(operation, (lateByMs) => {
+        callerTimedOut = true;
+        onTimeout?.();
+        const telemetry = getRouteEnrichmentTelemetry();
+        telemetry.recordPhase("callerTimeoutOvershoot", lateByMs);
+        // ELU covers all work executed by this process during the wait, not
+        // exclusive CPU for this DB call. Useful alongside timer overshoot to
+        // distinguish a late timer callback from a slow DB response.
+        telemetry.recordTimeoutEventLoopUtilization(
+          performance.eventLoopUtilization(eventLoopBaseline).utilization,
+        );
+      });
       if (recovering) {
         this.retryAfter = 0;
         this.circuitOpenedAt = null;
