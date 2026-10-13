@@ -99,6 +99,14 @@ nasazením před sloučením opravy release identity; záměrně se nepřepisuje
 PR #851 nyní před přijetím existujícího nebo nově vytvořeného tagu vyřeší a
 ověří cíl z validovaného manifestu artefaktu.
 
+V 2026-10-13 14:43 CEST první uložený vzorek po restartu zaznamenal p95
+`twin.eventOutcome.local` `0,231 ms`, p95 Operational Twin `0,414 ms` a RSS
+procesu `754 MiB`, zatímco v postiženém segmentu byl hot path přibližně
+`5,21–5,38 s`. Stejný vzorek stále ukázal degradaci route/DB
+(`databaseCallP95Ms` `2,54 s`, route circuit otevřený), takže oprava indexu řeší
+potvrzený hot path Twin, ale netvrdí, že odstranila nezávislý tlak databáze nebo
+providerů. 24hodinový soak zůstává otevřený.
+
 Incident ledger používá stabilní identifikátory `runtime-cpu`,
 `runtime-event_loop`, `runtime-database_call`, `runtime-route_circuit` a
 `runtime-availability`. V každém vzorku se ukládá jen stav, čas, čítače a
