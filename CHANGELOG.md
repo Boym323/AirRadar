@@ -17,6 +17,41 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.440] - 2026-10-13
+
+Changes since v1.0.439.
+
+### Fixed
+
+- Preserve artifact and tag identity (8b1d7c4c)
+- Preserve artifact and tag identity (#848) (954fab24)
+- Verify automated tag target (247dae1e)
+- Verify automated tag target (#851) (d6831804)
+
+### Documentation
+
+- Record deployed runtime optimization (5700aec2)
+- Note historical release tag mismatch (affc51d0)
+- Record deployed runtime optimization (#850) (304fe38d)
+
+### Maintenance
+
+- Sync generated repository metadata (#849) (3d9fa2db)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(release): preserve artifact and tag identity (8b1d7c4c)
+- Merge remote-tracking branch 'origin/main' into fix/release-identity-20261013 (c796f2b0)
+- fix(release): preserve artifact and tag identity (#848) (954fab24)
+- chore(metadata): sync generated repository metadata (#849) (3d9fa2db)
+- docs(performance): record deployed runtime optimization (5700aec2)
+- fix(release): verify automated tag target (247dae1e)
+- docs(performance): note historical release tag mismatch (affc51d0)
+- docs(performance): record deployed runtime optimization (#850) (304fe38d)
+- fix(release): verify automated tag target (#851) (d6831804)
+
+</details>
 ## [1.0.439] - 2026-10-13
 
 Changes since v1.0.438.
