@@ -19,9 +19,25 @@ All notable changes to AirRadar are documented here.
 
 ## [1.0.438] - 2026-10-13
 
-Changes since v1.0.438.
+Changes since v1.0.437.
 
-No user-facing changes.
+**Features touched:** System Observability.
+
+### Performance
+
+- Add persistent production monitor (#845) (a5110be6)
+
+### Maintenance
+
+- Sync generated repository metadata (#844) (c96b321b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#844) (c96b321b)
+- perf(runtime): add persistent production monitor (#845) (a5110be6)
+
+</details>
 
 ## [1.0.437] - 2026-10-13
 
