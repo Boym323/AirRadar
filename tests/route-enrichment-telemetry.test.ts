@@ -63,6 +63,8 @@ describe("route enrichment telemetry", () => {
     metrics.recordPhase("dbReadSettlement", 15);
     metrics.recordPhase("dbWriteSettlement", 18);
     metrics.recordPhase("dbMaintenanceSettlement", 24, "error");
+    metrics.recordPhase("dbMaintenanceCount", 12);
+    metrics.recordPhase("dbMaintenancePrune", 36, "error");
     const phases = metrics.getSnapshot().phases;
     expect(phases.memoryLookup.p50Ms).toBe(1);
     expect(phases.readThroughLoad.p50Ms).toBe(40);
@@ -71,6 +73,8 @@ describe("route enrichment telemetry", () => {
     expect(phases.dbReadSettlement.p50Ms).toBe(15);
     expect(phases.dbWriteSettlement.p50Ms).toBe(18);
     expect(phases.dbMaintenanceSettlement).toMatchObject({ p50Ms: 24, errors: 1 });
+    expect(phases.dbMaintenanceCount).toMatchObject({ p50Ms: 12, errors: 0 });
+    expect(phases.dbMaintenancePrune).toMatchObject({ p50Ms: 36, errors: 1 });
     expect(phases.memoryLookup.scope).toBe("process-local-recent-samples");
     expect(phases.memoryLookup).toMatchObject({ sampleCapacity: 1_024 });
     expect(phases.dbConnection).toMatchObject({ measured: false, p95Ms: null });

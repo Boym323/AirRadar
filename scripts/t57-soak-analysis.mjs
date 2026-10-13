@@ -17,6 +17,7 @@ const ROUTE_PHASE_NAMES = [
   "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
   "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
   "dbCallSettlement", "dbReadSettlement", "dbWriteSettlement", "dbMaintenanceSettlement",
+  "dbMaintenanceCount", "dbMaintenancePrune",
   "dbLateSettlement", "callerTimeoutOvershoot",
 ];
 const safe = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null;

@@ -22,6 +22,10 @@ Autorizovaný endpoint `/api/system/status` obsahuje
   `phases.dbMaintenanceSettlement` (včetně chyb). Lze tak odlišit čtení,
   zápisy a pomocné COUNT/prune dotazy; souhrnná `dbCallSettlement` zůstává.
   Metriky jsou omezené na proces a neměří čistý SQL čas ani čekání na pool.
+- Agregát údržby je navíc rozdělen na `phases.dbMaintenanceCount` a
+  `phases.dbMaintenancePrune`. Zachovávají stejný rozsah včetně čekání na
+  dokončení a pouze rozlišují volitelný COUNT platných položek od mazání
+  prošlých položek; četnost ani chování operací se nemění.
 - `phases.dbLateSettlement`: doba **nad rámec** 750ms limitu volajícího
   u DB operací dokončených po timeoutu. Timeout volajícího SQL neruší.
 - `phases.callerTimeoutOvershoot`: zpoždění callbacku časovače oproti
