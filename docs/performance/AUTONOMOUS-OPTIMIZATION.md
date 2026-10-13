@@ -113,7 +113,11 @@ with database and local-beast source healthy, `/api/version` returned
 `1.0.439` / `954fab24` / `production`, the service was active with
 `NRestarts=0`, and the new process was approximately 0.7 GiB resident. This is
 an initial post-restart observation, not evidence that the leak question is
-closed.
+closed. The historical tag `v1.0.439` points at `f4bbf269` because it was
+created by the first automated deployment before the release-identity fix
+merged; it is intentionally not rewritten. Follow-up PR #851 makes automated
+release publishing resolve and verify the validated artifact target before
+accepting an existing or newly created tag.
 
 ## Verification and follow-up
 

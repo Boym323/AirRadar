@@ -91,7 +91,11 @@ Post-release důkaz v 2026-10-13 14:29 CEST: veřejný health vrátil `200`,
 databáze i local-beast zdroj byly zdravé, `/api/version` vrátil
 `1.0.439` / `954fab24` / `production`, služba byla aktivní s `NRestarts=0` a
 nový proces měl přibližně 0,7 GiB residentní paměti. Jde o první pozorování po
-restartu, nikoli o důkaz, že otázka úniku je uzavřena.
+restartu, nikoli o důkaz, že otázka úniku je uzavřena. Historický tag
+`v1.0.439` ukazuje na `f4bbf269`, protože vznikl prvním automatizovaným
+nasazením před sloučením opravy release identity; záměrně se nepřepisuje.
+Následný PR #851 před přijetím existujícího nebo nově vytvořeného tagu vyřeší a
+ověří cíl z validovaného manifestu artefaktu.
 
 Incident ledger používá stabilní identifikátory `runtime-cpu`,
 `runtime-event_loop`, `runtime-database_call`, `runtime-route_circuit` a
