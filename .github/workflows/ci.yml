@@ -597,8 +597,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           release_version="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("/tmp/airradar-ci-production-build/manifest.json","utf8")); process.stdout.write(m.version)')"
+          release_target="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("/tmp/airradar-ci-production-build/manifest.json","utf8")); process.stdout.write(m.commit)')"
           release_tag="v${release_version}"
-          RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs
+          RELEASE_TAG="${release_tag}" RELEASE_TARGET="${release_target}" node /var/www/airradar/scripts/create-github-release.mjs
 
       - name: Verify production ATS routes after release
         run: |

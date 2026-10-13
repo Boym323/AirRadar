@@ -92,7 +92,10 @@ fast-forwardable from `origin/main`. During the privileged repository update,
 the release script synchronizes remote release tags into the production
 checkout so post-deploy version resolution sees prior automated releases. After
 production health checks pass, the workflow creates a GitHub Release with
-generated release notes, targeting the exact tested commit. Once the complete
+generated release notes, targeting the exact commit recorded by the validated
+production-build manifest. The publisher resolves the resulting tag and
+fails closed if it points anywhere else; an existing release is reusable only
+when its tag still resolves to that same artifact commit. Once the complete
 main CI workflow succeeds, `.github/workflows/repository-metadata.yml`
 backfills `CHANGELOG.md` from published tags, refreshes generated codebase
 metrics, opens one audit PR from `automation/repository-metadata`, and merges

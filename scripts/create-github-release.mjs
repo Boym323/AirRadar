@@ -49,8 +49,29 @@ export async function createGitHubRelease({
     }
   };
 
+  const tagCommit = async () => {
+    const reference = await github("GET", `/git/ref/tags/${encodeURIComponent(tag)}`);
+    if (reference.object?.type === "commit" && typeof reference.object.sha === "string") {
+      return reference.object.sha;
+    }
+    if (reference.object?.type === "tag" && typeof reference.object.sha === "string") {
+      const annotated = await github("GET", `/git/tags/${encodeURIComponent(reference.object.sha)}`);
+      if (annotated.object?.type === "commit" && typeof annotated.object.sha === "string") return annotated.object.sha;
+    }
+    throw new Error(`GitHub tag ${tag} does not resolve to a commit.`);
+  };
+
+  const verifyTagTarget = async () => {
+    const actual = await tagCommit();
+    if (actual.toLowerCase() !== target.toLowerCase()) {
+      throw new Error(`GitHub tag ${tag} points at ${actual}, expected deployed artifact ${target}. Refusing to accept the release.`);
+    }
+    log(`GitHub tag ${tag} resolves to deployed artifact ${target}.`);
+  };
+
   const existing = await existingRelease();
   if (existing) {
+    await verifyTagTarget();
     log(`GitHub release ${tag} already exists at ${existing.html_url}; leaving it unchanged.`);
     return { status: "existing", release: existing };
   }
@@ -67,6 +88,7 @@ export async function createGitHubRelease({
       name: notes.name || tag,
       body: notes.body || "",
     });
+    await verifyTagTarget();
     log(`Created GitHub release ${release.html_url}`);
     return { status: "created", release };
   } catch (error) {
@@ -74,6 +96,7 @@ export async function createGitHubRelease({
     if (error instanceof GitHubApiError && error.status === 422) {
       const raced = await existingRelease();
       if (raced) {
+        await verifyTagTarget();
         log(`GitHub release ${tag} was created concurrently at ${raced.html_url}; treating it as success.`);
         return { status: "existing", release: raced };
       }
@@ -87,7 +110,7 @@ async function main() {
     repository: process.env.GITHUB_REPOSITORY,
     token: process.env.GITHUB_TOKEN,
     tag: process.env.RELEASE_TAG,
-    target: process.env.GITHUB_SHA,
+    target: process.env.RELEASE_TARGET || process.env.GITHUB_SHA,
   });
 }
 
