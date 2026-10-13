@@ -221,10 +221,31 @@ async function rebuildAtcContextDataset(): Promise<PreparedAtcContextDataset | n
   const atc = await getAtcData();
   const routeDocuments = [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()].filter((doc): doc is NonNullable<typeof doc> => doc !== null);
   if (!atc && !routeDocuments.length) return null;
+  const identity = atcContextDatasetIdentity(atc?.sectors ?? [], routeDocuments);
+  // getAtcData() deliberately revalidates the source on its own bounded TTL.
+  // Reuse the expensive owned clone, bboxes and grids when that source version
+  // is unchanged; the 30s freshness check remains the invalidation boundary.
+  if (cachedDataset && cachedDatasetIdentity === identity) {
+    cachedDatasetAt = Date.now();
+    return cachedDataset;
+  }
   cachedDataset = prepareAtcContextDataset({ sectors: atc?.sectors ?? [], routeDocuments });
+  cachedDatasetIdentity = identity;
   cachedDatasetAt = Date.now();
   return cachedDataset;
 }
 
+function atcContextDatasetIdentity(
+  sectors: readonly AtcSector[],
+  routeDocuments: readonly AtcContextDataset["routeDocuments"][number][],
+): string {
+  // Dataset imports update version/timestamps; include the structural keys as
+  // a defensive fallback for providers that do not expose an import version.
+  const sectorIdentity = sectors.map((sector) => [sector.id, sector.validFrom, sector.validTo, sector.lastVerifiedAt, sector.sourceReference].join("|")).join(";");
+  const routeIdentity = routeDocuments.map((document) => [document.source.reference, document.source.effectiveDate, document.source.lastVerifiedAt, document.counts.segments, document.counts.points].join("|")).join(";");
+  return `${sectorIdentity}#${routeIdentity}`;
+}
+
 let cachedDataset: PreparedAtcContextDataset | null = null;
 let cachedDatasetAt = 0;
+let cachedDatasetIdentity: string | null = null;

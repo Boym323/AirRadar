@@ -151,6 +151,11 @@ function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">):
 }
 
 const OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS = 60_000;
+const ATC_RESOLUTION_BATCH_SIZE = 12;
+
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
 
 export class AircraftStateService {
   private readonly provider: AircraftProvider;
@@ -246,6 +251,10 @@ export class AircraftStateService {
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
   private atcResolutionInFlight = false;
+  /** Latest-wins handoff. A slow resolution never creates a backlog of snapshots. */
+  private pendingAtcResolutionSnapshot: ProviderSnapshot | null = null;
+  private atcResolutionDrain: Promise<void> | null = null;
+  private atcResolutionFirstCallSettled = false;
   private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private lifetimeReceptionRecordLoaded = false;
   private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
@@ -1586,13 +1595,37 @@ export class AircraftStateService {
       this.clearAtcResolutionState();
       return;
     }
-    if (this.atcResolutionInFlight) return;
-    this.atcResolutionInFlight = true;
-    try {
-      await measureRuntimeAsync("atc.resolve", snapshot.aircraft.length, () => this.resolveAtcCore(snapshot));
-    } finally {
-      this.atcResolutionInFlight = false;
+    // Keep only the newest observation. This makes the ATC lane bounded even
+    // when the provider poll interval is shorter than a database lookup.
+    this.pendingAtcResolutionSnapshot = snapshot;
+    // A caller arriving while a lookup is pending only replaces the queued
+    // snapshot. Waiting here would make the normal poller retain promises
+    // behind a slow provider and would also make callers wait for newer work.
+    if (this.atcResolutionDrain) {
+      if (!this.atcResolutionFirstCallSettled) return;
+      await this.atcResolutionDrain;
+      return;
     }
+    this.pendingAtcResolutionSnapshot = null;
+    this.atcResolutionInFlight = true;
+    const firstResolution = measureRuntimeAsync("atc.resolve", snapshot.aircraft.length, () => this.resolveAtcCore(snapshot));
+    this.atcResolutionDrain = (async () => {
+      await firstResolution;
+      this.atcResolutionFirstCallSettled = true;
+      this.atcResolutionInFlight = false;
+      while (this.pendingAtcResolutionSnapshot && !this.shuttingDown) {
+        const next = this.pendingAtcResolutionSnapshot;
+        this.pendingAtcResolutionSnapshot = null;
+        this.atcResolutionInFlight = true;
+        await measureRuntimeAsync("atc.resolve", next.aircraft.length, () => this.resolveAtcCore(next));
+        this.atcResolutionInFlight = false;
+      }
+    })().finally(() => {
+      this.atcResolutionInFlight = false;
+      this.atcResolutionDrain = null;
+      this.atcResolutionFirstCallSettled = false;
+    });
+    await firstResolution;
   }
 
   private async resolveAtcCore(snapshot: ProviderSnapshot): Promise<void> {
@@ -1603,42 +1636,41 @@ export class AircraftStateService {
       const key = atcResolutionKey(incoming);
       return Boolean(key) && this.atcResolutionKeys.get(incoming.icaoHex) !== key;
     });
-    const results = await Promise.all(candidates.map(async (incoming) => {
-      const key = atcResolutionKey(incoming);
-      if (!key || !this.aircraft.has(incoming.icaoHex)) return { incoming, key, assignment: null, resolved: false };
-      this.atcResolutionKeys.set(incoming.icaoHex, key);
-      try {
-        const match = await this.atc.lookup({ latitude: incoming.lat!, longitude: incoming.lon!, altitudeFt: incoming.altitude, observedAt: new Date(snapshot.fetchedAt) });
-        if (!this.aircraft.has(incoming.icaoHex)) {
+    let changed = false;
+    for (let offset = 0; offset < candidates.length; offset += ATC_RESOLUTION_BATCH_SIZE) {
+      const batch = candidates.slice(offset, offset + ATC_RESOLUTION_BATCH_SIZE);
+      const results = await Promise.all(batch.map(async (incoming) => {
+        const key = atcResolutionKey(incoming);
+        if (!key || !this.aircraft.has(incoming.icaoHex)) return { incoming, key, assignment: null, resolved: false };
+        this.atcResolutionKeys.set(incoming.icaoHex, key);
+        try {
+          const match = await this.atc.lookup({ latitude: incoming.lat!, longitude: incoming.lon!, altitudeFt: incoming.altitude, observedAt: new Date(snapshot.fetchedAt) });
+          if (!this.aircraft.has(incoming.icaoHex)) {
+            if (this.atcResolutionKeys.get(incoming.icaoHex) === key) this.atcResolutionKeys.delete(incoming.icaoHex);
+            return { incoming, key, assignment: null, resolved: false };
+          }
+          return { incoming, key, assignment: match ? assignmentFromMatch(match) : null, resolved: true };
+        } catch {
           if (this.atcResolutionKeys.get(incoming.icaoHex) === key) this.atcResolutionKeys.delete(incoming.icaoHex);
+          failures.push(incoming.icaoHex);
           return { incoming, key, assignment: null, resolved: false };
         }
-        return { incoming, key, assignment: match ? assignmentFromMatch(match) : null, resolved: true };
-      } catch {
-        // Do not permanently memoize a transient ATC/database failure. The
-        // next snapshot must be allowed to retry this aircraft.
-        if (this.atcResolutionKeys.get(incoming.icaoHex) === key) this.atcResolutionKeys.delete(incoming.icaoHex);
-        failures.push(incoming.icaoHex);
-        return { incoming, key, assignment: null, resolved: false };
+      }));
+      for (const result of results) {
+        const current = this.aircraft.get(result.incoming.icaoHex);
+        const resolutionKey = result.key;
+        if (!result.resolved || !resolutionKey || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== resolutionKey) continue;
+        const validation = getAtcPredictionValidation();
+        validation.observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
+        void this.evaluateShadowPrediction(current, result.assignment?.sectorId ?? null, resolutionKey);
+        if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
+        this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
+        changed = true;
       }
-    }));
+      if (offset + ATC_RESOLUTION_BATCH_SIZE < candidates.length) await yieldToEventLoop();
+    }
     if (this.shuttingDown) return;
     if (failures.length) logger.error({ failedAircraft: failures.length }, "AirRadar ATC resolution failed");
-    let changed = false;
-    for (const result of results) {
-      const current = this.aircraft.get(result.incoming.icaoHex);
-      // A slower lookup from an older position must never overwrite a newer
-      // result. The coarse key is intentional throttling; a changed key is a
-      // new resolution generation.
-      const resolutionKey = result.key;
-      if (!result.resolved || !resolutionKey || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== resolutionKey) continue;
-      const validation = getAtcPredictionValidation();
-      validation.observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
-      void this.evaluateShadowPrediction(current, result.assignment?.sectorId ?? null, resolutionKey);
-      if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
-      this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
-      changed = true;
-    }
     if (changed && !this.shuttingDown) {
       this.invalidateSnapshotCache();
       this.notify();
