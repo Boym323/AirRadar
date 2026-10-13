@@ -39,3 +39,30 @@ test("release-preview skips duplicated PR validation, not release quality gates"
   assert.match(release, /npm run test:production:all/);
   assert.match(job("deploy"), /needs: \[release-scope, release-validate, release-tests, release-performance\]/);
 });
+
+test("validated PR previews can reduce main gates only after fail-closed trust checks", () => {
+  const scope = job("release-scope");
+  assert.match(scope, /contents: read/);
+  assert.match(scope, /pull-requests: read/);
+  assert.match(scope, /actions: read/);
+  assert.match(scope, /node scripts\/ci-pr-validation-reuse\.mjs/);
+  assert.match(scope, /if: steps\.preview\.outputs\.reuse == 'true'/);
+  assert.match(scope, /validated_preview: \$\{\{ steps\.preview\.outputs\.reuse \}\}/);
+  assert.match(scope, /fast\.browser !== "fast"/);
+  const checks = job("release-tests");
+  assert.match(checks, /if \[\[ "\$AIRRADAR_VALIDATED_PREVIEW" == "true" \]\]/);
+  assert.match(checks, /npm run test:full/);
+  assert.match(checks, /npm run test:targeted -- tests\/aircraft-state\.test\.ts/);
+  assert.match(checks, /npm run typecheck:prepared/);
+  assert.match(job("release-validate"), /npm run test:production:all/);
+  assert.match(job("release-performance"), /npm run benchmark:radar/);
+  assert.match(job("deploy"), /needs: \[release-scope, release-validate, release-tests, release-performance\]/);
+});
+
+test("all PR preview changes are checked relative to the PR base commit", () => {
+  const scope = job("release-scope");
+  assert.match(scope, /PR_BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(scope, /git diff --name-only -z "\$PR_BASE_SHA" HEAD > "\$changes"/);
+  assert.match(scope, /Cannot verify PR base: selecting full release gates/);
+  assert.match(scope, /Cannot verify push base: selecting full release gates/);
+});
