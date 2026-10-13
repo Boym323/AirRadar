@@ -159,6 +159,10 @@ Noční a ručně spouštěný workflow `ci-heavy.yml` nezávisle provádí **ú
    mutaci repozitáře přeskakují; post-CI workflow Repository Metadata doplní
    tagovaný release společně s vygenerovanými metrikami codebase, zatímco
    GitHub Release dál používá poznámky generované GitHubem.
+   Build zapisuje oddělené identity source, release, artefaktu a cíle tagu.
+   U ručního releasu se commit changelogu stává release a artifact identitou;
+   automatizovaný release zachová pro všechny identity přesně připnutý CI
+   commit.
 5. Spustí `npm ci` s lokální cache a bez síťových npm audit/fund kontrol,
    vygeneruje Prisma kontrakt a poté paralelně spustí lint, typecheck a úplnou
    sadu Vitest. Release test používá Vitest `--pool=threads`; všechny testy se
@@ -179,9 +183,12 @@ Noční a ručně spouštěný workflow `ci-heavy.yml` nezávisle provádí **ú
    nikdy nekopíruje.
 9. Krátce zastaví `airradar.service`, atomicky aktivuje dokončený build,
    spustí službu, vyžaduje její aktivní stav, s retry zkontroluje lokální health
-   URL a s retry zkontroluje veřejné health URL. Starý build zůstává zachovaný,
-   dokud neprojdou obě health kontroly.
-10. Teprve po úspěchu všech povinných kontrol vytvoří vyřešený Git tag.
+   URL, s retry zkontroluje veřejné health URL a ověří, že veřejné
+   `/api/version` hlásí očekávanou verzi, commit artefaktu a produkční kanál.
+   Starý build zůstává zachovaný, dokud tyto kontroly neprojdou.
+10. Teprve po úspěchu všech povinných kontrol vytvoří vyřešený Git tag na
+    přesném commitu artefaktu. Existující tag lze znovu použít pouze tehdy,
+    pokud na tento commit již ukazuje; neshodný tag skript odmítne přepsat.
 
 Neúspěšný release po restartu vypíše diagnostiku systemd/journal a
 automaticky nevrací zpět Git kód ani databázové migrace. Obnova musí zohlednit

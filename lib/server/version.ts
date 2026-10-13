@@ -7,6 +7,10 @@ export interface BuildMetadata {
   tag: string;
   commit: string | null;
   shortCommit: string | null;
+  sourceCommit: string | null;
+  releaseCommit: string | null;
+  artifactCommit: string | null;
+  tagTarget: string | null;
   buildTime: string | null;
   channel: string;
 }
@@ -35,6 +39,10 @@ function fallbackMetadata(): BuildMetadata {
     tag: `v${version}`,
     commit,
     shortCommit: commit?.slice(0, 8) ?? null,
+    sourceCommit: commit,
+    releaseCommit: commit,
+    artifactCommit: commit,
+    tagTarget: commit,
     buildTime: null,
     channel: process.env.NODE_ENV === "production" ? "production" : "development",
   };
@@ -47,6 +55,9 @@ export function parseBuildMetadata(value: unknown): BuildMetadata | null {
   if (typeof candidate.tag !== "string" || candidate.tag !== `v${candidate.version}`) return null;
   if (candidate.commit !== null && (typeof candidate.commit !== "string" || !COMMIT_PATTERN.test(candidate.commit))) return null;
   if (candidate.shortCommit !== null && (typeof candidate.shortCommit !== "string" || !COMMIT_PATTERN.test(candidate.shortCommit))) return null;
+  for (const value of [candidate.sourceCommit, candidate.releaseCommit, candidate.artifactCommit, candidate.tagTarget]) {
+    if (value != null && (typeof value !== "string" || !COMMIT_PATTERN.test(value))) return null;
+  }
   if (candidate.buildTime !== null && (typeof candidate.buildTime !== "string" || !Number.isFinite(Date.parse(candidate.buildTime)))) return null;
   if (typeof candidate.channel !== "string" || !CHANNEL_PATTERN.test(candidate.channel)) return null;
   const isReleaseCandidate = candidate.version.includes("-rc.");
@@ -56,6 +67,10 @@ export function parseBuildMetadata(value: unknown): BuildMetadata | null {
     tag: candidate.tag,
     commit: candidate.commit ?? null,
     shortCommit: candidate.shortCommit ?? null,
+    sourceCommit: candidate.sourceCommit ?? candidate.commit ?? null,
+    releaseCommit: candidate.releaseCommit ?? candidate.commit ?? null,
+    artifactCommit: candidate.artifactCommit ?? candidate.commit ?? null,
+    tagTarget: candidate.tagTarget ?? candidate.artifactCommit ?? candidate.commit ?? null,
     buildTime: candidate.buildTime ?? null,
     channel: candidate.channel,
   };

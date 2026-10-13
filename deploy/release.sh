@@ -40,6 +40,10 @@ EXPECTED_COMMIT=""
 PREPARED_BUILD_ROOT=""
 OLD_SHA=""
 NEW_SHA=""
+SOURCE_COMMIT=""
+RELEASE_COMMIT=""
+ARTIFACT_COMMIT=""
+TAG_TARGET=""
 RESTART_ATTEMPTED=0
 SERVICE_STOPPED=0
 ERROR_REPORTED=0
@@ -114,6 +118,10 @@ print_summary() {
   log "Duration: ${duration_seconds}s"
   log "OLD_SHA: ${old_sha}"
   log "NEW_SHA: ${new_sha}"
+  log "SOURCE_COMMIT: ${SOURCE_COMMIT:-<not captured>}"
+  log "RELEASE_COMMIT: ${RELEASE_COMMIT:-<not captured>}"
+  log "ARTIFACT_COMMIT: ${ARTIFACT_COMMIT:-<not captured>}"
+  log "TAG_TARGET: ${TAG_TARGET:-<not captured>}"
 }
 
 show_failure_diagnostics() {
@@ -526,6 +534,7 @@ update_repository() {
   fi
 
   NEW_SHA="$(git_cmd rev-parse HEAD)"
+  SOURCE_COMMIT="${NEW_SHA}"
   if [[ -n "${EXPECTED_COMMIT}" && "${NEW_SHA}" != "${EXPECTED_COMMIT}" ]]; then
     die "Resolved ${DEPLOY_BRANCH} at ${NEW_SHA}, but deployment expected ${EXPECTED_COMMIT}."
   fi
@@ -562,8 +571,15 @@ NODE
     export AIRRADAR_VERSION="${RELEASE_VERSION}"
     export AIRRADAR_TAG="${RELEASE_TAG}"
     export AIRRADAR_COMMIT="${NEW_SHA}"
+    RELEASE_COMMIT="${NEW_SHA}"
+    ARTIFACT_COMMIT="${NEW_SHA}"
+    TAG_TARGET="${NEW_SHA}"
+    export AIRRADAR_SOURCE_COMMIT="${SOURCE_COMMIT}"
+    export AIRRADAR_RELEASE_COMMIT="${RELEASE_COMMIT}"
+    export AIRRADAR_ARTIFACT_COMMIT="${ARTIFACT_COMMIT}"
+    export AIRRADAR_TAG_TARGET="${TAG_TARGET}"
     export AIRRADAR_CHANNEL="production"
-    log "Continuous-deployment metadata: ${RELEASE_VERSION} (${RELEASE_TAG}), commit=${NEW_SHA}"
+    log "Continuous-deployment metadata: ${RELEASE_VERSION} (${RELEASE_TAG}), source=${SOURCE_COMMIT}, artifact=${ARTIFACT_COMMIT}"
     return 0
   fi
 
@@ -579,6 +595,13 @@ NODE
   export AIRRADAR_VERSION="${RELEASE_VERSION}"
   export AIRRADAR_TAG="${RELEASE_TAG}"
   export AIRRADAR_COMMIT="${NEW_SHA}"
+  RELEASE_COMMIT="${NEW_SHA}"
+  ARTIFACT_COMMIT="${NEW_SHA}"
+  TAG_TARGET="${NEW_SHA}"
+  export AIRRADAR_SOURCE_COMMIT="${SOURCE_COMMIT}"
+  export AIRRADAR_RELEASE_COMMIT="${RELEASE_COMMIT}"
+  export AIRRADAR_ARTIFACT_COMMIT="${ARTIFACT_COMMIT}"
+  export AIRRADAR_TAG_TARGET="${TAG_TARGET}"
   export AIRRADAR_CHANNEL="${RELEASE_BUILD_CHANNEL}"
   log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG}), channel=${RELEASE_BUILD_CHANNEL}"
 }
@@ -587,6 +610,12 @@ generate_release_changelog() {
   local release_date
 
   if (( AUTOMATED == 1 )); then
+    RELEASE_COMMIT="${SOURCE_COMMIT:-${NEW_SHA}}"
+    ARTIFACT_COMMIT="${RELEASE_COMMIT}"
+    TAG_TARGET="${ARTIFACT_COMMIT}"
+    export AIRRADAR_RELEASE_COMMIT="${RELEASE_COMMIT}"
+    export AIRRADAR_ARTIFACT_COMMIT="${ARTIFACT_COMMIT}"
+    export AIRRADAR_TAG_TARGET="${TAG_TARGET}"
     log "Continuous deployment; skipping changelog commit to keep ${DEPLOY_BRANCH} fast-forwardable."
     return 0
   fi
@@ -596,6 +625,12 @@ generate_release_changelog() {
   node "${CHANGELOG_SCRIPT}" generate "${RELEASE_VERSION}" "${release_date}"
 
   if git_cmd diff --quiet -- CHANGELOG.md; then
+    RELEASE_COMMIT="${NEW_SHA}"
+    ARTIFACT_COMMIT="${RELEASE_COMMIT}"
+    TAG_TARGET="${ARTIFACT_COMMIT}"
+    export AIRRADAR_RELEASE_COMMIT="${RELEASE_COMMIT}"
+    export AIRRADAR_ARTIFACT_COMMIT="${ARTIFACT_COMMIT}"
+    export AIRRADAR_TAG_TARGET="${TAG_TARGET}"
     log "Changelog unchanged"
     return 0
   fi
@@ -603,7 +638,13 @@ generate_release_changelog() {
   git_cmd add -- CHANGELOG.md
   git_cmd commit -m "docs: update changelog for ${RELEASE_TAG}"
   NEW_SHA="$(git_cmd rev-parse HEAD)"
+  RELEASE_COMMIT="${NEW_SHA}"
+  ARTIFACT_COMMIT="${RELEASE_COMMIT}"
+  TAG_TARGET="${ARTIFACT_COMMIT}"
   export AIRRADAR_COMMIT="${NEW_SHA}"
+  export AIRRADAR_RELEASE_COMMIT="${RELEASE_COMMIT}"
+  export AIRRADAR_ARTIFACT_COMMIT="${ARTIFACT_COMMIT}"
+  export AIRRADAR_TAG_TARGET="${TAG_TARGET}"
   log "Changelog committed at ${NEW_SHA}"
 }
 
@@ -1058,6 +1099,29 @@ check_health_with_retries() {
   return 0
 }
 
+check_deployed_version_identity() {
+  local version_url version_response expected_short
+
+  [[ -n "${RELEASE_VERSION}" && -n "${ARTIFACT_COMMIT}" ]] || die "Release identity is incomplete before deployed version verification."
+  expected_short="${ARTIFACT_COMMIT:0:8}"
+  version_url="${PUBLIC_HEALTH_URL%/api/health}/api/version"
+  log "Checking deployed version identity: ${version_url}"
+  version_response="$(curl --fail --silent --show-error --location --max-time 15 "${version_url}")" || die "Could not read deployed version identity."
+  node - "${RELEASE_VERSION}" "${expected_short}" "${version_response}" <<'NODE'
+const [expectedVersion, expectedCommit, raw] = process.argv.slice(2);
+let value;
+try {
+  value = JSON.parse(raw);
+} catch {
+  throw new Error("deployed /api/version response is not valid JSON");
+}
+if (value.version !== expectedVersion) throw new Error(`deployed version mismatch: ${value.version} != ${expectedVersion}`);
+if (String(value.commit || "").toLowerCase() !== expectedCommit.toLowerCase()) throw new Error(`deployed artifact mismatch: ${value.commit} != ${expectedCommit}`);
+if (value.channel !== "production") throw new Error(`deployed channel mismatch: ${value.channel}`);
+NODE
+  log "Deployed artifact verified: version=${RELEASE_VERSION}, commit=${expected_short}, channel=production"
+}
+
 restart_and_check() {
   log "Restarting ${SERVICE_NAME}.service"
   RESTART_ATTEMPTED=1
@@ -1070,6 +1134,7 @@ restart_and_check() {
   check_static_assets_with_retries "Local" "${LOCAL_HEALTH_URL%/api/health}"
   check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
   check_static_assets_with_retries "Public" "${PUBLIC_HEALTH_URL%/api/health}"
+  check_deployed_version_identity
 }
 
 activate_staged_build_and_check() {
@@ -1105,6 +1170,7 @@ activate_staged_build_and_check() {
   check_static_assets_with_retries "Local" "${LOCAL_HEALTH_URL%/api/health}"
   check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
   check_static_assets_with_retries "Public" "${PUBLIC_HEALTH_URL%/api/health}"
+  check_deployed_version_identity
 
   # Keep exactly one previous complete runtime for an explicitly approved
   # schema-compatible recovery. Never auto-switch old code after DB migration.
@@ -1113,6 +1179,8 @@ activate_staged_build_and_check() {
 
 create_release_tag() {
   local tag_ref="refs/tags/${RELEASE_TAG}"
+  local tag_target="${TAG_TARGET:-${ARTIFACT_COMMIT:-${NEW_SHA}}}"
+  local existing_target
 
   if (( AUTOMATED == 1 )); then
     log "Continuous deployment; no release tag mutation."
@@ -1120,18 +1188,20 @@ create_release_tag() {
   fi
 
   [[ "${RELEASE_TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]] || die "Refusing to create non-canonical release tag: ${RELEASE_TAG}"
-
-  if git_cmd tag --points-at HEAD | awk -v expected="${RELEASE_TAG}" '$0 == expected { found = 1 } END { exit found ? 0 : 1 }'; then
-    log "Release tag already exists on HEAD; reusing ${RELEASE_TAG}"
-    return 0
-  fi
+  [[ "${tag_target}" =~ ^[0-9a-f]{40}$ ]] || die "Refusing to create release tag with invalid target: ${tag_target}"
+  git_cmd cat-file -e "${tag_target}^{commit}" || die "Release tag target is not a commit: ${tag_target}"
 
   if git_cmd show-ref --verify --quiet "${tag_ref}"; then
-    die "Release tag ${RELEASE_TAG} already exists but does not point at HEAD."
+    existing_target="$(git_cmd rev-parse "${RELEASE_TAG}^{commit}")"
+    if [[ "${existing_target}" == "${tag_target}" ]]; then
+      log "Release tag already points at artifact ${tag_target}; reusing ${RELEASE_TAG}"
+      return 0
+    fi
+    die "Release tag ${RELEASE_TAG} already points at ${existing_target}; refusing to rewrite it to ${tag_target}."
   fi
 
-  git_cmd tag "${RELEASE_TAG}" HEAD
-  log "Created release tag: ${RELEASE_TAG}"
+  git_cmd tag "${RELEASE_TAG}" "${tag_target}"
+  log "Created release tag: ${RELEASE_TAG} -> ${tag_target}"
 }
 
 print_dry_run_plan() {

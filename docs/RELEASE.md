@@ -175,6 +175,9 @@ The nightly/manual `ci-heavy.yml` workflow runs the **complete browser/productio
    mutation; the post-CI Repository Metadata workflow backfills the tagged
    release together with generated codebase metrics while the GitHub Release
    continues to use GitHub-generated notes.
+   The build records separate source, release, artifact, and tag-target commit
+   identities. A manual changelog commit becomes the release and artifact
+   identity; automated releases keep the pinned CI commit for all identities.
 5. It runs `npm ci` with the local cache and without npm audit/fund network
    checks and emits the Prisma contract. Manual releases then run lint,
    typecheck, and the full Vitest suite in parallel. Automated releases reuse
@@ -197,9 +200,14 @@ The nightly/manual `ci-heavy.yml` workflow runs the **complete browser/productio
    never copied.
 9. It briefly stops `airradar.service`, atomically activates the completed
    build, starts the service, requires it to be active, checks the local health
-   URL with retries, and checks the public health URL with retries. The old
-   build is retained until both health checks pass.
-10. Only after every required check passes does it create the resolved Git tag.
+   URL with retries, checks the public health URL with retries, and verifies
+   that public `/api/version` reports the expected release version, artifact
+   commit, and production channel. The old build is retained until these
+   checks pass.
+10. Only after every required check passes does it create the resolved Git tag
+    on the exact artifact commit. An existing tag is reusable only when it
+    already points at that commit; the script refuses to rewrite a mismatched
+    tag.
 
 A failed post-restart release prints systemd/journal diagnostics and does not
 automatically roll back Git code or database migrations. Recovery must account
