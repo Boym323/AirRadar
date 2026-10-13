@@ -13,6 +13,30 @@ test("bounded scheduler visits each check once with limited concurrency", async 
   assert.deepEqual(seen.sort((a,b)=>a-b), [0,1,2,3,4,5,6]);
 });
 
+test("three-worker release scheduling never exceeds the bounded limit", async () => {
+  let inFlight = 0;
+  let maximum = 0;
+  let activeExclusive = 0;
+  let maxExclusive = 0;
+  const observed = [];
+  const tasks = Array.from({ length: 12 }, (_, id) => ({ id, exclusive: id % 4 === 0 }));
+  await runBoundedChecks(tasks, 3, async (item) => {
+    inFlight++;
+    maximum = Math.max(maximum, inFlight);
+    if (item.exclusive) {
+      activeExclusive++;
+      maxExclusive = Math.max(maxExclusive, activeExclusive);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 4));
+    observed.push(item.id);
+    if (item.exclusive) activeExclusive--;
+    inFlight--;
+  }, { isExclusive: (item) => item.exclusive });
+  assert.equal(maximum, 3);
+  assert.equal(maxExclusive, 1);
+  assert.deepEqual(observed.sort((a, b) => a - b), tasks.map((x) => x.id));
+});
+
 test("first failure is propagated only after in-flight workers settle", async () => {
   let settled = 0; let started = 0;
   await assert.rejects(
