@@ -37,6 +37,11 @@ export function assessPreviewReuse({ repository, sha, prs, mainCommit, prCommit,
       && run.pull_requests?.some((ref) => ref.number === pr.number
         && ref.head?.sha === pr.head.sha && ref.base?.ref === "main"))
     .sort((a, b) => Date.parse(b.updated_at || b.created_at) - Date.parse(a.updated_at || a.created_at));
+  const codeqlPassed = runs.some((run) => run.conclusion === "success" && run.status === "completed"
+    && run.event === "pull_request" && run.name === "CodeQL"
+    && run.path === ".github/workflows/codeql.yml" && run.head_sha === pr.head.sha
+    && run.pull_requests?.some((ref) => ref.number === pr.number && ref.head?.sha === pr.head.sha));
+  if (!codeqlPassed) return { reusable: false, reason: "CodeQL not green for exact PR head" };
   for (const run of matchingRuns) {
     const jobs = jobsByRun.get(run.id);
     if (!Array.isArray(jobs)) continue;
