@@ -2,7 +2,8 @@
 
 [English version](../../performance/AUTONOMOUS-OPTIMIZATION.md)
 
-Stav: probíhá implementace a release validace. Poslední aktualizace:
+Stav: runtime oprava je nasazena; probíhá post-release soak. Poslední
+aktualizace:
 2026-10-13 (Europe/Prague).
 
 ## Rozsah a důkazy
@@ -14,8 +15,12 @@ odesílán. Analyzátor odmítl zpracování bez autorizovaných diagnostik, pro
 jsou níže uvedená čísla odvozena z omezených vzorků a korelována s lokálními
 záznamy systemd.
 
-Produkce běžela na verzi `1.0.437`, commitu `3596e96e`, v jednom Node procesu.
-Systemd potvrdil tři ukončení OOM killerem s maximem přibližně 1,9 GiB.
+Výchozí soak byl pořízen na verzi `1.0.437`, commitu `3596e96e`. Během šetření
+produkce přešla přes `1.0.438`; potvrzená oprava je nyní nasazena jako verze
+`1.0.439`, commit `954fab24`, build z `2026-10-13T12:23:12Z`. Produkce stále
+běží jako `airradar.service` v jednom Node procesu s politikou
+`Restart=on-failure` a bez limitu `MemoryMax` pro službu; tlak na paměť a
+zaznamenané OOM nastaly v obklopujícím `system.slice`.
 
 ## Základní stav
 
@@ -40,9 +45,10 @@ data, ale produkce stále běžela na `1.0.437` až do tohoto release.
 
 ## Posouzení hlavní příčiny
 
-Potvrzeným selháním je růst paměti až k limitu cgroup a ukončení hlavního
-procesu, spolu s vysokým CPU a zpožděním event loopu. Omezená retenční
-diagnostika nepotvrdila jednu neomezenou mapu nebo trail, proto nebyla
+Potvrzeným selháním je růst paměti do podmínek tlaku cgroup a ukončení hlavního
+procesu, spolu s vysokým CPU a zpožděním event loopu. Samotná service cgroup má
+`MemoryMax=infinity`, takže důkazy neurčují lokální hard limit služby. Omezená
+retenční diagnostika nepotvrdila jednu neomezenou mapu nebo trail, proto nebyla
 provedena spekulativní změna interního algoritmu.
 
 Potvrzenou odstranitelnou režií je minutový watchdog volající plný
@@ -68,6 +74,29 @@ jdoucí okna znamenají critical, tři z pěti degraded a aktuální porušení 
 Monitor neukládá payloady ani tajné údaje a nemůže měnit kód, konfiguraci,
 schéma nebo release.
 
+Hlavní optimalizace hot path je nyní nasazena. Validátor výsledků eventů
+Operational Twin udržuje omezený reverzní index od ICAO hex na ID čekajících
+výsledků, prochází jen letadla z aktuálního lokálního snapshotu a přeskočí práci
+s body trailu, pokud se časové okno výsledku nemůže překrývat s aktuální pravdou.
+Vyřešení, expirace, kapacitní evikce i reset odstraňují záznamy z obou map a
+zachovávají původní omezený kontrakt fronty.
+
+Změna byla sloučena v PR #847 (`f4bbf269`) a vydána s opravou identity release
+v PR #848 (`954fab24`). CI prošlo úplným Vitest/typecheck gate, prepared
+buildem, kritickým runtime smoke testem, produkční browser bránou,
+výkonnostní regresí a CodeQL. Syntetický benchmark event-outcome proběhl jako
+regresní kontrola, ale jeho scénář nebyl použit jako důkaz produkčního zrychlení.
+
+Post-release důkaz v 2026-10-13 14:29 CEST: veřejný health vrátil `200`,
+databáze i local-beast zdroj byly zdravé, `/api/version` vrátil
+`1.0.439` / `954fab24` / `production`, služba byla aktivní s `NRestarts=0` a
+nový proces měl přibližně 0,7 GiB residentní paměti. Jde o první pozorování po
+restartu, nikoli o důkaz, že otázka úniku je uzavřena. Historický tag
+`v1.0.439` ukazuje na `f4bbf269`, protože vznikl prvním automatizovaným
+nasazením před sloučením opravy release identity; záměrně se nepřepisuje.
+Následný PR #851 před přijetím existujícího nebo nově vytvořeného tagu vyřeší a
+ověří cíl z validovaného manifestu artefaktu.
+
 Incident ledger používá stabilní identifikátory `runtime-cpu`,
 `runtime-event_loop`, `runtime-database_call`, `runtime-route_circuit` a
 `runtime-availability`. V každém vzorku se ukládá jen stav, čas, čítače a
@@ -77,11 +106,12 @@ text ani odpověď poskytovatele se neukládá. Historie zůstává omezena na
 
 ## Ověření a další krok
 
-Prošly cílené testy health probe, watchdogu, přechodů incidentů a persistence
-telemetrie; typecheck prochází. Po release je nutný nový soak s kontrolou RSS,
-event loopu, DB settlementu a incident ledgeru. Pokud RSS znovu poroste k limitu,
-dalším krokem bude autorizovaný heap/retainer capture korelovaný s těmito
-agregovanými čítači; monitor heap snapshoty neukládá.
+Prošly cílené testy health probe, watchdogu, přechodů incidentů, persistence
+telemetrie a úklidu omezeného event-outcome indexu. Úplný CI typecheck a Vitest
+gate prošly. Po release je nutný 24hodinový soak s kontrolou RSS, event loopu,
+DB settlementu a incident ledgeru. Pokud RSS znovu poroste do podmínek tlaku
+systémové paměti, dalším krokem bude autorizovaný heap/retainer capture
+korelovaný s těmito agregovanými čítači; monitor heap snapshoty neukládá.
 
 Při této validaci se nesmí zaměnit selhání monitorovacího požadavku za restart
 procesu: dostupnost veřejného endpointu, stáří zdroje, systemd stav, PID a

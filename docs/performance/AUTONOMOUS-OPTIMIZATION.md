@@ -2,7 +2,7 @@
 
 [Česká verze](../cs/performance/AUTONOMOUS-OPTIMIZATION.md)
 
-Status: implementation and release validation in progress. Last updated:
+Status: runtime fix deployed; post-release soak in progress. Last updated:
 2026-10-13 (Europe/Prague).
 
 ## Scope and evidence
@@ -14,10 +14,13 @@ repository or uploaded. The artifact's analyzer correctly refused to process
 the journal without authorized diagnostics, so the figures below are derived
 from the bounded samples and correlated with local systemd evidence.
 
-Production was running version `1.0.437`, commit `3596e96e`, while the working
-tree was at the metadata-only descendant of that release. The production
-service was `airradar.service`, one Node process, with systemd restart policy
-`Restart=on-failure` and a cgroup peak of approximately 1.9 GiB.
+The baseline soak was captured on version `1.0.437`, commit `3596e96e`. During
+the investigation production advanced through `1.0.438`; the confirmed fix is
+now deployed as version `1.0.439`, commit `954fab24`, built at
+`2026-10-13T12:23:12Z`. The production service remains `airradar.service`, one
+Node process, with systemd restart policy `Restart=on-failure` and no service
+`MemoryMax` limit; the enclosing `system.slice` is where memory pressure and
+the recorded OOM kills occurred.
 
 ## Baseline
 
@@ -57,9 +60,11 @@ change is released.
 
 ## Root-cause assessment
 
-Confirmed reliability failure: the single live Node process reached the cgroup
-memory ceiling and was killed, while CPU and event-loop delay were already
-high. Confirmed latency evidence includes multi-second event-loop windows and
+Confirmed reliability failure: the single live Node process reached the
+enclosing systemd/cgroup memory-pressure condition and was killed, while CPU
+and event-loop delay were already high. The service cgroup itself has
+`MemoryMax=infinity`, so the evidence does not identify a service-local hard
+limit. Confirmed latency evidence includes multi-second event-loop windows and
 late route-cache settlements. Bounded retention diagnostics did not identify a
 single unbounded aircraft map or trail as the cause; the underlying allocation
 retainer therefore remains unproven and is not changed speculatively here.
@@ -90,12 +95,37 @@ The systemd watchdog now uses `/api/health?watchdog=1`, a minimal readiness and
 ADSB freshness response. The full status route remains available for
 authorized diagnostics.
 
+The main hot-path optimization is now deployed. The Operational Twin
+event-outcome validator keeps a bounded reverse index from ICAO hex to pending
+outcome IDs, iterates only aircraft present in the current local snapshot, and
+skips trail-point work when the pending time window cannot overlap the current
+truth trail. Resolution, expiry, capacity eviction, and reset remove entries
+from both maps, preserving the existing bounded queue contract.
+
+The change was merged in PR #847 (`f4bbf269`) and released with the identity
+fix in PR #848 (`954fab24`). CI passed the full Vitest/typecheck gate, prepared
+build, critical runtime smoke, production browser gate, performance regression,
+and CodeQL. The synthetic event-outcome benchmark was run as a regression
+check, but its scenario was not treated as proof of a production speedup.
+
+Post-release evidence at 2026-10-13 14:29 CEST: public health returned `200`
+with database and local-beast source healthy, `/api/version` returned
+`1.0.439` / `954fab24` / `production`, the service was active with
+`NRestarts=0`, and the new process was approximately 0.7 GiB resident. This is
+an initial post-restart observation, not evidence that the leak question is
+closed. The historical tag `v1.0.439` points at `f4bbf269` because it was
+created by the first automated deployment before the release-identity fix
+merged; it is intentionally not rewritten. Follow-up PR #851 makes automated
+release publishing resolve and verify the validated artifact target before
+accepting an existing or newly created tag.
+
 ## Verification and follow-up
 
 Focused tests cover the health probe, watchdog stale/recent behavior, monitor
-incident transitions, unavailable samples, and telemetry persistence. Typecheck
-passes. A post-release soak must verify reduced watchdog overhead and must
-recheck memory, event-loop delay, DB settlement, and the incident ledger. If
-RSS still trends toward the cgroup limit, the next investigation is an
-authorized heap/retainer capture correlated with the persisted retention and
-hot-path counters; no heap snapshot is stored by the monitor.
+incident transitions, unavailable samples, telemetry persistence, and bounded
+event-outcome index cleanup. The full CI typecheck and Vitest gate passes. A
+24-hour post-release soak must verify reduced watchdog overhead and recheck
+RSS, event-loop delay, DB settlement, and the incident ledger. If RSS still
+trends toward system memory pressure, the next investigation is an authorized
+heap/retainer capture correlated with the persisted retention and hot-path
+counters; no heap snapshot is stored by the monitor.
