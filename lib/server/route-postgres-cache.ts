@@ -87,6 +87,7 @@ export class PostgresRouteCache implements RouteCacheStore {
   private retryAfter = 0;
   private active = 0;
   private activeWrites = 0;
+  private activeMaintenance = 0;
   private halfOpenProbe = false;
   private failureStreak = 0;
   private lastCleanup = 0;
@@ -138,7 +139,8 @@ export class PostgresRouteCache implements RouteCacheStore {
     const recovering = this.retryAfter !== 0 && now >= this.retryAfter;
     const unavailable = now < this.retryAfter || this.halfOpenProbe
       || (recovering && (this.active > 0 || kind === "maintenance"));
-    const saturated = this.active >= MAX_ACTIVE
+    const saturated = (kind !== "maintenance" && this.activeMaintenance > 0)
+      || this.active >= MAX_ACTIVE
       || (kind === "write" && this.activeWrites >= MAX_ACTIVE_WRITES)
       || (kind === "maintenance" && this.active > 0);
     if (unavailable || saturated) {
@@ -188,6 +190,7 @@ export class PostgresRouteCache implements RouteCacheStore {
     }
     this.active++;
     if (kind === "write") this.activeWrites++;
+    if (kind === "maintenance") this.activeMaintenance++;
     this.stats.maxActive = Math.max(this.stats.maxActive, this.active);
     this.syncTelemetry();
     const started = performance.now();
@@ -222,6 +225,7 @@ export class PostgresRouteCache implements RouteCacheStore {
       }
       this.active--;
       if (kind === "write") this.activeWrites--;
+      if (kind === "maintenance") this.activeMaintenance--;
       this.syncTelemetry();
     };
     void operation.then(() => complete(true), () => complete(false));

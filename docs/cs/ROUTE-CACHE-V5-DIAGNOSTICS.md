@@ -48,6 +48,22 @@ loop a časování výkonnostních hot-paths. U překrývajících se asynchronn
 úseků je `cpuMs` označeno `inclusive-process-overlap`: nejde o exkluzivní
 CPU čas a součet vnořených úseků by byl chybný.
 
+## Potvrzená oprava konfliktu ve V5.8
+
+Produkční měření ukázalo dokončení údržby a zpoždění timeoutu v okamžiku,
+kdy bylo využití celého event loopu 100 %. Samo o sobě nedokazuje, že COUNT
+nebo prune byly synchronním blokátorem. Potvrdilo však chybu v plánování cache:
+údržba při spuštění ověřila, že popředí je nečinné, ale další čtení mohla
+začít ještě během aktivního COUNT/prune. Volitelná údržba tak mohla soupeřit
+o zdroje s popředím Route Cache.
+
+Oprava V5.8 přidává procesní bariéru údržby. COUNT/prune zachovávají stejnou
+četnost i fail-soft chování, ale během aktivní údržby se popřední čtení a zápisy
+obejdou; údržba se zároveň nespustí, pokud už běží popřední operace. Živá cesta
+zůstává beze změny a nemění se timeout, velikost poolu ani limity souběhu Route
+Cache. Regresní test ověřuje, že čekající údržbový dotaz nemůže běžet současně
+s novým popředním čtením.
+
 ## Read-only diagnostika PostgreSQL pro správce
 
 Na důvěryhodném hostu s existujícím **minimálně oprávněným read-only**

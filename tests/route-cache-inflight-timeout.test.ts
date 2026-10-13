@@ -207,4 +207,33 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     await expect(store.get("flight-route:ABC124:CSA123:2026-10-10")).resolves.toBeNull();
     expect(query).toHaveBeenCalledTimes(3);
   });
+
+  it("does not overlap foreground reads with an active maintenance query", async () => {
+    let finishCount!: (rows: []) => void;
+    const count = new Promise<[]>((resolve) => { finishCount = resolve; });
+    const query = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(() => count)
+      .mockResolvedValue([]);
+    getPrismaMock.mockReturnValue({
+      raw: { sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }) },
+      runtime: () => ({ query }),
+    });
+    const store = new PostgresRouteCache();
+
+    await expect(store.get("flight-route:ABC123:CSA123:2026-10-10")).resolves.toBeNull();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(store.getDiagnostics().active).toBe(1);
+
+    await expect(store.get("flight-route:ABC124:CSA123:2026-10-10")).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(store.getDiagnostics().rejectedConcurrency).toBe(1);
+
+    finishCount([]);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(store.getDiagnostics().active).toBe(0);
+    await expect(store.get("flight-route:ABC124:CSA123:2026-10-10")).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(3);
+  });
 });

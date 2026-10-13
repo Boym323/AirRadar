@@ -52,6 +52,24 @@ runtime hot-path timings. The `cpuMs` values in overlapping asynchronous
 scopes are **inclusive-process-overlap**, not exclusive CPU; nested scopes
 must never be summed as independent CPU consumption.
 
+## V5.8 confirmed contention fix
+
+The production evidence showed maintenance settlement and timeout overshoot
+occurring while whole-process event-loop utilization was 100%. The evidence
+does not identify COUNT/prune as the synchronous blocker, but it did confirm a
+route-cache scheduling defect: maintenance checked that foreground work was
+idle only when it started, then foreground reads could enter while COUNT or
+prune was still active. That allowed optional housekeeping to contend with
+foreground route lookups.
+
+The V5.8 fix adds a process-local maintenance barrier. COUNT/prune still run
+with their existing cadence and fail-soft behavior, but foreground reads and
+writes are bypassed while maintenance is active; maintenance is also refused
+when foreground work is already active. This preserves the live path and
+avoids changing the timeout, pool size, or route-cache concurrency limits.
+The regression test verifies that a pending maintenance query cannot overlap a
+new foreground read.
+
 ## Operator read-only PostgreSQL evidence
 
 From a trusted host with an existing **least-privileged read-only**
