@@ -33,6 +33,9 @@ The authenticated `/api/system/status` response includes
 - `sql.eventLoopAtTimeout`: bounded sample of Node.js event-loop utilization
   over each timed-out call's wait interval, in **percent**, not milliseconds.
   This is whole-process utilization, not an exclusive per-request CPU cost.
+- `sql.connectionFailures` counts synchronous client-creation failures only; asynchronous
+  driver connection/pool/network rejections may be recorded as `queryFailures`.
+  A zero connectionFailures counter does **not** exclude network/pool faults.
 - `sql.timing.serverSideSql` and `sql.timing.connectionAcquisition` remain
   `NOT MEASURED` until independently verified instrumentation is available.
 - All distributions are from at most 1,024 **recent process-local**
