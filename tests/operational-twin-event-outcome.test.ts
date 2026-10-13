@@ -105,6 +105,29 @@ function aircraft(at: number, lat: number, lon: number, altitude = 30000): Aircr
   };
 }
 
+function testAtcDataset(id = "TARGET", west = 17.4, east = 17.6) {
+  return prepareAtcContextDataset({
+    sectors: [{
+      id,
+      name: id,
+      atcCallsign: id,
+      airspaceType: "CTA_SECTOR",
+      airspaceClass: "C",
+      polygons: [[[west, 48.9], [east, 48.9], [east, 49.1], [west, 49.1], [west, 48.9]]],
+      lowerAltitudeFt: 0,
+      upperAltitudeFt: 40000,
+      frequencies: [],
+      validFrom: null,
+      validTo: null,
+      country: "CZ",
+      source: "test",
+      sourceReference: "test",
+      lastVerifiedAt: new Date(baseNow).toISOString(),
+    }],
+    routeDocuments: [],
+  });
+}
+
 function event(type: OperationalTwinSituation["events"][number]["type"], atMinutes: number, overrides: Partial<OperationalTwinSituation["events"][number]> = {}) {
   const at = new Date(baseNow + atMinutes * 60_000).toISOString();
   return {
@@ -303,6 +326,126 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
 
     expect(validator.report(new Date(predictedAt + 21_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(2);
     expect(computeAtcContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses ATC truth across repeated snapshots and newly allocated Aircraft objects", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([
+      event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5 }),
+    ]), { atcDataset: dataset, sigmets: null, destination: null });
+    const first = aircraft(baseNow, 49, 18.5);
+    vi.mocked(computeAtcContext).mockClear();
+    validator.observeLocal(new Map([[first.icaoHex, first]]), baseNow + 60_000);
+    const second = { ...first, trail: [...first.trail] };
+    validator.observeLocal(new Map([[second.icaoHex, second]]), baseNow + 120_000);
+    expect(computeAtcContext).toHaveBeenCalledTimes(1);
+    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1, size: 1 });
+  });
+
+  it("does not share same-timestamp truth between different ICAOs", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    const west = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5 })]);
+    const east = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${predictedAt}:east`, lat: 49, lon: 17.5 })]);
+    east.aircraft.icaoHex = "EAST01";
+    validator.capture(west, { atcDataset: dataset, sigmets: null, destination: null });
+    validator.capture(east, { atcDataset: dataset, sigmets: null, destination: null });
+    const westTruth = aircraft(baseNow, 49, 18.5);
+    const eastTruth = { ...aircraft(baseNow, 49, 18.5), icaoHex: "EAST01" };
+    vi.mocked(computeAtcContext).mockClear();
+    validator.observeLocal(new Map([["ABC123", westTruth], ["EAST01", eastTruth]]), baseNow + 60_000);
+    expect(computeAtcContext).toHaveBeenCalledTimes(2);
+    expect(validator.getAtcCacheStats().hits).toBe(0);
+  });
+
+  it("invalidates a same-timestamp cache entry when the position is corrected", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5 })]), { atcDataset: dataset, sigmets: null, destination: null });
+    const wrong = aircraft(baseNow, 49, 18.5);
+    const corrected = aircraft(baseNow, 49, 17.5);
+    vi.mocked(computeAtcContext).mockClear();
+    validator.observeLocal(new Map([[wrong.icaoHex, wrong]]), baseNow + 60_000);
+    validator.observeLocal(new Map([[corrected.icaoHex, corrected]]), baseNow + 120_000);
+    expect(computeAtcContext).toHaveBeenCalledTimes(2);
+    expect(validator.report(new Date(baseNow + 120_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(1);
+  });
+
+  it("uses a new ATC dataset identity instead of an old sector result", () => {
+    const firstDataset = testAtcDataset("FIRST");
+    const secondDataset = testAtcDataset("SECOND", 18.4, 18.6);
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    const first = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:FIRST:${predictedAt}`, lat: 49, lon: 17.5 })]);
+    const second = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:SECOND:${predictedAt}`, lat: 49, lon: 18.5 })]);
+    second.aircraft.icaoHex = "SECOND1";
+    validator.capture(first, { atcDataset: firstDataset, sigmets: null, destination: null });
+    validator.capture(second, { atcDataset: secondDataset, sigmets: null, destination: null });
+    const firstTruth = aircraft(baseNow, 49, 17.5);
+    const secondTruth = { ...aircraft(baseNow, 49, 17.5), icaoHex: "SECOND1" };
+    vi.mocked(computeAtcContext).mockClear();
+    validator.observeLocal(new Map([["ABC123", firstTruth], ["SECOND1", secondTruth]]), baseNow + 60_000);
+    expect(computeAtcContext).toHaveBeenCalledTimes(2);
+    expect(validator.getAtcCacheStats().hits).toBe(0);
+  });
+
+  it("evaluates a newly captured pending event against an existing historical trail", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    const truth = aircraft(baseNow, 49, 17.5);
+    validator.observeLocal(new Map([[truth.icaoHex, truth]]), baseNow + 60_000);
+    validator.capture(situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5 })]), { atcDataset: dataset, sigmets: null, destination: null });
+    validator.observeLocal(new Map([[truth.icaoHex, { ...truth, trail: [...truth.trail] }]]), baseNow + 120_000);
+    expect(validator.report(new Date(baseNow + 120_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(1);
+  });
+
+  it("sorts out-of-order trail points before evaluating continuity and truth", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5 })]), { atcDataset: dataset, sigmets: null, destination: null });
+    const truth = aircraft(baseNow, null as unknown as number, null as unknown as number);
+    truth.lat = null;
+    truth.lon = null;
+    truth.trail = [
+      { recordedAt: new Date(predictedAt + 30_000).toISOString(), lat: 49, lon: 18.5, altitude: 30000, track: 90, groundSpeed: 420 },
+      { recordedAt: new Date(predictedAt - 30_000).toISOString(), lat: 49, lon: 17.5, altitude: 30000, track: 90, groundSpeed: 420 },
+    ];
+    validator.observeLocal(new Map([[truth.icaoHex, truth]]), baseNow + 60_000);
+    expect(validator.report(new Date(baseNow + 60_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(1);
+  });
+
+  it("expires and resets the bounded ATC cache", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 60 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([event("ATC_SECTOR_ENTRY", 60, { id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5 })]), { atcDataset: dataset, sigmets: null, destination: null });
+    const truth = aircraft(predictedAt - 60_000, 49, 18.5);
+    vi.mocked(computeAtcContext).mockClear();
+    validator.observeLocal(new Map([[truth.icaoHex, truth]]), baseNow + 60_000);
+    const ttl = validator.getAtcCacheStats().ttlMs;
+    validator.observeLocal(new Map([[truth.icaoHex, { ...truth, trail: [...truth.trail] }]]), baseNow + ttl + 120_000);
+    expect(validator.getAtcCacheStats().expirations).toBeGreaterThan(0);
+    validator.reset();
+    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 0, misses: 0, size: 0, evictions: 0, expirations: 0 });
+  });
+
+  it("enforces the configured maximum cache capacity", () => {
+    const dataset = testAtcDataset();
+    const validator = new OperationalTwinEventOutcomeValidator({ atcTruthCacheMaxEntries: 2 });
+    for (const [index, icaoHex] of ["A00001", "A00002", "A00003"].entries()) {
+      const current = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${baseNow + 5 * 60_000}:${index}`, lat: 49, lon: 18.5 })]);
+      current.aircraft.icaoHex = icaoHex;
+      validator.capture(current, { atcDataset: dataset, sigmets: null, destination: null });
+      const truth = { ...aircraft(baseNow, 49, 18.5), icaoHex };
+      validator.observeLocal(new Map([[icaoHex, truth]]), baseNow + 60_000 + index);
+    }
+    expect(validator.getAtcCacheStats()).toMatchObject({ size: 2, maxEntries: 2, evictions: 1 });
   });
 
   it("does not share sector truth between aircraft at the same timestamp", () => {

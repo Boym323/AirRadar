@@ -83,6 +83,8 @@ const ARRIVAL_LATE_MS = 15 * 60_000;
 const CONTINUITY_TOLERANCE_MS = 90_000;
 const WAYPOINT_RADIUS_NM = 3;
 const MAX_PENDING = 6_000;
+const ATC_CACHE_TTL_MS = 15 * 60_000;
+const ATC_CACHE_MAX_ENTRIES = 16_384;
 const BUCKET_MS = OPERATIONAL_TWIN_EVENT_OUTCOME_BUCKET_MINUTES * 60_000;
 const WINDOW_MS = OPERATIONAL_TWIN_EVENT_OUTCOME_WINDOW_MINUTES * 60_000;
 const MAX_BUCKETS = Math.ceil(WINDOW_MS / BUCKET_MS) + 2;
@@ -100,10 +102,31 @@ interface TruthPoint {
   onGround: boolean;
 }
 
-type SectorTruthCache = WeakMap<
-  PreparedAtcContextDataset,
-  WeakMap<Aircraft, Map<number, ReadonlySet<string>>>
->;
+interface AtcTruthCacheEntry {
+  dataset: PreparedAtcContextDataset;
+  icaoHex: string;
+  observedAt: number;
+  fingerprint: string;
+  ids: ReadonlySet<string>;
+  lastUsedAt: number;
+}
+
+export interface OperationalTwinAtcCacheStats {
+  hits: number;
+  misses: number;
+  evictions: number;
+  expirations: number;
+  size: number;
+  maxEntries: number;
+  ttlMs: number;
+}
+
+export interface OperationalTwinEventOutcomeValidatorOptions {
+  /** Test/benchmark escape hatch for measuring the uncached baseline. */
+  enableAtcTruthCache?: boolean;
+  /** Keeps capacity tests deterministic without changing the production limit. */
+  atcTruthCacheMaxEntries?: number;
+}
 
 interface WaypointTruthDescriptor {
   kind: "WAYPOINT";
@@ -727,25 +750,22 @@ function altitudeMatches(lowerFt: number | null, upperFt: number | null, altitud
   return true;
 }
 
-function sectorIdsAtPoint(
-  aircraft: Aircraft,
+function atcInputFingerprint(point: TruthPoint): string {
+  return [
+    point.lat,
+    point.lon,
+    point.altitudeFt,
+    point.trackDeg,
+    point.groundSpeedKt,
+    point.verticalRateFpm,
+    point.onGround ? 1 : 0,
+  ].map((value) => value === null ? "null" : String(value)).join("|");
+}
+
+function computeSectorIdsAtPoint(
   point: TruthPoint,
   dataset: PreparedAtcContextDataset,
-  cache: SectorTruthCache,
 ): ReadonlySet<string> {
-  let byAircraft = cache.get(dataset);
-  if (!byAircraft) {
-    byAircraft = new WeakMap();
-    cache.set(dataset, byAircraft);
-  }
-  let byTimestamp = byAircraft.get(aircraft);
-  if (!byTimestamp) {
-    byTimestamp = new Map();
-    byAircraft.set(aircraft, byTimestamp);
-  }
-  const cached = byTimestamp.get(point.at);
-  if (cached) return cached;
-
   const context = computeAtcContext({
     lat: point.lat,
     lon: point.lon,
@@ -759,16 +779,15 @@ function sectorIdsAtPoint(
     timestamp: new Date(point.at).toISOString(),
     onGround: point.onGround,
   }, dataset, new Date(point.at));
-  const ids = new Set(context.currentAirspaces.map((airspace) => airspace.id));
-  byTimestamp.set(point.at, ids);
-  return ids;
+  return new Set(context.currentAirspaces.map((airspace) => airspace.id));
 }
 
 function spatialTruthMatches(
   pending: PendingEventOutcome,
   aircraft: Aircraft,
   point: TruthPoint,
-  sectorCache: SectorTruthCache,
+  atcTruthCache: AtcTruthCache,
+  now: number,
 ): boolean {
   switch (pending.descriptor.kind) {
     case "WAYPOINT":
@@ -779,7 +798,7 @@ function spatialTruthMatches(
         pending.descriptor.lon,
       ) / KM_PER_NM <= WAYPOINT_RADIUS_NM;
     case "ATC_SECTOR_ENTRY": {
-      return sectorIdsAtPoint(aircraft, point, pending.descriptor.dataset, sectorCache).has(pending.descriptor.sectorId);
+      return atcTruthCache.idsAtPoint(aircraft.icaoHex, point, pending.descriptor.dataset, now).has(pending.descriptor.sectorId);
     }
     case "SIGMET_INTERSECTION":
       return sigmetValidAt(pending.descriptor.feature, point.at)
@@ -794,6 +813,106 @@ function spatialTruthMatches(
   }
 }
 
+class AtcTruthCache {
+  private readonly entries = new Map<string, AtcTruthCacheEntry>();
+  private readonly datasetIds = new WeakMap<PreparedAtcContextDataset, number>();
+  private nextDatasetId = 1;
+  private hits = 0;
+  private misses = 0;
+  private evictions = 0;
+  private expirations = 0;
+  private lastCleanupAt = Number.NEGATIVE_INFINITY;
+
+  constructor(
+    private readonly enabled = true,
+    private readonly maxEntries = ATC_CACHE_MAX_ENTRIES,
+  ) {}
+
+  idsAtPoint(icaoHex: string, point: TruthPoint, dataset: PreparedAtcContextDataset, now = Date.now()): ReadonlySet<string> {
+    if (!this.enabled) {
+      this.misses += 1;
+      return computeSectorIdsAtPoint(point, dataset);
+    }
+
+    const datasetId = this.datasetId(dataset);
+    const key = `${datasetId}:${icaoHex}:${point.at}`;
+    const fingerprint = atcInputFingerprint(point);
+    const cached = this.entries.get(key);
+    if (cached && cached.dataset === dataset && cached.fingerprint === fingerprint) {
+      cached.lastUsedAt = now;
+      this.entries.delete(key);
+      this.entries.set(key, cached);
+      this.hits += 1;
+      return cached.ids;
+    }
+
+    this.misses += 1;
+    const entry: AtcTruthCacheEntry = {
+      dataset,
+      icaoHex,
+      observedAt: point.at,
+      fingerprint,
+      ids: computeSectorIdsAtPoint(point, dataset),
+      lastUsedAt: now,
+    };
+    this.entries.set(key, entry);
+    this.enforceCapacity();
+    return entry.ids;
+  }
+
+  beginObservation(now: number): void {
+    if (!this.enabled || now - this.lastCleanupAt < 1_000) return;
+    this.removeExpired(now);
+    this.lastCleanupAt = now;
+  }
+
+  stats(): OperationalTwinAtcCacheStats {
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      evictions: this.evictions,
+      expirations: this.expirations,
+      size: this.entries.size,
+      maxEntries: this.maxEntries,
+      ttlMs: ATC_CACHE_TTL_MS,
+    };
+  }
+
+  clear(): void {
+    this.entries.clear();
+    this.hits = 0;
+    this.misses = 0;
+    this.evictions = 0;
+    this.expirations = 0;
+    this.lastCleanupAt = Number.NEGATIVE_INFINITY;
+  }
+
+  private datasetId(dataset: PreparedAtcContextDataset): number {
+    const existing = this.datasetIds.get(dataset);
+    if (existing) return existing;
+    const id = this.nextDatasetId++;
+    this.datasetIds.set(dataset, id);
+    return id;
+  }
+
+  private removeExpired(now: number): void {
+    for (const [key, entry] of this.entries) {
+      if (now - entry.lastUsedAt <= ATC_CACHE_TTL_MS) continue;
+      this.entries.delete(key);
+      this.expirations += 1;
+    }
+  }
+
+  private enforceCapacity(): void {
+    while (this.entries.size > this.maxEntries) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest === undefined) break;
+      this.entries.delete(oldest);
+      this.evictions += 1;
+    }
+  }
+}
+
 function terminalEvidence(event: FlightIntelligenceEvent): LandingTerminalEvidenceV1 | null {
   const value = event.metadata?.terminalEvidence;
   if (!value || typeof value !== "object") return null;
@@ -801,6 +920,7 @@ function terminalEvidence(event: FlightIntelligenceEvent): LandingTerminalEviden
 }
 
 export class OperationalTwinEventOutcomeValidator {
+  private readonly atcTruthCache: AtcTruthCache;
   private readonly pending = new Map<string, PendingEventOutcome>();
   /**
    * Reverse index for the refresh-driven local truth pass. Pending outcomes
@@ -814,6 +934,14 @@ export class OperationalTwinEventOutcomeValidator {
   private firstObservedAt: number | null = null;
   private duplicateCaptureSkips = 0;
   private capacityEvictions = 0;
+
+  constructor(options: OperationalTwinEventOutcomeValidatorOptions = {}) {
+    this.atcTruthCache = new AtcTruthCache(options.enableAtcTruthCache ?? true, options.atcTruthCacheMaxEntries ?? ATC_CACHE_MAX_ENTRIES);
+  }
+
+  getAtcCacheStats(): OperationalTwinAtcCacheStats {
+    return this.atcTruthCache.stats();
+  }
 
   capture(
     situation: OperationalTwinSituation,
@@ -875,7 +1003,7 @@ export class OperationalTwinEventOutcomeValidator {
 
   observeLocal(local: ReadonlyMap<string, Aircraft>, now = Date.now()): void {
     if (!Number.isFinite(now)) return;
-    const sectorCache: SectorTruthCache = new WeakMap();
+    this.atcTruthCache.beginObservation(now);
     for (const [icaoHex, aircraft] of local) {
       const pendingIds = this.pendingByAircraft.get(icaoHex);
       if (!pendingIds || pendingIds.size === 0) continue;
@@ -890,7 +1018,7 @@ export class OperationalTwinEventOutcomeValidator {
         for (const point of points) {
           if (point.at < pending.earlyAt || point.at > pending.expiresAt) continue;
           this.updateContinuity(pending, point.at);
-          if (spatialTruthMatches(pending, aircraft, point, sectorCache)) {
+          if (spatialTruthMatches(pending, aircraft, point, this.atcTruthCache, now)) {
             this.resolveObserved(pending, point.at);
             break;
           }
@@ -1099,6 +1227,7 @@ export class OperationalTwinEventOutcomeValidator {
     this.firstObservedAt = null;
     this.duplicateCaptureSkips = 0;
     this.capacityEvictions = 0;
+    this.atcTruthCache.clear();
   }
 
   private updateContinuity(pending: PendingEventOutcome, at: number): void {
