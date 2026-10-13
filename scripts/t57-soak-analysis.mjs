@@ -16,6 +16,7 @@ const ROUTE_METRIC_NAMES = [
 const ROUTE_PHASE_NAMES = [
   "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
   "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
+  "dbCallSettlement", "dbLateSettlement", "callerTimeoutOvershoot",
 ];
 const safe = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null;
 const stamp = (x) => typeof x === "string" && Number.isFinite(Date.parse(x)) ? x : null;
@@ -124,6 +125,12 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       probeAttempts: safe(route.sql.probeAttempts), probeFailures: safe(route.sql.probeFailures),
       failureStreak: safe(route.sql.failureStreak), halfOpenProbe: route.sql.halfOpenProbe === true,
       callerTimeouts: safe(route.sql.callerTimeouts), completedAfterCallerTimeout: safe(route.sql.completedAfterCallerTimeout),
+      eventLoopAtTimeout: route.sql.eventLoopAtTimeout ? {
+        sampleCount: safe(route.sql.eventLoopAtTimeout.sampleCount),
+        p50Percent: safe(route.sql.eventLoopAtTimeout.p50Percent),
+        p95Percent: safe(route.sql.eventLoopAtTimeout.p95Percent),
+        p99Percent: safe(route.sql.eventLoopAtTimeout.p99Percent),
+      } : null,
       circuit: { state: route.sql.circuit?.state === "open" ? "open" : "closed", openSince: stamp(route.sql.circuit?.openSince), openDurationMs: safe(route.sql.circuit?.openDurationMs) },
       timing: { measurement: "db_call_elapsed", serverSideOnly: false },
     } : null,
@@ -347,6 +354,13 @@ export function analyzeT57Soak(records) {
         (lastRoute?.sql?.callerTimeouts ?? 0) - (firstRoute?.sql?.callerTimeouts ?? 0),
       completedAfterCallerTimeoutDelta: routeSamples.length && firstRoute?.sql && lastRoute?.sql ?
         (lastRoute.sql.completedAfterCallerTimeout ?? 0) - (firstRoute.sql.completedAfterCallerTimeout ?? 0) : null,
+      eventLoopAtTimeout: {
+        p50Percent: series(routeSamples, (r) => r.sql?.eventLoopAtTimeout?.p50Percent),
+        p95Percent: series(routeSamples, (r) => r.sql?.eventLoopAtTimeout?.p95Percent),
+        p99Percent: series(routeSamples, (r) => r.sql?.eventLoopAtTimeout?.p99Percent),
+        sampleCountMax: series(routeSamples, (r) => r.sql?.eventLoopAtTimeout?.sampleCount)?.max ?? null,
+        scope: "process-local-recent-samples",
+      },
       sqlLatencyMeasurement: "db_call_elapsed; server-side SQL latency NOT MEASURED",
     },
     hotPathsByWindowCpuMs: selected,
