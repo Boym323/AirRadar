@@ -307,8 +307,11 @@ jobs:
         env:
           AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
           PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
-          AIRRADAR_VISUAL_CONCURRENCY: '2'
-          AIRRADAR_VIEWPORT_CONCURRENCY: '2'
+          # The browser scheduler caps parallel checks at 3 and serializes
+          # GPU-exclusive scenarios. The previous value 2 was the release
+          # browser-gate critical path (75 visuals + 14 viewports).
+          AIRRADAR_VISUAL_CONCURRENCY: '3'
+          AIRRADAR_VIEWPORT_CONCURRENCY: '3'
         run: npm run test:production:all
       - name: Upload visual system artifacts
         if: always()
