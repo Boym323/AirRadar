@@ -264,6 +264,40 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(validator.report(new Date(predictedAt + 21_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(1);
   });
 
+  it("shares one ATC truth lookup across sector predictions for the same point", () => {
+    const dataset = prepareAtcContextDataset({
+      sectors: ["A", "B"].map((id) => ({
+        id,
+        name: id,
+        atcCallsign: id,
+        airspaceType: "CTA_SECTOR",
+        airspaceClass: "C",
+        polygons: [[[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]]],
+        lowerAltitudeFt: 0,
+        upperAltitudeFt: 40000,
+        frequencies: [],
+        validFrom: null,
+        validTo: null,
+        country: "CZ",
+        source: "test",
+        sourceReference: "test",
+        lastVerifiedAt: new Date(baseNow).toISOString(),
+      })),
+      routeDocuments: [],
+    });
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([
+      event("ATC_SECTOR_ENTRY", 5, { id: `sector:A:${predictedAt}`, title: "A", lat: 49, lon: 17.5 }),
+      event("ATC_SECTOR_ENTRY", 5, { id: `sector:B:${predictedAt}`, title: "B", lat: 49, lon: 17.5 }),
+    ]), { atcDataset: dataset, sigmets: null, destination: null });
+
+    const truth = aircraft(predictedAt + 20_000, 49, 17.5);
+    validator.observeLocal(new Map([[truth.icaoHex, truth]]), predictedAt + 21_000);
+
+    expect(validator.report(new Date(predictedAt + 21_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(2);
+  });
+
   it("validates a predicted SIGMET intersection against captured geometry and LOCAL truth", () => {
     const predictedAt = baseNow + 5 * 60_000;
     const sigmets: SigmetSnapshot = {
