@@ -18,7 +18,10 @@ jobs:
     # Metadata PRs are validated by the explicit workflow_dispatch run started
     # by repository-metadata.yml. Skipping the duplicate pull_request job keeps
     # its auto-merge from deleting the branch while that event is still queued.
-    if: (github.event_name == 'pull_request' && github.head_ref != 'automation/repository-metadata') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
+    # release-preview already executes full unit/typecheck, the production
+    # browser suite and performance gates. Avoid repeating the fast PR job;
+    # release-tests must retain lint, dependency and static quality checks.
+    if: (github.event_name == 'pull_request' && github.head_ref != 'automation/repository-metadata' && !contains(github.event.pull_request.labels.*.name, 'release-preview')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -342,6 +345,16 @@ jobs:
       - run: npm run prisma:generate
       - name: Verify Prisma migration integrity
         run: npx prisma migration check
+      # Keep these gates authoritative for release-preview PRs even though the
+      # duplicate fast validate job is skipped.
+      - name: Run static quality gates
+        run: |
+          npm run lint
+          npm run features:check
+          npm run docs:check
+          npm run visual:check
+          npm run icons:audit
+          npm run changelog:check
       - name: Verify release gate planner
         run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
       - name: Run release typecheck and full Vitest in parallel
