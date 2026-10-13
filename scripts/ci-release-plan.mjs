@@ -61,7 +61,14 @@ const DOCUMENTATION = [
   /^docs\/metrics\/(?:code-history\.json|code-growth\.svg)$/,
 ];
 const RULES = [
-  { kind: "radar", paths: [/^components\/radar\//, /^lib\/radar\//] },
+  // Pure ATC geometry/context and outcome evaluation affect the radar but
+  // do not change shared UI layouts. Still run radar-specific browser captures
+  // and the FULL performance baseline. Unknown/shared paths remain fail-closed.
+  { kind: "radar", paths: [
+    /^components\/radar\//, /^lib\/radar\//,
+    /^lib\/atc-context\/(?:engine|geometry|handoff|prediction)\.ts$/,
+    /^lib\/operational-twin\/(?:event-outcome|outcome|regional-focus-queue|regional-situation)\.ts$/,
+  ] },
   { kind: "airport", paths: [
     /^app\/airports\//, /^components\/(?:airport[^/]*|airports-[^/]*|live-airport-network[^/]*)\.(?:[cm]?[jt]sx?|css)$/,
     /^components\/airport[^/]*\//,
