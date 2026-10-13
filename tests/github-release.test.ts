@@ -15,7 +15,8 @@ describe("continuous deploy release workflow", () => {
     const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
     const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
     expect(release).toContain("git_cmd fetch --force --prune --prune-tags --tags origin");
-    expect(workflow).toContain('RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs');
+    expect(workflow).toContain('RELEASE_TAG="${release_tag}" RELEASE_TARGET="${release_target}" node /var/www/airradar/scripts/create-github-release.mjs');
+    expect(workflow).toContain('RELEASE_TARGET="${release_target}"');
     expect(workflow).not.toContain('if git rev-parse --verify --quiet "refs/tags/${release_tag}"');
   });
 });
@@ -30,14 +31,15 @@ describe("GitHub release publishing", () => {
   };
 
   it("treats an existing release as success without trying to recreate it", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () =>
-      response(200, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }));
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(response(200, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }))
+      .mockResolvedValueOnce(response(200, { object: { type: "commit", sha: "abc1234" } }));
 
     const result = await createGitHubRelease({ ...base, fetchImpl });
 
     expect(result.status).toBe("existing");
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(fetchImpl.mock.calls[0]?.[1]?.method).toBe("GET");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[1]?.[1]?.method).toBe("GET");
   });
 
   it("creates release notes and a release when the tag has no GitHub Release", async () => {
@@ -45,12 +47,13 @@ describe("GitHub release publishing", () => {
       response(500, { message: "unexpected call" }))
       .mockResolvedValueOnce(response(404, { message: "Not Found" }))
       .mockResolvedValueOnce(response(200, { name: "v1.0.1", body: "notes" }))
-      .mockResolvedValueOnce(response(201, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }));
+      .mockResolvedValueOnce(response(201, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }))
+      .mockResolvedValueOnce(response(200, { object: { type: "commit", sha: "abc1234" } }));
 
     const result = await createGitHubRelease({ ...base, fetchImpl });
 
     expect(result.status).toBe("created");
-    expect(fetchImpl.mock.calls.map((call) => call[1]?.method)).toEqual(["GET", "POST", "POST"]);
+    expect(fetchImpl.mock.calls.map((call) => call[1]?.method)).toEqual(["GET", "POST", "POST", "GET"]);
   });
 
   it("treats a concurrent already-exists race as success after rechecking the release", async () => {
@@ -59,11 +62,20 @@ describe("GitHub release publishing", () => {
       .mockResolvedValueOnce(response(404, { message: "Not Found" }))
       .mockResolvedValueOnce(response(200, { name: "v1.0.1", body: "notes" }))
       .mockResolvedValueOnce(response(422, { message: "Validation Failed" }))
-      .mockResolvedValueOnce(response(200, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }));
+      .mockResolvedValueOnce(response(200, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }))
+      .mockResolvedValueOnce(response(200, { object: { type: "commit", sha: "abc1234" } }));
 
     const result = await createGitHubRelease({ ...base, fetchImpl });
 
     expect(result.status).toBe("existing");
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
+  });
+
+  it("rejects an existing release whose tag points at another commit", async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(response(200, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }))
+      .mockResolvedValueOnce(response(200, { object: { type: "commit", sha: "deadbee" } }));
+
+    await expect(createGitHubRelease({ ...base, fetchImpl })).rejects.toThrow("Refusing to accept the release");
   });
 });

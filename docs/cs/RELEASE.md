@@ -80,8 +80,11 @@ fast-forwardovatelný z `origin/main`. Během privilegované aktualizace
 repozitáře release skript synchronizuje vzdálené release tagy do produkčního
 checkoutu, aby post-deploy rozlišení verze vidělo předchozí automatická
 vydání. Po úspěchu produkčních health kontrol workflow vytvoří GitHub Release
-s vygenerovanými release notes cílený přesně na otestovaný commit. Po úspěchu
-celého main CI workflow `.github/workflows/repository-metadata.yml` doplní
+s vygenerovanými release notes cílený na přesný commit z ověřeného manifestu
+produkčního artefaktu. Publisher vyřeší výsledný tag a při jiném cíli skončí
+chybou; existující release lze znovu použít jen tehdy, pokud jeho tag stále
+ukazuje na stejný commit artefaktu. Po úspěchu celého main CI workflow
+`.github/workflows/repository-metadata.yml` doplní
 `CHANGELOG.md` z publikovaných tagů, obnoví vygenerované metriky codebase,
 otevře jeden audit PR z `automation/repository-metadata` a tento metadata PR
 automaticky sloučí. Metadata-only merge je explicitně vyřazen z produkčního
