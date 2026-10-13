@@ -16,8 +16,8 @@ from the bounded samples and correlated with local systemd evidence.
 
 The baseline soak was captured on version `1.0.437`, commit `3596e96e`. During
 the investigation production advanced through `1.0.438`; the confirmed fix is
-now deployed as version `1.0.439`, commit `954fab24`, built at
-`2026-10-13T12:23:12Z`. The production service remains `airradar.service`, one
+now deployed as version `1.0.440`, commit `d6831804`, built at
+`2026-10-13T12:36:09Z`. The production service remains `airradar.service`, one
 Node process, with systemd restart policy `Restart=on-failure` and no service
 `MemoryMax` limit; the enclosing `system.slice` is where memory pressure and
 the recorded OOM kills occurred.
@@ -102,22 +102,24 @@ skips trail-point work when the pending time window cannot overlap the current
 truth trail. Resolution, expiry, capacity eviction, and reset remove entries
 from both maps, preserving the existing bounded queue contract.
 
-The change was merged in PR #847 (`f4bbf269`) and released with the identity
-fix in PR #848 (`954fab24`). CI passed the full Vitest/typecheck gate, prepared
+The change was merged in PR #847 (`f4bbf269`) and released with identity fixes
+in PRs #848 (`954fab24`) and #851 (`d6831804`). CI passed the full Vitest/typecheck gate, prepared
 build, critical runtime smoke, production browser gate, performance regression,
 and CodeQL. The synthetic event-outcome benchmark was run as a regression
 check, but its scenario was not treated as proof of a production speedup.
 
-Post-release evidence at 2026-10-13 14:29 CEST: public health returned `200`
+Post-release evidence at 2026-10-13 14:42 CEST: public health returned `200`
 with database and local-beast source healthy, `/api/version` returned
-`1.0.439` / `954fab24` / `production`, the service was active with
-`NRestarts=0`, and the new process was approximately 0.7 GiB resident. This is
+`1.0.440` / `d6831804` / `production`, the service was active with
+`NRestarts=0`, and the new process was approximately 0.7 GiB resident. The
+release tag `v1.0.440` resolves to the exact full artifact commit
+`d683180489e063164e511bb1e7fd31b3fe1b7399`. This is
 an initial post-restart observation, not evidence that the leak question is
 closed. The historical tag `v1.0.439` points at `f4bbf269` because it was
 created by the first automated deployment before the release-identity fix
-merged; it is intentionally not rewritten. Follow-up PR #851 makes automated
-release publishing resolve and verify the validated artifact target before
-accepting an existing or newly created tag.
+merged; it is intentionally not rewritten. PR #851 now makes automated release
+publishing resolve and verify the validated artifact target before accepting an
+existing or newly created tag.
 
 ## Verification and follow-up
 
