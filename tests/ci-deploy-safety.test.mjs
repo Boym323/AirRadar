@@ -23,3 +23,10 @@ test("all release gates run in maintainer-requested previews", () => {
   }
   assert.match(job("deploy"), /release-tests, release-performance/);
 });
+
+test("release browser throughput remains within the tested bounded scheduler", () => {
+  const release = job("release-validate");
+  assert.match(release, /AIRRADAR_VISUAL_CONCURRENCY: '3'/);
+  assert.match(release, /AIRRADAR_VIEWPORT_CONCURRENCY: '3'/);
+  assert.match(release, /npm run test:production:all/);
+});
