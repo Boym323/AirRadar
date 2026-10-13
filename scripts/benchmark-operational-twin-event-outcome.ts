@@ -7,22 +7,26 @@ const NOW = Date.parse("2026-10-13T12:00:00.000Z");
 const AIRCRAFT_COUNT = 60;
 const TRAIL_POINTS = 120;
 const REFRESH_CYCLES = 10;
-const dataset = prepareAtcContextDataset({
+function makeDataset(prefix: string) {
+  return prepareAtcContextDataset({
   sectors: ["S0", "S1", "S2"].map((id) => ({
-    id, name: id, atcCallsign: id, airspaceType: "CTA_SECTOR", airspaceClass: "C",
+    id: `${prefix}${id}`, name: `${prefix}${id}`, atcCallsign: `${prefix}${id}`, airspaceType: "CTA_SECTOR", airspaceClass: "C",
     polygons: [[[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]]],
     lowerAltitudeFt: 0, upperAltitudeFt: 40000, frequencies: [], validFrom: null, validTo: null,
     country: "CZ", source: "benchmark", sourceReference: "benchmark", lastVerifiedAt: new Date(NOW).toISOString(),
   })),
   routeDocuments: [],
-});
+  });
+}
+const dataset = makeDataset("");
+const refreshedDataset = makeDataset("R");
 
-function situation(icaoHex: string, index: number): OperationalTwinSituation {
+function situation(icaoHex: string, index: number, refreshed = false): OperationalTwinSituation {
   return {
     generatedAt: new Date(NOW).toISOString(), aircraft: { icaoHex },
     events: [0, 1, 2].map((sector) => ({
-      type: "ATC_SECTOR_ENTRY" as const, id: `sector:S${sector}:${icaoHex}:${index}`,
-      at: new Date(NOW + 5 * 60_000 + index * 1_000).toISOString(), title: `S${sector}`,
+      type: "ATC_SECTOR_ENTRY" as const, id: `sector:${refreshed ? "R" : ""}S${sector}:${icaoHex}:${index}`,
+      at: new Date(NOW + 5 * 60_000 + index * 1_000 + (refreshed ? 60_000 : 0)).toISOString(), title: `${refreshed ? "R" : ""}S${sector}`,
       lat: 49, lon: 17.5, altitudeFt: 30000, confidence: "HIGH" as const, provenance: "PREDICTED" as const,
     })),
   } as unknown as OperationalTwinSituation;
@@ -65,16 +69,25 @@ function run(enableAtcTruthCache: boolean) {
   const memoryBefore = process.memoryUsage();
   const durations: number[] = [];
   for (let cycle = 0; cycle < REFRESH_CYCLES; cycle += 1) {
+    const observationAt = NOW + 60_000 + cycle * 1_000;
+    if (cycle === Math.floor(REFRESH_CYCLES / 2)) {
+      for (let index = 0; index < AIRCRAFT_COUNT; index += 1) {
+        const icaoHex = (0xabc000 + index).toString(16).toUpperCase();
+        validator.capture(situation(icaoHex, index, true), { atcDataset: refreshedDataset, sigmets: null, destination: null }, observationAt);
+      }
+    }
     const started = performance.now();
-    validator.observeLocal(snapshot(cycle), NOW + 60_000 + cycle * 1_000);
+    validator.observeLocal(snapshot(cycle), observationAt);
     durations.push(performance.now() - started);
   }
   const cpu = process.cpuUsage(cpuBefore);
   const memoryAfter = process.memoryUsage();
-  const stats = validator.getAtcCacheStats();
+  const stats = "getAtcCacheStats" in validator
+    ? validator.getAtcCacheStats()
+    : { hits: 0, misses: 0, evictions: 0, expirations: 0, size: 0, maxEntries: 0, ttlMs: 0 };
   const warm = durations.slice(1);
   return {
-    cache: enableAtcTruthCache ? "optimized" : "baseline",
+    cache: enableAtcTruthCache ? "pr-optimized" : "pr-no-cache",
     workload: { aircraft: AIRCRAFT_COUNT, trailPoints: TRAIL_POINTS, pendingPerAircraft: 3, refreshCycles: REFRESH_CYCLES },
     computeAtcContextCalls: stats.misses, cacheHits: stats.hits, cacheMisses: stats.misses,
     cacheHitRate: stats.hits + stats.misses ? stats.hits / (stats.hits + stats.misses) : 0,

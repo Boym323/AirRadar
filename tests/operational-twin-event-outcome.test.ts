@@ -344,6 +344,31 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1, size: 1 });
   });
 
+  it("keeps prepared dataset maps immutable without freezing provider-owned input", () => {
+    const source = {
+      sectors: [{
+        id: "IMMUTABLE",
+        name: "Immutable",
+        atcCallsign: "IMMUTABLE",
+        airspaceType: "CTA_SECTOR",
+        airspaceClass: "C",
+        polygons: [[[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]]],
+        lowerAltitudeFt: 0,
+        upperAltitudeFt: 40000,
+        frequencies: [], validFrom: null, validTo: null, country: "CZ",
+        source: "test", sourceReference: "test", lastVerifiedAt: new Date(baseNow).toISOString(),
+      }],
+      routeDocuments: [],
+    };
+    const prepared = prepareAtcContextDataset(source);
+    expect(() => (prepared.atcGrid as Map<string, number[]>).set("mutated", [0])).toThrow(TypeError);
+    expect(() => (prepared.atcGrid as Map<string, number[]>).clear()).toThrow(TypeError);
+    expect(Object.isFrozen(prepared.sectors[0])).toBe(true);
+    expect(Object.isFrozen(source.sectors[0])).toBe(false);
+    source.sectors[0].name = "provider refresh";
+    expect(prepared.sectors[0].name).toBe("Immutable");
+  });
+
   it("does not share same-timestamp truth between different ICAOs", () => {
     const dataset = testAtcDataset();
     const predictedAt = baseNow + 5 * 60_000;

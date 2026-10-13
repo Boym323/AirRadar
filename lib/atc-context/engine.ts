@@ -22,7 +22,20 @@ function queryGrid(grid: ReadonlyMap<string, ReadonlyArray<number>>, point: [num
   for (const index of grid.get(key(point[0], point[1])) ?? []) seen.add(index);
   return [...seen];
 }
-function immutableGrid(grid: Map<string, number[]>): ReadonlyMap<string, ReadonlyArray<number>> { return new Map([...grid].map(([k, v]) => [k, Object.freeze(v.slice())] as const)); }
+function immutableGrid(grid: Map<string, number[]>): ReadonlyMap<string, ReadonlyArray<number>> {
+  const map = new Map([...grid].map(([k, v]) => [k, Object.freeze(v.slice())] as const));
+  return new Proxy(map, {
+    get(target, property) {
+      if (property === "set" || property === "delete" || property === "clear") {
+        return () => { throw new TypeError("Prepared ATC grids are immutable"); };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+    set() { throw new TypeError("Prepared ATC grids are immutable"); },
+    deleteProperty() { throw new TypeError("Prepared ATC grids are immutable"); },
+  }) as unknown as ReadonlyMap<string, ReadonlyArray<number>>;
+}
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -31,14 +44,16 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 export function prepareAtcContextDataset(dataset: AtcContextDataset): PreparedAtcContextDataset {
-  const airspaces = dataset.sectors.map((sector) => ({ sector, boxes: sector.polygons.map((polygon) => bbox([polygon as unknown as [number, number][]])), order: ORDER[typeOf(sector)] ?? 90 }));
+  // Do not freeze caller-owned input: providers may reuse and refresh their source objects.
+  const ownedDataset = structuredClone(dataset);
+  const airspaces = ownedDataset.sectors.map((sector) => ({ sector, boxes: sector.polygons.map((polygon) => bbox([polygon as unknown as [number, number][]])), order: ORDER[typeOf(sector)] ?? 90 }));
   airspaces.sort((a, b) => a.order - b.order || a.sector.id.localeCompare(b.sector.id));
-  const segments = dataset.routeDocuments.flatMap((doc) => doc.routes.flatMap((route) => route.segments.map((segment) => ({ routeId: route.designator, countryCode: doc.source.countryCode ?? null, sourceReference: doc.source.reference, segment, box: bbox([[segment.from, segment.to]]), forwardBearing: bearing(segment.from, segment.to), reverseBearing: bearing(segment.to, segment.from) }))));
-  const points = dataset.routeDocuments.flatMap((doc) => doc.routes.flatMap((route) => route.points.map((point) => ({ point, sourceReference: doc.source.reference, box: [point.longitude, point.latitude, point.longitude, point.latitude] as Box }))));
+  const segments = ownedDataset.routeDocuments.flatMap((doc) => doc.routes.flatMap((route) => route.segments.map((segment) => ({ routeId: route.designator, countryCode: doc.source.countryCode ?? null, sourceReference: doc.source.reference, segment, box: bbox([[segment.from, segment.to]]), forwardBearing: bearing(segment.from, segment.to), reverseBearing: bearing(segment.to, segment.from) }))));
+  const points = ownedDataset.routeDocuments.flatMap((doc) => doc.routes.flatMap((route) => route.points.map((point) => ({ point, sourceReference: doc.source.reference, box: [point.longitude, point.latitude, point.longitude, point.latitude] as Box }))));
   const atcGrid = new Map<string, number[]>(); const atsGrid = new Map<string, number[]>(); const pointGrid = new Map<string, number[]>();
   airspaces.forEach((entry, i) => entry.boxes.forEach((box) => addGrid(atcGrid, box, i)));
   segments.forEach((entry, i) => addGrid(atsGrid, entry.box, i, 0.3)); points.forEach((entry, i) => addGrid(pointGrid, entry.box, i, 5));
-  return deepFreeze({ ...dataset, prepared: true as const, airspaces: Object.freeze(airspaces), segments: Object.freeze(segments), points: Object.freeze(points), atcGrid: immutableGrid(atcGrid), atsGrid: immutableGrid(atsGrid), pointGrid: immutableGrid(pointGrid), builtAt: new Date().toISOString() });
+  return deepFreeze({ ...ownedDataset, prepared: true as const, airspaces: Object.freeze(airspaces), segments: Object.freeze(segments), points: Object.freeze(points), atcGrid: immutableGrid(atcGrid), atsGrid: immutableGrid(atsGrid), pointGrid: immutableGrid(pointGrid), builtAt: new Date().toISOString() });
 }
 
 /** Returns only the sectors whose polygon bboxes cover the position. */
