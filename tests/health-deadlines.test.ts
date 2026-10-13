@@ -31,6 +31,7 @@ describe("health dependency deadlines", () => {
     mocks.isDatabaseConfigured.mockReturnValue(true);
     mocks.getAircraftStateService.mockReturnValue({
       waitForReady: vi.fn(async () => undefined), getSnapshot: vi.fn(() => ({ aircraft: [] })),
+      getNetworkDiagnostics: vi.fn(() => ({ enabled: true, status: "online", lastSuccessAt: "2026-10-13T10:00:00.000Z", lastAttemptAt: "2026-10-13T10:00:01.000Z" })),
       getAlertStatus: vi.fn(() => ({ status: "disabled" })),
     });
     mocks.getPrisma.mockReturnValue({ orm: { public: { Aircraft: { limit: () => ({ all: async () => [] }) } } } });
@@ -65,6 +66,23 @@ describe("health dependency deadlines", () => {
     resolveDatabase();
     resolveAtc();
     expect((await result).status).toBe(200);
+  });
+
+  it("serves the watchdog probe without starting full dependency diagnostics", async () => {
+    const response = await GET(new Request("http://localhost/api/health?watchdog=1"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "ok",
+      adsbLol: {
+        enabled: true,
+        status: "ok",
+        lastSuccessAt: "2026-10-13T10:00:00.000Z",
+        lastAttemptAt: "2026-10-13T10:00:01.000Z",
+      },
+    });
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
+    expect(mocks.getAtcMetadata).not.toHaveBeenCalled();
+    expect(mocks.measureRuntime.mock.calls.map((call) => call[0])).toEqual(["health.watchdog"]);
   });
 
   it("returns bounded 503 when readiness never resolves", async () => {

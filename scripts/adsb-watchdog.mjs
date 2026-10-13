@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 const STATUS_URL = process.env.AIRRADAR_ADSB_WATCHDOG_STATUS_URL?.trim()
-  || "http://192.168.1.142:3000/api/system/status";
+  || "http://192.168.1.142:3000/api/health?watchdog=1";
 const STATE_FILE = process.env.AIRRADAR_ADSB_WATCHDOG_STATE_FILE?.trim()
   || "/run/airradar-adsb-watchdog/last-restart";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -17,9 +17,9 @@ function timestampMs(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function readLastRestartAt() {
+function readLastRestartAt(stateFile = STATE_FILE) {
   try {
-    const value = Number(readFileSync(STATE_FILE, "utf8").trim());
+    const value = Number(readFileSync(stateFile, "utf8").trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -40,16 +40,16 @@ function shouldRestart(adsbLol, now = Date.now()) {
   return successAge >= STALE_THRESHOLD_MS && attemptAge >= STALE_THRESHOLD_MS;
 }
 
-function restartIsCoolingDown(now = Date.now()) {
-  const lastRestartAt = readLastRestartAt();
+function restartIsCoolingDown(now = Date.now(), stateFile = STATE_FILE) {
+  const lastRestartAt = readLastRestartAt(stateFile);
   return lastRestartAt !== null && now - lastRestartAt < RESTART_COOLDOWN_MS;
 }
 
-async function readStatus() {
+async function readStatus(statusUrl = STATUS_URL) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(STATUS_URL, { cache: "no-store", signal: controller.signal });
+    const response = await fetch(statusUrl, { cache: "no-store", signal: controller.signal });
     if (!response.ok) throw new Error(`status HTTP ${response.status}`);
     return await response.json();
   } finally {
@@ -59,10 +59,10 @@ async function readStatus() {
 
 export async function runWatchdog({ now = Date.now(), restart = () => {
   execFileSync("/usr/bin/systemctl", ["restart", "airradar.service"], { stdio: "inherit" });
-} } = {}) {
+}, statusUrl = STATUS_URL, stateFile = STATE_FILE } = {}) {
   let body;
   try {
-    body = await readStatus();
+    body = await readStatus(statusUrl);
   } catch (error) {
     console.warn(`[adsb-watchdog] status check failed: ${error instanceof Error ? error.message : String(error)}`);
     return { action: "unavailable" };
@@ -71,12 +71,12 @@ export async function runWatchdog({ now = Date.now(), restart = () => {
   const adsbLol = body && typeof body === "object" && !Array.isArray(body) ? body.adsbLol : null;
   if (!shouldRestart(adsbLol, now)) return { action: "none" };
 
-  if (restartIsCoolingDown(now)) {
+  if (restartIsCoolingDown(now, stateFile)) {
     console.warn("[adsb-watchdog] ADSB.lol stale; restart cooldown active");
     return { action: "cooldown" };
   }
 
-  writeFileSync(STATE_FILE, `${now}\n`, { encoding: "utf8", mode: 0o600 });
+  writeFileSync(stateFile, `${now}\n`, { encoding: "utf8", mode: 0o600 });
   console.warn("[adsb-watchdog] ADSB.lol stale; restarting airradar.service");
   restart();
   return { action: "restart" };
