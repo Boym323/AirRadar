@@ -50,6 +50,26 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
+  // The systemd watchdog runs once per minute. Keep that probe deliberately
+  // small: the full system-status response walks every diagnostic provider,
+  // database probe, and enrichment report, which is the wrong dependency for
+  // deciding whether the ADSB.lol polling lane is making progress.
+  if (new URL(request.url).searchParams.get("watchdog") === "1") {
+    return measureRuntime("health.watchdog", 0, () => {
+      const network = service.getNetworkDiagnostics();
+      const providerStatus = network.status;
+      return Response.json({
+        status: providerStatus === "online" ? "ok" : "degraded",
+        adsbLol: {
+          enabled: network.enabled,
+          status: providerStatus === "online" ? "ok" : "degraded",
+          lastSuccessAt: network.lastSuccessAt,
+          lastAttemptAt: network.lastAttemptAt,
+        },
+      }, { headers: { "Cache-Control": "no-store" } });
+    });
+  }
+
   const snapshot = measureRuntime("health.snapshot", 0, () => service.getSnapshot());
   // This probe is intentionally fire-and-forget: it records the delay until
   // the event loop can schedule a callback without adding to health latency.
