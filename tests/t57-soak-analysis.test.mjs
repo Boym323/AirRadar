@@ -95,6 +95,35 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(JSON.stringify(result.sample)).not.toContain("ICAO-ID-PRIVATE");
   });
 
+  it("preserves bounded V5 SQL settlement and event-loop evidence without raw route data", () => {
+    const { status, metrics } = raw(1);
+    status.routeEnrichment = {
+      phases: {
+        dbCallSettlement: { measured: true, count: 3, sampleCount: 3, p50Ms: 500, p95Ms: 2100, p99Ms: 2100, maxMs: 2100 },
+        dbLateSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 1350, p95Ms: 1350, p99Ms: 1350, maxMs: 1350 },
+        callerTimeoutOvershoot: { measured: true, count: 1, sampleCount: 1, p50Ms: 700, p95Ms: 700, p99Ms: 700, maxMs: 700 },
+      },
+      sql: {
+        callerTimeouts: 1,
+        completedAfterCallerTimeout: 1,
+        eventLoopAtTimeout: { sampleCount: 1, p50Percent: 92, p95Percent: 92, p99Percent: 92 },
+      },
+      secret: "SHOULD_NOT_LEAK",
+    };
+    const projected = projectT57SoakSample(status, metrics, at(1)).sample;
+    expect(projected.routeCache.phases.callerTimeoutOvershoot.p95Ms).toBe(700);
+    expect(projected.routeCache.phases.dbCallSettlement.p99Ms).toBe(2100);
+    expect(projected.routeCache.sql.eventLoopAtTimeout.p95Percent).toBe(92);
+    expect(JSON.stringify(projected)).not.toContain("SHOULD_NOT_LEAK");
+
+    const stream = records();
+    for (const row of stream) if (row.type === "sample") row.value.routeCache = projected.routeCache;
+    const report = analyzeT57Soak(stream);
+    expect(report.routeCache.phaseLatencyMs.callerTimeoutOvershoot.measured).toBe(true);
+    expect(report.routeCache.eventLoopAtTimeout.p95Percent.p50).toBe(92);
+    expect(report.routeCache.eventLoopAtTimeout.scope).toBe("process-local-recent-samples");
+  });
+
   it("fails closed for absent runtime/retention/admin telemetry", () => {
     const { status, metrics } = raw(1);
     status.detailLevel = "public";

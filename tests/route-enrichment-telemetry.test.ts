@@ -72,6 +72,24 @@ describe("route enrichment telemetry", () => {
     expect(metrics.getSnapshot().phases).not.toHaveProperty("sqlCompletion");
   });
 
+  it("keeps timeout event-loop utilization bounded and separate from time measured in milliseconds", () => {
+    const metrics = new RouteEnrichmentTelemetry(null, () => Date.parse("2026-10-12T12:00:00Z"));
+    metrics.recordTimeoutEventLoopUtilization(-1);
+    metrics.recordTimeoutEventLoopUtilization(Number.NaN);
+    metrics.recordTimeoutEventLoopUtilization(1.1);
+    metrics.recordTimeoutEventLoopUtilization(0.25);
+    metrics.recordTimeoutEventLoopUtilization(0.75);
+    metrics.recordTimeoutEventLoopUtilization(1);
+    expect(metrics.getSnapshot().sql.eventLoopAtTimeout).toMatchObject({
+      scope: "process-local-recent-samples", sampleCount: 3,
+      p50Percent: 75, p95Percent: 100, p99Percent: 100,
+    });
+    for (let i = 0; i < 1100; i++) metrics.recordTimeoutEventLoopUtilization(0.5);
+    expect(metrics.getSnapshot().sql.eventLoopAtTimeout.sampleCount).toBe(1024);
+    expect(metrics.getSnapshot().sql.eventLoopAtTimeout.p95Percent).toBe(50);
+    expect(metrics.getSnapshot().sql.timing.serverSideSql).toBe("NOT MEASURED");
+  });
+
   it("saves only bounded aggregate history and restores it without callsigns or positions", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "airradar-route-metrics-"));
     const file = path.join(directory, "history.json");

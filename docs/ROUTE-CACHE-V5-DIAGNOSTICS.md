@@ -1,0 +1,82 @@
+# AirRadar Route Cache V5 — latency root cause attribution
+
+## Scope and safety
+
+V5.1/V5.2 only add **process-local, bounded, passive telemetry** and an
+**operator-run, read-only SQL inspection**. No change to timeout (750 ms),
+circuit recovery, cache policy, production config, data, schemas or migrations.
+Do not run `EXPLAIN ANALYZE`, new synthetic route lookups or load tests against
+the production database for this phase.
+
+## What can be measured from the application
+
+The authenticated `/api/system/status` response includes
+`routeEnrichment.phases` and `routeEnrichment.sql`.
+
+- `phases.dbCallSettlement`: **wall elapsed** until the underlying Promise
+  settles, **including both successful and failed** calls and calls that
+  settle after their caller already timed out. Contains pool wait, network and
+  database execution; not SQL server duration. Also includes optional
+  maintenance (COUNT/prune) calls.
+- `phases.dbLateSettlement`: wall time **after** the 750 ms caller deadline
+  for underlying operations that settle after their caller timed out. This
+  does not mean SQL was cancelled by the timeout.
+- `phases.callerTimeoutOvershoot`: delay between the expected 750 ms deadline
+  and the actual timer callback. A positive value is evidence of scheduling
+  delay, **not proof** that CPU, a particular handler or SQL caused it.
+- `sql.eventLoopAtTimeout`: bounded sample of Node.js event-loop utilization
+  over each timed-out call's wait interval, in **percent**, not milliseconds.
+  This is whole-process utilization, not an exclusive per-request CPU cost.
+- `sql.timing.serverSideSql` and `sql.timing.connectionAcquisition` remain
+  `NOT MEASURED` until independently verified instrumentation is available.
+- All distributions are from at most 1,024 **recent process-local**
+  observations, **not** percentiles over the entire soak window. Counters may
+  reset on restart. Use process/commit segmentation and compare workload mix.
+
+Existing `/api/system/runtime-performance` windows cover event-loop lag and
+runtime hot-path timings. The `cpuMs` values in overlapping asynchronous
+scopes are **inclusive-process-overlap**, not exclusive CPU; nested scopes
+must never be summed as independent CPU consumption.
+
+## Operator read-only PostgreSQL evidence
+
+From a trusted host with an existing **least-privileged read-only**
+PostgreSQL connection (do not paste a DATABASE_URL or secrets into logs):
+
+```sh
+psql -X -v ON_ERROR_STOP=1 -f scripts/route-cache-v5-readonly.sql > route-cache-v5-db-report.txt
+```
+
+This reports grouped `pg_stat_activity` wait states, global database
+statistics, cache table activity/size, index metadata and a **planner-only**
+EXPLAIN. It neither executes cache lookups nor runs migration/DDL.
+
+Notes:
+- `pg_stat_activity` is a single snapshot, so repeat a small number of
+  snapshots during natural load to distinguish transient from persistent
+  waits. Do not collect raw `query`, client address, PID or parameters.
+- `pg_stat_database` and table counters may span many hours; compare deltas
+  with their `stats_reset` markers. They are not isolated to route cache.
+- `blk_read_time`/`blk_write_time` require server-side
+  `track_io_timing`; zero does not necessarily mean zero I/O.
+- Index presence and planner estimate do not establish actual query latency.
+  Do not attribute end-to-end time exclusively to PostgreSQL without
+  additional independent evidence.
+
+## Interpreting the 12-hour soak
+
+1. Pin production identity and PID; use process/commit segments.
+2. Compare minute-level event-loop p99 and CPU with the **same timestamped**
+   cache timeout and settlement windows; avoid inference from cumulative
+   process totals.
+3. A large `callerTimeoutOvershoot` *with high whole-process ELU* suggests
+   investigating JS scheduling and synchronous hot paths. Low overshoot but
+   slow settlement suggests investigating pool/network/DB.
+4. Inspect transaction and autocommit DB lanes already present in runtime
+   diagnostics to understand competing work.
+5. If persistent database waits are suspected, collect `pg_stat_activity`
+   safely. Plan targeted changes and a short 1–2h production soak only after
+   the evidence identifies a concrete bottleneck.
+
+A V5 PR must pass Vitest, TypeScript, lint, and release/production gates.
+Do not merge or deploy diagnostic changes as part of an observation-only task.

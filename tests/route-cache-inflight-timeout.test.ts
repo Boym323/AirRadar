@@ -22,7 +22,12 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     });
     const store = new PostgresRouteCache();
     const key = "flight-route:ABC123:CSA123:2026-10-10";
-    const before = getRouteEnrichmentTelemetry().getDbLatencyDistribution().sampleCount;
+    const metrics = getRouteEnrichmentTelemetry();
+    const before = metrics.getDbLatencyDistribution().sampleCount;
+    const beforeSettlement = metrics.getSnapshot().phases.dbCallSettlement.count;
+    const beforeLateSettlement = metrics.getSnapshot().phases.dbLateSettlement.count;
+    const beforeTimerOvershoot = metrics.getSnapshot().phases.callerTimeoutOvershoot.count;
+    const beforeEventLoop = metrics.getSnapshot().sql.eventLoopAtTimeout.sampleCount;
     const result = store.get(key);
     await vi.advanceTimersByTimeAsync(751);
     await expect(result).resolves.toBeNull();
@@ -38,6 +43,19 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     expect(store.getDiagnostics().completedAfterCallerTimeout).toBe(1);
     expect(getRouteEnrichmentTelemetry().getDbLatencyDistribution().sampleCount).toBe(before + 1);
     const snapshot = getRouteEnrichmentTelemetry().getSnapshot();
+    expect(snapshot.phases.dbCallSettlement.count).toBeGreaterThan(beforeSettlement);
+    expect(snapshot.phases.dbLateSettlement.count).toBeGreaterThan(beforeLateSettlement);
+    expect(snapshot.phases.callerTimeoutOvershoot.count).toBeGreaterThan(beforeTimerOvershoot);
+    expect(snapshot.phases.callerTimeoutOvershoot.p50Ms).toBeGreaterThanOrEqual(0);
+    expect(snapshot.sql.eventLoopAtTimeout.sampleCount).toBeGreaterThan(beforeEventLoop);
+    expect(snapshot.sql.eventLoopAtTimeout).toMatchObject({
+      scope: "process-local-recent-samples", sampleCapacity: 1024,
+    });
+    expect(snapshot.sql.timing).toMatchObject({
+      serverSideSql: "NOT MEASURED",
+      connectionAcquisition: "NOT MEASURED",
+      settlement: "all-route-cache-db-calls-including-failures",
+    });
     expect(snapshot.sql.callerTimeouts).toBeGreaterThanOrEqual(1);
     expect(snapshot.sql.completedAfterCallerTimeout).toBeGreaterThanOrEqual(1);
     expect(snapshot.sql.timing).toMatchObject({
