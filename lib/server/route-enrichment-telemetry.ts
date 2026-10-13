@@ -11,6 +11,7 @@ export const ROUTE_METRIC_KEYS = [
 export const ROUTE_PHASE_KEYS = [
   "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
   "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
+  "dbCallSettlement", "dbLateSettlement", "callerTimeoutOvershoot",
 ] as const;
 export type RoutePhaseKey = (typeof ROUTE_PHASE_KEYS)[number];
 export type RouteMetricKey = (typeof ROUTE_METRIC_KEYS)[number];
@@ -51,6 +52,16 @@ export interface RouteEnrichmentSnapshot {
     halfOpenProbe: boolean;
     callerTimeouts: number;
     completedAfterCallerTimeout: number;
+    /** Event-loop utilization over the DB-call interval, sampled only when its caller times out.
+     * This is correlation evidence, NOT SQL execution time or CPU attributable to this call. */
+    eventLoopAtTimeout: {
+      scope: "process-local-recent-samples";
+      sampleCapacity: number;
+      sampleCount: number;
+      p50Percent: number | null;
+      p95Percent: number | null;
+      p99Percent: number | null;
+    };
     circuit: { state: "closed" | "open"; openSince: string | null; openDurationMs: number | null };
     timing: {
       measurement: "db_call_elapsed";
@@ -58,6 +69,9 @@ export interface RouteEnrichmentSnapshot {
       includesPoolWait: true;
       includesNetworkTime: true;
       connectionAcquisition: "NOT MEASURED";
+      serverSideSql: "NOT MEASURED";
+      settlement: "all-route-cache-db-calls-including-failures";
+      timeoutOvershoot: "callback-delay-beyond-750ms-deadline";
     };
   };
   telemetry: { diskEnabled: boolean; loadedFromDisk: boolean; lastSavedAt: string | null; failures: number };
@@ -116,6 +130,8 @@ export class RouteEnrichmentTelemetry {
   // Query-time distributions do not include failed/timed-out SQL operations.
   private readonly recentDbQueries: { at: number; ms: number }[] = [];
   private nextDbQuerySlot = 0;
+  private readonly eventLoopAtTimeoutSamples: number[] = [];
+  private nextEventLoopAtTimeoutSlot = 0;
   private readonly phaseSamples = emptyPhaseSamples();
   private readonly phaseNextSlots = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
   private readonly phaseCounts = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
@@ -190,6 +206,30 @@ export class RouteEnrichmentTelemetry {
     this.phaseCounts[key] = Math.min(MAX_COUNT, this.phaseCounts[key] + 1);
     if (outcome === "error") this.phaseErrors[key] = Math.min(MAX_COUNT, this.phaseErrors[key] + 1);
     if (outcome === "timeout") this.phaseTimeouts[key] = Math.min(MAX_COUNT, this.phaseTimeouts[key] + 1);
+  }
+
+  /** Elapsed event-loop utilization from perf_hooks during a timed-out call, in [0, 1].
+   * Ring is process-local and bounded. No route IDs, SQL, credentials or timings are persisted. */
+  recordTimeoutEventLoopUtilization(utilization: number): void {
+    if (!Number.isFinite(utilization) || utilization < 0 || utilization > 1) return;
+    const percent = utilization * 100;
+    if (this.eventLoopAtTimeoutSamples.length < PHASE_SAMPLE_CAPACITY) {
+      this.eventLoopAtTimeoutSamples.push(percent);
+    } else {
+      this.eventLoopAtTimeoutSamples[this.nextEventLoopAtTimeoutSlot] = percent;
+    }
+    this.nextEventLoopAtTimeoutSlot = (this.nextEventLoopAtTimeoutSlot + 1) % PHASE_SAMPLE_CAPACITY;
+  }
+
+  private eventLoopAtTimeoutSnapshot(): RouteEnrichmentSnapshot["sql"]["eventLoopAtTimeout"] {
+    const values = this.eventLoopAtTimeoutSamples.slice().sort((a, b) => a - b);
+    const rank = (p: number) => values.length ? values[Math.ceil(values.length * p) - 1] ?? null : null;
+    return {
+      scope: "process-local-recent-samples",
+      sampleCapacity: PHASE_SAMPLE_CAPACITY,
+      sampleCount: values.length,
+      p50Percent: rank(0.5), p95Percent: rank(0.95), p99Percent: rank(0.99),
+    };
   }
 
   getPhaseDiagnostics(): RoutePhaseDiagnostics {
@@ -285,6 +325,7 @@ export class RouteEnrichmentTelemetry {
       phases: this.getPhaseDiagnostics(),
       sql: {
         ...this.sqlDiagnostics,
+        eventLoopAtTimeout: this.eventLoopAtTimeoutSnapshot(),
         circuit,
         timing: {
           measurement: "db_call_elapsed",
@@ -292,6 +333,9 @@ export class RouteEnrichmentTelemetry {
           includesPoolWait: true,
           includesNetworkTime: true,
           connectionAcquisition: "NOT MEASURED",
+          serverSideSql: "NOT MEASURED",
+          settlement: "all-route-cache-db-calls-including-failures",
+          timeoutOvershoot: "callback-delay-beyond-750ms-deadline",
         },
       },
       telemetry: { diskEnabled: !!this.filePath, loadedFromDisk: this.loadedFromDisk, lastSavedAt: this.lastSavedAt, failures: this.failures },
