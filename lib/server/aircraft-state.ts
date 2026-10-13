@@ -14,6 +14,7 @@ import {
   getReceiverComparisonRadiusNm,
   getSourceAffinityFailoverGraceMs,
   isAircraftMassDropGuardEnabled,
+  isAtcResolutionEnabled,
   isTrackFusionShadowEnabled,
   isTrackFusionDigitalTwinEnabled,
 } from "@/lib/server/config";
@@ -244,6 +245,7 @@ export class AircraftStateService {
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
+  private atcResolutionInFlight = false;
   private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private lifetimeReceptionRecordLoaded = false;
   private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
@@ -973,6 +975,8 @@ export class AircraftStateService {
 
   private applySnapshotCore(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
+    const atcResolutionEnabled = isAtcResolutionEnabled();
+    if (!atcResolutionEnabled) this.clearAtcResolutionState();
     const previousAircraft = new Map(this.localAircraft);
     const previousObservedHexes = this.localObservedHexes;
     const currentHexes = new Set<string>();
@@ -989,7 +993,7 @@ export class AircraftStateService {
       const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
       // ATC is assigned from position/altitude, not callsign. Preserve a
       // still-valid estimate across an observation callsign change.
-      const atc = previous?.atc ?? incoming.atc;
+      const atc = atcResolutionEnabled ? previous?.atc ?? incoming.atc : undefined;
       this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
     }
     this.continuity.observeMembership("local", previousObservedHexes, currentHexes, now);
@@ -1345,6 +1349,24 @@ export class AircraftStateService {
     getAtcPredictionValidation().remove(hex);
   }
 
+  private clearAtcResolutionState(): boolean {
+    let changed = this.atcResolutionKeys.size > 0
+      || this.atcShadowPredictionKeys.size > 0
+      || this.atcShadowPredictionInFlight.size > 0;
+    for (const [hex, aircraft] of this.localAircraft) {
+      if (aircraft.atc === undefined) continue;
+      changed = true;
+      const withoutAtc = { ...aircraft };
+      delete withoutAtc.atc;
+      this.localAircraft.set(hex, withoutAtc);
+    }
+    this.atcResolutionKeys.clear();
+    this.atcShadowPredictionKeys.clear();
+    this.atcShadowPredictionInFlight.clear();
+    for (const hex of this.localAircraft.keys()) getAtcPredictionValidation().remove(hex);
+    return changed;
+  }
+
   private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
     return measureRuntime("snapshot.trail-update", 1, () => {
       const previousTrail = previous?.trail ?? [];
@@ -1565,7 +1587,20 @@ export class AircraftStateService {
   }
 
   private async resolveAtc(snapshot: ProviderSnapshot): Promise<void> {
-    await measureRuntimeAsync("atc.resolve", snapshot.aircraft.length, () => this.resolveAtcCore(snapshot));
+    if (!isAtcResolutionEnabled()) {
+      if (this.clearAtcResolutionState()) {
+        this.invalidateSnapshotCache();
+        if (!this.shuttingDown) this.notify();
+      }
+      return;
+    }
+    if (this.atcResolutionInFlight) return;
+    this.atcResolutionInFlight = true;
+    try {
+      await measureRuntimeAsync("atc.resolve", snapshot.aircraft.length, () => this.resolveAtcCore(snapshot));
+    } finally {
+      this.atcResolutionInFlight = false;
+    }
   }
 
   private async resolveAtcCore(snapshot: ProviderSnapshot): Promise<void> {
@@ -1619,6 +1654,7 @@ export class AircraftStateService {
   }
 
   private async evaluateShadowPrediction(aircraft: Aircraft, currentSector: string | null, resolutionKey: string): Promise<void> {
+    if (!isAtcResolutionEnabled()) return;
     if (this.atcShadowPredictionInFlight.has(aircraft.icaoHex) || this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) return;
     this.atcShadowPredictionKeys.set(aircraft.icaoHex, resolutionKey);
     this.atcShadowPredictionInFlight.add(aircraft.icaoHex);
@@ -1630,6 +1666,7 @@ export class AircraftStateService {
         return;
       }
       const result = computeAtcContext(input, dataset);
+      if (!isAtcResolutionEnabled()) return;
       const observedAtMs = Date.parse(aircraft.lastSeen);
       const reason = classifyAtcPrediction({
         currentSector,
