@@ -234,6 +234,9 @@ export function isTrackFusionShadowEnabled(): boolean {
 export function isTrackFusionDigitalTwinEnabled(): boolean {
   return process.env.AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED?.trim().toLowerCase() === "true";
 }
+export function isAtcResolutionEnabled(): boolean {
+  return process.env.AIRRADAR_ATC_RESOLUTION_ENABLED?.trim().toLowerCase() !== "false";
+}
 export type OperationalTwinWindTimingPolicy = "CANONICAL" | "WIND_GRADUATED";
 export function getOperationalTwinWindTimingPolicy(): OperationalTwinWindTimingPolicy {
   return process.env.AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY?.trim().toUpperCase() === "WIND_GRADUATED"

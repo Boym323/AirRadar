@@ -1116,10 +1116,36 @@ describe("aircraft state service", () => {
     const staleResolution = internal.resolveAtc(firstSnapshot);
     internal.applySnapshot(secondSnapshot);
     await internal.resolveAtc(secondSnapshot);
-    expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("NEW");
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(service.getAircraft("ABC123")?.atc).toBeUndefined();
     releaseFirst(atcMatch("OLD"));
     await staleResolution;
+    expect(service.getAircraft("ABC123")?.atc).toBeUndefined();
+    await internal.resolveAtc(secondSnapshot);
     expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("NEW");
+  });
+
+  it("isolates the ATC lane without affecting local snapshots or subscribers", async () => {
+    vi.stubEnv("AIRRADAR_ATC_RESOLUTION_ENABLED", "false");
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver);
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+    const lookup = vi.fn().mockResolvedValue(atcMatch("DISABLED"));
+    const snapshot: ProviderSnapshot = { aircraft: [aircraft], receiver, fetchedAt: new Date().toISOString(), provider: "test" };
+    const service = new AircraftStateService(
+      { name: "test", getSnapshot: vi.fn(async () => snapshot) },
+      new EnrichmentService({}),
+      { lookup } as unknown as AtcSectorService,
+    );
+    services.push(service);
+    const published: StateSnapshot[] = [];
+    service.subscribe((value) => published.push(value));
+    await service.waitForReady();
+
+    expect(lookup).not.toHaveBeenCalled();
+    expect(service.getAircraft("ABC123")).toMatchObject({ icaoHex: "ABC123" });
+    expect(service.getAircraft("ABC123")?.atc).toBeUndefined();
+    expect(published.at(-1)?.aircraft).toHaveLength(1);
   });
 
   it("retries ATC after a transient lookup failure", async () => {
