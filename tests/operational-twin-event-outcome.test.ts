@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
+import type { SectorPolygon } from "@/lib/atc/types";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import {
   OperationalTwinEventOutcomeValidator,
@@ -345,6 +346,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
   });
 
   it("keeps prepared dataset maps immutable without freezing provider-owned input", () => {
+    const immutablePolygon: SectorPolygon = [[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]];
     const source = {
       sectors: [{
         id: "IMMUTABLE",
@@ -352,7 +354,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
         atcCallsign: "IMMUTABLE",
         airspaceType: "CTA_SECTOR",
         airspaceClass: "C",
-        polygons: [[[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]]],
+        polygons: [immutablePolygon],
         lowerAltitudeFt: 0,
         upperAltitudeFt: 40000,
         frequencies: [], validFrom: null, validTo: null, country: "CZ",
