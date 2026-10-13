@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.436] - 2026-10-13
+
+Changes since v1.0.435.
+
+### Added
+
+- Enhance route cache metrics and session management (5128516f)
+
+### Maintenance
+
+- Sync generated repository metadata (#841) (33dc6b70)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#841) (33dc6b70)
+- feat(t57-soak): enhance route cache metrics and session management (5128516f)
+
+</details>
 ## [1.0.435] - 2026-10-12
 
 Changes since v1.0.434.
