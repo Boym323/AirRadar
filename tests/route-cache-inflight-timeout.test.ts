@@ -44,6 +44,8 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     expect(getRouteEnrichmentTelemetry().getDbLatencyDistribution().sampleCount).toBe(before + 1);
     const snapshot = getRouteEnrichmentTelemetry().getSnapshot();
     expect(snapshot.phases.dbCallSettlement.count).toBeGreaterThan(beforeSettlement);
+    expect(snapshot.phases.dbReadSettlement.count).toBeGreaterThan(0);
+    expect(snapshot.phases.dbWriteSettlement.measured).toBe(false);
     expect(snapshot.phases.dbLateSettlement.count).toBeGreaterThan(beforeLateSettlement);
     expect(snapshot.phases.callerTimeoutOvershoot.count).toBeGreaterThan(beforeTimerOvershoot);
     expect(snapshot.phases.callerTimeoutOvershoot.p50Ms).toBeGreaterThanOrEqual(0);
@@ -180,6 +182,9 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     // next microtask. Its independent SQL slot is released asynchronously.
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(store.getDiagnostics()).toMatchObject({ active: 0, activeWrites: 0, maxActive: 3 });
+    const phases = getRouteEnrichmentTelemetry().getSnapshot().phases;
+    expect(phases.dbReadSettlement.measured).toBe(true);
+    expect(phases.dbWriteSettlement.measured).toBe(true);
   });
 
   it("does not open the foreground circuit when optional COUNT maintenance fails", async () => {
@@ -194,6 +199,7 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     await expect(store.get("flight-route:ABC123:CSA123:2026-10-10")).resolves.toBeNull();
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(query).toHaveBeenCalledTimes(2);
+    expect(getRouteEnrichmentTelemetry().getSnapshot().phases.dbMaintenanceSettlement.errors).toBeGreaterThan(0);
     expect(store.getDiagnostics()).toMatchObject({
       retryAfter: 0, active: 0, failureStreak: 0, failures: 1,
     });

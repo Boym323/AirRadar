@@ -18,6 +18,12 @@ The authenticated `/api/system/status` response includes
   settle after their caller already timed out. Contains pool wait, network and
   database execution; not SQL server duration. Also includes optional
   maintenance (COUNT/prune) calls.
+- V5.6 separates the same DB-call elapsed measurement into
+  `phases.dbReadSettlement`, `phases.dbWriteSettlement`, and
+  `phases.dbMaintenanceSettlement` (including failures) to distinguish
+  foreground reads and writes from optional COUNT/prune maintenance. The
+  original aggregate `dbCallSettlement` is retained for continuity. Each is
+  bounded and process-local; none measures SQL execution or connection-pool wait.
 - `phases.dbLateSettlement`: wall time **after** the 750 ms caller deadline
   for underlying operations that settle after their caller timed out. This
   does not mean SQL was cancelled by the timeout.
@@ -27,6 +33,9 @@ The authenticated `/api/system/status` response includes
 - `sql.eventLoopAtTimeout`: bounded sample of Node.js event-loop utilization
   over each timed-out call's wait interval, in **percent**, not milliseconds.
   This is whole-process utilization, not an exclusive per-request CPU cost.
+- `sql.connectionFailures` counts synchronous client-creation failures only; asynchronous
+  driver connection/pool/network rejections may be recorded as `queryFailures`.
+  A zero connectionFailures counter does **not** exclude network/pool faults.
 - `sql.timing.serverSideSql` and `sql.timing.connectionAcquisition` remain
   `NOT MEASURED` until independently verified instrumentation is available.
 - All distributions are from at most 1,024 **recent process-local**

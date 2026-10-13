@@ -17,6 +17,11 @@ Autorizovaný endpoint `/api/system/status` obsahuje
   včetně úspěšných i neúspěšných volání a operací dokončených až po timeoutu
   volajícího. Zahrnuje čekání na spojení, síť a DB; nejde o samotný SQL čas.
   Mohou sem spadat i údržbové dotazy COUNT/prune.
+- V5.6 rozlišuje stejné celkové DB volání podle druhu na
+  `phases.dbReadSettlement`, `phases.dbWriteSettlement` a
+  `phases.dbMaintenanceSettlement` (včetně chyb). Lze tak odlišit čtení,
+  zápisy a pomocné COUNT/prune dotazy; souhrnná `dbCallSettlement` zůstává.
+  Metriky jsou omezené na proces a neměří čistý SQL čas ani čekání na pool.
 - `phases.dbLateSettlement`: doba **nad rámec** 750ms limitu volajícího
   u DB operací dokončených po timeoutu. Timeout volajícího SQL neruší.
 - `phases.callerTimeoutOvershoot`: zpoždění callbacku časovače oproti
@@ -25,6 +30,9 @@ Autorizovaný endpoint `/api/system/status` obsahuje
 - `sql.eventLoopAtTimeout`: omezené vzorky využití Node.js event loop
   během čekání na každý timeoutovaný DB požadavek; jednotkou jsou **procenta**,
   nikoliv milisekundy. Jde o celý proces, ne o exkluzivní CPU daného dotazu.
+- `sql.connectionFailures` počítá jen synchronní chyby při vytváření DB klienta;
+  asynchronní chyby ovladače, poolu nebo sítě mohou spadat pod `queryFailures`.
+  Nulový čítač connectionFailures **nevylučuje** problém poolu ani sítě.
 - `sql.timing.serverSideSql` a `sql.timing.connectionAcquisition` zůstávají
   `NOT MEASURED`, dokud nebude k dispozici nezávislé ověřené měření.
 - Všechna rozdělení vycházejí nejvýše z 1 024 **posledních vzorků v procesu**,

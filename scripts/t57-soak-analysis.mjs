@@ -16,7 +16,8 @@ const ROUTE_METRIC_NAMES = [
 const ROUTE_PHASE_NAMES = [
   "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
   "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
-  "dbCallSettlement", "dbLateSettlement", "callerTimeoutOvershoot",
+  "dbCallSettlement", "dbReadSettlement", "dbWriteSettlement", "dbMaintenanceSettlement",
+  "dbLateSettlement", "callerTimeoutOvershoot",
 ];
 const safe = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null;
 const stamp = (x) => typeof x === "string" && Number.isFinite(Date.parse(x)) ? x : null;

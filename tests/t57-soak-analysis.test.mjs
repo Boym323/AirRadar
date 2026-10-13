@@ -100,6 +100,9 @@ describe("T5.7C 24-hour read-only soak", () => {
     status.routeEnrichment = {
       phases: {
         dbCallSettlement: { measured: true, count: 3, sampleCount: 3, p50Ms: 500, p95Ms: 2100, p99Ms: 2100, maxMs: 2100 },
+        dbReadSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 2100, p95Ms: 2100, p99Ms: 2100, maxMs: 2100 },
+        dbWriteSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 5, p95Ms: 5, p99Ms: 5, maxMs: 5 },
+        dbMaintenanceSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 35, p95Ms: 35, p99Ms: 35, maxMs: 35, errors: 1 },
         dbLateSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 1350, p95Ms: 1350, p99Ms: 1350, maxMs: 1350 },
         callerTimeoutOvershoot: { measured: true, count: 1, sampleCount: 1, p50Ms: 700, p95Ms: 700, p99Ms: 700, maxMs: 700 },
       },
@@ -113,6 +116,9 @@ describe("T5.7C 24-hour read-only soak", () => {
     const projected = projectT57SoakSample(status, metrics, at(1)).sample;
     expect(projected.routeCache.phases.callerTimeoutOvershoot.p95Ms).toBe(700);
     expect(projected.routeCache.phases.dbCallSettlement.p99Ms).toBe(2100);
+    expect(projected.routeCache.phases.dbReadSettlement.p95Ms).toBe(2100);
+    expect(projected.routeCache.phases.dbWriteSettlement.p95Ms).toBe(5);
+    expect(projected.routeCache.phases.dbMaintenanceSettlement.errors).toBe(1);
     expect(projected.routeCache.sql.eventLoopAtTimeout.p95Percent).toBe(92);
     expect(JSON.stringify(projected)).not.toContain("SHOULD_NOT_LEAK");
 
@@ -120,6 +126,9 @@ describe("T5.7C 24-hour read-only soak", () => {
     for (const row of stream) if (row.type === "sample") row.value.routeCache = projected.routeCache;
     const report = analyzeT57Soak(stream);
     expect(report.routeCache.phaseLatencyMs.callerTimeoutOvershoot.measured).toBe(true);
+    expect(report.routeCache.phaseLatencyMs.dbReadSettlement.measured).toBe(true);
+    expect(report.routeCache.phaseLatencyMs.dbWriteSettlement.measured).toBe(true);
+    expect(report.routeCache.phaseLatencyMs.dbMaintenanceSettlement.measured).toBe(true);
     expect(report.routeCache.eventLoopAtTimeout.p95Percent.p50).toBe(92);
     expect(report.routeCache.eventLoopAtTimeout.scope).toBe("process-local-recent-samples");
   });
