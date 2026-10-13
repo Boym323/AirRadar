@@ -17,6 +17,35 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.445] - 2026-10-13
+
+Changes since v1.0.444.
+
+### Changed
+
+- Isolate ATC resolution lane behind feature gate (#864) (a0c24eff)
+
+### Fixed
+
+- Restore AirRadar runtime stability and optimize ATC resolution (e3b0bf9e)
+
+### Performance
+
+- Operational Twin cross-snapshot ATC truth cache (#863) (34ddc153)
+
+### Maintenance
+
+- Sync generated repository metadata (#862) (bba395de)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#862) (bba395de)
+- perf: Operational Twin cross-snapshot ATC truth cache (#863) (34ddc153)
+- Isolate ATC resolution lane behind feature gate (#864) (a0c24eff)
+- fix: restore AirRadar runtime stability and optimize ATC resolution (e3b0bf9e)
+
+</details>
 ## [1.0.444] - 2026-10-13
 
 Changes since v1.0.443.
