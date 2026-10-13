@@ -213,6 +213,10 @@ export function createBuildMetadata({ packageVersion = readPackageVersion() } = 
   const parsedVersion = parseReleaseVersion(version);
   const commit = safeCommit(process.env.AIRRADAR_COMMIT) ?? currentCommit();
   const shortCommit = safeCommit(process.env.AIRRADAR_SHORT_COMMIT) ?? currentShortCommit(commit);
+  const sourceCommit = safeCommit(process.env.AIRRADAR_SOURCE_COMMIT) ?? commit;
+  const releaseCommit = safeCommit(process.env.AIRRADAR_RELEASE_COMMIT) ?? commit;
+  const artifactCommit = safeCommit(process.env.AIRRADAR_ARTIFACT_COMMIT) ?? commit;
+  const tagTarget = safeCommit(process.env.AIRRADAR_TAG_TARGET) ?? artifactCommit;
   const tag = process.env.AIRRADAR_TAG?.trim() || `v${version}`;
   const parsedTag = parseReleaseTag(tag);
   if (!parsedTag || parsedTag.version !== version) throw new Error(`Build tag ${tag} does not match build version ${version}.`);
@@ -229,6 +233,10 @@ export function createBuildMetadata({ packageVersion = readPackageVersion() } = 
     tag,
     commit,
     shortCommit,
+    sourceCommit,
+    releaseCommit,
+    artifactCommit,
+    tagTarget,
     buildTime: safeBuildTime(process.env.AIRRADAR_BUILD_TIME),
     channel,
   };

@@ -139,6 +139,35 @@ describe("release candidate versioning", () => {
     }
   });
 
+  it("preserves release identity across the build artifact", () => {
+    const sourceCommit = "1111111111111111111111111111111111111111";
+    const releaseCommit = "2222222222222222222222222222222222222222";
+    const artifactCommit = "3333333333333333333333333333333333333333";
+    vi.stubEnv("AIRRADAR_VERSION", "1.0.0");
+    vi.stubEnv("AIRRADAR_TAG", "v1.0.0");
+    vi.stubEnv("AIRRADAR_CHANNEL", "production");
+    vi.stubEnv("AIRRADAR_COMMIT", artifactCommit);
+    vi.stubEnv("AIRRADAR_SOURCE_COMMIT", sourceCommit);
+    vi.stubEnv("AIRRADAR_RELEASE_COMMIT", releaseCommit);
+    vi.stubEnv("AIRRADAR_ARTIFACT_COMMIT", artifactCommit);
+    vi.stubEnv("AIRRADAR_TAG_TARGET", artifactCommit);
+    try {
+      const metadata = createBuildMetadata({ packageVersion: "1.0.0" });
+      expect(metadata).toMatchObject({ sourceCommit, releaseCommit, artifactCommit, tagTarget: artifactCommit });
+      expect(parseBuildMetadata(metadata)).toMatchObject({ sourceCommit, releaseCommit, artifactCommit, tagTarget: artifactCommit });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("verifies the activated artifact before creating a release tag", async () => {
+    const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
+    expect(release).toContain("check_deployed_version_identity");
+    expect(release).toContain('git_cmd tag "${RELEASE_TAG}" "${tag_target}"');
+    expect(release).toContain("refusing to rewrite it");
+    expect(release).not.toContain('git_cmd tag "${RELEASE_TAG}" HEAD');
+  });
+
   it("uses the release resolver for automated production metadata", () => {
     const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
     const automatedStart = release.indexOf("  if (( AUTOMATED == 1 ));", release.indexOf("prepare_release_version()"));
