@@ -60,11 +60,17 @@ describe("route enrichment telemetry", () => {
     metrics.recordPhase("readThroughLoad", 40);
     metrics.recordPhase("routeResolution", 42);
     metrics.recordPhase("postgresCacheRequest", 12);
+    metrics.recordPhase("dbReadSettlement", 15);
+    metrics.recordPhase("dbWriteSettlement", 18);
+    metrics.recordPhase("dbMaintenanceSettlement", 24, "error");
     const phases = metrics.getSnapshot().phases;
     expect(phases.memoryLookup.p50Ms).toBe(1);
     expect(phases.readThroughLoad.p50Ms).toBe(40);
     expect(phases.routeResolution.p50Ms).toBe(42);
     expect(phases.postgresCacheRequest.p50Ms).toBe(12);
+    expect(phases.dbReadSettlement.p50Ms).toBe(15);
+    expect(phases.dbWriteSettlement.p50Ms).toBe(18);
+    expect(phases.dbMaintenanceSettlement).toMatchObject({ p50Ms: 24, errors: 1 });
     expect(phases.memoryLookup.scope).toBe("process-local-recent-samples");
     expect(phases.memoryLookup).toMatchObject({ sampleCapacity: 1_024 });
     expect(phases.dbConnection).toMatchObject({ measured: false, p95Ms: null });
