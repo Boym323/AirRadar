@@ -202,6 +202,12 @@ export class PostgresRouteCache implements RouteCacheStore {
       // underlying SQL that continues executing after its caller timed out.
       // It still INCLUDES pool acquisition and network time; it is NOT SQL-only.
       telemetry.recordPhase("dbCallSettlement", elapsedMs, successful ? "ok" : "error");
+      // V5.6: separate foreground reads/writes from optional housekeeping.
+      // Same inclusive DB-call elapsed scope; NOT a server-side SQL timer.
+      telemetry.recordPhase(
+        kind === "read" ? "dbReadSettlement" : kind === "write" ? "dbWriteSettlement" : "dbMaintenanceSettlement",
+        elapsedMs, successful ? "ok" : "error",
+      );
       if (successful) telemetry.recordDbLatency(elapsedMs);
       if (callerTimedOut) {
         this.stats.completedAfterCallerTimeout++;
