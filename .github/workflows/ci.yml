@@ -529,8 +529,8 @@ jobs:
             if sudo -n /var/www/airradar/deploy/release.sh \
                 --branch main \
                 --automated \
-                --commit "${GITHUB_SHA}" >"${output}" 2>&1; then
-              cat -- "${output}"
+                --commit "${GITHUB_SHA}" 2>&1 | tee "${output}"; then
+              # Stream release progress while retaining an exact diagnostic copy.
               rm -f -- "${output}"
               exit 0
             else
