@@ -30,6 +30,9 @@ Autorizovaný endpoint `/api/system/status` obsahuje
 - `sql.eventLoopAtTimeout`: omezené vzorky využití Node.js event loop
   během čekání na každý timeoutovaný DB požadavek; jednotkou jsou **procenta**,
   nikoliv milisekundy. Jde o celý proces, ne o exkluzivní CPU daného dotazu.
+- `sql.connectionFailures` počítá jen synchronní chyby při vytváření DB klienta;
+  asynchronní chyby ovladače, poolu nebo sítě mohou spadat pod `queryFailures`.
+  Nulový čítač connectionFailures **nevylučuje** problém poolu ani sítě.
 - `sql.timing.serverSideSql` a `sql.timing.connectionAcquisition` zůstávají
   `NOT MEASURED`, dokud nebude k dispozici nezávislé ověřené měření.
 - Všechna rozdělení vycházejí nejvýše z 1 024 **posledních vzorků v procesu**,
