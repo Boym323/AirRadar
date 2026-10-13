@@ -181,11 +181,23 @@ jobs:
         shell: bash
         env:
           PUSH_BEFORE: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -Eeuo pipefail
           changes="$(mktemp)"
           trap 'rm -f -- "$changes"' EXIT
-          if [[ "$PUSH_BEFORE" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$PUSH_BEFORE" =~ ^0{40}$ ]] \
+          # A preview must assess the *entire PR*, not github.event.before
+          # (which may identify only its latest incremental commit).
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            if [[ "$PR_BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] \
+              && git cat-file -e "$PR_BASE_SHA^{commit}" \
+              && git merge-base --is-ancestor "$PR_BASE_SHA" HEAD; then
+              git diff --name-only -z "$PR_BASE_SHA" HEAD > "$changes"
+            else
+              printf '%s\0' '__unknown_change__' > "$changes"
+              echo "::warning::Cannot verify PR base: selecting full release gates"
+            fi
+          elif [[ "$PUSH_BEFORE" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$PUSH_BEFORE" =~ ^0{40}$ ]] \
             && git cat-file -e "$PUSH_BEFORE^{commit}" \
             && git merge-base --is-ancestor "$PUSH_BEFORE" "$GITHUB_SHA"; then
             git diff --name-only -z "$PUSH_BEFORE" "$GITHUB_SHA" > "$changes"
