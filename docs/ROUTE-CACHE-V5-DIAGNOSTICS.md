@@ -18,6 +18,12 @@ The authenticated `/api/system/status` response includes
   settle after their caller already timed out. Contains pool wait, network and
   database execution; not SQL server duration. Also includes optional
   maintenance (COUNT/prune) calls.
+- V5.6 separates the same DB-call elapsed measurement into
+  `phases.dbReadSettlement`, `phases.dbWriteSettlement`, and
+  `phases.dbMaintenanceSettlement` (including failures) to distinguish
+  foreground reads and writes from optional COUNT/prune maintenance. The
+  original aggregate `dbCallSettlement` is retained for continuity. Each is
+  bounded and process-local; none measures SQL execution or connection-pool wait.
 - `phases.dbLateSettlement`: wall time **after** the 750 ms caller deadline
   for underlying operations that settle after their caller timed out. This
   does not mean SQL was cancelled by the timeout.
