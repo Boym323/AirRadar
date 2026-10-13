@@ -100,6 +100,11 @@ interface TruthPoint {
   onGround: boolean;
 }
 
+type SectorTruthCache = WeakMap<
+  PreparedAtcContextDataset,
+  WeakMap<Aircraft, Map<number, ReadonlySet<string>>>
+>;
+
 interface WaypointTruthDescriptor {
   kind: "WAYPOINT";
   lat: number;
@@ -722,7 +727,49 @@ function altitudeMatches(lowerFt: number | null, upperFt: number | null, altitud
   return true;
 }
 
-function spatialTruthMatches(pending: PendingEventOutcome, point: TruthPoint): boolean {
+function sectorIdsAtPoint(
+  aircraft: Aircraft,
+  point: TruthPoint,
+  dataset: PreparedAtcContextDataset,
+  cache: SectorTruthCache,
+): ReadonlySet<string> {
+  let byAircraft = cache.get(dataset);
+  if (!byAircraft) {
+    byAircraft = new WeakMap();
+    cache.set(dataset, byAircraft);
+  }
+  let byTimestamp = byAircraft.get(aircraft);
+  if (!byTimestamp) {
+    byTimestamp = new Map();
+    byAircraft.set(aircraft, byTimestamp);
+  }
+  const cached = byTimestamp.get(point.at);
+  if (cached) return cached;
+
+  const context = computeAtcContext({
+    lat: point.lat,
+    lon: point.lon,
+    altitude: point.altitudeFt,
+    baroAltitude: point.altitudeFt,
+    geomAltitude: point.altitudeFt,
+    altitudeSource: "baro",
+    track: point.trackDeg,
+    groundSpeed: point.groundSpeedKt,
+    verticalRate: point.verticalRateFpm,
+    timestamp: new Date(point.at).toISOString(),
+    onGround: point.onGround,
+  }, dataset, new Date(point.at));
+  const ids = new Set(context.currentAirspaces.map((airspace) => airspace.id));
+  byTimestamp.set(point.at, ids);
+  return ids;
+}
+
+function spatialTruthMatches(
+  pending: PendingEventOutcome,
+  aircraft: Aircraft,
+  point: TruthPoint,
+  sectorCache: SectorTruthCache,
+): boolean {
   switch (pending.descriptor.kind) {
     case "WAYPOINT":
       return haversineDistanceKm(
@@ -732,21 +779,7 @@ function spatialTruthMatches(pending: PendingEventOutcome, point: TruthPoint): b
         pending.descriptor.lon,
       ) / KM_PER_NM <= WAYPOINT_RADIUS_NM;
     case "ATC_SECTOR_ENTRY": {
-      const descriptor = pending.descriptor;
-      const context = computeAtcContext({
-        lat: point.lat,
-        lon: point.lon,
-        altitude: point.altitudeFt,
-        baroAltitude: point.altitudeFt,
-        geomAltitude: point.altitudeFt,
-        altitudeSource: "baro",
-        track: point.trackDeg,
-        groundSpeed: point.groundSpeedKt,
-        verticalRate: point.verticalRateFpm,
-        timestamp: new Date(point.at).toISOString(),
-        onGround: point.onGround,
-      }, descriptor.dataset, new Date(point.at));
-      return context.currentAirspaces.some((airspace) => airspace.id === descriptor.sectorId);
+      return sectorIdsAtPoint(aircraft, point, pending.descriptor.dataset, sectorCache).has(pending.descriptor.sectorId);
     }
     case "SIGMET_INTERSECTION":
       return sigmetValidAt(pending.descriptor.feature, point.at)
@@ -842,6 +875,7 @@ export class OperationalTwinEventOutcomeValidator {
 
   observeLocal(local: ReadonlyMap<string, Aircraft>, now = Date.now()): void {
     if (!Number.isFinite(now)) return;
+    const sectorCache: SectorTruthCache = new WeakMap();
     for (const [icaoHex, aircraft] of local) {
       const pendingIds = this.pendingByAircraft.get(icaoHex);
       if (!pendingIds || pendingIds.size === 0) continue;
@@ -856,7 +890,7 @@ export class OperationalTwinEventOutcomeValidator {
         for (const point of points) {
           if (point.at < pending.earlyAt || point.at > pending.expiresAt) continue;
           this.updateContinuity(pending, point.at);
-          if (spatialTruthMatches(pending, point)) {
+          if (spatialTruthMatches(pending, aircraft, point, sectorCache)) {
             this.resolveObserved(pending, point.at);
             break;
           }
