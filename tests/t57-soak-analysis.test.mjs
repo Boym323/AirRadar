@@ -103,6 +103,8 @@ describe("T5.7C 24-hour read-only soak", () => {
         dbReadSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 2100, p95Ms: 2100, p99Ms: 2100, maxMs: 2100 },
         dbWriteSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 5, p95Ms: 5, p99Ms: 5, maxMs: 5 },
         dbMaintenanceSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 35, p95Ms: 35, p99Ms: 35, maxMs: 35, errors: 1 },
+        dbMaintenanceCount: { measured: true, count: 1, sampleCount: 1, p50Ms: 35, p95Ms: 35, p99Ms: 35, maxMs: 35, errors: 1 },
+        dbMaintenancePrune: { measured: false, count: 0, sampleCount: 0, p50Ms: null, p95Ms: null, p99Ms: null, maxMs: null, errors: 0 },
         dbLateSettlement: { measured: true, count: 1, sampleCount: 1, p50Ms: 1350, p95Ms: 1350, p99Ms: 1350, maxMs: 1350 },
         callerTimeoutOvershoot: { measured: true, count: 1, sampleCount: 1, p50Ms: 700, p95Ms: 700, p99Ms: 700, maxMs: 700 },
       },
@@ -119,6 +121,7 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(projected.routeCache.phases.dbReadSettlement.p95Ms).toBe(2100);
     expect(projected.routeCache.phases.dbWriteSettlement.p95Ms).toBe(5);
     expect(projected.routeCache.phases.dbMaintenanceSettlement.errors).toBe(1);
+    expect(projected.routeCache.phases.dbMaintenanceCount.errors).toBe(1);
     expect(projected.routeCache.sql.eventLoopAtTimeout.p95Percent).toBe(92);
     expect(JSON.stringify(projected)).not.toContain("SHOULD_NOT_LEAK");
 

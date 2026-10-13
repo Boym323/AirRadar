@@ -12,6 +12,7 @@ export const ROUTE_PHASE_KEYS = [
   "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
   "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
   "dbCallSettlement", "dbReadSettlement", "dbWriteSettlement", "dbMaintenanceSettlement",
+  "dbMaintenanceCount", "dbMaintenancePrune",
   "dbLateSettlement", "callerTimeoutOvershoot",
 ] as const;
 export type RoutePhaseKey = (typeof ROUTE_PHASE_KEYS)[number];

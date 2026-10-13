@@ -24,6 +24,11 @@ The authenticated `/api/system/status` response includes
   foreground reads and writes from optional COUNT/prune maintenance. The
   original aggregate `dbCallSettlement` is retained for continuity. Each is
   bounded and process-local; none measures SQL execution or connection-pool wait.
+- The maintenance aggregate is additionally split into
+  `phases.dbMaintenanceCount` and `phases.dbMaintenancePrune`. These retain
+  the same inclusive settlement scope as the aggregate and distinguish the
+  optional valid-entry COUNT from expired-entry pruning without changing either
+  operation's cadence or behavior.
 - `phases.dbLateSettlement`: wall time **after** the 750 ms caller deadline
   for underlying operations that settle after their caller timed out. This
   does not mean SQL was cancelled by the timeout.

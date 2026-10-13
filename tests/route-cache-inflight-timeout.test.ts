@@ -200,6 +200,7 @@ describe("route-cache timed out SQL operation lifecycle", () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(query).toHaveBeenCalledTimes(2);
     expect(getRouteEnrichmentTelemetry().getSnapshot().phases.dbMaintenanceSettlement.errors).toBeGreaterThan(0);
+    expect(getRouteEnrichmentTelemetry().getSnapshot().phases.dbMaintenanceCount.errors).toBeGreaterThan(0);
     expect(store.getDiagnostics()).toMatchObject({
       retryAfter: 0, active: 0, failureStreak: 0, failures: 1,
     });

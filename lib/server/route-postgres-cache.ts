@@ -16,6 +16,7 @@ const MAX_ACTIVE = 4;
 const MAX_ACTIVE_WRITES = 2;
 // Maintenance work must never contend with a foreground route lookup.
 type OperationKind = "read" | "write" | "maintenance";
+type MaintenanceOperation = "count" | "prune";
 
 /** Process-local, bounded reason counters. No query text, credentials, keys or IDs. */
 type DbRouteDiagnostics = {
@@ -131,7 +132,7 @@ export class PostgresRouteCache implements RouteCacheStore {
 
   private async run<T>(
     fallback: T, query: (database: NonNullable<ReturnType<typeof getPrisma>>) => Promise<T>,
-    kind: OperationKind = "read", onTimeout?: () => void,
+    kind: OperationKind = "read", onTimeout?: () => void, maintenanceOperation?: MaintenanceOperation,
   ): Promise<T> {
     const now = Date.now();
     const recovering = this.retryAfter !== 0 && now >= this.retryAfter;
@@ -208,6 +209,12 @@ export class PostgresRouteCache implements RouteCacheStore {
         kind === "read" ? "dbReadSettlement" : kind === "write" ? "dbWriteSettlement" : "dbMaintenanceSettlement",
         elapsedMs, successful ? "ok" : "error",
       );
+      if (kind === "maintenance" && maintenanceOperation) {
+        telemetry.recordPhase(
+          maintenanceOperation === "count" ? "dbMaintenanceCount" : "dbMaintenancePrune",
+          elapsedMs, successful ? "ok" : "error",
+        );
+      }
       if (successful) telemetry.recordDbLatency(elapsedMs);
       if (callerTimedOut) {
         this.stats.completedAfterCallerTimeout++;
@@ -339,7 +346,7 @@ export class PostgresRouteCache implements RouteCacheStore {
         WHERE "expiresAtMs" > ${BigInt(Date.now())}
       `.returnsRow({ entries: "pg/int4@1" }).build());
       return rows[0]?.entries ?? null;
-    }, "maintenance").then((count) => {
+    }, "maintenance", undefined, "count").then((count) => {
       if (count !== null) getRouteEnrichmentTelemetry().setValidEntries(count);
     });
   }
@@ -356,6 +363,6 @@ export class PostgresRouteCache implements RouteCacheStore {
         )
       `.affectedCount().build());
       return true;
-    }, "maintenance");
+    }, "maintenance", undefined, "prune");
   }
 }
