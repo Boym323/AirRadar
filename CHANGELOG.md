@@ -17,6 +17,12 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.438] - 2026-10-13
+
+Changes since v1.0.438.
+
+No user-facing changes.
+
 ## [1.0.437] - 2026-10-13
 
 Changes since v1.0.436.
