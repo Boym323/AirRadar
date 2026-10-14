@@ -23,3 +23,30 @@ test("all release gates run in maintainer-requested previews", () => {
   }
   assert.match(job("deploy"), /release-tests, release-performance/);
 });
+
+test("release browser throughput remains within the tested bounded scheduler", () => {
+  const release = job("release-validate");
+  assert.match(release, /AIRRADAR_VISUAL_CONCURRENCY: '3'/);
+  assert.match(release, /AIRRADAR_VIEWPORT_CONCURRENCY: '3'/);
+  assert.match(release, /npm run test:production:all/);
+});
+
+test("production release logs stream live with pipefail and retain flock retry detection", () => {
+  const deploy = job("deploy");
+  assert.match(deploy, /set -Eeuo pipefail/);
+  assert.match(deploy, /--commit "\$\{GITHUB_SHA\}" 2>&1 \| tee "\$\{output\}"/);
+  assert.match(deploy, /if grep -Fq 'Another AirRadar release is already running\.'/);
+  assert.match(deploy, /exit "\$\{result\}"/);
+});
+
+test("release-preview includes the complete PR base-to-HEAD diff", () => {
+  const scope = job("release-scope");
+  assert.match(scope, /PR_BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(scope, /if \[\[ "\$GITHUB_EVENT_NAME" == "pull_request" \]\]; then/);
+  assert.match(scope, /git merge-base --is-ancestor "\$PR_BASE_SHA" HEAD/);
+  assert.match(scope, /git diff --name-only -z "\$PR_BASE_SHA" HEAD > "\$changes"/);
+  assert.match(scope, /Cannot verify PR base: selecting full release gates/);
+  // Main pushes keep their separate push-base guard; PR previews must not
+  // silently classify only a final test-only commit as the full change.
+  assert.match(scope, /git diff --name-only -z "\$PUSH_BEFORE" "\$GITHUB_SHA"/);
+});
