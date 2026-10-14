@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.452] - 2026-10-14
+
+Changes since v1.0.451.
+
+**Features touched:** System Observability.
+
+### Performance
+
+- Recover nearest-airport event-loop hotspot (#881) (8ea6082f)
+
+### Maintenance
+
+- Sync generated repository metadata (#880) (c74203b9)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#880) (c74203b9)
+- perf(runtime): recover nearest-airport event-loop hotspot (#881) (8ea6082f)
+
+</details>
 ## [1.0.451] - 2026-10-14
 
 Changes since v1.0.450.
