@@ -104,7 +104,6 @@ interface TruthPoint {
 
 interface AtcTruthCacheEntry {
   dataset: PreparedAtcContextDataset;
-  icaoHex: string;
   observedAt: number;
   fingerprint: string;
   ids: ReadonlySet<string>;
@@ -828,14 +827,17 @@ class AtcTruthCache {
     private readonly maxEntries = ATC_CACHE_MAX_ENTRIES,
   ) {}
 
-  idsAtPoint(icaoHex: string, point: TruthPoint, dataset: PreparedAtcContextDataset, now = Date.now()): ReadonlySet<string> {
+  idsAtPoint(_icaoHex: string, point: TruthPoint, dataset: PreparedAtcContextDataset, now = Date.now()): ReadonlySet<string> {
     if (!this.enabled) {
       this.misses += 1;
       return computeSectorIdsAtPoint(point, dataset);
     }
 
     const datasetId = this.datasetId(dataset);
-    const key = `${datasetId}:${icaoHex}:${point.at}`;
+    // Sector membership is a pure function of the dataset and truth point.
+    // Do not include aircraft identity: dense snapshots commonly contain the
+    // same sampled point for multiple aircraft and should share the result.
+    const key = `${datasetId}:${point.at}`;
     const fingerprint = atcInputFingerprint(point);
     const cached = this.entries.get(key);
     if (cached && cached.dataset === dataset && cached.fingerprint === fingerprint) {
@@ -849,7 +851,6 @@ class AtcTruthCache {
     this.misses += 1;
     const entry: AtcTruthCacheEntry = {
       dataset,
-      icaoHex,
       observedAt: point.at,
       fingerprint,
       ids: computeSectorIdsAtPoint(point, dataset),
