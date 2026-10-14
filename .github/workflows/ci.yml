@@ -313,9 +313,15 @@ jobs:
           const fs = require("node:fs");
           const [manifestPath, commit, version, buildTime] = process.argv.slice(2);
           const metadata = JSON.parse(fs.readFileSync("generated/build-version.json", "utf8"));
+          const standaloneMetadata = JSON.parse(fs.readFileSync(".next/standalone/generated/build-version.json", "utf8"));
           const buildId = fs.readFileSync(".next/BUILD_ID", "utf8").trim();
           if (metadata.commit !== commit || metadata.version !== version || metadata.channel !== "production") {
-            throw new Error(`Build metadata mismatch: ${JSON.stringify(metadata)}`);
+            throw new Error("Root build metadata does not match the CI release identity");
+          }
+          if (standaloneMetadata.commit !== commit || standaloneMetadata.version !== version ||
+              standaloneMetadata.channel !== metadata.channel ||
+              standaloneMetadata.buildTime !== metadata.buildTime) {
+            throw new Error("Standalone build metadata does not match the CI release identity");
           }
           const manifest = {
             schemaVersion: 1,

@@ -13,6 +13,8 @@ const standalonePublicDir = resolve(standaloneDir, "public");
 const sourceAtsDir = resolve("data", "ats", "generated");
 const standaloneAtsDir = resolve(standaloneDir, "data", "ats", "generated");
 const readyMarker = resolve(standaloneDir, ".airradar-runtime-ready");
+const sourceBuildMetadata = resolve("generated", "build-version.json");
+const standaloneBuildMetadata = resolve(standaloneDir, "generated", "build-version.json");
 
 rmSync(readyMarker, { force: true });
 
@@ -99,6 +101,21 @@ if (existsSync(sourcePublicDir)) {
 rmSync(resolve(standaloneDir, "data", "ats"), { recursive: true, force: true });
 if (existsSync(sourceAtsDir)) {
   cpSync(sourceAtsDir, standaloneAtsDir, { recursive: true });
+}
+
+// Explicitly package the release identity alongside the standalone runtime.
+if (!existsSync(sourceBuildMetadata)) {
+  throw new Error("Standalone build metadata source missing");
+}
+const buildMetadata = JSON.parse(readFileSync(sourceBuildMetadata, "utf8"));
+if (!buildMetadata || !/^[0-9a-f]{40}$/i.test(buildMetadata.commit ?? "") ||
+    !["production", "release-candidate"].includes(buildMetadata.channel)) {
+  throw new Error("Standalone build metadata source invalid");
+}
+mkdirSync(resolve(standaloneDir, "generated"), { recursive: true });
+cpSync(sourceBuildMetadata, standaloneBuildMetadata);
+if (readFileSync(sourceBuildMetadata, "utf8") !== readFileSync(standaloneBuildMetadata, "utf8")) {
+  throw new Error("Standalone build metadata copy mismatch");
 }
 
 writeFileSync(readyMarker, "standalone-v1\n", "utf8");

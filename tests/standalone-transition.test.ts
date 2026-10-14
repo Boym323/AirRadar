@@ -27,6 +27,9 @@ describe("standalone transition safety", () => {
     try {
       await mkdir(join(distDir, "static"), { recursive: true });
       await mkdir(standaloneDir, { recursive: true });
+      await mkdir(join(root, "generated"), { recursive: true });
+      const metadata = { version: "1.0.451", commit: "a".repeat(40), channel: "production" };
+      await writeFile(join(root, "generated", "build-version.json"), JSON.stringify(metadata), "utf8");
       await writeFile(join(distDir, "BUILD_ID"), "fixture-build\n", "utf8");
       await writeFile(join(distDir, "static", "fixture.js"), "fixture\n", "utf8");
       await writeFile(
@@ -47,6 +50,8 @@ describe("standalone transition safety", () => {
       expect(rewritten).toContain('"distDirRoot":".next"');
       expect(rewritten).not.toContain(".next-release-test");
       await expect(readFile(join(standaloneDir, ".airradar-runtime-ready"), "utf8")).resolves.toBe("standalone-v1\n");
+      await expect(readFile(join(standaloneDir, "generated", "build-version.json"), "utf8"))
+        .resolves.toBe(JSON.stringify(metadata));
     } finally {
       await rm(root, { recursive: true, force: true });
     }
