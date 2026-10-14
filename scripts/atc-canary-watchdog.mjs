@@ -83,6 +83,7 @@ async function acquireLocks() {
   try { return { release, build: await lock(BUILD_LOCK) }; }
   catch (error) { await release.close(); throw error; }
 }
+async function acquireBuildLock() { return lock(BUILD_LOCK); }
 export function validateActivationPreconditions({ phase, state, currentFlags, verifiedFlags, timerActive }) {
   if (phase !== "assignment" && phase !== "shadow") die("invalid_phase");
   if (!state || state.mode !== "armed") die("watchdog_not_armed");
@@ -159,47 +160,127 @@ async function restore(reason, heldLocks = null) {
     return "restored_off";
   } finally { if (!heldLocks) { await locks.build.close(); await locks.release.close(); } }
 }
-async function initialize() {
-  await mkdir(STATE_DIR, { recursive: true, mode: 0o700 });
-  const current = await readFile(ENV, "utf8");
-  const flags = parseFlags(current);
-  if (flags.AIRRADAR_ATC_RESOLUTION_ENABLED !== "false" || flags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== "false") die("initialize_requires_atc_off");
-  await copyFile(ENV, BACKUP, 0);
-  await chmod(BACKUP, 0o600);
-  await saveState({ schema: 1, mode: "armed", recoveries: 0, preparedAt: Date.now(), baseline: flags, samples: [] });
-  process.stdout.write("ATC watchdog armed with verified false/false backup\n");
+export async function initialize(runtime = {}) {
+  const ops = { acquireLocks, mkdir, readState, readFile, parseFlags, copyFile, chmod, saveState, ...runtime };
+  const locks = await ops.acquireLocks();
+  try {
+    await ops.mkdir(STATE_DIR, { recursive: true, mode: 0o700 });
+    const previous = await ops.readState();
+    if (previous.mode === "lockout" || previous.critical === true) die("watchdog_lockout");
+    const current = await ops.readFile(ENV, "utf8");
+    const flags = ops.parseFlags(current);
+    if (flags.AIRRADAR_ATC_RESOLUTION_ENABLED !== "false" || flags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== "false") die("initialize_requires_atc_off");
+    await ops.copyFile(ENV, BACKUP, 0);
+    await ops.chmod(BACKUP, 0o600);
+    await ops.saveState({ schema: 1, mode: "armed", recoveries: 0, preparedAt: Date.now(), baseline: flags, samples: [] });
+    process.stdout.write("ATC watchdog armed with verified false/false backup\n");
+  } finally {
+    await locks.build.close();
+    await locks.release.close();
+  }
 }
-async function activate(phase) {
-  const locks = await acquireLocks();
+function failureCode(error, fallback) {
+  if (error instanceof Error && /^[a-z0-9_]+$/.test(error.message)) return error.message;
+  return fallback;
+}
+export async function activate(phase, runtime = {}) {
+  const ops = { acquireLocks, acquireBuildLock, readState, readFile, stat, atomicWrite, exec, waitForHealth, saveState, ...runtime };
+  const locks = await ops.acquireLocks();
   let changed = false;
+  let buildReleased = false;
+  let buildReleaseUncertain = false;
+  let current;
+  let envStat;
+  let state;
+  let stage = "validation";
   try {
     // All activation inputs are read only after both locks are held. This
     // prevents a concurrent watchdog recovery/import/release from invalidating
     // the decision between validation and the .env replacement.
-    const state = await readState();
-    const current = await readFile(ENV, "utf8");
-    const verified = await readFile(BACKUP, "utf8");
-    const timerActive = await exec("/usr/bin/systemctl", ["is-active", "--quiet", "airradar-atc-watchdog.timer"])
+    state = await ops.readState();
+    current = await ops.readFile(ENV, "utf8");
+    envStat = await ops.stat(ENV);
+    const verified = await ops.readFile(BACKUP, "utf8");
+    const timerActive = await ops.exec("/usr/bin/systemctl", ["is-active", "--quiet", "airradar-atc-watchdog.timer"])
       .then(() => true, () => false);
     validateActivationPreconditions({ phase, state, currentFlags: parseFlags(current), verifiedFlags: parseFlags(verified), timerActive });
-    const envStat = await stat(ENV);
     const next = withFlags(current, true, phase === "shadow");
-    await atomicWrite(ENV, next, envStat);
-    await locks.build.close();
+    stage = "atomic_write";
+    await ops.atomicWrite(ENV, next, envStat);
     changed = true;
-    await exec("/usr/bin/systemctl", ["restart", "airradar.service"]);
-    await waitForHealth();
+    stage = "build_lock_release";
+    buildReleaseUncertain = true;
+    await locks.build.close();
+    buildReleased = true;
+    buildReleaseUncertain = false;
+    stage = "restart";
+    await ops.exec("/usr/bin/systemctl", ["restart", "airradar.service"]);
+    stage = "health_check";
+    await ops.waitForHealth();
     process.stdout.write(`ATC ${phase} configuration active; health OK\n`);
   } catch (error) {
     if (changed) {
+      let rollbackStage = "lock_acquire";
+      let rollbackError;
       try {
-        const envStat = await stat(ENV);
-        await atomicWrite(ENV, current, envStat);
-        await exec("/usr/bin/systemctl", ["restart", "airradar.service"]);
-      } catch {}
+        if (buildReleaseUncertain) {
+          // A failed close is ambiguous: the child may still hold the lock or
+          // may have exited after releasing it. Do not write until ownership
+          // is made unambiguous again.
+          try { await locks.build.close(); } catch {}
+          locks.build = await ops.acquireBuildLock();
+          buildReleased = false;
+          buildReleaseUncertain = false;
+        }
+        if (buildReleased) {
+          locks.build = await ops.acquireBuildLock();
+          buildReleased = false;
+        }
+        rollbackStage = "atomic_write";
+        await ops.atomicWrite(ENV, current, envStat);
+        rollbackStage = "restart";
+        await ops.exec("/usr/bin/systemctl", ["restart", "airradar.service"]);
+        rollbackStage = "health_check";
+        await ops.waitForHealth();
+      } catch (restoreError) {
+        rollbackError = restoreError;
+      }
+      if (rollbackError) {
+        const diagnostic = {
+          phase,
+          mode: "lockout",
+          critical: true,
+          rollbackFailed: true,
+          failure: stage,
+          rollbackFailure: rollbackStage,
+          recoveries: Math.max(Number.isSafeInteger(state?.recoveries) ? state.recoveries : 0, 1),
+          lastFailureAt: Date.now(),
+        };
+        try {
+          await ops.saveState({ ...state, ...diagnostic });
+        } catch {
+          throw new Error("ATC_WATCHDOG_CRITICAL rollback_state_persist_failed");
+        }
+        throw new Error(`ATC_WATCHDOG_CRITICAL rollback_failed_${failureCode(rollbackError, rollbackStage)}`);
+      }
+      await ops.saveState({
+        ...state,
+        mode: "lockout",
+        recoveries: Math.max(Number.isSafeInteger(state?.recoveries) ? state.recoveries : 0, 1),
+        lastFailureAt: Date.now(),
+        reason: `activation_${stage}`,
+        restored: true,
+        critical: false,
+      });
+      throw new Error(`activation_rolled_back_${stage}`);
     }
     throw error;
-  } finally { await locks.build.close(); await locks.release.close(); }
+  } finally {
+    if (!buildReleased) {
+      try { await locks.build.close(); } catch {}
+    }
+    await locks.release.close();
+  }
 }
 async function once() {
   const locks = await acquireLocks();
