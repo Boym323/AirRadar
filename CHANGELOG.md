@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.448] - 2026-10-14
+
+Changes since v1.0.447.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Fixed
+
+- Bound shadow prediction scheduling (89d2d789)
+
+### Maintenance
+
+- Sync generated repository metadata (#872) (191a8284)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#872) (191a8284)
+- fix(atc): bound shadow prediction scheduling (89d2d789)
+
+</details>
 ## [1.0.447] - 2026-10-14
 
 Changes since v1.0.446.
