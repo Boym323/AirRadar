@@ -2,8 +2,8 @@ import type { AtcAssignment, AtcFrequencySummary, AtcLookup, AtcSector, AtcSecto
 import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 import { isAtcValidityValid } from "@/lib/server/atc-validity";
-import { getAtcSectorCandidates, prepareAtcContextDataset } from "@/lib/atc-context/engine";
-import type { PreparedAtcContextDataset } from "@/lib/atc-context/types";
+import { getAtcSectorCandidatesFromIndex, prepareAtcSectorDatasetAsync } from "@/lib/atc-context/engine";
+import type { PreparedAtcSectorDataset } from "@/lib/atc-context/types";
 import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
@@ -263,10 +263,13 @@ export function summarizeRelevantAtcFrequencies(input: ReadonlyArray<AtcAssigned
 
 export class AtcSectorService {
   private sectors: AtcSector[] | null = null;
-  private preparedDataset: PreparedAtcContextDataset | null = null;
-  private loading: Promise<AtcSector[]> | null = null;
+  private preparedDataset: PreparedAtcSectorDataset | null = null;
+  private loading: Promise<void> | null = null;
+  private generation = 0;
 
-  constructor(private readonly provider: AtcSectorProvider) {}
+  constructor(private readonly provider: AtcSectorProvider) {
+    provider.onDatasetInvalidated?.(() => this.invalidate());
+  }
 
   async lookup(lookup: AtcLookup): Promise<AtcSectorMatch | null> {
     return measureRuntimeAsync("atc.lookup.total", 1, async () => {
@@ -293,27 +296,39 @@ export class AtcSectorService {
   }
 
   invalidate(): void {
+    this.generation += 1;
     this.sectors = null;
     this.preparedDataset = null;
   }
 
   private async getSectors(): Promise<AtcSector[]> {
-    if (this.sectors) return this.sectors;
-    this.loading ??= measureRuntimeAsync("atc.provider.wait", 0, () => this.provider.getSectors())
-      .then((sectors) => {
-        this.sectors = sectors;
-        this.preparedDataset = measureRuntime("atc.dataset.preparation", sectors.length, () => prepareAtcContextDataset({ sectors, routeDocuments: [] }));
-        return sectors;
-      })
-      .finally(() => {
-        this.loading = null;
-      });
-    return this.loading;
+    while (true) {
+      if (this.sectors && this.preparedDataset) return this.sectors;
+      const generation = this.generation;
+      if (!this.loading) {
+        this.loading = (async () => {
+          const hasSnapshot = typeof this.provider.getSectorsSnapshot === "function";
+          const sectors = await measureRuntimeAsync("atc.provider.wait", 0, () => hasSnapshot
+            ? this.provider.getSectorsSnapshot!()
+            : this.provider.getSectors());
+          const prepared = await measureRuntimeAsync("atc.dataset.preparation", sectors.length, () => prepareAtcSectorDatasetAsync(sectors, { owned: hasSnapshot }));
+          // An import can invalidate while preparation yields. Never publish a
+          // partially or stale-built index over the newer generation.
+          if (generation === this.generation) {
+            this.sectors = [...sectors];
+            this.preparedDataset = prepared;
+          }
+        })().finally(() => {
+          this.loading = null;
+        });
+      }
+      await this.loading;
+    }
   }
 
   private async getCandidates(lookup: AtcLookup): Promise<AtcSector[]> {
     await this.getSectors();
     if (!this.preparedDataset) return [];
-    return measureRuntime("atc.sector.candidate-lookup", 1, () => getAtcSectorCandidates(this.preparedDataset!, lookup.longitude, lookup.latitude));
+    return measureRuntime("atc.sector.candidate-lookup", 1, () => getAtcSectorCandidatesFromIndex(this.preparedDataset!, lookup.longitude, lookup.latitude));
   }
 }

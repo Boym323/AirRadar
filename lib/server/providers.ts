@@ -15,7 +15,7 @@ import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
 import { isAdsbHubEnabled } from "@/lib/server/config";
 import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, NetworkAircraftProvider, ProviderRegistry } from "@/lib/server/provider";
-import { DatabaseAtcSectorProvider, getStoredAtcData, getStoredAtcMetadata, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
+import { DatabaseAtcSectorProvider, getStoredAtcData, getStoredAtcDataSnapshot, getStoredAtcMetadata, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
 import type { AtcDataResponse } from "@/lib/atc/types";
 
 export function createAircraftProvider(): AircraftProvider {
@@ -193,6 +193,38 @@ export function createAtcSectorProvider() {
 
 export async function getAtcData(): Promise<AtcDataResponse> {
   if (shouldUseSampleAtcData()) {
+    return structuredClone({
+      sectors: SAMPLE_ATC_SECTORS,
+      transmitters: SAMPLE_ATC_TRANSMITTERS,
+      metadata: {
+        status: "sample",
+        source: "AirRadar sample data",
+        sourceReference: "demo://airradar-sample-atc",
+        effectiveDate: null,
+        lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+        sectorCount: SAMPLE_ATC_SECTORS.length,
+        transmitterCount: SAMPLE_ATC_TRANSMITTERS.length,
+      },
+    });
+  }
+  return await getStoredAtcData() ?? {
+    sectors: [],
+    transmitters: [],
+    metadata: {
+      status: "unavailable",
+      source: null,
+      sourceReference: null,
+      effectiveDate: null,
+      lastVerifiedAt: null,
+      sectorCount: 0,
+      transmitterCount: 0,
+    },
+  };
+}
+
+/** Internal immutable snapshot for index builders; public callers use getAtcData(). */
+export async function getAtcDataSnapshot(): Promise<Readonly<AtcDataResponse>> {
+  if (shouldUseSampleAtcData()) {
     return {
       sectors: SAMPLE_ATC_SECTORS,
       transmitters: SAMPLE_ATC_TRANSMITTERS,
@@ -207,18 +239,10 @@ export async function getAtcData(): Promise<AtcDataResponse> {
       },
     };
   }
-  return await getStoredAtcData() ?? {
+  return await getStoredAtcDataSnapshot() ?? {
     sectors: [],
     transmitters: [],
-    metadata: {
-      status: "unavailable",
-      source: null,
-      sourceReference: null,
-      effectiveDate: null,
-      lastVerifiedAt: null,
-      sectorCount: 0,
-      transmitterCount: 0,
-    },
+    metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
   };
 }
 

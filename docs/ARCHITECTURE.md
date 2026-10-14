@@ -208,9 +208,13 @@ independent lanes:
 - `EnrichmentService` invokes configured metadata, route, and flight-plan
   providers asynchronously. It uses normalized keys, positive/negative TTLs,
   in-flight coalescing, and bounded concurrency.
-- `AtcSectorService` loads one cached sector dataset and matches point,
-  altitude, and validity time. Results are attached asynchronously and are
-  explicitly estimates.
+- `AtcSectorService` loads one immutable provider snapshot and builds a
+  sector-only bbox/grid index. Preparation is single-flight, chunked with
+  `setImmediate()` yields, and published atomically only for the current
+  dataset generation. The richer `loadAtcContextDataset()` path separately
+  builds ATS route/point indexes for prediction and uses the same bounded
+  invalidation rule. Results are attached asynchronously and are explicitly
+  estimates.
 - `ReceiverStatistics` maintains the current local-day aggregate in RAM and
   persists only changed aggregate, aircraft, and coverage rows.
 - `logbook-summary.ts` builds one bounded dashboard response from the current

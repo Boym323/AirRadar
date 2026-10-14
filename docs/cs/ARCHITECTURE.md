@@ -127,9 +127,12 @@ nezávislé větve:
 - `EnrichmentService` volá nakonfigurované providery metadat, tras a flight
   planů asynchronně. Používá normalizované klíče, pozitivní/negativní TTL,
   slučování in-flight požadavků a omezenou concurrency.
-- `AtcSectorService` načítá jednu cacheovanou datovou sadu sektorů a porovnává
-  bod, výšku a čas platnosti. Výsledky se připojují asynchronně a jsou
-  explicitně odhady.
+- `AtcSectorService` načítá jeden neměnný snapshot provideru a vytváří pouze
+  bbox/grid index sektorů. Příprava je single-flight, po omezených dávkách
+  předává řízení přes `setImmediate()` a atomicky publikuje pouze aktuální
+  generaci datasetu. Bohatší cesta `loadAtcContextDataset()` samostatně
+  vytváří ATS route/point indexy pro predikci a používá stejnou bezpečnou
+  invalidaci. Výsledky se připojují asynchronně a jsou explicitně odhady.
 - `ReceiverStatistics` udržuje agregaci aktuálního lokálního dne v RAM a
   persistuje pouze změněné agregační, aircraft a coverage řádky.
 - `logbook-summary.ts` sestavuje jednu omezenou dashboard odpověď z Flight

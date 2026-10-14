@@ -66,6 +66,9 @@ export interface FlightPlanProvider {
 export interface AtcSectorProvider {
   readonly name: string;
   getSectors(): Promise<AtcSector[]>;
+  /** Immutable process-owned snapshot for index builders that can avoid a second deep clone. */
+  getSectorsSnapshot?(): Promise<ReadonlyArray<AtcSector>>;
+  onDatasetInvalidated?(listener: () => void): () => void;
 }
 
 export interface AtcActivityProvider {

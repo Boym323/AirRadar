@@ -1,12 +1,13 @@
+import { createHash } from "node:crypto";
 import type { AtcSector } from "@/lib/atc/types";
 import { loadAtAtsRoutes } from "@/lib/ats/at-routes";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
-import { getAtcData } from "@/lib/server/providers";
-import { measureRuntime } from "@/lib/server/runtime-performance";
+import { getAtcDataSnapshot } from "@/lib/server/providers";
+import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 import type { Aircraft } from "@/lib/aircraft/types";
-import { angleDifference, bbox, bboxContains, bearing, destination, distanceNm, distanceToSegmentNm, pointInPolygon } from "./geometry";
-import type { AtcContextDataset, AtcContextInput, AtcContextLookupDiagnostics, AtcContextResult, AtsRouteMatch, ContextAirspace, ContextConfidence, ContextPoint, PreparedAtcContextDataset, VerticalMatch } from "./types";
+import { angleDifference, bbox, bboxAsync, bboxContains, bearing, destination, distanceNm, distanceToSegmentNm, pointInPolygon } from "./geometry";
+import type { AtcContextDataset, AtcContextInput, AtcContextLookupDiagnostics, AtcContextResult, AtsRouteMatch, ContextAirspace, ContextConfidence, ContextPoint, PreparedAtcContextDataset, PreparedAtcSectorDataset, VerticalMatch } from "./types";
 
 const SUPPORTED = new Set(["CZ", "SK", "AT"]);
 const ORDER: Record<string, number> = { TMA: 10, CTR: 15, CTA_SECTOR: 20, CTA: 30, FIR: 40, OTHER: 90 };
@@ -44,6 +45,111 @@ function deepFreeze<T>(value: T): T {
   }
   return value;
 }
+
+type PreparationOptions = { owned?: boolean };
+type PreparedAirspace = { sector: AtcSector; boxes: Array<Box>; order: number };
+
+function cloneSectors(sectors: readonly AtcSector[]): AtcSector[] {
+  return structuredClone(sectors) as AtcSector[];
+}
+
+function freezeSectorIndex(
+  sectors: readonly AtcSector[],
+  airspaces: PreparedAirspace[],
+  atcGrid: Map<string, number[]>,
+): PreparedAtcSectorDataset {
+  const frozenAirspaces = Object.freeze(airspaces.map((entry) => Object.freeze({
+    sector: entry.sector,
+    boxes: Object.freeze(entry.boxes.map((box) => Object.freeze(box) as unknown as Box)),
+    order: entry.order,
+  })));
+  return {
+    sectors: Object.freeze([...sectors]),
+    airspaces: frozenAirspaces,
+    atcGrid: immutableGrid(atcGrid),
+    builtAt: new Date().toISOString(),
+    prepared: true,
+  };
+}
+
+/** Lightweight assignment-only index. It intentionally excludes ATS routes and points. */
+export function prepareAtcSectorDataset(sectors: readonly AtcSector[]): PreparedAtcSectorDataset {
+  const ownedSectors = cloneSectors(sectors);
+  const airspaces: PreparedAirspace[] = ownedSectors.map((sector) => ({
+    sector,
+    boxes: sector.polygons.map((polygon) => bbox([polygon as unknown as [number, number][]])),
+    order: ORDER[typeOf(sector)] ?? 90,
+  }));
+  airspaces.sort((a, b) => a.order - b.order || a.sector.id.localeCompare(b.sector.id));
+  const atcGrid = new Map<string, number[]>();
+  airspaces.forEach((entry, index) => entry.boxes.forEach((box) => addGrid(atcGrid, box, index)));
+  deepFreeze(ownedSectors);
+  return freezeSectorIndex(ownedSectors, airspaces, atcGrid);
+}
+
+async function addGridAsync(grid: Map<string, number[]>, box: Box, index: number, expansion = 0): Promise<void> {
+  let started = performance.now();
+  for (let x = cell(box[0] - expansion); x <= cell(box[2] + expansion); x++) {
+    for (let y = cell(box[1] - expansion); y <= cell(box[3] + expansion); y++) {
+      const k = `${x}:${y}`;
+      const values = grid.get(k);
+      if (values) values.push(index); else grid.set(k, [index]);
+      if (performance.now() - started >= 6) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        started = performance.now();
+      }
+    }
+  }
+}
+
+/**
+ * Async assignment preparation. `owned: true` is reserved for provider
+ * snapshots whose runtime ownership is immutable; the generic path retains a
+ * defensive clone for custom providers.
+ */
+export async function prepareAtcSectorDatasetAsync(
+  sectors: readonly AtcSector[],
+  options: PreparationOptions = {},
+): Promise<PreparedAtcSectorDataset> {
+  const ownedSectors = options.owned
+    ? sectors
+    : measureRuntime("atc.dataset.structured-clone", sectors.length, () => cloneSectors(sectors));
+  const airspaces: PreparedAirspace[] = [];
+  let lastYield = performance.now();
+  let sectorIndex = 0;
+  for (const sector of ownedSectors) {
+    const boxes: Box[] = [];
+    for (const polygon of sector.polygons) boxes.push(await bboxAsync([polygon as unknown as [number, number][]]));
+    airspaces.push({ sector, boxes, order: ORDER[typeOf(sector)] ?? 90 });
+    sectorIndex += 1;
+    if ((sectorIndex & 63) === 0 || performance.now() - lastYield >= 6) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      lastYield = performance.now();
+    }
+  }
+  airspaces.sort((a, b) => a.order - b.order || a.sector.id.localeCompare(b.sector.id));
+  const atcGrid = new Map<string, number[]>();
+  await measureRuntimeAsync("atc.dataset.grid", sectors.length, async () => {
+    for (let index = 0; index < airspaces.length; index += 1) {
+      for (const box of airspaces[index].boxes) await addGridAsync(atcGrid, box, index);
+    }
+  });
+  if (!options.owned) deepFreeze(ownedSectors);
+  return measureRuntime("atc.dataset.deep-freeze", sectors.length, () => freezeSectorIndex(ownedSectors, airspaces, atcGrid));
+}
+
+export function getAtcSectorCandidatesFromIndex(dataset: PreparedAtcSectorDataset, longitude: number, latitude: number): AtcSector[] {
+  const candidates: AtcSector[] = [];
+  const seen = new Set<string>();
+  for (const index of queryGrid(dataset.atcGrid, [longitude, latitude])) {
+    const sector = dataset.airspaces[index]?.sector;
+    if (!sector || seen.has(sector.id)) continue;
+    seen.add(sector.id);
+    candidates.push(sector);
+  }
+  return candidates.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export function prepareAtcContextDataset(dataset: AtcContextDataset): PreparedAtcContextDataset {
   // Do not freeze caller-owned input: providers may reuse and refresh their source objects.
   const ownedDataset = measureRuntime("atc.dataset.structured-clone", dataset.sectors.length, () => structuredClone(dataset));
@@ -55,6 +161,86 @@ export function prepareAtcContextDataset(dataset: AtcContextDataset): PreparedAt
   airspaces.forEach((entry, i) => entry.boxes.forEach((box) => addGrid(atcGrid, box, i)));
   segments.forEach((entry, i) => addGrid(atsGrid, entry.box, i, 0.3)); points.forEach((entry, i) => addGrid(pointGrid, entry.box, i, 5));
   return measureRuntime("atc.dataset.deep-freeze", ownedDataset.sectors.length, () => deepFreeze({ ...ownedDataset, prepared: true as const, airspaces: Object.freeze(airspaces), segments: Object.freeze(segments), points: Object.freeze(points), atcGrid: immutableGrid(atcGrid), atsGrid: immutableGrid(atsGrid), pointGrid: immutableGrid(pointGrid), builtAt: new Date().toISOString() }));
+}
+
+/** Event-loop-safe context preparation used by the live prediction lane. */
+export async function prepareAtcContextDatasetAsync(
+  dataset: AtcContextDataset,
+  options: PreparationOptions = {},
+): Promise<PreparedAtcContextDataset> {
+  const ownedDataset = options.owned
+    ? dataset
+    : measureRuntime("atc.dataset.structured-clone", dataset.sectors.length, () => structuredClone(dataset));
+  const airspaces: PreparedAirspace[] = [];
+  let lastYield = performance.now();
+  await measureRuntimeAsync("atc.dataset.bbox", ownedDataset.sectors.length, async () => {
+    for (const sector of ownedDataset.sectors) {
+      const boxes: Box[] = [];
+      for (const polygon of sector.polygons) boxes.push(await bboxAsync([polygon as unknown as [number, number][]]));
+      airspaces.push({ sector, boxes, order: ORDER[typeOf(sector)] ?? 90 });
+      if ((airspaces.length & 63) === 0 || performance.now() - lastYield >= 6) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        lastYield = performance.now();
+      }
+    }
+  });
+  airspaces.sort((a, b) => a.order - b.order || a.sector.id.localeCompare(b.sector.id));
+
+  const segments: Array<PreparedAtcContextDataset["segments"][number]> = [];
+  const points: Array<PreparedAtcContextDataset["points"][number]> = [];
+  for (const doc of ownedDataset.routeDocuments) {
+    for (const route of doc.routes) {
+      for (const segment of route.segments) {
+        segments.push({
+          routeId: route.designator,
+          countryCode: doc.source.countryCode ?? null,
+          sourceReference: doc.source.reference,
+          segment,
+          box: await bboxAsync([[segment.from, segment.to]]),
+          forwardBearing: bearing(segment.from, segment.to),
+          reverseBearing: bearing(segment.to, segment.from),
+        });
+        if (performance.now() - lastYield >= 6) {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          lastYield = performance.now();
+        }
+      }
+      for (const point of route.points) {
+        points.push({ point, sourceReference: doc.source.reference, box: [point.longitude, point.latitude, point.longitude, point.latitude] });
+        if (performance.now() - lastYield >= 6) {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          lastYield = performance.now();
+        }
+      }
+    }
+  }
+  const atcGrid = new Map<string, number[]>();
+  const atsGrid = new Map<string, number[]>();
+  const pointGrid = new Map<string, number[]>();
+  await measureRuntimeAsync("atc.dataset.grid", ownedDataset.sectors.length, async () => {
+    for (let index = 0; index < airspaces.length; index += 1) {
+      for (const box of airspaces[index].boxes) await addGridAsync(atcGrid, box, index);
+    }
+    for (let index = 0; index < segments.length; index += 1) await addGridAsync(atsGrid, segments[index].box, index, 0.3);
+    for (let index = 0; index < points.length; index += 1) await addGridAsync(pointGrid, points[index].box, index, 5);
+  });
+
+  if (!options.owned) deepFreeze(ownedDataset);
+  return measureRuntime("atc.dataset.deep-freeze", ownedDataset.sectors.length, () => ({
+    ...ownedDataset,
+    prepared: true as const,
+    airspaces: Object.freeze(airspaces.map((entry) => Object.freeze({
+      sector: entry.sector,
+      boxes: Object.freeze(entry.boxes.map((box) => Object.freeze(box) as unknown as Box)),
+      order: entry.order,
+    }))),
+    segments: Object.freeze(segments),
+    points: Object.freeze(points),
+    atcGrid: immutableGrid(atcGrid),
+    atsGrid: immutableGrid(atsGrid),
+    pointGrid: immutableGrid(pointGrid),
+    builtAt: new Date().toISOString(),
+  }));
 }
 
 /** Returns only the sectors whose polygon bboxes cover the position. */
@@ -211,26 +397,47 @@ export function inputFromAircraft(aircraft: Pick<Aircraft, "lat" | "lon" | "alti
 }
 
 export async function loadAtcContextDataset(): Promise<PreparedAtcContextDataset | null> {
-  if (cachedDataset && Date.now() - cachedDatasetAt < 30_000) return cachedDataset;
-  if (loadingDataset) return loadingDataset;
-  loadingDataset = rebuildAtcContextDataset();
-  try { return await loadingDataset; } finally { loadingDataset = null; }
+  while (true) {
+    if (cachedDataset && Date.now() - cachedDatasetAt < 30_000) return cachedDataset;
+    const generation = contextDatasetGeneration;
+    if (!loadingDataset) {
+      loadingDataset = rebuildAtcContextDataset(generation);
+    }
+    const flight = loadingDataset;
+    try {
+      const result = await flight;
+      if (generation === contextDatasetGeneration) return result;
+    } finally {
+      if (loadingDataset === flight) loadingDataset = null;
+    }
+  }
 }
 
 let loadingDataset: Promise<PreparedAtcContextDataset | null> | null = null;
-async function rebuildAtcContextDataset(): Promise<PreparedAtcContextDataset | null> {
-  const atc = await getAtcData();
+let contextDatasetGeneration = 0;
+
+export function invalidateAtcContextDatasetCache(): void {
+  contextDatasetGeneration += 1;
+  cachedDataset = null;
+  cachedDatasetAt = 0;
+  cachedDatasetIdentity = null;
+}
+
+async function rebuildAtcContextDataset(generation: number): Promise<PreparedAtcContextDataset | null> {
+  const atc = await getAtcDataSnapshot();
   const routeDocuments = [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()].filter((doc): doc is NonNullable<typeof doc> => doc !== null);
   if (!atc && !routeDocuments.length) return null;
-  const identity = atcContextDatasetIdentity(atc?.sectors ?? [], routeDocuments);
-  // getAtcData() deliberately revalidates the source on its own bounded TTL.
+  const identity = await atcContextDatasetIdentityAsync(atc?.sectors ?? [], routeDocuments);
+  // getAtcDataSnapshot() deliberately revalidates the source on its own bounded TTL.
   // Reuse the expensive owned clone, bboxes and grids when that source version
   // is unchanged; the 30s freshness check remains the invalidation boundary.
   if (cachedDataset && cachedDatasetIdentity === identity) {
     cachedDatasetAt = Date.now();
     return cachedDataset;
   }
-  cachedDataset = prepareAtcContextDataset({ sectors: atc?.sectors ?? [], routeDocuments });
+  if (generation !== contextDatasetGeneration) return null;
+  cachedDataset = await prepareAtcContextDatasetAsync({ sectors: [...(atc?.sectors ?? [])], routeDocuments }, { owned: true });
+  if (generation !== contextDatasetGeneration) return null;
   cachedDatasetIdentity = identity;
   cachedDatasetAt = Date.now();
   return cachedDataset;
@@ -240,25 +447,102 @@ export function atcContextDatasetIdentity(
   sectors: readonly AtcSector[],
   routeDocuments: readonly AtcContextDataset["routeDocuments"][number][],
 ): string {
-  // This runs only at the bounded dataset refresh boundary, never per
-  // aircraft lookup. Include geometry and route payloads so an importer that
-  // keeps metadata/timestamps unchanged still invalidates the prepared grid.
-  return JSON.stringify({
-    sectors: sectors.map((sector) => ({
-      id: sector.id,
-      name: sector.name,
-      validFrom: sector.validFrom,
-      validTo: sector.validTo,
-      lastVerifiedAt: sector.lastVerifiedAt,
-      sourceReference: sector.sourceReference,
-      polygons: sector.polygons,
-      lowerAltitudeFt: sector.lowerAltitudeFt,
-      upperAltitudeFt: sector.upperAltitudeFt,
-      lowerAltitudeReference: sector.lowerAltitudeReference,
-      upperAltitudeReference: sector.upperAltitudeReference,
-    })),
-    routes: routeDocuments,
-  });
+  return identityDigest({ sectors, routes: routeDocuments });
+}
+
+function* identityTokens(value: unknown): Generator<string> {
+  if (value === null) { yield "null;"; return; }
+  if (value === undefined) { yield "undefined;"; return; }
+  if (typeof value === "string") { yield `string:${value.length}:${value};`; return; }
+  if (typeof value === "number") { yield `number:${value};`; return; }
+  if (typeof value === "boolean") { yield `boolean:${value ? 1 : 0};`; return; }
+  if (Array.isArray(value)) {
+    yield `array:${value.length};`;
+    for (const item of value) yield* identityTokens(item);
+    return;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const keys = Object.keys(record).sort();
+    yield `object:${keys.length};`;
+    for (const key of keys) {
+      yield `key:${key.length}:${key};`;
+      yield* identityTokens(record[key]);
+    }
+    return;
+  }
+  yield `${typeof value}:${String(value)};`;
+}
+
+function identityDigest(value: unknown): string {
+  const hash = createHash("sha256");
+  hash.update("airradar-atc-identity-v2;");
+  if (isIdentityDataset(value)) {
+    for (let index = 0; index < value.sectors.length; index += 1) {
+      const { polygons, ...metadata } = value.sectors[index];
+      hash.update(`sector:${index}:${JSON.stringify(metadata)};`);
+      for (let polygonIndex = 0; polygonIndex < polygons.length; polygonIndex += 1) updatePolygonHash(hash, polygonIndex, polygons[polygonIndex]);
+    }
+    for (let index = 0; index < value.routes.length; index += 1) hash.update(`route:${index}:${JSON.stringify(value.routes[index])};`);
+  } else {
+    for (const token of identityTokens(value)) hash.update(token);
+  }
+  return hash.digest("hex");
+}
+
+function updatePolygonHash(hash: ReturnType<typeof createHash>, polygonIndex: number, polygon: ReadonlyArray<readonly [number, number]>): void {
+  let chunk = `polygon:${polygonIndex}:`;
+  for (let pointIndex = 0; pointIndex < polygon.length; pointIndex += 1) {
+    const point = polygon[pointIndex];
+    chunk += `${point[0]},${point[1]};`;
+    if ((pointIndex + 1) % 256 === 0) {
+      hash.update(chunk);
+      chunk = "";
+    }
+  }
+  hash.update(`${chunk};`);
+}
+
+function isIdentityDataset(value: unknown): value is { sectors: readonly AtcSector[]; routes: readonly AtcContextDataset["routeDocuments"][number][] } {
+  return Boolean(value && typeof value === "object" && "sectors" in value && "routes" in value);
+}
+
+export async function atcContextDatasetIdentityAsync(
+  sectors: readonly AtcSector[],
+  routeDocuments: readonly AtcContextDataset["routeDocuments"][number][],
+): Promise<string> {
+  const hash = createHash("sha256");
+  hash.update("airradar-atc-identity-v2;");
+  let lastYield = performance.now();
+  for (let index = 0; index < sectors.length; index += 1) {
+    const { polygons, ...metadata } = sectors[index];
+    hash.update(`sector:${index}:${JSON.stringify(metadata)};`);
+    for (let polygonIndex = 0; polygonIndex < polygons.length; polygonIndex += 1) {
+      const polygon = polygons[polygonIndex];
+      let chunk = `polygon:${polygonIndex}:`;
+      for (let pointIndex = 0; pointIndex < polygon.length; pointIndex += 1) {
+        const point = polygon[pointIndex];
+        chunk += `${point[0]},${point[1]};`;
+        if ((pointIndex + 1) % 256 === 0) {
+          hash.update(chunk);
+          chunk = "";
+          if (performance.now() - lastYield >= 4) {
+            await new Promise<void>((resolve) => setImmediate(resolve));
+            lastYield = performance.now();
+          }
+        }
+      }
+      hash.update(`${chunk};`);
+    }
+  }
+  for (let index = 0; index < routeDocuments.length; index += 1) {
+    hash.update(`route:${index}:${JSON.stringify(routeDocuments[index])};`);
+    if (performance.now() - lastYield >= 6) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      lastYield = performance.now();
+    }
+  }
+  return hash.digest("hex");
 }
 
 let cachedDataset: PreparedAtcContextDataset | null = null;

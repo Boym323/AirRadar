@@ -243,6 +243,14 @@ These are behavior and safety contracts for changes to the current system.
 - ATC assignment is a probable candidate based on aircraft position,
   comparable altitude, and observation time. It never claims the aircraft's
   actual tuned frequency.
+- The assignment index is sector-only; ATS route and point indexes belong only
+  to the context/prediction path. Dataset preparation must be bounded and
+  yield to the event loop, with one in-flight build per generation and atomic
+  publication of a complete immutable index.
+- Provider-owned ATC snapshots are immutable process-owned data. Public
+  responses remain defensive clones/projections. Invalidations advance a
+  generation token; an older in-flight preparation must never publish after
+  a newer import or geometry snapshot.
 - Point-on-boundary matches are explicit. AGL limits cannot be compared with
   MSL aircraft altitude without terrain data, so altitude confidence becomes
   `unknown`; this must not be silently presented as a matched altitude.

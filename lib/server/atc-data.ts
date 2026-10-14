@@ -60,10 +60,21 @@ export const SAMPLE_ATC_TRANSMITTERS: AtcTransmitter[] = [
   { id: "LKPR-RADAR", name: "Praha Radar", latitude: 50.0755, longitude: 14.4378, service: "Area control", frequencyMhz: 127.35, notes: "Sample transmitter location", source: "AirRadar sample data", sourceReference: "demo://airradar-sample-atc", validFrom: null, validTo: null, lastVerifiedAt: "2026-01-01T00:00:00.000Z" },
 ];
 
+// Sample data is also a process-owned snapshot. Freeze it once so the
+// assignment/context builders can safely share geometry without cloning it.
+SAMPLE_ATC_SECTORS.forEach(freezeAtcSector);
+SAMPLE_ATC_TRANSMITTERS.forEach((transmitter) => Object.freeze(transmitter));
+Object.freeze(SAMPLE_ATC_SECTORS);
+Object.freeze(SAMPLE_ATC_TRANSMITTERS);
+
 export class SampleAtcSectorProvider implements AtcSectorProvider {
   readonly name = "sample-atc";
 
   async getSectors(): Promise<AtcSector[]> {
+    return SAMPLE_ATC_SECTORS;
+  }
+
+  async getSectorsSnapshot(): Promise<ReadonlyArray<AtcSector>> {
     return SAMPLE_ATC_SECTORS;
   }
 }
@@ -278,6 +289,7 @@ const globalAtcMetadata = globalThis as typeof globalThis & {
   __airRadarAtcDatasetGeneration?: number;
   __airRadarAtcDatasetDiagnostics?: AtcDatasetCacheDiagnostics;
 };
+const atcInvalidationListeners = new Set<() => void>();
 const ATC_METADATA_CACHE_MS = 30_000;
 // Imported ATC data changes on publication/import boundaries, not per request.
 // The import path invalidates this cache explicitly; the TTL is a second line
@@ -314,15 +326,34 @@ function cloneAtcData(value: AtcDataResponse | null): AtcDataResponse | null {
   return structuredClone(value);
 }
 
+function freezeAtcSector(sector: AtcSector): AtcSector {
+  for (const polygon of sector.polygons) {
+    for (const point of polygon) Object.freeze(point);
+    Object.freeze(polygon);
+  }
+  Object.freeze(sector.polygons);
+  for (const frequency of sector.frequencies) Object.freeze(frequency);
+  Object.freeze(sector.frequencies);
+  return Object.freeze(sector);
+}
+
+function freezeAtcRows(value: AtcDatasetRows): AtcDatasetRows {
+  value.sectors.forEach(freezeAtcSector);
+  value.transmitters.forEach((transmitter) => Object.freeze(transmitter));
+  Object.freeze(value.sectors);
+  Object.freeze(value.transmitters);
+  return Object.freeze(value);
+}
+
 function activeAtcData(value: AtcDatasetRows, observedAtMs = Date.now()): AtcDataResponse {
   const sectors = value.sectors.filter((sector) => isAtcValidityValid(sector.validFrom, sector.validTo, observedAtMs));
   const transmitters = value.transmitters.filter((transmitter) => isAtcValidityValid(transmitter.validFrom, transmitter.validTo, observedAtMs));
-  return { sectors, transmitters, metadata: datasetMetadata(sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters) };
+  return { sectors: Object.freeze(sectors) as AtcSector[], transmitters: Object.freeze(transmitters) as AtcTransmitter[], metadata: datasetMetadata(sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters) };
 }
 
 function setAtcDatasetCache(value: AtcDatasetRows, fingerprint: string, generation: number): void {
   globalAtcMetadata.__airRadarAtcDataset = {
-    value, fingerprint, expiresAtMs: Date.now() + ATC_DATASET_CACHE_MS, generation,
+    value: freezeAtcRows(value), fingerprint, expiresAtMs: Date.now() + ATC_DATASET_CACHE_MS, generation,
   };
   const diagnostics = datasetCacheDiagnostics();
   diagnostics.entries = 1;
@@ -349,6 +380,12 @@ export function invalidateAtcDataCache(): void {
   diagnostics.invalidations += 1;
   diagnostics.entries = 0;
   diagnostics.generation = generation;
+  for (const listener of atcInvalidationListeners) listener();
+}
+
+export function onAtcDataCacheInvalidated(listener: () => void): () => void {
+  atcInvalidationListeners.add(listener);
+  return () => atcInvalidationListeners.delete(listener);
 }
 
 export function getAtcDatasetCacheDiagnostics(): AtcDatasetCacheDiagnostics {
@@ -428,7 +465,7 @@ export function resetAtcMetadataCacheForTests(): void {
   delete globalAtcMetadata.__airRadarAtcDatasetDiagnostics;
 }
 
-export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
+export async function getStoredAtcDataSnapshot(): Promise<AtcDataResponse | null> {
   const cached = globalAtcMetadata.__airRadarAtcDataset;
   const now = Date.now();
   if (cached && cached.expiresAtMs > now && cached.generation === (globalAtcMetadata.__airRadarAtcDatasetGeneration ?? 0)) {
@@ -438,7 +475,7 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
         const fingerprint = await readAtcDatasetFingerprint(database);
         if (globalAtcMetadata.__airRadarAtcDataset === cached && fingerprint === cached.fingerprint) {
           datasetCacheDiagnostics().hits += 1;
-          return cloneAtcData(activeAtcData(cached.value, now));
+          return activeAtcData(cached.value, now);
         }
         invalidateAtcDataCache();
       } catch (error) {
@@ -453,7 +490,7 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
     datasetCacheDiagnostics().entries = 0;
   }
   datasetCacheDiagnostics().misses += 1;
-  if (globalAtcMetadata.__airRadarAtcDatasetFlight) return cloneAtcData(await globalAtcMetadata.__airRadarAtcDatasetFlight);
+  if (globalAtcMetadata.__airRadarAtcDatasetFlight) return await globalAtcMetadata.__airRadarAtcDatasetFlight;
 
   const flight = (async () => {
     // A bounded two-attempt check prevents publishing rows from before an
@@ -501,10 +538,15 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
     return null;
   })();
   globalAtcMetadata.__airRadarAtcDatasetFlight = flight;
-  try { return cloneAtcData(await flight); }
+  try { return await flight; }
   finally {
     if (globalAtcMetadata.__airRadarAtcDatasetFlight === flight) delete globalAtcMetadata.__airRadarAtcDatasetFlight;
   }
+}
+
+/** Public callers receive a defensive projection; internal indexes use the immutable snapshot. */
+export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
+  return cloneAtcData(await getStoredAtcDataSnapshot());
 }
 
 /** Production provider: no sample fallback when the real ATC tables are empty or unavailable. */
@@ -513,5 +555,13 @@ export class DatabaseAtcSectorProvider implements AtcSectorProvider {
 
   async getSectors(): Promise<AtcSector[]> {
     return (await getStoredAtcData())?.sectors ?? [];
+  }
+
+  async getSectorsSnapshot(): Promise<ReadonlyArray<AtcSector>> {
+    return (await getStoredAtcDataSnapshot())?.sectors ?? [];
+  }
+
+  onDatasetInvalidated(listener: () => void): () => void {
+    return onAtcDataCacheInvalidated(listener);
   }
 }

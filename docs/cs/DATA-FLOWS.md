@@ -364,6 +364,14 @@ Souhrny relevantních frekvencí agregují už vyřešené assignmenty podle
 frequency/service/callsign a zahrnují confidence counts. Žádná cesta netvrdí
 skutečně naladěnou frekvenci letadla.
 
+Assignment a predikce používají oddělené přípravné cesty. Assignment vytváří
+jen sector bbox/grid index z neměnného snapshotu provideru; ATS route ani point
+indexy při něm nevznikají. Context predikce vytváří bohatší dataset asynchronně
+v omezených dávkách s `setImmediate()`. Obě cesty používají single-flight
+inicializaci, atomické publikování ověřené generačním tokenem a bezpečné veřejné
+projekce. Změna geometrie invaliduje identitu i při stejném ID sektoru a
+timestampu.
+
 ## Pomocné toky
 
 - Metadata `ADSBDB` jsou klíčována aircraft hexem. Route data ADSBDB jsou
