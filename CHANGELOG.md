@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.449] - 2026-10-14
+
+Changes since v1.0.448.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Fixed
+
+- Remove redundant assignment pipeline work (f8d80837)
+
+### Maintenance
+
+- Sync generated repository metadata (#874) (25104d66)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#874) (25104d66)
+- fix(atc): remove redundant assignment pipeline work (f8d80837)
+
+</details>
 ## [1.0.448] - 2026-10-14
 
 Changes since v1.0.447.
