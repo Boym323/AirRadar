@@ -372,6 +372,98 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(secondReport.performance.pendingEntriesWithoutNewTruth).toBe(1);
   });
 
+  it("matches the full-scan reference across trail corrections, duplicates, reordering, and replacement", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const events = [
+      event("WAYPOINT", 5, { id: `waypoint:OLDER:${predictedAt}`, title: "OLDER", lat: 49, lon: 17.5 }),
+      event("WAYPOINT", 5, { id: `waypoint:LATEST:${predictedAt}`, title: "LATEST", lat: 49, lon: 17.6 }),
+      event("WAYPOINT", 5, { id: `waypoint:INSERTED:${predictedAt}`, title: "INSERTED", lat: 49, lon: 17.7 }),
+      event("WAYPOINT", 5, { id: `waypoint:REPLACED:${predictedAt}`, title: "REPLACED", lat: 49, lon: 17.8 }),
+    ];
+    const captured = situation(events);
+    const context = { atcDataset: null, sigmets: null, destination: null };
+    const incremental = new OperationalTwinEventOutcomeValidator();
+    const fullScan = new OperationalTwinEventOutcomeValidator({
+      enableIncrementalTruthEvaluation: false,
+      enableExpiryQueue: false,
+    });
+    incremental.capture(captured, context);
+    fullScan.capture(captured, context);
+
+    const point = (at: number, lon: number) => ({
+      recordedAt: new Date(at).toISOString(),
+      lat: 49,
+      lon,
+      altitude: 30000,
+      track: 90,
+      groundSpeed: 420,
+    });
+    const snapshot = (trail: ReturnType<typeof point>[]) => {
+      const current = aircraft(baseNow, 49, 18.5);
+      current.lat = null;
+      current.lon = null;
+      current.trail = trail;
+      return new Map([[current.icaoHex, current]]);
+    };
+    const semanticReport = (validator: OperationalTwinEventOutcomeValidator, at: number) => {
+      const semantic = { ...validator.report(new Date(at)) };
+      delete (semantic as { performance?: unknown }).performance;
+      return semantic;
+    };
+    const t1 = predictedAt - 30_000;
+    const t2 = predictedAt + 30_000;
+    const snapshots = [
+      // Out-of-order source order and a duplicate timestamp whose first value wins.
+      snapshot([point(t2, 18.5), point(t1, 18.5), point(t1, 18.5)]),
+      // Correct an older duplicate timestamp while the newest point is unchanged.
+      snapshot([point(t2, 18.5), point(t1, 17.5), point(t1, 18.5)]),
+      // Correct the newest point at the same timestamp.
+      snapshot([point(t2, 17.6), point(t1, 17.5), point(t1, 18.5)]),
+      // Insert an out-of-order point between the existing timestamps.
+      snapshot([point(t2, 17.6), point(predictedAt, 17.7), point(t1, 17.5), point(t1, 18.5)]),
+      // Replace the trail with a shorter history while preserving the newest timestamp.
+      snapshot([point(t2, 17.8), point(t1, 18.5)]),
+    ];
+
+    for (const [index, local] of snapshots.entries()) {
+      const observedAt = baseNow + (index + 1) * 60_000;
+      incremental.observeLocal(local, observedAt);
+      fullScan.observeLocal(local, observedAt);
+      expect(semanticReport(incremental, observedAt)).toEqual(semanticReport(fullScan, observedAt));
+    }
+    expect(incremental.report(new Date(baseNow + 6 * 60_000)).overall.observed).toBe(4);
+  });
+
+  it("distinguishes continuity-backed false positives from missing truth", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([
+      event("WAYPOINT", 5, { id: `waypoint:MISS:${predictedAt}`, title: "MISS", lat: 49, lon: 17.5 }),
+    ]), { atcDataset: null, sigmets: null, destination: null });
+
+    const wrongPoint = (at: number) => ({
+      recordedAt: new Date(at).toISOString(),
+      lat: 49,
+      lon: 17.6,
+      altitude: 30000,
+      track: 90,
+      groundSpeed: 420,
+    });
+    const first = aircraft(baseNow, 49, 18.5);
+    first.lat = null;
+    first.lon = null;
+    first.trail = [wrongPoint(predictedAt)];
+    validator.observeLocal(new Map([[first.icaoHex, first]]), predictedAt);
+
+    const nearExpiry = { ...first, trail: [wrongPoint(predictedAt + 8 * 60_000)] };
+    validator.observeLocal(new Map([[nearExpiry.icaoHex, nearExpiry]]), predictedAt + 8 * 60_000);
+    validator.observeLocal(new Map(), predictedAt + 8 * 60_000 + 1);
+
+    const report = validator.report(new Date(predictedAt + 8 * 60_000 + 1));
+    expect(report.overall.falsePositive).toBe(1);
+    expect(report.overall.expiredNoTruth).toBe(0);
+  });
+
   it("keeps prepared dataset maps immutable without freezing provider-owned input", () => {
     const immutablePolygon: SectorPolygon = [[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]];
     const source = {
