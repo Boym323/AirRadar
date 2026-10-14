@@ -350,7 +350,11 @@ jobs:
         env:
           AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
           PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
-          AIRRADAR_VISUAL_CONCURRENCY: '3'
+          # Full browser matrix is GPU-heavy: three workers produced two
+          # distinct timeout failures on main (#867/#869) and an intermittent
+          # pass on retry. Keep visual captures at the proven two-worker limit
+          # while retaining three independent viewport workers.
+          AIRRADAR_VISUAL_CONCURRENCY: '2'
           AIRRADAR_VIEWPORT_CONCURRENCY: '3'
         run: npm run test:production:all
       - name: Upload visual system artifacts
