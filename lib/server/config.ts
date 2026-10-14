@@ -237,6 +237,12 @@ export function isTrackFusionDigitalTwinEnabled(): boolean {
 export function isAtcResolutionEnabled(): boolean {
   return process.env.AIRRADAR_ATC_RESOLUTION_ENABLED?.trim().toLowerCase() !== "false";
 }
+
+/** Shadow prediction follows assignment unless explicitly disabled. */
+export function isAtcShadowPredictionEnabled(): boolean {
+  const configured = process.env.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED?.trim().toLowerCase();
+  return configured === undefined || configured === "" ? isAtcResolutionEnabled() : configured === "true";
+}
 export type OperationalTwinWindTimingPolicy = "CANONICAL" | "WIND_GRADUATED";
 export function getOperationalTwinWindTimingPolicy(): OperationalTwinWindTimingPolicy {
   return process.env.AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY?.trim().toUpperCase() === "WIND_GRADUATED"

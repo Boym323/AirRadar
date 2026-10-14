@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherCacheFile, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, getSourceAffinityFailoverGraceMs, isAviationWeatherEnabled } from "@/lib/server/config";
+import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherCacheFile, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, getSourceAffinityFailoverGraceMs, isAtcResolutionEnabled, isAtcShadowPredictionEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAtcData } from "@/lib/server/providers";
 import { getAlertConfigPath } from "@/lib/server/alert-config";
 import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runtime-state";
@@ -7,6 +7,18 @@ import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runt
 afterEach(() => vi.unstubAllEnvs());
 
 describe("numeric environment configuration", () => {
+  it("keeps shadow prediction backwards-compatible but independently switchable", () => {
+    vi.stubEnv("AIRRADAR_ATC_RESOLUTION_ENABLED", "true");
+    expect(isAtcResolutionEnabled()).toBe(true);
+    expect(isAtcShadowPredictionEnabled()).toBe(true);
+    vi.stubEnv("AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED", "false");
+    expect(isAtcResolutionEnabled()).toBe(true);
+    expect(isAtcShadowPredictionEnabled()).toBe(false);
+    vi.stubEnv("AIRRADAR_ATC_RESOLUTION_ENABLED", "false");
+    vi.stubEnv("AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED", "true");
+    expect(isAtcShadowPredictionEnabled()).toBe(true);
+  });
+
   it("keeps Aviation Weather opt-in and constrains its server-side settings", () => {
     vi.stubEnv("AVIATION_WEATHER_ENABLED", "false");
     expect(isAviationWeatherEnabled()).toBe(false);
