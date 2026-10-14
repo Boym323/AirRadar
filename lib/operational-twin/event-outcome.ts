@@ -102,6 +102,16 @@ interface TruthPoint {
   onGround: boolean;
 }
 
+interface TruthTrailState {
+  inputFingerprint: string;
+  points: TruthPoint[];
+  version: number;
+  /** Current points whose timestamp/fingerprint was not unchanged. */
+  changedIndexes: ReadonlySet<number>;
+  /** Older corrections/new observations that must bypass the timestamp cursor. */
+  correctionIndexes: ReadonlySet<number>;
+}
+
 interface AtcTruthCacheEntry {
   dataset: PreparedAtcContextDataset;
   observedAt: number;
@@ -125,6 +135,10 @@ export interface OperationalTwinEventOutcomeValidatorOptions {
   enableAtcTruthCache?: boolean;
   /** Keeps capacity tests deterministic without changing the production limit. */
   atcTruthCacheMaxEntries?: number;
+  /** Benchmark-only switch for comparing the pre-incremental truth pass. */
+  enableIncrementalTruthEvaluation?: boolean;
+  /** Benchmark-only switch for comparing the pre-indexed expiration pass. */
+  enableExpiryQueue?: boolean;
 }
 
 interface WaypointTruthDescriptor {
@@ -164,6 +178,7 @@ type TruthDescriptor =
 
 interface PendingEventOutcome {
   id: string;
+  captureSequence: number;
   icaoHex: string;
   capturedAt: number;
   predictedAt: number;
@@ -180,6 +195,24 @@ interface PendingEventOutcome {
   windShadowAdjustmentSeconds: number | null;
   truthNearTarget: boolean;
   truthNearExpiry: boolean;
+  /** Truth snapshot version last evaluated by this pending event. */
+  lastEvaluatedTruthVersion: number | null;
+  /** Highest local truth timestamp evaluated by this pending event. */
+  lastEvaluatedPointAt: number | null;
+  /** Static truth inputs already checked inside a valid event window. */
+  checkedStaticTruthContent: Set<string>;
+}
+
+export interface OperationalTwinEventOutcomePerformance {
+  observeCalls: number;
+  aircraftWithPending: number;
+  pendingEntriesScanned: number;
+  pendingEntriesWithoutNewTruth: number;
+  truthPointBuilds: number;
+  truthPointsBuilt: number;
+  evaluatedTruthPoints: number;
+  expiryEntriesScanned: number;
+  intelligenceEntriesScanned: number;
 }
 
 interface EventAggregate {
@@ -368,6 +401,7 @@ export interface OperationalTwinEventOutcomeReport {
   byType: Record<OperationalTwinEventOutcomeType, OperationalTwinEventOutcomeSlice>;
   byLeadMinutes: Record<LeadBucket, OperationalTwinEventOutcomeSlice>;
   windTimingGraduation: OperationalTwinWindTimingGraduationReport;
+  performance: OperationalTwinEventOutcomePerformance;
 }
 
 export interface OperationalTwinEventOutcomeDecisionInput {
@@ -466,6 +500,111 @@ function emptyAggregate(): EventAggregate {
     within120Seconds: 0,
     within300Seconds: 0,
   };
+}
+
+function emptyPerformance(): OperationalTwinEventOutcomePerformance {
+  return {
+    observeCalls: 0,
+    aircraftWithPending: 0,
+    pendingEntriesScanned: 0,
+    pendingEntriesWithoutNewTruth: 0,
+    truthPointBuilds: 0,
+    truthPointsBuilt: 0,
+    evaluatedTruthPoints: 0,
+    expiryEntriesScanned: 0,
+    intelligenceEntriesScanned: 0,
+  };
+}
+
+interface PendingExpiryEntry {
+  id: string;
+  expiresAt: number;
+}
+
+interface PendingCaptureEntry {
+  id: string;
+  capturedAt: number;
+  sequence: number;
+}
+
+function pushExpiryEntry(queue: PendingExpiryEntry[], entry: PendingExpiryEntry): void {
+  queue.push(entry);
+  let index = queue.length - 1;
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2);
+    if (queue[parent]!.expiresAt <= entry.expiresAt) break;
+    queue[index] = queue[parent]!;
+    index = parent;
+  }
+  queue[index] = entry;
+}
+
+function popExpiryEntry(queue: PendingExpiryEntry[]): PendingExpiryEntry | undefined {
+  const first = queue[0];
+  const last = queue.pop();
+  if (!first || !last || queue.length === 0) return first;
+  let index = 0;
+  while (true) {
+    const left = index * 2 + 1;
+    if (left >= queue.length) break;
+    const right = left + 1;
+    const child = right < queue.length && queue[right]!.expiresAt < queue[left]!.expiresAt ? right : left;
+    if (queue[child]!.expiresAt >= last.expiresAt) break;
+    queue[index] = queue[child]!;
+    index = child;
+  }
+  queue[index] = last;
+  return first;
+}
+
+function rebuildExpiryQueue(pending: ReadonlyMap<string, PendingEventOutcome>): PendingExpiryEntry[] {
+  const queue: PendingExpiryEntry[] = [];
+  for (const item of pending.values()) pushExpiryEntry(queue, { id: item.id, expiresAt: item.expiresAt });
+  return queue;
+}
+
+function pushCaptureEntry(queue: PendingCaptureEntry[], entry: PendingCaptureEntry): void {
+  const before = (left: PendingCaptureEntry, right: PendingCaptureEntry) =>
+    left.capturedAt < right.capturedAt
+    || (left.capturedAt === right.capturedAt && left.sequence < right.sequence);
+  queue.push(entry);
+  let index = queue.length - 1;
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2);
+    if (!before(entry, queue[parent]!)) break;
+    queue[index] = queue[parent]!;
+    index = parent;
+  }
+  queue[index] = entry;
+}
+
+function popCaptureEntry(queue: PendingCaptureEntry[]): PendingCaptureEntry | undefined {
+  const first = queue[0];
+  const last = queue.pop();
+  if (!first || !last || queue.length === 0) return first;
+  let index = 0;
+  while (true) {
+    const left = index * 2 + 1;
+    if (left >= queue.length) break;
+    const right = left + 1;
+    const before = (candidate: PendingCaptureEntry, reference: PendingCaptureEntry) =>
+      candidate.capturedAt < reference.capturedAt
+      || (candidate.capturedAt === reference.capturedAt && candidate.sequence < reference.sequence);
+    const child = right < queue.length && before(queue[right]!, queue[left]!) ? right : left;
+    if (!before(queue[child]!, last)) break;
+    queue[index] = queue[child]!;
+    index = child;
+  }
+  queue[index] = last;
+  return first;
+}
+
+function rebuildCaptureQueue(pending: ReadonlyMap<string, PendingEventOutcome>): PendingCaptureEntry[] {
+  const queue: PendingCaptureEntry[] = [];
+  for (const item of pending.values()) {
+    pushCaptureEntry(queue, { id: item.id, capturedAt: item.capturedAt, sequence: item.captureSequence });
+  }
+  return queue;
 }
 
 function typeRecord(): Record<OperationalTwinEventOutcomeType, EventAggregate> {
@@ -734,6 +873,37 @@ function truthPoints(aircraft: Aircraft): TruthPoint[] {
   return result.sort((left, right) => left.at - right.at);
 }
 
+/**
+ * Fingerprint only the source fields that can affect truthPoints(). This lets
+ * unchanged refreshes reuse the parsed/sorted trail while still noticing
+ * corrections to older points, out-of-order arrivals, truncation and trail
+ * replacement even when the newest point did not change.
+ */
+function truthInputFingerprint(aircraft: Aircraft): string {
+  return JSON.stringify([
+    aircraft.trail.slice(-120).map((point) => [
+      point.recordedAt,
+      point.lat,
+      point.lon,
+      point.altitude,
+      point.track,
+      point.groundSpeed,
+    ]),
+    aircraft.lat,
+    aircraft.lon,
+    aircraft.altitude,
+    aircraft.baroAltitude,
+    aircraft.geomAltitude,
+    aircraft.track,
+    aircraft.groundSpeed,
+    aircraft.verticalRate,
+    aircraft.onGround,
+    aircraft.lastSeen,
+    aircraft.seenSeconds,
+    aircraft.seenPosSeconds,
+  ]);
+}
+
 function sigmetValidAt(feature: SigmetSnapshot["features"][number], at: number): boolean {
   const from = feature.properties.validFrom ? Date.parse(feature.properties.validFrom) : Number.NEGATIVE_INFINITY;
   const to = feature.properties.validTo ? Date.parse(feature.properties.validTo) : Number.POSITIVE_INFINITY;
@@ -922,6 +1092,8 @@ function terminalEvidence(event: FlightIntelligenceEvent): LandingTerminalEviden
 
 export class OperationalTwinEventOutcomeValidator {
   private readonly atcTruthCache: AtcTruthCache;
+  private readonly enableIncrementalTruthEvaluation: boolean;
+  private readonly enableExpiryQueue: boolean;
   private readonly pending = new Map<string, PendingEventOutcome>();
   /**
    * Reverse index for the refresh-driven local truth pass. Pending outcomes
@@ -930,14 +1102,24 @@ export class OperationalTwinEventOutcomeValidator {
    * path. Keep the index bounded with the pending map itself.
    */
   private readonly pendingByAircraft = new Map<string, Set<string>>();
+  /** Parsed local truth snapshots shared by all pending events for an aircraft. */
+  private readonly truthStates = new Map<string, TruthTrailState>();
+  /** Expiry order avoids scanning all pending observations on every refresh. */
+  private pendingExpiryQueue: PendingExpiryEntry[] = [];
+  /** Capture order avoids sorting the bounded pending map on every insertion. */
+  private pendingCaptureQueue: PendingCaptureEntry[] = [];
   private readonly lastCaptureAt = new Map<string, number>();
   private buckets: OutcomeBucket[] = [];
   private firstObservedAt: number | null = null;
+  private nextCaptureSequence = 1;
   private duplicateCaptureSkips = 0;
   private capacityEvictions = 0;
+  private performance = emptyPerformance();
 
   constructor(options: OperationalTwinEventOutcomeValidatorOptions = {}) {
     this.atcTruthCache = new AtcTruthCache(options.enableAtcTruthCache ?? true, options.atcTruthCacheMaxEntries ?? ATC_CACHE_MAX_ENTRIES);
+    this.enableIncrementalTruthEvaluation = options.enableIncrementalTruthEvaluation ?? true;
+    this.enableExpiryQueue = options.enableExpiryQueue ?? true;
   }
 
   getAtcCacheStats(): OperationalTwinAtcCacheStats {
@@ -969,6 +1151,7 @@ export class OperationalTwinEventOutcomeValidator {
       const id = `${dedupKey}:${now}`;
       const sample: PendingEventOutcome = {
         id,
+        captureSequence: this.nextCaptureSequence++,
         icaoHex: situation.aircraft.icaoHex,
         capturedAt: now,
         predictedAt,
@@ -985,8 +1168,13 @@ export class OperationalTwinEventOutcomeValidator {
         windShadowAdjustmentSeconds: windShadowPrediction?.adjustmentSeconds ?? null,
         truthNearTarget: false,
         truthNearExpiry: false,
+        lastEvaluatedTruthVersion: null,
+        lastEvaluatedPointAt: null,
+        checkedStaticTruthContent: new Set(),
       };
       this.pending.set(id, sample);
+      if (this.enableExpiryQueue) pushExpiryEntry(this.pendingExpiryQueue, { id, expiresAt: sample.expiresAt });
+      pushCaptureEntry(this.pendingCaptureQueue, { id, capturedAt: sample.capturedAt, sequence: sample.captureSequence });
       let aircraftPending = this.pendingByAircraft.get(sample.icaoHex);
       if (!aircraftPending) {
         aircraftPending = new Set<string>();
@@ -1004,26 +1192,133 @@ export class OperationalTwinEventOutcomeValidator {
 
   observeLocal(local: ReadonlyMap<string, Aircraft>, now = Date.now()): void {
     if (!Number.isFinite(now)) return;
+    this.performance.observeCalls += 1;
     this.atcTruthCache.beginObservation(now);
     for (const [icaoHex, aircraft] of local) {
       const pendingIds = this.pendingByAircraft.get(icaoHex);
       if (!pendingIds || pendingIds.size === 0) continue;
-      let points: TruthPoint[] | null = null;
+      this.performance.aircraftWithPending += 1;
+      let fullScanPoints: TruthPoint[] | null = null;
+      let truthState: TruthTrailState | null = null;
       for (const id of pendingIds) {
+        this.performance.pendingEntriesScanned += 1;
         const pending = this.pending.get(id);
         if (!pending || pending.descriptor.kind === "ARRIVAL_ETA" || pending.descriptor.kind === "RUNWAY_EXPECTATION") continue;
-        points ??= truthPoints(aircraft);
+        if (!this.enableIncrementalTruthEvaluation) {
+          if (fullScanPoints === null) {
+            fullScanPoints = truthPoints(aircraft);
+            this.performance.truthPointBuilds += 1;
+            this.performance.truthPointsBuilt += fullScanPoints.length;
+          }
+          const firstPoint = fullScanPoints[0];
+          const lastPoint = fullScanPoints.at(-1);
+          if (!firstPoint || !lastPoint || lastPoint.at < pending.earlyAt || firstPoint.at > pending.expiresAt) continue;
+          for (const point of fullScanPoints) {
+            this.performance.evaluatedTruthPoints += 1;
+            if (point.at < pending.earlyAt || point.at > pending.expiresAt) continue;
+            this.updateContinuity(pending, point.at);
+            if (spatialTruthMatches(pending, aircraft, point, this.atcTruthCache, now)) {
+              this.resolveObserved(pending, point.at);
+              break;
+            }
+          }
+          continue;
+        }
+        if (truthState === null) {
+          const inputFingerprint = truthInputFingerprint(aircraft);
+          const previousState = this.truthStates.get(icaoHex);
+          if (previousState?.inputFingerprint === inputFingerprint) {
+            truthState = previousState;
+          } else {
+            const points = truthPoints(aircraft);
+            const changedIndexes = new Set<number>();
+            const correctionIndexes = new Set<number>();
+            const previousByAt = new Map<number, string>();
+            const previousContents = new Set<string>();
+            if (previousState) {
+              for (const previousPoint of previousState.points) {
+                previousByAt.set(previousPoint.at, atcInputFingerprint(previousPoint));
+                previousContents.add(atcInputFingerprint(previousPoint));
+              }
+              for (const [index, point] of points.entries()) {
+                const fingerprint = atcInputFingerprint(point);
+                const previousFingerprint = previousByAt.get(point.at);
+                if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
+                if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
+                  && (previousFingerprint !== undefined && previousFingerprint !== fingerprint
+                    || previousFingerprint === undefined && !previousContents.has(fingerprint))) {
+                  correctionIndexes.add(index);
+                }
+              }
+            } else {
+              points.forEach((_, index) => changedIndexes.add(index));
+            }
+            truthState = {
+              inputFingerprint,
+              points,
+              version: (previousState?.version ?? 0) + 1,
+              changedIndexes,
+              correctionIndexes,
+            };
+            this.truthStates.set(icaoHex, truthState);
+            this.performance.truthPointBuilds += 1;
+            this.performance.truthPointsBuilt += points.length;
+          }
+        }
+        const points = truthState.points;
         const firstPoint = points[0];
         const lastPoint = points.at(-1);
-        if (!firstPoint || !lastPoint || lastPoint.at < pending.earlyAt || firstPoint.at > pending.expiresAt) continue;
-        for (const point of points) {
+        if (!firstPoint || !lastPoint) continue;
+        const previousVersion = pending.lastEvaluatedTruthVersion;
+        if (previousVersion === truthState.version) {
+          // Keep the cache's observable reuse semantics for repeated snapshots
+          // without rescanning the historical trail. This is intentionally a
+          // single endpoint check, not a replay of all truth points. A changed
+          // older point never reaches this branch because the shared truth
+          // snapshot version changes even when the endpoint is unchanged.
+          if (lastPoint.at >= pending.earlyAt
+            && lastPoint.at <= pending.expiresAt
+            && pending.descriptor.kind === "ATC_SECTOR_ENTRY") {
+            if (spatialTruthMatches(pending, aircraft, lastPoint, this.atcTruthCache, now)) {
+              this.resolveObserved(pending, lastPoint.at);
+            }
+          }
+          this.performance.pendingEntriesWithoutNewTruth += 1;
+          continue;
+        }
+        const previousLastEvaluatedAt = pending.lastEvaluatedPointAt;
+        const staticTruth = pending.descriptor.kind === "WAYPOINT"
+          || pending.descriptor.kind === "ATC_SECTOR_ENTRY";
+        const temporalTruth = pending.descriptor.kind === "SIGMET_INTERSECTION";
+        pending.lastEvaluatedTruthVersion = truthState.version;
+        pending.lastEvaluatedPointAt = lastPoint.at;
+        if (lastPoint.at < pending.earlyAt || firstPoint.at > pending.expiresAt) continue;
+        let evaluatedPoints = 0;
+        for (let index = 0; index < points.length; index += 1) {
+          const point = points[index]!;
+          const content = staticTruth ? atcInputFingerprint(point) : null;
+          const afterCursor = previousLastEvaluatedAt === null || point.at > previousLastEvaluatedAt;
+          const changedBeforeCursor = truthState.correctionIndexes.has(index)
+            || (temporalTruth && truthState.changedIndexes.has(index));
+          const needsStaticWindowCheck = staticTruth
+            && content !== null
+            && !pending.checkedStaticTruthContent.has(content);
+          const shouldConsiderPoint = afterCursor || changedBeforeCursor || needsStaticWindowCheck;
+          if (shouldConsiderPoint) evaluatedPoints += 1;
           if (point.at < pending.earlyAt || point.at > pending.expiresAt) continue;
           this.updateContinuity(pending, point.at);
+          if (!shouldConsiderPoint) continue;
+          if (staticTruth) {
+            if (content === null) continue;
+            if (pending.checkedStaticTruthContent.size >= 256) pending.checkedStaticTruthContent.clear();
+            pending.checkedStaticTruthContent.add(content);
+          }
           if (spatialTruthMatches(pending, aircraft, point, this.atcTruthCache, now)) {
             this.resolveObserved(pending, point.at);
             break;
           }
         }
+        this.performance.evaluatedTruthPoints += evaluatedPoints;
       }
     }
     this.expire(now);
@@ -1039,8 +1334,11 @@ export class OperationalTwinEventOutcomeValidator {
       if (event.type !== "LANDING") continue;
       const occurredAt = Date.parse(event.occurredAt);
       if (!Number.isFinite(occurredAt)) continue;
-      for (const pending of [...this.pending.values()]) {
-        if (pending.icaoHex !== event.icaoHex.toUpperCase()) continue;
+      const pendingIds = this.pendingByAircraft.get(event.icaoHex.toUpperCase()) ?? [];
+      for (const id of pendingIds) {
+        const pending = this.pending.get(id);
+        this.performance.intelligenceEntriesScanned += 1;
+        if (!pending) continue;
         if (pending.descriptor.kind !== "ARRIVAL_ETA" && pending.descriptor.kind !== "RUNWAY_EXPECTATION") continue;
         if (occurredAt < pending.earlyAt || occurredAt > pending.expiresAt) continue;
         const observedAirport = event.airportIcao?.trim().toUpperCase() ?? null;
@@ -1185,6 +1483,7 @@ export class OperationalTwinEventOutcomeValidator {
       byType: byTypeSlices,
       byLeadMinutes: byLeadSlices,
       windTimingGraduation,
+      performance: { ...this.performance },
     };
   }
 
@@ -1223,11 +1522,16 @@ export class OperationalTwinEventOutcomeValidator {
   reset(): void {
     this.pending.clear();
     this.pendingByAircraft.clear();
+    this.truthStates.clear();
+    this.pendingExpiryQueue = [];
+    this.pendingCaptureQueue = [];
     this.lastCaptureAt.clear();
+    this.nextCaptureSequence = 1;
     this.buckets = [];
     this.firstObservedAt = null;
     this.duplicateCaptureSkips = 0;
     this.capacityEvictions = 0;
+    this.performance = emptyPerformance();
     this.atcTruthCache.clear();
   }
 
@@ -1237,8 +1541,28 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private expire(now: number): void {
-    for (const pending of [...this.pending.values()]) {
-      if (now <= pending.expiresAt) continue;
+    if (!this.enableExpiryQueue) {
+      for (const pending of [...this.pending.values()]) {
+        this.performance.expiryEntriesScanned += 1;
+        if (now <= pending.expiresAt) continue;
+        const spatial = pending.descriptor.kind === "WAYPOINT"
+          || pending.descriptor.kind === "ATC_SECTOR_ENTRY"
+          || pending.descriptor.kind === "SIGMET_INTERSECTION";
+        const arrival = pending.descriptor.kind === "ARRIVAL_ETA";
+        if ((spatial || arrival) && pending.truthNearTarget && pending.truthNearExpiry) {
+          this.resolveFalsePositive(pending);
+        } else {
+          this.resolveExpiredNoTruth(pending);
+        }
+      }
+      return;
+    }
+    while (this.pendingExpiryQueue[0] && this.pendingExpiryQueue[0].expiresAt < now) {
+      const entry = popExpiryEntry(this.pendingExpiryQueue);
+      if (!entry) break;
+      this.performance.expiryEntriesScanned += 1;
+      const pending = this.pending.get(entry.id);
+      if (!pending || pending.expiresAt !== entry.expiresAt) continue;
       const spatial = pending.descriptor.kind === "WAYPOINT"
         || pending.descriptor.kind === "ATC_SECTOR_ENTRY"
         || pending.descriptor.kind === "SIGMET_INTERSECTION";
@@ -1248,6 +1572,10 @@ export class OperationalTwinEventOutcomeValidator {
       } else {
         this.resolveExpiredNoTruth(pending);
       }
+    }
+    const staleLimit = Math.max(1_024, this.pending.size * 2 + 32);
+    if (this.pendingExpiryQueue.length > staleLimit) {
+      this.pendingExpiryQueue = rebuildExpiryQueue(this.pending);
     }
   }
 
@@ -1346,10 +1674,16 @@ export class OperationalTwinEventOutcomeValidator {
 
   private enforceCapacity(): void {
     while (this.pending.size > MAX_PENDING) {
-      const oldest = [...this.pending.values()].sort((left, right) => left.capturedAt - right.capturedAt)[0];
-      if (!oldest) break;
+      const entry = popCaptureEntry(this.pendingCaptureQueue);
+      if (!entry) break;
+      const oldest = this.pending.get(entry.id);
+      if (!oldest || oldest.capturedAt !== entry.capturedAt) continue;
       this.removePending(oldest.id);
       this.capacityEvictions += 1;
+    }
+    const staleLimit = Math.max(1_024, this.pending.size * 2 + 32);
+    if (this.pendingCaptureQueue.length > staleLimit) {
+      this.pendingCaptureQueue = rebuildCaptureQueue(this.pending);
     }
   }
 
@@ -1359,7 +1693,10 @@ export class OperationalTwinEventOutcomeValidator {
     this.pending.delete(id);
     const aircraftPending = this.pendingByAircraft.get(pending.icaoHex);
     aircraftPending?.delete(id);
-    if (aircraftPending && aircraftPending.size === 0) this.pendingByAircraft.delete(pending.icaoHex);
+    if (aircraftPending && aircraftPending.size === 0) {
+      this.pendingByAircraft.delete(pending.icaoHex);
+      this.truthStates.delete(pending.icaoHex);
+    }
     return pending;
   }
 
