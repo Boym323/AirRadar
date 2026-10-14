@@ -104,7 +104,7 @@ function record(name: string, durationMs: number, processedAircraft: number, cpu
   // diagnostic endpoint is actually read (once per minute by the sampler).
 }
 
-export function measureRuntime<T>(name: string, processedAircraft: number, operation: () => T): T {
+export function measureRuntime<T>(name: string, processedAircraft: number | (() => number), operation: () => T): T {
   const started = performance.now();
   try {
     return operation();
@@ -112,7 +112,7 @@ export function measureRuntime<T>(name: string, processedAircraft: number, opera
     const durationMs = Math.max(0, performance.now() - started);
     // This is an inclusive synchronous wall-time proxy. Nested scopes
     // overlap and must never be summed as exclusive process CPU.
-    record(name, durationMs, processedAircraft, durationMs);
+    record(name, durationMs, typeof processedAircraft === "function" ? processedAircraft() : processedAircraft, durationMs);
   }
 }
 

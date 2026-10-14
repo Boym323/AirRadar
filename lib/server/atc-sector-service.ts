@@ -4,6 +4,7 @@ import type { AtcSectorProvider } from "@/lib/server/provider";
 import { isAtcValidityValid } from "@/lib/server/atc-validity";
 import { getAtcSectorCandidates, prepareAtcContextDataset } from "@/lib/atc-context/engine";
 import type { PreparedAtcContextDataset } from "@/lib/atc-context/types";
+import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
   readonly name = "empty";
@@ -73,7 +74,7 @@ function containsAltitude(sector: AtcSector, altitudeFt: number | null): { match
   };
 }
 
-export function matchSector(sector: AtcSector, lookup: AtcLookup): AtcSectorMatch | null {
+export function matchSector(sector: AtcSector, lookup: AtcLookup, onPolygonTest?: () => void): AtcSectorMatch | null {
   const observedAt = lookup.observedAt ?? new Date();
   if (!isAtcValidityValid(sector.validFrom, sector.validTo, observedAt)) return null;
   const altitude = containsAltitude(sector, lookup.altitudeFt);
@@ -81,6 +82,7 @@ export function matchSector(sector: AtcSector, lookup: AtcLookup): AtcSectorMatc
   const point: Coordinate = [lookup.longitude, lookup.latitude];
   let confidence: AtcSectorMatch["confidence"] | null = null;
   for (const polygon of sector.polygons) {
+    onPolygonTest?.();
     const result = pointInPolygon(point, polygon);
     if (result === "boundary") return { sector, confidence: result, altitudeConfidence: altitude.confidence };
     if (result === "inside") confidence = result;
@@ -267,12 +269,15 @@ export class AtcSectorService {
   constructor(private readonly provider: AtcSectorProvider) {}
 
   async lookup(lookup: AtcLookup): Promise<AtcSectorMatch | null> {
-    const sectors = await this.getCandidates(lookup);
-    const matches = sectors
-      .map((sector) => matchSector(sector, lookup))
-      .filter((match): match is AtcSectorMatch => match !== null)
-      .sort(compareAtcMatches);
-    return matches[0] ?? null;
+    return measureRuntimeAsync("atc.lookup.total", 1, async () => {
+      const sectors = await this.getCandidates(lookup);
+      let polygonTests = 0;
+      const matches = measureRuntime("atc.polygon-matching", () => polygonTests, () => sectors
+        .map((sector) => matchSector(sector, lookup, () => { polygonTests += 1; }))
+        .filter((match): match is AtcSectorMatch => match !== null));
+      measureRuntime("atc.sorting", matches.length, () => matches.sort(compareAtcMatches));
+      return matches[0] ?? null;
+    });
   }
 
   async lookupAll(lookup: AtcLookup): Promise<AtcSectorMatch[]> {
@@ -294,10 +299,10 @@ export class AtcSectorService {
 
   private async getSectors(): Promise<AtcSector[]> {
     if (this.sectors) return this.sectors;
-    this.loading ??= this.provider.getSectors()
+    this.loading ??= measureRuntimeAsync("atc.provider.wait", 0, () => this.provider.getSectors())
       .then((sectors) => {
         this.sectors = sectors;
-        this.preparedDataset = prepareAtcContextDataset({ sectors, routeDocuments: [] });
+        this.preparedDataset = measureRuntime("atc.dataset.preparation", sectors.length, () => prepareAtcContextDataset({ sectors, routeDocuments: [] }));
         return sectors;
       })
       .finally(() => {
@@ -309,6 +314,6 @@ export class AtcSectorService {
   private async getCandidates(lookup: AtcLookup): Promise<AtcSector[]> {
     await this.getSectors();
     if (!this.preparedDataset) return [];
-    return getAtcSectorCandidates(this.preparedDataset, lookup.longitude, lookup.latitude);
+    return measureRuntime("atc.sector.candidate-lookup", 1, () => getAtcSectorCandidates(this.preparedDataset!, lookup.longitude, lookup.latitude));
   }
 }
