@@ -18,6 +18,7 @@ const AIRSPACE_DEBOUNCE_MS = 45_000;
 const PHASE_CONFIRMATIONS = 2;
 const AIRPORT_PROXIMITY_KM = 25;
 const RUNWAY_PROXIMITY_KM = 8;
+const AIRPORT_DISTANCE_TIE_EPSILON = 1e-15;
 const MAX_POSITION_AGE_MS = 60_000;
 const MAX_OBSERVATION_GAP_MS = 3 * 60_000;
 const MIN_LEVEL_OFF_HISTORY = 3;
@@ -106,7 +107,7 @@ interface TrackState {
   lastUnusualTurnAt: number | null;
 }
 interface Signal { active: boolean; weight: number; evidence: string; }
-interface AirportMatch { airport: Airport; distanceKm: number; }
+export interface AirportMatch { airport: Airport; distanceKm: number; }
 interface HoldingEvidence { signals: Signal[]; durationMs: number; maxRadiusKm: number; }
 
 interface AirportPoint {
@@ -566,17 +567,24 @@ export class FlightIntelligenceDetector {
     ]);
     return { type: orbit ? "ORBIT" : "UNUSUAL_TURN", scored };
   }
-  private nearestAirport(aircraft: Aircraft): AirportMatch | null {
+  nearestAirport(aircraft: Aircraft): AirportMatch | null {
     if (aircraft.lat === null || aircraft.lon === null) return null;
     const [x, y, z] = aircraftVector(aircraft.lat, aircraft.lon);
     let best: AirportPoint | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
+    let bestDistanceKm = Number.POSITIVE_INFINITY;
     const search = (node: AirportIndexNode | null, depth: number): void => {
       if (!node) return;
       const distance = (x - node.x) ** 2 + (y - node.y) ** 2 + (z - node.z) ** 2;
-      if (distance < bestDistance || (distance === bestDistance && (!best || node.order < best.order))) {
+      const distanceKm = Math.abs(distance - bestDistance) <= AIRPORT_DISTANCE_TIE_EPSILON
+        ? haversineDistanceKm(aircraft.lat!, aircraft.lon!, node.airport.latitude, node.airport.longitude)
+        : Number.POSITIVE_INFINITY;
+      if (distance < bestDistance - AIRPORT_DISTANCE_TIE_EPSILON || (Math.abs(distance - bestDistance) <= AIRPORT_DISTANCE_TIE_EPSILON && (!best || distanceKm < bestDistanceKm || (distanceKm === bestDistanceKm && node.order < best.order)))) {
         best = node;
         bestDistance = distance;
+        bestDistanceKm = distanceKm === Number.POSITIVE_INFINITY
+          ? haversineDistanceKm(aircraft.lat!, aircraft.lon!, node.airport.latitude, node.airport.longitude)
+          : distanceKm;
       }
       const axis = depth % 3;
       const value = axis === 0 ? x : axis === 1 ? y : z;
@@ -584,7 +592,7 @@ export class FlightIntelligenceDetector {
       const near = value < nodeValue ? node.left : node.right;
       const far = value < nodeValue ? node.right : node.left;
       search(near, depth + 1);
-      if ((value - nodeValue) ** 2 <= bestDistance) search(far, depth + 1);
+      if ((value - nodeValue) ** 2 <= bestDistance + AIRPORT_DISTANCE_TIE_EPSILON) search(far, depth + 1);
     };
     search(this.airportIndex, 0);
     const nearest = best as AirportPoint | null;
