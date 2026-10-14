@@ -1,0 +1,23 @@
+[Unit]
+Description=Fail-safe external ATC canary watchdog for AirRadar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/var/www/airradar
+Environment=ATC_WATCHDOG_BASE_URL=http://192.168.1.142:3000
+Environment=ATC_WATCHDOG_STATE_DIR=/var/lib/airradar-atc-watchdog
+ExecStart=/usr/bin/node /var/www/airradar/scripts/atc-canary-watchdog.mjs --once
+StateDirectory=airradar-atc-watchdog
+StateDirectoryMode=0700
+ReadWritePaths=/var/www/airradar
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal
