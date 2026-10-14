@@ -18,6 +18,7 @@ const AIRSPACE_DEBOUNCE_MS = 45_000;
 const PHASE_CONFIRMATIONS = 2;
 const AIRPORT_PROXIMITY_KM = 25;
 const RUNWAY_PROXIMITY_KM = 8;
+const AIRPORT_DISTANCE_TIE_EPSILON = 1e-15;
 const MAX_POSITION_AGE_MS = 60_000;
 const MAX_OBSERVATION_GAP_MS = 3 * 60_000;
 const MIN_LEVEL_OFF_HISTORY = 3;
@@ -106,12 +107,58 @@ interface TrackState {
   lastUnusualTurnAt: number | null;
 }
 interface Signal { active: boolean; weight: number; evidence: string; }
-interface AirportMatch { airport: Airport; distanceKm: number; }
+export interface AirportMatch { airport: Airport; distanceKm: number; }
 interface HoldingEvidence { signals: Signal[]; durationMs: number; maxRadiusKm: number; }
+
+interface AirportPoint {
+  airport: Airport;
+  order: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface AirportIndexNode extends AirportPoint {
+  left: AirportIndexNode | null;
+  right: AirportIndexNode | null;
+}
 
 function finite(value: number | null | undefined): value is number { return typeof value === "number" && Number.isFinite(value); }
 function signedAngularDifference(a: number, b: number): number { return ((b - a + 540) % 360) - 180; }
 function observedAtOf(aircraft: Aircraft, fallback: number): number { const value = Date.parse(aircraft.lastSeen); return Number.isFinite(value) ? value : fallback; }
+
+function airportPoint(airport: Airport, order: number): AirportPoint {
+  const latitude = airport.latitude * Math.PI / 180;
+  const longitude = airport.longitude * Math.PI / 180;
+  const cosLatitude = Math.cos(latitude);
+  return {
+    airport, order,
+    x: cosLatitude * Math.cos(longitude),
+    y: cosLatitude * Math.sin(longitude),
+    z: Math.sin(latitude),
+  };
+}
+
+function buildAirportIndex(points: AirportPoint[], depth = 0): AirportIndexNode | null {
+  if (!points.length) return null;
+  const axis = depth % 3;
+  const coordinate = axis === 0 ? "x" : axis === 1 ? "y" : "z";
+  points.sort((left, right) => left[coordinate] - right[coordinate]);
+  const middle = Math.floor(points.length / 2);
+  const point = points[middle]!;
+  return {
+    ...point,
+    left: buildAirportIndex(points.slice(0, middle), depth + 1),
+    right: buildAirportIndex(points.slice(middle + 1), depth + 1),
+  };
+}
+
+function aircraftVector(latitude: number, longitude: number): [number, number, number] {
+  const lat = latitude * Math.PI / 180;
+  const lon = longitude * Math.PI / 180;
+  const cosLat = Math.cos(lat);
+  return [cosLat * Math.cos(lon), cosLat * Math.sin(lon), Math.sin(lat)];
+}
 
 function positionAgeMs(aircraft: Aircraft): number {
   return finite(aircraft.seenPosSeconds) && aircraft.seenPosSeconds >= 0 ? aircraft.seenPosSeconds * 1000 : 0;
@@ -154,13 +201,15 @@ function altitudeDelta(history: FlightObservation[], count = 3): number | null {
 export class FlightIntelligenceDetector {
   private readonly tracks = new Map<string, TrackState>();
   private airports: readonly Airport[];
+  private airportIndex: AirportIndexNode | null = null;
   private readonly runwaysByAirport = new Map<string, readonly AirportRunway[]>();
 
   constructor(airports: readonly Airport[] = SAMPLE_AIRPORTS, runwaysByAirport?: ReadonlyMap<string, readonly AirportRunway[]>) {
     this.airports = airports.slice(0, 100_000);
+    this.rebuildAirportIndex();
     if (runwaysByAirport) this.setRunways(runwaysByAirport);
   }
-  setAirports(airports: readonly Airport[]): void { this.airports = airports.slice(0, 100_000); }
+  setAirports(airports: readonly Airport[]): void { this.airports = airports.slice(0, 100_000); this.rebuildAirportIndex(); }
   setRunways(runwaysByAirport: ReadonlyMap<string, readonly AirportRunway[]>): void {
     this.runwaysByAirport.clear();
     for (const [icao, runways] of runwaysByAirport) {
@@ -518,14 +567,40 @@ export class FlightIntelligenceDetector {
     ]);
     return { type: orbit ? "ORBIT" : "UNUSUAL_TURN", scored };
   }
-  private nearestAirport(aircraft: Aircraft): AirportMatch | null {
+  nearestAirport(aircraft: Aircraft): AirportMatch | null {
     if (aircraft.lat === null || aircraft.lon === null) return null;
-    let best: AirportMatch | null = null;
-    for (const airport of this.airports) {
-      const distanceKm = haversineDistanceKm(aircraft.lat, aircraft.lon, airport.latitude, airport.longitude);
-      if (!best || distanceKm < best.distanceKm) best = { airport, distanceKm };
-    }
-    return best;
+    const [x, y, z] = aircraftVector(aircraft.lat, aircraft.lon);
+    let best: AirportPoint | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestDistanceKm = Number.POSITIVE_INFINITY;
+    const search = (node: AirportIndexNode | null, depth: number): void => {
+      if (!node) return;
+      const distance = (x - node.x) ** 2 + (y - node.y) ** 2 + (z - node.z) ** 2;
+      const distanceKm = Math.abs(distance - bestDistance) <= AIRPORT_DISTANCE_TIE_EPSILON
+        ? haversineDistanceKm(aircraft.lat!, aircraft.lon!, node.airport.latitude, node.airport.longitude)
+        : Number.POSITIVE_INFINITY;
+      if (distance < bestDistance - AIRPORT_DISTANCE_TIE_EPSILON || (Math.abs(distance - bestDistance) <= AIRPORT_DISTANCE_TIE_EPSILON && (!best || distanceKm < bestDistanceKm || (distanceKm === bestDistanceKm && node.order < best.order)))) {
+        best = node;
+        bestDistance = distance;
+        bestDistanceKm = distanceKm === Number.POSITIVE_INFINITY
+          ? haversineDistanceKm(aircraft.lat!, aircraft.lon!, node.airport.latitude, node.airport.longitude)
+          : distanceKm;
+      }
+      const axis = depth % 3;
+      const value = axis === 0 ? x : axis === 1 ? y : z;
+      const nodeValue = axis === 0 ? node.x : axis === 1 ? node.y : node.z;
+      const near = value < nodeValue ? node.left : node.right;
+      const far = value < nodeValue ? node.right : node.left;
+      search(near, depth + 1);
+      if ((value - nodeValue) ** 2 <= bestDistance + AIRPORT_DISTANCE_TIE_EPSILON) search(far, depth + 1);
+    };
+    search(this.airportIndex, 0);
+    const nearest = best as AirportPoint | null;
+    return nearest ? { airport: nearest.airport, distanceKm: haversineDistanceKm(aircraft.lat, aircraft.lon, nearest.airport.latitude, nearest.airport.longitude) } : null;
+  }
+
+  private rebuildAirportIndex(): void {
+    this.airportIndex = buildAirportIndex(this.airports.map((airport, order) => airportPoint(airport, order)));
   }
 
   private event(type: FlightEventType, aircraft: Aircraft, state: TrackState, airportIcao: string | null, phase: FlightPhase, scored: { confidence: number; evidence: string[] }, runwayContext: RunwayContext | null, semanticSuffix = "", sectorId: string | null = null, metadata?: Record<string, unknown>, startedAt?: number, endedAt?: number): FlightIntelligenceEvent | null {

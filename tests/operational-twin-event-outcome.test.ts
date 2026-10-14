@@ -371,7 +371,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(prepared.sectors[0].name).toBe("Immutable");
   });
 
-  it("does not share same-timestamp truth between different ICAOs", () => {
+  it("shares same-timestamp truth between different ICAOs when the point is identical", () => {
     const dataset = testAtcDataset();
     const predictedAt = baseNow + 5 * 60_000;
     const validator = new OperationalTwinEventOutcomeValidator();
@@ -384,8 +384,8 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     const eastTruth = { ...aircraft(baseNow, 49, 18.5), icaoHex: "EAST01" };
     vi.mocked(computeAtcContext).mockClear();
     validator.observeLocal(new Map([["ABC123", westTruth], ["EAST01", eastTruth]]), baseNow + 60_000);
-    expect(computeAtcContext).toHaveBeenCalledTimes(2);
-    expect(validator.getAtcCacheStats().hits).toBe(0);
+    expect(computeAtcContext).toHaveBeenCalledTimes(1);
+    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1 });
   });
 
   it("invalidates a same-timestamp cache entry when the position is corrected", () => {
@@ -469,13 +469,13 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
       const current = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${baseNow + 5 * 60_000}:${index}`, lat: 49, lon: 18.5 })]);
       current.aircraft.icaoHex = icaoHex;
       validator.capture(current, { atcDataset: dataset, sigmets: null, destination: null });
-      const truth = { ...aircraft(baseNow, 49, 18.5), icaoHex };
+      const truth = { ...aircraft(baseNow + index * 1_000, 49, 18.5), icaoHex };
       validator.observeLocal(new Map([[icaoHex, truth]]), baseNow + 60_000 + index);
     }
     expect(validator.getAtcCacheStats()).toMatchObject({ size: 2, maxEntries: 2, evictions: 1 });
   });
 
-  it("does not share sector truth between aircraft at the same timestamp", () => {
+  it("does not share sector truth between aircraft at different points", () => {
     const dataset = prepareAtcContextDataset({
       sectors: [
         {
