@@ -7,6 +7,7 @@
  */
 import { copyFile, chmod, chown, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { execFile, spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -70,7 +71,7 @@ async function lock(path) {
     let output = "";
     child.stdout.on("data", (chunk) => { output += chunk; if (output.includes("acquired")) resolve(true); });
     child.once("error", reject);
-    child.once("exit", (code) => { if (!output.includes("acquired")) resolve(false); });
+    child.once("exit", () => { if (!output.includes("acquired")) resolve(false); });
   });
   let closed = false;
   const stop = () => { if (closed) return; closed = true; try { process.kill(-child.pid, "SIGTERM"); } catch {} };
@@ -81,6 +82,19 @@ async function acquireLocks() {
   const release = await lock(RELEASE_LOCK);
   try { return { release, build: await lock(BUILD_LOCK) }; }
   catch (error) { await release.close(); throw error; }
+}
+export function validateActivationPreconditions({ phase, state, currentFlags, verifiedFlags, timerActive }) {
+  if (phase !== "assignment" && phase !== "shadow") die("invalid_phase");
+  if (!state || state.mode !== "armed") die("watchdog_not_armed");
+  if (!Number.isSafeInteger(state.recoveries) || state.recoveries >= MAX_RECOVERIES) die("recovery_budget_exhausted");
+  if (!verifiedFlags || verifiedFlags.AIRRADAR_ATC_RESOLUTION_ENABLED !== "false" ||
+      verifiedFlags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== "false") die("verified_backup_not_off");
+  const expected = phase === "assignment" ? ["false", "false"] : ["true", "false"];
+  if (!currentFlags || currentFlags.AIRRADAR_ATC_RESOLUTION_ENABLED !== expected[0] ||
+      currentFlags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== expected[1]) {
+    die("unexpected_previous_atc_config");
+  }
+  if (timerActive !== true) die("watchdog_timer_inactive");
 }
 async function json(path) {
   const controller = new AbortController();
@@ -124,18 +138,18 @@ function bad(snapshot, prior) {
   if (finite(snapshot.memoryMax) && snapshot.memoryMax > 0 && finite(snapshot.memoryCurrent) && snapshot.memoryCurrent / snapshot.memoryMax > 0.85) return "cgroup_memory_high";
   return null;
 }
-async function restore(reason) {
-  const state = await readState();
-  if (state.recoveries >= MAX_RECOVERIES) die("recovery_budget_exhausted");
-  if (state.lastRecoveryAt && Date.now() - state.lastRecoveryAt < COOLDOWN_MS) die("recovery_cooldown");
-  const current = await readFile(ENV, "utf8");
-  const currentFlags = parseFlags(current);
-  if (currentFlags.AIRRADAR_ATC_RESOLUTION_ENABLED === "false" && currentFlags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED === "false") return "already_off";
-  const verified = await readFile(BACKUP, "utf8");
-  const verifiedFlags = parseFlags(verified);
-  if (verifiedFlags.AIRRADAR_ATC_RESOLUTION_ENABLED !== "false" || verifiedFlags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== "false") die("verified_backup_not_off");
-  const locks = await acquireLocks();
+async function restore(reason, heldLocks = null) {
+  const locks = heldLocks ?? await acquireLocks();
   try {
+    const state = await readState();
+    if (state.recoveries >= MAX_RECOVERIES) die("recovery_budget_exhausted");
+    if (state.lastRecoveryAt && Date.now() - state.lastRecoveryAt < COOLDOWN_MS) die("recovery_cooldown");
+    const current = await readFile(ENV, "utf8");
+    const currentFlags = parseFlags(current);
+    if (currentFlags.AIRRADAR_ATC_RESOLUTION_ENABLED === "false" && currentFlags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED === "false") return "already_off";
+    const verified = await readFile(BACKUP, "utf8");
+    const verifiedFlags = parseFlags(verified);
+    if (verifiedFlags.AIRRADAR_ATC_RESOLUTION_ENABLED !== "false" || verifiedFlags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== "false") die("verified_backup_not_off");
     const envStat = await stat(ENV);
     await atomicWrite(ENV, withFlags(current, false, false), envStat);
     await locks.build.close();
@@ -143,7 +157,7 @@ async function restore(reason) {
     await waitForHealth();
     await saveState({ ...state, mode: "lockout", recoveries: (state.recoveries || 0) + 1, lastRecoveryAt: Date.now(), reason, restored: true });
     return "restored_off";
-  } finally { await locks.build.close(); await locks.release.close(); }
+  } finally { if (!heldLocks) { await locks.build.close(); await locks.release.close(); } }
 }
 async function initialize() {
   await mkdir(STATE_DIR, { recursive: true, mode: 0o700 });
@@ -156,16 +170,18 @@ async function initialize() {
   process.stdout.write("ATC watchdog armed with verified false/false backup\n");
 }
 async function activate(phase) {
-  if (phase !== "assignment" && phase !== "shadow") die("invalid_phase");
-  const current = await readFile(ENV, "utf8");
-  const flags = parseFlags(current);
-  const expected = phase === "assignment"
-    ? ["false", "false"]
-    : ["true", "false"];
-  if (flags.AIRRADAR_ATC_RESOLUTION_ENABLED !== expected[0] || flags.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED !== expected[1]) die("unexpected_previous_atc_config");
   const locks = await acquireLocks();
   let changed = false;
   try {
+    // All activation inputs are read only after both locks are held. This
+    // prevents a concurrent watchdog recovery/import/release from invalidating
+    // the decision between validation and the .env replacement.
+    const state = await readState();
+    const current = await readFile(ENV, "utf8");
+    const verified = await readFile(BACKUP, "utf8");
+    const timerActive = await exec("/usr/bin/systemctl", ["is-active", "--quiet", "airradar-atc-watchdog.timer"])
+      .then(() => true, () => false);
+    validateActivationPreconditions({ phase, state, currentFlags: parseFlags(current), verifiedFlags: parseFlags(verified), timerActive });
     const envStat = await stat(ENV);
     const next = withFlags(current, true, phase === "shadow");
     await atomicWrite(ENV, next, envStat);
@@ -186,26 +202,31 @@ async function activate(phase) {
   } finally { await locks.build.close(); await locks.release.close(); }
 }
 async function once() {
-  const state = await readState();
-  if (state.mode !== "armed") return { action: "inactive" };
-  const current = parseFlags(await readFile(ENV, "utf8"));
-  if (current.AIRRADAR_ATC_RESOLUTION_ENABLED === "false" && current.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED === "false") return { action: "off" };
-  const sample = await metricSnapshot();
-  const samples = [...(state.samples || []), sample].filter((x) => x.at >= sample.at - WINDOW_MS);
-  const reason = bad(sample, samples.slice(0, -1));
-  await saveState({ ...state, samples });
-  if (reason) return { action: await restore(reason), reason };
-  return { action: "healthy", pid: sample.pid, commit: sample.commit };
+  const locks = await acquireLocks();
+  try {
+    const state = await readState();
+    if (state.mode !== "armed") return { action: "inactive" };
+    const current = parseFlags(await readFile(ENV, "utf8"));
+    if (current.AIRRADAR_ATC_RESOLUTION_ENABLED === "false" && current.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED === "false") return { action: "off" };
+    const sample = await metricSnapshot();
+    const samples = [...(state.samples || []), sample].filter((x) => x.at >= sample.at - WINDOW_MS);
+    const reason = bad(sample, samples.slice(0, -1));
+    await saveState({ ...state, samples });
+    if (reason) return { action: await restore(reason, locks), reason };
+    return { action: "healthy", pid: sample.pid, commit: sample.commit };
+  } finally { await locks.build.close(); await locks.release.close(); }
 }
-const command = process.argv[2] || "--once";
-try {
-  if (command === "--initialize") await initialize();
-  else if (command === "--activate" && process.argv.length === 4) await activate(process.argv[3]);
-  else if (command === "--restore" && process.argv.length === 4) process.stdout.write(`${await restore(process.argv[3])}\n`);
-  else if (command === "--once") process.stdout.write(JSON.stringify(await once()) + "\n");
-  else if (command === "--dry-run") process.stdout.write(JSON.stringify({ stateDir: STATE_DIR, env: ENV, releaseLock: RELEASE_LOCK, buildLock: BUILD_LOCK, restart: "airradar.service only" }) + "\n");
-  else die("invalid_command");
-} catch (error) {
-  process.stderr.write(`ATC watchdog unavailable: ${error instanceof Error ? error.message : "unknown"}\n`);
-  process.exitCode = 1;
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const command = process.argv[2] || "--once";
+  try {
+    if (command === "--initialize") await initialize();
+    else if (command === "--activate" && process.argv.length === 4) await activate(process.argv[3]);
+    else if (command === "--restore" && process.argv.length === 4) process.stdout.write(`${await restore(process.argv[3])}\n`);
+    else if (command === "--once") process.stdout.write(JSON.stringify(await once()) + "\n");
+    else if (command === "--dry-run") process.stdout.write(JSON.stringify({ stateDir: STATE_DIR, env: ENV, releaseLock: RELEASE_LOCK, buildLock: BUILD_LOCK, restart: "airradar.service only" }) + "\n");
+    else die("invalid_command");
+  } catch (error) {
+    process.stderr.write(`ATC watchdog unavailable: ${error instanceof Error ? error.message : "unknown"}\n`);
+    process.exitCode = 1;
+  }
 }
