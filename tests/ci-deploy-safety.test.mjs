@@ -26,7 +26,9 @@ test("all release gates run in maintainer-requested previews", () => {
 
 test("release browser throughput remains within the tested bounded scheduler", () => {
   const release = job("release-validate");
-  assert.match(release, /AIRRADAR_VISUAL_CONCURRENCY: '3'/);
+  assert.match(release, /AIRRADAR_VISUAL_CONCURRENCY: '2'/);
+  // The 3-worker full visual matrix caused intermittent hidden drawer and
+  // timeout failures on two main-branch releases; prioritize release reliability.
   assert.match(release, /AIRRADAR_VIEWPORT_CONCURRENCY: '3'/);
   assert.match(release, /npm run test:production:all/);
 });
