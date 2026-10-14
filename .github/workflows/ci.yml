@@ -350,8 +350,8 @@ jobs:
         env:
           AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
           PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
-          AIRRADAR_VISUAL_CONCURRENCY: '2'
-          AIRRADAR_VIEWPORT_CONCURRENCY: '2'
+          AIRRADAR_VISUAL_CONCURRENCY: '3'
+          AIRRADAR_VIEWPORT_CONCURRENCY: '3'
         run: npm run test:production:all
       - name: Upload visual system artifacts
         if: always()
@@ -587,14 +587,15 @@ jobs:
             if sudo -n /var/www/airradar/deploy/release.sh \
                 --branch main \
                 --automated \
-                --commit "${GITHUB_SHA}" >"${output}" 2>&1; then
-              cat -- "${output}"
+                --commit "${GITHUB_SHA}" 2>&1 | tee "${output}"; then
+              # Stream release progress while retaining an exact diagnostic copy.
               rm -f -- "${output}"
               exit 0
             else
               result=$?
             fi
-            cat -- "${output}"
+            # Output has already been streamed by tee; reuse the saved copy only
+            # for targeted release-lock retry detection.
             if grep -Fq 'Another AirRadar release is already running.' "${output}" && (( attempt < 5 )); then
               rm -f -- "${output}"
               echo "::warning::Another AirRadar release holds the lock (attempt ${attempt}/5); retrying after 30 seconds."

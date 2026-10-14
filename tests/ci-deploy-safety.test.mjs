@@ -24,6 +24,21 @@ test("all release gates run in maintainer-requested previews", () => {
   assert.match(job("deploy"), /release-tests, release-performance/);
 });
 
+test("release browser throughput remains within the tested bounded scheduler", () => {
+  const release = job("release-validate");
+  assert.match(release, /AIRRADAR_VISUAL_CONCURRENCY: '3'/);
+  assert.match(release, /AIRRADAR_VIEWPORT_CONCURRENCY: '3'/);
+  assert.match(release, /npm run test:production:all/);
+});
+
+test("production release logs stream live with pipefail and retain flock retry detection", () => {
+  const deploy = job("deploy");
+  assert.match(deploy, /set -Eeuo pipefail/);
+  assert.match(deploy, /--commit "\$\{GITHUB_SHA\}" 2>&1 \| tee "\$\{output\}"/);
+  assert.match(deploy, /if grep -Fq 'Another AirRadar release is already running\.'/);
+  assert.match(deploy, /exit "\$\{result\}"/);
+});
+
 test("release-preview skips duplicated PR validation, not release quality gates", () => {
   const validate = job("validate");
   assert.match(validate, /!contains\(github\.event\.pull_request\.labels\.\*\.name, 'release-preview'\)/);
