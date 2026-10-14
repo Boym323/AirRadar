@@ -659,6 +659,8 @@ const fs = require("node:fs");
 const [manifestPath, expectedCommit, expectedVersion, expectedChannel, buildIdPath, automated] = process.argv.slice(2);
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const buildId = fs.readFileSync(buildIdPath, "utf8").trim();
+const artifactMetadataPath = require("node:path").join(require("node:path").dirname(buildIdPath), "standalone", "generated", "build-version.json");
+const artifactMetadata = JSON.parse(fs.readFileSync(artifactMetadataPath, "utf8"));
 if (manifest.schemaVersion !== 1) throw new Error("Unsupported prepared-build manifest schema");
 if (manifest.runtime !== "standalone-v1") throw new Error("Prepared build is not a standalone-v1 runtime");
 if (String(manifest.commit || "").toLowerCase() !== expectedCommit.toLowerCase()) throw new Error(`Prepared build commit mismatch: ${manifest.commit} != ${expectedCommit}`);
@@ -671,6 +673,10 @@ if (manifest.version !== expectedVersion) {
 }
 if (manifest.channel !== expectedChannel) throw new Error(`Prepared build channel mismatch: ${manifest.channel} != ${expectedChannel}`);
 if (manifest.buildId !== buildId) throw new Error("Prepared build BUILD_ID does not match its manifest");
+if (artifactMetadata.commit !== manifest.commit || artifactMetadata.version !== manifest.version ||
+    artifactMetadata.channel !== manifest.channel || artifactMetadata.buildTime !== manifest.buildTime) {
+  throw new Error("Prepared standalone build metadata does not match its manifest");
+}
 if (typeof manifest.buildTime !== "string" || !Number.isFinite(Date.parse(manifest.buildTime))) throw new Error("Prepared build has invalid buildTime");
 process.stdout.write(new Date(manifest.buildTime).toISOString());
 NODE
