@@ -770,7 +770,7 @@ run_release_steps() {
     RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
     export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
     rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
-    if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
+    if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" AIRRADAR_RELEASE_BUILD=1 npm run build; then
       restore_build_source_files || true
       release_build_lock
       die "Production build failed; the active .next directory was not changed."
