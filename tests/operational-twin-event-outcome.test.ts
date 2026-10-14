@@ -345,6 +345,33 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1, size: 1 });
   });
 
+  it("does not rescan unchanged local truth points for pending events", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([
+      event("WAYPOINT", 5, { id: `waypoint:VLM:${predictedAt}`, title: "VLM", lat: 49, lon: 17.5 }),
+    ]), { atcDataset: null, sigmets: null, destination: null });
+
+    const first = aircraft(baseNow, 49, 18.5);
+    first.trail = Array.from({ length: 120 }, (_, index) => ({
+      recordedAt: new Date(baseNow - (119 - index) * 1_000).toISOString(),
+      lat: 49,
+      lon: 18.5,
+      altitude: 30000,
+      track: 90,
+      groundSpeed: 420,
+    }));
+    validator.observeLocal(new Map([[first.icaoHex, first]]), baseNow + 60_000);
+    const firstReport = validator.report(new Date(baseNow + 60_000));
+
+    validator.observeLocal(new Map([[first.icaoHex, { ...first, trail: [...first.trail] }]]), baseNow + 120_000);
+    const secondReport = validator.report(new Date(baseNow + 120_000));
+
+    expect(secondReport.overall).toEqual(firstReport.overall);
+    expect(secondReport.performance.evaluatedTruthPoints).toBe(firstReport.performance.evaluatedTruthPoints);
+    expect(secondReport.performance.pendingEntriesWithoutNewTruth).toBe(1);
+  });
+
   it("keeps prepared dataset maps immutable without freezing provider-owned input", () => {
     const immutablePolygon: SectorPolygon = [[17.4, 48.9], [17.6, 48.9], [17.6, 49.1], [17.4, 49.1], [17.4, 48.9]];
     const source = {
