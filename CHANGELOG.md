@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.450] - 2026-10-14
+
+Changes since v1.0.449.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Added
+
+- Add systemd service and timer for ATC canary watchdog (07aa7597)
+
+### Maintenance
+
+- Sync generated repository metadata (#876) (f9f46f36)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#876) (f9f46f36)
+- feat(atc): add systemd service and timer for ATC canary watchdog (07aa7597)
+
+</details>
 ## [1.0.449] - 2026-10-14
 
 Changes since v1.0.448.
