@@ -283,3 +283,27 @@ Skript ověřuje obě BUILD_ID, zamyká release a build, požaduje výslovné
 potvrzení kompatibility a kontroluje lokální health endpoint. Při selhání
 obnovy zkusí vrátit původně aktivní runtime. Nemění Git, migrace ani data.
 Po obnovení proveďte také kontrolu veřejných JS/CSS souborů a aplikace.
+
+## Opětovné využití ověřených PR testů při nasazení main
+
+Štítek `release-preview` u PR spustí kompletní release typecheck, Vitest,
+browser a výkonnostní kontroly **před sloučením** (z PR se nikdy nenasazuje).
+Základní rychlý validační PR job se pak přeskočí, protože jeho lint,
+dependency audit, migrace, registr funkcí, dokumentace, vizuální a changelog
+kontroly běží v release-tests.
+
+Po sloučení `scripts/ci-pr-validation-reuse.mjs` pouze čte GitHub API.
+`main` smí znovu použít úspěšný výsledek a spustit menší reprezentativní
+browser/výkonnostní sadu a cílené runtime testy **jen pokud** je jednoznačně
+prokázán: jediný sloučený PR ze stejného repozitáře se štítkem
+`release-preview`; naprosto shodný Git tree mezi main a PR head;
+úspěšný release-preview (scope, build/browser, plný Vitest/typecheck,
+výkonnostní gate); úspěšný CodeQL na témže SHA; a žádná změna samotných
+workflow nebo testovací/release infrastruktury. Produkční build,
+typecheck, audit závislostí, migrací a statických kontrol, core/browser
+smoke, výkonová kontrola, ověření verze, health i rollback zůstávají.
+
+Přímý push, rozdílný strom, neúplné výsledky, změna CI infrastruktury,
+nefunkční GitHub API, nejednoznačný PR nebo nedostatečná oprávnění
+automaticky aktivují **původní plné brány main**. Toto bezpečnostní
+přepnutí se nesmí obcházet; release stále používá přesný commit a zámek.

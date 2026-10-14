@@ -18,7 +18,10 @@ jobs:
     # Metadata PRs are validated by the explicit workflow_dispatch run started
     # by repository-metadata.yml. Skipping the duplicate pull_request job keeps
     # its auto-merge from deleting the branch while that event is still queued.
-    if: (github.event_name == 'pull_request' && github.head_ref != 'automation/repository-metadata') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
+    # release-preview already executes full unit/typecheck, the production
+    # browser suite and performance gates. Avoid repeating the fast PR job;
+    # release-tests must retain lint, dependency and static quality checks.
+    if: (github.event_name == 'pull_request' && github.head_ref != 'automation/repository-metadata' && !contains(github.event.pull_request.labels.*.name, 'release-preview')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -67,7 +70,7 @@ jobs:
           node scripts/changelog.mjs check
       - name: Verify release gate planner
         if: steps.scope.outputs.docs_only != 'true'
-        run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
+        run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
@@ -163,12 +166,18 @@ jobs:
     name: Release scope
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')
     runs-on: ubuntu-24.04
+    # Read-only verification of the exact-tree PR preview against GitHub.
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
     outputs:
       deploy: ${{ steps.scope.outputs.deploy }}
       browser: ${{ steps.scope.outputs.browser }}
-      visual_targets: ${{ steps.scope.outputs.visual_targets }}
-      viewports: ${{ steps.scope.outputs.viewports }}
-      performance_scenarios: ${{ steps.scope.outputs.performance_scenarios }}
+      visual_targets: ${{ steps.quick.outputs.visual_targets || steps.scope.outputs.visual_targets }}
+      viewports: ${{ steps.quick.outputs.viewports || steps.scope.outputs.viewports }}
+      performance_scenarios: ${{ steps.quick.outputs.performance_scenarios || steps.scope.outputs.performance_scenarios }}
+      validated_preview: ${{ steps.preview.outputs.reuse }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -186,8 +195,6 @@ jobs:
           set -Eeuo pipefail
           changes="$(mktemp)"
           trap 'rm -f -- "$changes"' EXIT
-          # A preview must assess the *entire PR*, not github.event.before
-          # (which may identify only its latest incremental commit).
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             if [[ "$PR_BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] \
               && git cat-file -e "$PR_BASE_SHA^{commit}" \
@@ -202,7 +209,6 @@ jobs:
             && git merge-base --is-ancestor "$PUSH_BEFORE" "$GITHUB_SHA"; then
             git diff --name-only -z "$PUSH_BEFORE" "$GITHUB_SHA" > "$changes"
           else
-            # A missing/rewritten push base must fail closed.
             printf '%s\0' '__unknown_change__' > "$changes"
             echo "::warning::Cannot verify push base: selecting full release gates"
           fi
@@ -221,6 +227,31 @@ jobs:
           done
           echo "Release scope: $scope_json"
           echo "Release gates: $plan_json"
+      - name: Verify completed PR preview for identical main tree
+        id: preview
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.deploy == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci-pr-validation-reuse.mjs
+      - name: Retain smoke gates but reuse verified release-preview coverage
+        id: quick
+        if: steps.preview.outputs.reuse == 'true'
+        run: |
+          set -Eeuo pipefail
+          # The PR built/tested exactly this source tree. Still run all main
+          # release identity, typecheck, core, smoke and deployment gates.
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+          import { planReleaseGates } from "./scripts/ci-release-plan.mjs";
+          const fast = planReleaseGates(["app/api/version/route.ts"]);
+          if (fast.browser !== "fast" || fast.performance !== "fast") throw new Error("fast smoke plan is not valid");
+          for (const [key, value] of [
+            ["visual_targets", fast.visualTargets],
+            ["viewports", fast.viewports],
+            ["performance_scenarios", fast.performanceScenarios],
+          ]) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          NODE
+          echo "Verified preview: main performs smoke checks instead of repeating the full visual/performance matrices"
 
   release-validate:
     name: Release validation
@@ -319,9 +350,6 @@ jobs:
         env:
           AIRRADAR_VISUAL_TARGETS: ${{ needs.release-scope.outputs.visual_targets }}
           PRODUCTION_GATE_BROWSER_VIEWPORTS: ${{ needs.release-scope.outputs.viewports }}
-          # The browser scheduler caps parallel checks at 3 and serializes
-          # GPU-exclusive scenarios. The previous value 2 was the release
-          # browser-gate critical path (75 visuals + 14 viewports).
           AIRRADAR_VISUAL_CONCURRENCY: '3'
           AIRRADAR_VIEWPORT_CONCURRENCY: '3'
         run: npm run test:production:all
@@ -357,16 +385,34 @@ jobs:
       - run: npm run prisma:generate
       - name: Verify Prisma migration integrity
         run: npx prisma migration check
+      # Keep these gates authoritative for release-preview PRs even though the
+      # duplicate fast validate job is skipped.
+      - name: Run static quality gates
+        run: |
+          npm run lint
+          npm run features:check
+          npm run docs:check
+          npm run visual:check
+          npm run icons:audit
+          npm run changelog:check
       - name: Verify release gate planner
-        run: node --check scripts/production-gates.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs
-      - name: Run release typecheck and full Vitest in parallel
+        run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs
+      - name: Run release typecheck and verified-preview-aware Vitest
         shell: bash
+        env:
+          AIRRADAR_VALIDATED_PREVIEW: ${{ needs.release-scope.outputs.validated_preview }}
         run: |
           set -Eeuo pipefail
           typecheck_status=0
           test_status=0
           npm run typecheck:prepared & typecheck_pid=$!
-          npm run test:full & test_pid=$!
+          if [[ "$AIRRADAR_VALIDATED_PREVIEW" == "true" ]]; then
+            # Exact code tree + four green release-preview jobs + CodeQL were
+            # checked on GitHub. Retain targeted runtime regression smoke.
+            npm run test:targeted -- tests/aircraft-state.test.ts tests/route-cache-inflight-timeout.test.ts tests/sse-capacity.test.ts & test_pid=$!
+          else
+            npm run test:full & test_pid=$!
+          fi
           wait "$typecheck_pid" || typecheck_status=$?
           wait "$test_pid" || test_status=$?
           if (( typecheck_status != 0 || test_status != 0 )); then

@@ -77,3 +77,24 @@ test("ambiguous or cross-feature visual components retain full coverage", () => 
 test("critical server streaming changes retain full benchmark", () => {
   assert.equal(planReleaseGates(["lib/server/runtime-diagnostics.ts"]).performance, "full");
 });
+
+test("isolated ATC context and Operational Twin evaluation use radar-targeted UI checks", () => {
+  for (const file of [
+    "lib/atc-context/engine.ts",
+    "lib/atc-context/geometry.ts",
+    "lib/atc-context/handoff.ts",
+    "lib/atc-context/prediction.ts",
+    "lib/operational-twin/event-outcome.ts",
+    "lib/operational-twin/outcome.ts",
+  ]) {
+    const plan = planReleaseGates([file]);
+    assert.equal(plan.browser, "targeted", file);
+    assert.equal(plan.performance, "full", file);
+    assert.match(plan.visualTargets, /radar-desktop-selected/, file);
+    assert.match(plan.visualTargets, /radar-v6-d-3d-mobile/, file);
+  }
+  assert.equal(planReleaseGates(["lib/operational-twin/map.ts"]).browser, "full");
+  assert.equal(planReleaseGates(["lib/atc-context/types.ts"]).browser, "full");
+  assert.equal(planReleaseGates(["lib/atc-context/engine.ts", "components/airport-map.tsx"]).browser, "full");
+  assert.equal(planReleaseGates([".github/workflows/ci.yml"]).browser, "full");
+});

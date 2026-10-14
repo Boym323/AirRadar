@@ -308,3 +308,28 @@ check; it restores the original active runtime if recovery fails. It does not
 run `prisma:deploy`, mutate the Git branch, revert database migrations or tag
 a release. Verify public JS/CSS static assets and business functions after a
 successful recovery. Do not invoke this script automatically from CI.
+
+## Reusing verified PR release gates on main
+
+Apply the `release-preview` label to a PR to run full release typecheck,
+Vitest, browser and performance gates **before** merging (but never deploy
+from a PR). The ordinary fast PR validation job is then skipped because its
+lint, dependency, migration, feature, docs, visual and changelog checks are
+included in the release-tests job.
+
+For the subsequent main-branch push, `scripts/ci-pr-validation-reuse.mjs`
+queries GitHub with read-only permissions. Main can run the fast representative
+browser/performance matrix and targeted runtime tests **only if** all of the
+following are proven: unique merged same-repository `release-preview` PR;
+exact matching main and PR-head Git tree; a completed successful matching
+release-preview run (release scope, release build/browser, full test/typecheck,
+performance); successful CodeQL on the same PR head; and no modifications to
+CI workflows or test/release-harness paths. The new production build,
+typecheck, dependency/migration/static audits, browser/core smoke, performance
+baseline, release verification, health checks and rollback remain mandatory.
+
+A direct push, merge with changed tree, missing green evidence, modified
+CI harness, GitHub API failure, ambiguous PR association or missing permission
+automatically uses the **original complete main release gates**. Never override
+this fallback or use a stale PR run to force a faster deployment. Main releases
+remain explicitly bound to the commit and use the existing production lock.
