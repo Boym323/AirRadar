@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock("@/lib/server/db", () => ({ getPrisma: mocks.getPrisma }));
 
-import { getAtcDatasetCacheDiagnostics, getStoredAtcData, getStoredAtcMetadata, invalidateAtcDataCache, resetAtcMetadataCacheForTests } from "@/lib/server/atc-data";
+import { getAtcDatasetCacheDiagnostics, getStoredAtcData, getStoredAtcDataSnapshot, getStoredAtcMetadata, invalidateAtcDataCache, resetAtcMetadataCacheForTests } from "@/lib/server/atc-data";
 
 function database(models: Record<string, unknown>, version: { value: string; reads?: number; error?: Error } = { value: "v1" }) {
   const publicSchema = {
@@ -219,6 +219,24 @@ describe("ATC health metadata fast path", () => {
     release();
     expect((await pending)?.sectors[0]?.name).toBe("New");
     expect(loads).toBeGreaterThanOrEqual(2);
+  });
+
+  it("refreshes geometry when the version changes even if id and timestamps do not", async () => {
+    const sector = { id: "GEOMETRY", name: "Stable name", polygonJson: JSON.stringify([[[14, 50], [15, 50], [15, 51], [14, 50]]]), lowerAltitudeFt: null, upperAltitudeFt: null, lowerAltitudeReference: null, upperAltitudeReference: null, atcCallsign: null, service: "APP", airspaceType: null, airspaceClass: null, remarks: null, primaryFrequencyMhz: 118.1, alternateFrequenciesJson: "[]", country: "CZ", source: "import", sourceReference: "test://same-timestamp", validFrom: null, validTo: null, lastVerifiedAt: "2026-10-09T12:00:00.000Z" };
+    const model = (records: unknown[]) => ({
+      limit: () => ({ all: async () => records }),
+      select: (...fields: string[]) => ({ limit: () => ({ all: async () => records.map((record) => Object.fromEntries(fields.map((field) => [field, (record as Record<string, unknown>)[field]]))) }) }),
+    });
+    const version = { value: "v1" };
+    mocks.getPrisma.mockReturnValue(database({ AtcSector: model([sector]), AtcTransmitter: model([]) }, version));
+    const first = await getStoredAtcDataSnapshot();
+    expect(first?.sectors[0]?.polygons[0]?.[0]).toEqual([14, 50]);
+    expect(Object.isFrozen(first?.sectors[0]?.polygons[0]?.[0])).toBe(true);
+
+    sector.polygonJson = JSON.stringify([[[14.25, 50], [15.25, 50], [15.25, 51], [14.25, 50]]]);
+    version.value = "v2";
+    const second = await getStoredAtcDataSnapshot();
+    expect(second?.sectors[0]?.polygons[0]?.[0]).toEqual([14.25, 50]);
   });
 
   it("invalidates instead of serving stale data when version verification fails", async () => {

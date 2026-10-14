@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AtcSectorService, compareAtcMatches, matchSector, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { normalizeAtcActivationStatus } from "@/lib/atc/types";
 import type { AtcAssignment, AtcSector, SectorPolygon } from "@/lib/atc/types";
@@ -49,6 +49,8 @@ function baseAssignment(sectorId: string, name: string): AtcAssignment {
 }
 
 describe("ATC sector matching", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("keeps published airspace activation fail-closed", () => {
     expect(normalizeAtcActivationStatus("ACTIVE")).toBe("ACTIVE");
     expect(normalizeAtcActivationStatus("published")).toBe("UNKNOWN");
@@ -173,6 +175,44 @@ describe("ATC sector matching", () => {
     current = [newSector];
     for (const listener of listeners) listener();
     expect((await pending)?.sector.id).toBe("NEW");
+  });
+
+  it("refreshes a prepared index after a bounded cross-process version change", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    const oldSector = { ...sector, id: "OLD" };
+    const newSector = { ...sector, id: "NEW" };
+    let current = [oldSector];
+    let fingerprint = "v1";
+    let fingerprintReads = 0;
+    let snapshotReads = 0;
+    const service = new AtcSectorService({
+      name: "versioned",
+      getSectors: async () => current,
+      getSectorsSnapshot: async () => { snapshotReads += 1; return current; },
+      getDatasetFingerprint: async () => { fingerprintReads += 1; return fingerprint; },
+    });
+
+    await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 8000 })).resolves.toMatchObject({ sector: { id: "OLD" } });
+    expect(fingerprintReads).toBe(1);
+    expect(snapshotReads).toBe(1);
+
+    current = [newSector];
+    fingerprint = "v2";
+    clock.mockReturnValue(1_030_001);
+    await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 8000 })).resolves.toMatchObject({ sector: { id: "NEW" } });
+    expect(fingerprintReads).toBe(3);
+    expect(snapshotReads).toBe(2);
+
+    // A manual/out-of-band geometry edit that forgot to bump the version is
+    // still bounded by the full snapshot refresh interval.
+    current = [{ ...newSector, polygons: [[[14.25, 50], [15.25, 50], [15.25, 51], [14.25, 51], [14.25, 50]]] }];
+    clock.mockReturnValue(1_330_002);
+    await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 8000 })).resolves.toMatchObject({ sector: { id: "NEW" } });
+    expect(snapshotReads).toBe(4);
+
+    clock.mockReturnValue(1_331_000);
+    await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 8000 })).resolves.toMatchObject({ sector: { id: "NEW" } });
+    expect(fingerprintReads).toBe(5);
   });
 
   it("aggregates frequencies from probable assignments and deduplicates per aircraft", () => {

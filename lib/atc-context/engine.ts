@@ -3,6 +3,7 @@ import type { AtcSector } from "@/lib/atc/types";
 import { loadAtAtsRoutes } from "@/lib/ats/at-routes";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
+import { onAtcDataCacheInvalidated } from "@/lib/server/atc-data";
 import { getAtcDataSnapshot } from "@/lib/server/providers";
 import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 import type { Aircraft } from "@/lib/aircraft/types";
@@ -423,11 +424,19 @@ export function invalidateAtcContextDatasetCache(): void {
   cachedDatasetIdentity = null;
 }
 
+// A local import calls both invalidation APIs, while an import in another
+// process is observed when the provider re-checks AtcDatasetVersion. Keep the
+// context cache behind the same bounded freshness boundary in both cases.
+onAtcDataCacheInvalidated(() => invalidateAtcContextDatasetCache());
+
 async function rebuildAtcContextDataset(generation: number): Promise<PreparedAtcContextDataset | null> {
   const atc = await getAtcDataSnapshot();
+  if (generation !== contextDatasetGeneration) return null;
   const routeDocuments = [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()].filter((doc): doc is NonNullable<typeof doc> => doc !== null);
+  if (generation !== contextDatasetGeneration) return null;
   if (!atc && !routeDocuments.length) return null;
   const identity = await atcContextDatasetIdentityAsync(atc?.sectors ?? [], routeDocuments);
+  if (generation !== contextDatasetGeneration) return null;
   // getAtcDataSnapshot() deliberately revalidates the source on its own bounded TTL.
   // Reuse the expensive owned clone, bboxes and grids when that source version
   // is unchanged; the 30s freshness check remains the invalidation boundary.
@@ -436,11 +445,14 @@ async function rebuildAtcContextDataset(generation: number): Promise<PreparedAtc
     return cachedDataset;
   }
   if (generation !== contextDatasetGeneration) return null;
-  cachedDataset = await prepareAtcContextDatasetAsync({ sectors: [...(atc?.sectors ?? [])], routeDocuments }, { owned: true });
+  const preparedDataset = await prepareAtcContextDatasetAsync({ sectors: [...(atc?.sectors ?? [])], routeDocuments }, { owned: true });
   if (generation !== contextDatasetGeneration) return null;
+  // Publish the complete tuple together. No observer can see a dataset whose
+  // identity or timestamp belongs to a different generation.
+  cachedDataset = preparedDataset;
   cachedDatasetIdentity = identity;
   cachedDatasetAt = Date.now();
-  return cachedDataset;
+  return preparedDataset;
 }
 
 export function atcContextDatasetIdentity(
@@ -536,7 +548,8 @@ export async function atcContextDatasetIdentityAsync(
     }
   }
   for (let index = 0; index < routeDocuments.length; index += 1) {
-    hash.update(`route:${index}:${JSON.stringify(routeDocuments[index])};`);
+    const serializedRoute = measureRuntime("atc.dataset.identity.route-serialization", 0, () => JSON.stringify(routeDocuments[index]));
+    hash.update(`route:${index}:${serializedRoute};`);
     if (performance.now() - lastYield >= 6) {
       await new Promise<void>((resolve) => setImmediate(resolve));
       lastYield = performance.now();

@@ -68,6 +68,8 @@ export interface AtcSectorProvider {
   getSectors(): Promise<AtcSector[]>;
   /** Immutable process-owned snapshot for index builders that can avoid a second deep clone. */
   getSectorsSnapshot?(): Promise<ReadonlyArray<AtcSector>>;
+  /** Bounded freshness token; implementations must not query on every lookup. */
+  getDatasetFingerprint?(): Promise<string | null>;
   onDatasetInvalidated?(listener: () => void): () => void;
 }
 

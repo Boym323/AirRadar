@@ -6,6 +6,14 @@ import { getAtcSectorCandidatesFromIndex, prepareAtcSectorDatasetAsync } from "@
 import type { PreparedAtcSectorDataset } from "@/lib/atc-context/types";
 import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 
+const ATC_FRESHNESS_CHECK_MS = 30_000;
+const ATC_FRESHNESS_ERROR_MAX_MS = 5 * 60_000;
+const ATC_FULL_SNAPSHOT_REFRESH_MS = 5 * 60_000;
+
+function sameSectorSnapshot(left: readonly AtcSector[], right: readonly AtcSector[]): boolean {
+  return left.length === right.length && left.every((sector, index) => sector === right[index]);
+}
+
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
   readonly name = "empty";
 
@@ -265,6 +273,12 @@ export class AtcSectorService {
   private sectors: AtcSector[] | null = null;
   private preparedDataset: PreparedAtcSectorDataset | null = null;
   private loading: Promise<void> | null = null;
+  private freshnessLoading: Promise<void> | null = null;
+  private freshnessCheckedAt = 0;
+  private fullSnapshotCheckedAt = 0;
+  private freshnessFailureSince: number | null = null;
+  private fullSnapshotFailureSince: number | null = null;
+  private datasetFingerprint: string | null | undefined;
   private generation = 0;
 
   constructor(private readonly provider: AtcSectorProvider) {
@@ -299,15 +313,24 @@ export class AtcSectorService {
     this.generation += 1;
     this.sectors = null;
     this.preparedDataset = null;
+    this.datasetFingerprint = undefined;
+    this.freshnessCheckedAt = 0;
+    this.fullSnapshotCheckedAt = 0;
+    this.freshnessFailureSince = null;
+    this.fullSnapshotFailureSince = null;
   }
 
   private async getSectors(): Promise<AtcSector[]> {
     while (true) {
-      if (this.sectors && this.preparedDataset) return this.sectors;
+      if (this.sectors && this.preparedDataset) {
+        await this.ensureFreshness();
+        if (this.sectors && this.preparedDataset) return this.sectors;
+      }
       const generation = this.generation;
       if (!this.loading) {
         this.loading = (async () => {
           const hasSnapshot = typeof this.provider.getSectorsSnapshot === "function";
+          const fingerprint = await this.readFingerprint();
           const sectors = await measureRuntimeAsync("atc.provider.wait", 0, () => hasSnapshot
             ? this.provider.getSectorsSnapshot!()
             : this.provider.getSectors());
@@ -317,6 +340,11 @@ export class AtcSectorService {
           if (generation === this.generation) {
             this.sectors = [...sectors];
             this.preparedDataset = prepared;
+            this.datasetFingerprint = fingerprint;
+            this.freshnessCheckedAt = Date.now();
+            this.fullSnapshotCheckedAt = this.freshnessCheckedAt;
+            this.freshnessFailureSince = null;
+            this.fullSnapshotFailureSince = null;
           }
         })().finally(() => {
           this.loading = null;
@@ -324,6 +352,65 @@ export class AtcSectorService {
       }
       await this.loading;
     }
+  }
+
+  private async readFingerprint(): Promise<string | null | undefined> {
+    if (!this.provider.getDatasetFingerprint) return undefined;
+    try {
+      return await this.provider.getDatasetFingerprint();
+    } catch {
+      return null;
+    }
+  }
+
+  private async ensureFreshness(): Promise<void> {
+    if (!this.sectors || !this.preparedDataset || !this.provider.getDatasetFingerprint) return;
+    const now = Date.now();
+    if (now - this.freshnessCheckedAt < ATC_FRESHNESS_CHECK_MS) return;
+    if (!this.freshnessLoading) {
+      this.freshnessLoading = (async () => {
+        const checkedAt = Date.now();
+        const fingerprint = await this.readFingerprint();
+        this.freshnessCheckedAt = checkedAt;
+        if (fingerprint === null || fingerprint === undefined) {
+          this.freshnessFailureSince ??= checkedAt;
+          if (checkedAt - this.freshnessFailureSince >= ATC_FRESHNESS_ERROR_MAX_MS) this.invalidate();
+          return;
+        }
+        this.freshnessFailureSince = null;
+        if (this.datasetFingerprint !== undefined && fingerprint !== this.datasetFingerprint) {
+          this.invalidate();
+          this.datasetFingerprint = fingerprint;
+          return;
+        }
+        this.datasetFingerprint = fingerprint;
+        if (this.provider.getSectorsSnapshot && checkedAt - this.fullSnapshotCheckedAt >= ATC_FULL_SNAPSHOT_REFRESH_MS) {
+          const currentSectors = this.sectors;
+          if (!currentSectors) return;
+          try {
+            const snapshot = await this.provider.getSectorsSnapshot();
+            this.fullSnapshotCheckedAt = checkedAt;
+            // An empty result is ambiguous between an empty dataset and a
+            // failed optional database read. Keep the last valid index for the
+            // same bounded error window used by the version check.
+            if (snapshot.length === 0 && currentSectors.length > 0) {
+              this.fullSnapshotFailureSince ??= checkedAt;
+              if (checkedAt - this.fullSnapshotFailureSince >= ATC_FRESHNESS_ERROR_MAX_MS) this.invalidate();
+            } else if (!sameSectorSnapshot(snapshot, currentSectors)) {
+              this.invalidate();
+            } else {
+              this.fullSnapshotFailureSince = null;
+            }
+          } catch {
+            this.fullSnapshotFailureSince ??= checkedAt;
+            if (checkedAt - this.fullSnapshotFailureSince >= ATC_FRESHNESS_ERROR_MAX_MS) this.invalidate();
+          }
+        }
+      })().finally(() => {
+        this.freshnessLoading = null;
+      });
+    }
+    await this.freshnessLoading;
   }
 
   private async getCandidates(lookup: AtcLookup): Promise<AtcSector[]> {
