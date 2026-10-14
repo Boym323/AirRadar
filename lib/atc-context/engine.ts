@@ -3,6 +3,7 @@ import { loadAtAtsRoutes } from "@/lib/ats/at-routes";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
 import { getAtcData } from "@/lib/server/providers";
+import { measureRuntime } from "@/lib/server/runtime-performance";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { angleDifference, bbox, bboxContains, bearing, destination, distanceNm, distanceToSegmentNm, pointInPolygon } from "./geometry";
 import type { AtcContextDataset, AtcContextInput, AtcContextLookupDiagnostics, AtcContextResult, AtsRouteMatch, ContextAirspace, ContextConfidence, ContextPoint, PreparedAtcContextDataset, VerticalMatch } from "./types";
@@ -45,7 +46,7 @@ function deepFreeze<T>(value: T): T {
 }
 export function prepareAtcContextDataset(dataset: AtcContextDataset): PreparedAtcContextDataset {
   // Do not freeze caller-owned input: providers may reuse and refresh their source objects.
-  const ownedDataset = structuredClone(dataset);
+  const ownedDataset = measureRuntime("atc.dataset.structured-clone", dataset.sectors.length, () => structuredClone(dataset));
   const airspaces = ownedDataset.sectors.map((sector) => ({ sector, boxes: sector.polygons.map((polygon) => bbox([polygon as unknown as [number, number][]])), order: ORDER[typeOf(sector)] ?? 90 }));
   airspaces.sort((a, b) => a.order - b.order || a.sector.id.localeCompare(b.sector.id));
   const segments = ownedDataset.routeDocuments.flatMap((doc) => doc.routes.flatMap((route) => route.segments.map((segment) => ({ routeId: route.designator, countryCode: doc.source.countryCode ?? null, sourceReference: doc.source.reference, segment, box: bbox([[segment.from, segment.to]]), forwardBearing: bearing(segment.from, segment.to), reverseBearing: bearing(segment.to, segment.from) }))));
@@ -53,7 +54,7 @@ export function prepareAtcContextDataset(dataset: AtcContextDataset): PreparedAt
   const atcGrid = new Map<string, number[]>(); const atsGrid = new Map<string, number[]>(); const pointGrid = new Map<string, number[]>();
   airspaces.forEach((entry, i) => entry.boxes.forEach((box) => addGrid(atcGrid, box, i)));
   segments.forEach((entry, i) => addGrid(atsGrid, entry.box, i, 0.3)); points.forEach((entry, i) => addGrid(pointGrid, entry.box, i, 5));
-  return deepFreeze({ ...ownedDataset, prepared: true as const, airspaces: Object.freeze(airspaces), segments: Object.freeze(segments), points: Object.freeze(points), atcGrid: immutableGrid(atcGrid), atsGrid: immutableGrid(atsGrid), pointGrid: immutableGrid(pointGrid), builtAt: new Date().toISOString() });
+  return measureRuntime("atc.dataset.deep-freeze", ownedDataset.sectors.length, () => deepFreeze({ ...ownedDataset, prepared: true as const, airspaces: Object.freeze(airspaces), segments: Object.freeze(segments), points: Object.freeze(points), atcGrid: immutableGrid(atcGrid), atsGrid: immutableGrid(atsGrid), pointGrid: immutableGrid(pointGrid), builtAt: new Date().toISOString() }));
 }
 
 /** Returns only the sectors whose polygon bboxes cover the position. */
