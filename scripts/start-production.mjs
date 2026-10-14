@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { waitForBuildReady } from "./build-start-lock.mjs";
 
@@ -37,6 +38,21 @@ async function start() {
   }
 
   if (standaloneAvailable) {
+    // The standalone bundle owns its immutable build identity. Never allow
+    // the development checkout's generated/ metadata to override it.
+    const metadataPath = fileURLToPath(new URL("../.next/standalone/generated/build-version.json", import.meta.url));
+    let metadata;
+    try {
+      metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+    } catch {
+      throw new Error("standalone_build_metadata_missing_or_invalid");
+    }
+    if (!metadata || !/^[0-9a-f]{40}$/i.test(metadata.commit ?? "") ||
+        !/^\\d+\\.\\d+\\.\\d+(?:-rc\\.[1-9]\\d*)?$/.test(metadata.version ?? "") ||
+        !["production", "release-candidate"].includes(metadata.channel)) {
+      throw new Error("standalone_build_identity_invalid");
+    }
+    process.env.AIRRADAR_ARTIFACT_METADATA_PATH = metadataPath;
     process.env.HOSTNAME = cliValue("--hostname", process.env.HOSTNAME || "0.0.0.0");
     process.env.PORT = cliValue("--port", process.env.PORT || "3000");
     await import(standaloneServer.href);
