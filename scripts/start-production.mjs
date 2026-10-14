@@ -48,7 +48,7 @@ async function start() {
       throw new Error("standalone_build_metadata_missing_or_invalid");
     }
     if (!metadata || !/^[0-9a-f]{40}$/i.test(metadata.commit ?? "") ||
-        !/^\\d+\\.\\d+\\.\\d+(?:-rc\\.[1-9]\\d*)?$/.test(metadata.version ?? "") ||
+        !/^\d+\.\d+\.\d+(?:-rc\.[1-9]\d*)?$/.test(metadata.version ?? "") ||
         !["production", "release-candidate"].includes(metadata.channel)) {
       throw new Error("standalone_build_identity_invalid");
     }
