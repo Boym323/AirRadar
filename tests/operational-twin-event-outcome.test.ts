@@ -431,6 +431,52 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(secondReport.performance.pendingEntriesWithoutNewTruth).toBe(1);
   });
 
+  it("reuses canonical point identities for many pending events and rechecks corrected older truth", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const events = [17.5, 17.6, 17.7, 17.8].map((lon, index) =>
+      event("WAYPOINT", 5, { id: `waypoint:FINGERPRINT-${index}`, title: `FINGERPRINT-${index}`, lat: 49, lon }));
+    const optimized = new OperationalTwinEventOutcomeValidator();
+    const reference = new OperationalTwinEventOutcomeValidator({ enableIncrementalTruthEvaluation: false });
+    const context = { atcDataset: null, sigmets: null, destination: null };
+    optimized.capture(situation(events), context);
+    reference.capture(situation(events), context);
+    const first = aircraft(baseNow + 4 * 60_000, 49, 18.5);
+    first.trail = Array.from({ length: 120 }, (_, index) => ({
+      recordedAt: new Date(baseNow + index * 2_000).toISOString(),
+      lat: 49, lon: 18.5, altitude: 30_000, track: 90, groundSpeed: 420,
+    }));
+    const observe = (plane: Aircraft, at: number) => {
+      const local = new Map([[plane.icaoHex, plane]]);
+      optimized.observeLocal(local, at);
+      reference.observeLocal(local, at);
+    };
+    observe(first, baseNow + 4 * 60_000);
+    const internals = optimized as unknown as {
+      truthStates: Map<string, { points: unknown[]; pointFingerprints: readonly string[] }>;
+    };
+    const before = internals.truthStates.get("ABC123");
+    expect(before).toBeDefined();
+    expect(before?.pointFingerprints).toHaveLength(before?.points.length ?? 0);
+
+    // A same-content replacement reuses the identities rather than rebuilding.
+    observe({ ...first, trail: [...first.trail] }, baseNow + 4 * 60_000 + 1_000);
+    expect(internals.truthStates.get("ABC123")?.pointFingerprints).toBe(before?.pointFingerprints);
+
+    // The corrected historical point must still be evaluated despite the
+    // timestamp cursor already advancing to a newer point.
+    const corrected: Aircraft = { ...first, trail: first.trail.map((point, index) =>
+      index === 25 ? { ...point, lon: 17.5 } : point) };
+    observe(corrected, baseNow + 4 * 60_000 + 2_000);
+    const after = internals.truthStates.get("ABC123");
+    expect(after?.pointFingerprints).not.toBe(before?.pointFingerprints);
+    expect(after?.pointFingerprints[25]).not.toBe(before?.pointFingerprints[25]);
+    const optimizedReport = optimized.report(new Date(predictedAt));
+    const referenceReport = reference.report(new Date(predictedAt));
+    expect(optimizedReport.overall).toEqual(referenceReport.overall);
+    expect(optimizedReport.pending).toBe(referenceReport.pending);
+    expect(optimizedReport.byType.WAYPOINT.observed).toBe(1);
+  });
+
   it("keeps canonical truth unchanged when provider ages change but positionObservedAt does not", () => {
     const predictedAt = baseNow + 5 * 60_000;
     const validator = new OperationalTwinEventOutcomeValidator();
