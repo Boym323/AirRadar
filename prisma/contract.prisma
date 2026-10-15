@@ -614,3 +614,25 @@ model OperationalTwinCalibrationBucket {
   @@id([lane, version, bucketStart])
 }
 
+
+
+/// Opt-in, parsed-only ACARS/VDL2 route evidence. Never stores message bodies.
+model RxwRouteSnapshot {
+  id              String   @id
+  icaoHex         String
+  flight          String
+  kind            String
+  origin          String
+  destination     String
+  etaUtc          String?
+  waypointsJson   String
+  positionedCount Int
+  stationId       String
+  protocol        String
+  observedAtMs    BigInt
+  source          String   @default("rxw-acarshub")
+  createdAt       DateTime @default(now())
+
+  @@index([icaoHex, flight, observedAtMs], map: "rxw_route_icao_flight_time_idx")
+  @@index([observedAtMs], map: "rxw_route_observed_idx")
+}

@@ -1,0 +1,10 @@
+.section { display: grid; gap: 12px; margin-top: var(--space-4); }
+.header h2 { margin: 0 0 4px; }
+.header p, .note { color: var(--text-muted); font-size: var(--font-size-sm); margin: 0; }
+.picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 12px; background: var(--surface-glass); color: var(--text-primary); cursor: pointer; text-align: left; }
+.choice[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.map { min-height: 320px; border-radius: var(--radius-md); overflow: hidden; }
+.details { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: var(--font-size-sm); }
+.fixes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fixes li { padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--font-size-xs); }

@@ -741,3 +741,28 @@ existující process-local Navigation Integrity working set
 
 V tomto toku nevzniká další HTTP fetch, DB query, polling loop, SSE,
 detector run ani persistence krok.
+
+
+## Historie tras ACARS / VDL2 (volitelná)
+
+Adaptér RXW Hub zpracovává strukturované údaje z jednotlivých přijatých zpráv.
+Po zapnutí `RXW_HUB_ENABLED=true` a `RXW_ROUTE_HISTORY_ENABLED=true` se
+úplná dvojice letišť se známým letem nebo plán H1/FPN zařadí do omezené
+jednovláknové fronty pro PostgreSQL. Waypointy navíc vyžadují
+`RXW_FPN_ENABLED=true`. Příjem dat nikdy nečeká na databázi.
+
+SQL `deploy/sql/rxw-route-history-v1.sql` aplikujte nejprve do testovací
+databáze. Před uchováváním a veřejným zobrazováním archivních dat ověřte
+souhlas provozovatele RXW Hubu. Neukládejte texty ACARS/CPDLC, původní UID,
+přesná umístění přijímačů ani nerozšifrovaný obsah. Ukládají se jen
+hashované identifikátory zpráv, ICAO24, identifikace letu, čas UTC, původ
+informace a povolené údaje o letištích či bodech.
+
+Na detailu historického letu `/flights/:id` se načte maximálně 30 záznamů,
+shodných v ICAO24, volacím znaku a omezeném časovém okně. Nahlášený FPN
+**není skutečná ADS-B stopa**; mapa spojuje jen sousední body s výslovnými
+souřadnicemi. Výpadek databáze neovlivní radar. Fronta má maximálně 256
+položek, dávka 32 a zápis běží v jednom proudu. Retence je standardně 30 dnů
+(nastavit lze 1 až 90); prořezávání po nejvýše 2 000 řádcích. Starší zprávy
+z doby před zapnutím funkce nelze zpětně obnovit. Vypnutí přepínače
+`RXW_ROUTE_HISTORY_ENABLED` funkci deaktivuje bez nutnosti mazat tabulku.
