@@ -20,18 +20,19 @@ const now = new Date(when + 60 * 60_000);
 const REPEATS = 5;
 const LOOPS = 4;
 
-function makeObservation(index: number, layout: "dense" | "fragmented"): NavigationIntegrityObservation {
+function makeObservation(index: number, layout: "dense" | "fragmented" | "normal"): NavigationIntegrityObservation {
   const at = new Date(when + Math.floor(index / 20) * 10_000).toISOString();
   const dense = layout === "dense";
+  const normal = layout === "normal";
   return {
     aircraftHex: `BENCH${index % 120}`, flightId: null,
     observedAt: at, receivedAt: at,
     lat: 49.1 + (dense ? index % 3 : index % 24) * 0.21,
     lon: 14.1 + (dense ? index % 2 : Math.floor(index / 24) % 24) * 0.21,
     altitudeFt: 30_000, altitudeBand: dense ? 3 : index % 5,
-    nic: index % 5 === 0 ? 8 : 3,
-    nacP: index % 7 === 0 ? 8 : 4,
-    nacV: index % 11 === 0 ? 3 : 1,
+    nic: normal || index % 5 === 0 ? 8 : 3,
+    nacP: normal || index % 7 === 0 ? 8 : 4,
+    nacV: normal || index % 11 === 0 ? 3 : 1,
     sil: 3, sda: 3, gva: 3, adsbVersion: 2,
     positionSource: "ADS-B", source: index % 3 === 0 ? "NETWORK" : "LOCAL",
     provider: "readsb", quality: "HIGH", confidence: "HIGH",
@@ -65,7 +66,7 @@ function measure(items: NavigationIntegrityObservation[], optimized: boolean, lo
   };
 }
 const results = [];
-for (const layout of ["dense", "fragmented"] as const) {
+for (const layout of ["normal", "dense", "fragmented"] as const) {
   const count = 1_200;
   const items = Array.from({ length: count }, (_, index) => makeObservation(index, layout));
   const first = measure(items, false, 1), second = measure(items, true, 1);
