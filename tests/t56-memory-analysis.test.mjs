@@ -7,7 +7,7 @@ function sample(i) {
   const at = new Date(start + i * 30000).toISOString();
   const gcTime = i >= 30 ? start + i * 30000 - 3000 : null;
   const status = {
-    detailLevel: "admin", application: { commit: "production-sha", version: "1.0.392" },
+    detailLevel: "admin", application: { commit: "aabbccddeeff", version: "1.0.392" },
     runtime: {
       localTrailPointCount: i * 10,
       networkTrailPointCount: 300 + i * 25,
@@ -62,6 +62,19 @@ describe("T5.6 memory projection and read-only trend analysis", () => {
     expect(() => projectT56Sample({ detailLevel: "public" },
       { schemaVersion: 2, scope: "process-local", runtime: { status: "enabled", v8HeapSpaces: [] } }))
       .toThrow("t56_admin_projection_required");
+  });
+
+  it("drops arbitrary remote text from version, commit and store identifiers", () => {
+    const projected = projectT56Sample({
+      detailLevel: "admin",
+      application: { commit: "Bearer sensitive header", version: "1.0.392\\nTOKEN" },
+      runtime: { autocommitOperationAttribution: { processId: 123, diagnosticsStoreId: "id\\nleak" } },
+    }, {
+      schemaVersion: 2, scope: "process-local",
+      runtime: { status: "enabled", v8HeapSpaces: [] },
+    });
+    expect(projected).toMatchObject({ commit: null, version: null, storeId: null });
+    expect(JSON.stringify(projected)).not.toContain("sensitive");
   });
 
   it("separates warmup and independent major-GC baselines", () => {
