@@ -1,3 +1,4 @@
+import { safeCommit, safeStoreId, safeVersion } from "./production-audit-sanitizers.mjs";
 // T5.5: pure, read-only projections and statistics. Never hold raw provider
 // payloads, auth headers, cookies, database connection strings or aircraft IDs.
 export const MAX_HOT_PATHS = 12;
@@ -19,10 +20,10 @@ export function projectT55Sample(status, metrics, now = new Date().toISOString()
   const hotPaths = Array.isArray(metrics.hotPaths) ? metrics.hotPaths : [];
   return {
     at: now,
-    commit: typeof status.application?.commit === "string" ? status.application.commit : null,
-    version: typeof status.application?.version === "string" ? status.application.version : null,
+    commit: safeCommit(status.application?.commit),
+    version: safeVersion(status.application?.version),
     pid: finite(db.processId),
-    storeId: typeof db.diagnosticsStoreId === "string" ? db.diagnosticsStoreId : null,
+    storeId: safeStoreId(db.diagnosticsStoreId),
     cpuPercent: finite(runtime.cpuIntervalPercent),
     cpuUserMs: finite(runtime.cpuUserTimeMs),
     cpuSystemMs: finite(runtime.cpuSystemTimeMs),
