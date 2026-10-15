@@ -11,6 +11,7 @@ sampled history, reference data, and daily statistics.
 - [Configuration](configuration.md)
 - [Development and testing](development.md)
 - [Deployment and operations](operations.md)
+- [Production performance soak (T58): one-command run and history](t58-production-soak.md)
 
 ## Authoritative documentation
 

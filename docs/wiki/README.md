@@ -5,6 +5,9 @@ Choose a language:
 - [English](en/README.md)
 - [Čeština](cs/README.md)
 
+Production T58 read-only performance measurement and GitHub history:
+[English](en/t58-production-soak.md) · [Česky](cs/t58-production-soak.md)
+
 The wiki is a practical, bilingual entry point. The technical source of truth
 remains in the linked documents under [`docs/`](../).
 

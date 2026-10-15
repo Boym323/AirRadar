@@ -439,6 +439,52 @@ generates [`CHANGELOG.md`](CHANGELOG.md) from commits since the previous
 release tag and commits the generated section. It never runs as part of
 ordinary development or documentation work.
 
+## Production performance soak (T58)
+
+AirRadar includes a **manual, read-only 60-minute production performance soak**
+introduced in [PR #889](https://github.com/Boym323/AirRadar/pull/889).
+Run it with a single command after the workflow has been merged into `main`:
+
+```bash
+gh workflow run t58-production-soak.yml --repo Boym323/AirRadar --ref main
+```
+
+Alternatively, use **GitHub → Actions → T58 Production Soak → Run workflow**
+or `bash scripts/run-t58.sh` from a repository checkout. A GitHub-hosted
+runner collects one sample per minute (10-minute warmup) through existing
+read-only production diagnostics. It does **not** restart the service,
+deploy a release, modify PostgreSQL, or generate synthetic aircraft traffic.
+
+The preflight requires the live version to include merged
+[PR #885](https://github.com/Boym323/AirRadar/pull/885), accessible admin
+diagnostics, and **already enabled**
+`AIRRADAR_OPERATIONAL_TWIN_FORENSICS_ENABLED=true`.
+When admin authentication is enabled, configure the repository Actions secret
+`T58_WATCHLIST_ADMIN_TOKEN`; never commit or pass the token as a workflow
+input. The workflow does not toggle production flags.
+
+Each completed report uploads allowlisted, identity-free
+`soak.summary.json`, `soak.summary.md`, and `comparison.md`
+to the Actions run (90-day artifact retention), and appends a permanent
+dated record plus index in the separate
+[`audit/t58-history`](https://github.com/Boym323/AirRadar/tree/audit/t58-history/reports/t58)
+branch (created after the first report). This **does not write to `main`**
+or trigger another production release. Raw NDJSON, aircraft identities,
+coordinates, and secrets are not archived. If archive-branch write permission
+is denied, the uploaded run artifact remains accessible and the archive job
+fails visibly.
+
+The comparison uses the measured T57 baseline (`1.0.454 / ca25f52b`).
+It reports CPU, event-loop tails, Event Outcome CPU per call, RSS, ATC cache
+hits, aircraft and pending population. Different production traffic makes
+this an **observational before/after**, not a matched benchmark or proof
+that the historical 5.66-second stall is eliminated.
+
+Full instructions: [English runbook](docs/T58-PRODUCTION-SOAK.md),
+[český návod](docs/cs/T58-PRODUCTION-SOAK.md), and
+[English](docs/wiki/en/t58-production-soak.md) /
+[česká](docs/wiki/cs/t58-production-soak.md) project Wiki pages.
+
 ## Architecture summary
 
 ```text
