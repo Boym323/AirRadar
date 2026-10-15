@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.468] - 2026-10-15
+
+Changes since v1.0.467.
+
+### Performance
+
+- Rust BEAST parser (packed N-API) a Mode-S CRC – experiment (#925) (bdc78cf8)
+
+### Maintenance
+
+- Sync generated repository metadata (#924) (551158a6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#924) (551158a6)
+- perf(native): Rust BEAST parser (packed N-API) a Mode-S CRC – experiment (#925) (bdc78cf8)
+
+</details>
 ## [1.0.467] - 2026-10-15
 
 Changes since v1.0.466.
