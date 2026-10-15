@@ -62,7 +62,7 @@ export function buildT58Comparison(source, { runUrl = null } = {}) {
   if (runUrl !== null && !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/\d+$/.test(runUrl)) {
     throw Error("t58_invalid_workflow_url");
   }
-  const path = report.hotPathsByWindowCpuMs?.find(p => p.path === "twin.eventOutcome.local");
+  const path = report.hotPathsByWindowCpuMs?.find(p => p.name === "twin.eventOutcome.local");
   const eventPerCall = finite(path?.cpuMs) !== null && finite(path?.calls) > 0
     ? path.cpuMs / path.calls : null;
   const entries = [

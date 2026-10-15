@@ -7,7 +7,7 @@ const sample = () => ({
   cpuPercent: { p50: 30.1, p95: 45.5 }, memoryMiB: { rss: { p50: 904 } },
   eventLoopWindowP99Ms: { p95: 120 }, eventLoopWindowMaxMs: { max: 1900 },
   load: { aircraft: { p50: 78 } },
-  hotPathsByWindowCpuMs: [{ path: "twin.eventOutcome.local", calls: 920, cpuMs: 60000 }],
+  hotPathsByWindowCpuMs: [{ name: "twin.eventOutcome.local", calls: 920, cpuMs: 60000 }],
   operationalTwinForensics: { enabled: true, cacheHitRate: 0.75,
     pendingPopulation: { p50: 20 } },
 });
