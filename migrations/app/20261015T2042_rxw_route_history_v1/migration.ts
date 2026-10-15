@@ -34,7 +34,7 @@ export default class M extends Migration<Start, End> {
   "protocol" text NOT NULL,
   "observedAtMs" bigint NOT NULL,
   "source" text NOT NULL DEFAULT 'rxw-acarshub',
-  "createdAt" timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "createdAt" timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT rxw_route_kind CHECK ("kind" IN ('FPN','AIRPORT_PAIR')),
   CONSTRAINT rxw_route_identity CHECK ("icaoHex" ~ '^[A-F0-9]{6}$' AND "flight" ~ '^[A-Z0-9]{2,10}$'),
   CONSTRAINT rxw_route_airports CHECK ("origin" ~ '^[A-Z]{3,4}$' AND "destination" ~ '^[A-Z]{3,4}$' AND "origin" <> "destination"),
