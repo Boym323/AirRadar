@@ -745,6 +745,35 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(validator.getAtcCacheStats()).toMatchObject({ hits: 0, misses: 0, size: 0, evictions: 0, expirations: 0 });
   });
 
+  it("expires the LRU prefix without losing expiry after out-of-order access times", () => {
+    const validator = new OperationalTwinEventOutcomeValidator();
+    const cache = (validator as unknown as {
+      atcTruthCache: {
+        entries: Map<string, { lastUsedAt: number }>;
+        beginObservation: (now: number) => void;
+        accessTimesMonotonic: boolean;
+      };
+    }).atcTruthCache;
+    const ttl = validator.getAtcCacheStats().ttlMs;
+    const now = baseNow + ttl + 30_000;
+    cache.entries.set("expired-first", { lastUsedAt: now - ttl - 1 });
+    cache.entries.set("live-middle", { lastUsedAt: now - ttl + 1 });
+    cache.entries.set("live-last", { lastUsedAt: now - 1 });
+    cache.beginObservation(now);
+    expect([...cache.entries.keys()]).toEqual(["live-middle", "live-last"]);
+    expect(validator.getAtcCacheStats().expirations).toBe(1);
+
+    // Simulate a backwards clock jump: access order is not timestamp order.
+    // The fallback must scan past the first fresh LRU entry.
+    cache.entries.clear();
+    cache.entries.set("fresh-first", { lastUsedAt: now + 1_000 });
+    cache.entries.set("expired-last", { lastUsedAt: now - ttl - 100 });
+    cache.accessTimesMonotonic = false;
+    cache.beginObservation(now + 1_001);
+    expect([...cache.entries.keys()]).toEqual(["fresh-first"]);
+    expect(validator.getAtcCacheStats().expirations).toBe(2);
+  });
+
   it("enforces the configured maximum cache capacity", () => {
     const dataset = testAtcDataset();
     const validator = new OperationalTwinEventOutcomeValidator({ atcTruthCacheMaxEntries: 2 });
