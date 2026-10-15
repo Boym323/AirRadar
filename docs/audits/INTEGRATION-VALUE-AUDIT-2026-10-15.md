@@ -89,3 +89,24 @@ not a measured end-to-end CPU or request savings claim.
 - `docs/INTEGRATION-HEALTH-INCIDENT-20261015.md`
 - `docs/audits/TECHNICAL-AUDIT-2026-10-15.md`
 - [T58 report](https://github.com/Boym323/AirRadar/blob/audit/t58-history/reports/t58/2026/10/15/run-38775992637-attempt-1/comparison.md)
+
+## Follow-up: measure actual network source value before disabling a lane
+
+A read-only admin-only `/api/system/integrations` response now includes
+`networkSourceValue`. Once per 60 seconds of active network publishing it
+samples configured ADSBHub, ADSB.lol raw and ADSB.lol HTTP snapshots. It
+returns per-source reported-aircraft counts, distinct fresh positioned counts,
+positions exclusive to one successfully sampled network lane, shared positions,
+and the union count. Disabled sources are absent and failures are null;
+`complete=false` means the sample cannot prove uniqueness against all
+configured sources. Individual aircraft identifiers and positions are never
+returned or retained by the diagnostic sampler. The live radar merge and
+upstream request cadence are not changed by this measurement.
+
+**Decision rule:** compare several equivalent traffic windows and source
+freshness, not a single snapshot. Exclusive network position means unique
+*among configured network lanes*, not unique relative to the LOCAL receiver.
+Also verify which unique observations are actually visible in Extended mode.
+Do not disable a source based on raw message volume alone. The source
+merger now avoids per-overlap temporary arrays and sorts; no production
+CPU/memory improvement is claimed until measured after deployment.
