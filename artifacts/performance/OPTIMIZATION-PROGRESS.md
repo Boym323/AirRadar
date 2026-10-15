@@ -5,9 +5,9 @@
 - Main SHA: `8f0655dec240ab5382ccd45ac48adb642c8666eb`
 - Production SHA: `e8282c48` documented by the 2026-10-15 technical audit; not independently re-read in this turn
 - Active branch: `perf/bounded-enrichment-telemetry`
-- Last validated SHA: `676eccc6b81a28af41d6788843eb0bc9d6f4318b`
-- CI status: release-preview CI run 38770295542 success (build, tests/typecheck, production/browser, performance); deploy skipped
-- CodeQL Security status: run 38770295617 success; no new security alerts reported by the workflow
+- Last validated SHA: `1a51b647286114135a9d7cf85c5533d322169893`
+- CI status: release-preview CI run 38771497987 success (build, tests/typecheck, production/browser, performance); deploy skipped
+- CodeQL Security status: run 38771498189 success; no alert findings were reported by the workflow
 
 ## Completed
 - Area: Runtime telemetry CPU hot path and enrichment memory retention.
@@ -21,7 +21,7 @@
 - Current problem: no additional confirmed code issue in this branch; production DB/CPU/memory causality remains unverified.
 - Confirmed cause: see completed item above.
 - Files changed: `lib/server/route-enrichment-telemetry.ts`, `lib/server/enrichment-cache.ts`, tests, benchmark, and evidence.
-- Last verified state: commit `676eccc6`; local and PR validation complete; no production changes.
+- Last verified state: commit `1a51b647`; local and PR validation complete; no production changes.
 - Next step: review PR #917; no merge/deploy/release performed.
 
 ## Blocked
@@ -40,7 +40,7 @@
 - Keep the optimization process-local and bounded; logging dedupe is best-effort and must not affect route results.
 
 ## Pull Requests
-- PR #917 — bounded enrichment telemetry and stale-fallback retention — draft/open — current validated head `676eccc6` — CI and CodeQL success.
+- PR #917 — bounded enrichment telemetry and stale-fallback retention — draft/open — current validated head `1a51b647` — CI and CodeQL success.
 - Existing open PR: #916 metadata sync; unrelated.
 
 ## Next Actions
