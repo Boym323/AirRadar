@@ -885,6 +885,22 @@ function truthPoints(aircraft: Aircraft): TruthPoint[] {
 }
 
 /**
+ * truthPoints() always returns a timestamp-sorted sequence. Skip the portion
+ * preceding an outcome's window without touching the cursor/correction logic
+ * for any point that can actually affect that outcome.
+ */
+function firstTruthPointInWindow(points: readonly TruthPoint[], earlyAt: number): number {
+  let lower = 0;
+  let upper = points.length;
+  while (lower < upper) {
+    const mid = lower + Math.floor((upper - lower) / 2);
+    if (points[mid]!.at < earlyAt) lower = mid + 1;
+    else upper = mid;
+  }
+  return lower;
+}
+
+/**
  * Fingerprint only the source fields that can affect truthPoints(). This lets
  * unchanged refreshes reuse the parsed/sorted trail while still noticing
  * corrections to older points, out-of-order arrivals, truncation and trail
@@ -1344,8 +1360,14 @@ export class OperationalTwinEventOutcomeValidator {
         pending.lastEvaluatedPointAt = lastPoint.at;
         if (lastPoint.at < pending.earlyAt || firstPoint.at > pending.expiresAt) continue;
         let evaluatedPoints = 0;
-        for (let index = 0; index < points.length; index += 1) {
+        // Only points in the pending time window can update continuity or
+        // resolve an outcome. Sorted truth permits bounded binary-search
+        // entry and early exit rather than rescanning irrelevant history for
+        // every pending prediction.
+        const firstIndex = firstTruthPointInWindow(points, pending.earlyAt);
+        for (let index = firstIndex; index < points.length; index += 1) {
           const point = points[index]!;
+          if (point.at > pending.expiresAt) break;
           const content = staticTruth ? truthState.pointFingerprints[index]! : null;
           const afterCursor = previousLastEvaluatedAt === null || point.at > previousLastEvaluatedAt;
           const changedBeforeCursor = truthState.correctionIndexes.has(index)
@@ -1355,7 +1377,6 @@ export class OperationalTwinEventOutcomeValidator {
             && !pending.checkedStaticTruthContent.has(content);
           const shouldConsiderPoint = afterCursor || changedBeforeCursor || needsStaticWindowCheck;
           if (shouldConsiderPoint) evaluatedPoints += 1;
-          if (point.at < pending.earlyAt || point.at > pending.expiresAt) continue;
           this.updateContinuity(pending, point.at);
           if (!shouldConsiderPoint) continue;
           if (staticTruth) {
