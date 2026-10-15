@@ -52,10 +52,13 @@ export function parseNotificationPreferencePatch(input: unknown): Partial<Notifi
   const keys = Object.keys(record);
   if (!keys.length || keys.some((key) => !allowed.has(key))) return null;
   const patch: Partial<NotificationPreferenceValues> = {};
-  for (const key of keys) {
+  // Assign only through canonical, compile-time preference keys. A validated
+  // request-supplied key must never become a computed property write.
+  for (const key of NOTIFICATION_PREFERENCE_KEYS) {
+    if (!Object.hasOwn(record, key)) continue;
     const mode = record[key];
     if (!isNotificationPreferenceMode(mode)) return null;
-    patch[key as NotificationPreferenceKey] = mode;
+    patch[key] = mode;
   }
   return patch;
 }
