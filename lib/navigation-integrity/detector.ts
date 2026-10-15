@@ -84,6 +84,7 @@ export function detectNavigationIntegrityAnomalies(
     const localAircraft = new Set<string>();
     const networkAircraft = new Set<string>();
     const occurrences = new Map<string, number>();
+    let maxOccurrences = 0;
     let first = Number.POSITIVE_INFINITY;
     let last = Number.NEGATIVE_INFINITY;
     let hasInvalidTime = false;
@@ -91,7 +92,9 @@ export function detectNavigationIntegrityAnomalies(
     let hasDegraded = false;
     let lowCount = 0;
     for (const item of items) {
-      occurrences.set(item.aircraftHex, (occurrences.get(item.aircraftHex) ?? 0) + 1);
+      const count = (occurrences.get(item.aircraftHex) ?? 0) + 1;
+      occurrences.set(item.aircraftHex, count);
+      if (count > maxOccurrences) maxOccurrences = count;
       if (item.source === "LOCAL") localAircraft.add(item.aircraftHex);
       if (item.source === "NETWORK") networkAircraft.add(item.aircraftHex);
       const observedAt = Date.parse(item.observedAt);
@@ -137,7 +140,7 @@ export function detectNavigationIntegrityAnomalies(
     ] as const;
     const auditCategories = [
       ...(baseline?.maturity === "IMMATURE" || baseline?.maturity === "PARTIAL" || !baseline ? ["BASELINE_IMMATURE" as const] : []),
-      ...(independent.length && Math.max(...occurrences.values()) / items.length > 0.5 ? ["AIRCRAFT_SPECIFIC" as const] : []),
+      ...(independent.length && maxOccurrences / items.length > 0.5 ? ["AIRCRAFT_SPECIFIC" as const] : []),
       ...(baseline && delta(currentNacPMedian, baseline.medianNacP) === 0 && delta(currentNicMedian, baseline.medianNic) === 0 && delta(currentLow, baseline.lowIntegrityShare) === 0 ? ["WEAK_EVIDENCE" as const] : []),
     ];
     const structured = {
