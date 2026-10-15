@@ -218,15 +218,24 @@ function providerChecks({ health, integrations, runtime, mode }) {
 
   checks.push({ id: "sse-browser", area: "sse/browser", status: "NOT VERIFIED", evidence: "No production fan-out or browser load test was run." });
   checks.push({ id: "atc-resolution", area: "atc", status: "NOT VERIFIED", evidence: "Production activation and geometry canary were intentionally not changed or run." });
-  const runtimeWindowMaxMs = Array.isArray(runtime?.runtime?.eventLoopLagWindows)
-    ? Math.max(...runtime.runtime.eventLoopLagWindows.map((window) => nonNegative(window?.maxMs) ?? 0)) : null;
+  const completedWindows = Array.isArray(runtime?.runtime?.eventLoopLagWindows)
+    ? runtime.runtime.eventLoopLagWindows : [];
+  const observedMaxima = completedWindows.map((window) => nonNegative(window?.maxMs))
+    .filter((value) => value !== null);
+  // Enabled instrumentation is not evidence of healthy latency immediately
+  // after process startup: no completed windows means NOT VERIFIED.
+  const hasEventLoopEvidence = runtime?.runtime?.status === "enabled" && observedMaxima.length > 0;
+  const runtimeWindowMaxMs = hasEventLoopEvidence ? Math.max(...observedMaxima) : null;
   checks.push({
     id: "event-loop",
     area: "runtime",
-    status: runtimeWindowMaxMs !== null && runtimeWindowMaxMs >= 1_000 ? "DEGRADED" : runtime?.runtime?.status === "enabled" ? "VERIFIED HEALTHY" : "NOT VERIFIED",
-    evidence: runtimeWindowMaxMs !== null && runtimeWindowMaxMs >= 1_000
-      ? `A bounded runtime window recorded a ${Math.round(runtimeWindowMaxMs)} ms event-loop maximum; causality is not established by this sample.`
-      : runtime?.runtime?.status === "enabled" ? "Runtime event-loop diagnostics are enabled; no >1s maximum was present in the returned window." : "Runtime event-loop diagnostics were not available.",
+    status: !hasEventLoopEvidence ? "NOT VERIFIED"
+      : runtimeWindowMaxMs >= 1_000 ? "DEGRADED" : "VERIFIED HEALTHY",
+    evidence: !hasEventLoopEvidence
+      ? "No completed event-loop windows with valid measurements are available; monitoring may have just started."
+      : runtimeWindowMaxMs >= 1_000
+        ? `A bounded runtime window recorded a ${Math.round(runtimeWindowMaxMs)} ms event-loop maximum; causality is not established by this sample.`
+        : "Completed event-loop windows have no observed >1s maximum; this does not prove long-term stall freedom.",
     metrics: runtime ? {
       p50Ms: nonNegative(runtime.runtime?.eventLoopLagP50Ms),
       p95Ms: nonNegative(runtime.runtime?.eventLoopLagP95Ms),
