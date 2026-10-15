@@ -22,7 +22,8 @@ export class BeastParser {
 
   constructor(maxBufferedBytes = 64 * 1024, options: { native?: boolean } = {}) {
     this.maxBufferedBytes = maxBufferedBytes;
-    const binding = options.native === false ? null : getNativeBeastEngine();
+    const binding = options.native === false || process.env.AIRRADAR_NATIVE_BEAST_PARSER === "0"
+      ? null : getNativeBeastEngine();
     this.native = binding ? new binding.NativeBeastParser(maxBufferedBytes) : null;
   }
 

@@ -43,3 +43,11 @@ Run `npm run benchmark:rust-beast` with the same opt-in environment to print
 a report-only, alternating-order synthetic comparison of 25,000 BEAST frames
 per trial over six trials. This microbenchmark does not measure real feed
 throughput, end-to-end decode, native conversion allocation or RSS retention.
+
+The native parser and CRC can be independently disabled after enabling the
+addon: set `AIRRADAR_NATIVE_BEAST_PARSER=0` or
+`AIRRADAR_NATIVE_BEAST_CRC=0`. This supports independent production-like
+A/B attribution without changing feed contracts.
+
+Run `npm run benchmark:rust-crc` under the same opt-in environment to compare
+10,000 deterministic Mode-S CRC messages using the BigInt and N-API paths.

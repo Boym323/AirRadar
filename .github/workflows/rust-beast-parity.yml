@@ -42,3 +42,8 @@ jobs:
           AIRRADAR_NATIVE_BEAST: '1'
           AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
         run: npm run benchmark:rust-beast
+      - name: Report synthetic CRC comparison
+        env:
+          AIRRADAR_NATIVE_BEAST: '1'
+          AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
+        run: npm run benchmark:rust-crc

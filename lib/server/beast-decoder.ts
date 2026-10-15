@@ -149,7 +149,8 @@ function modeSBits(value: bigint, start: number, length: number, totalBits = 56)
 }
 const MODE_S_CRC_POLYNOMIAL = 0xfff409n;
 // Resolve once: no module lookup or environment read per ADS-B message.
-const nativeCrc = getNativeBeastEngine()?.modeSCrc ?? null;
+const nativeCrc = process.env.AIRRADAR_NATIVE_BEAST_CRC === "0"
+  ? null : getNativeBeastEngine()?.modeSCrc ?? null;
 function modeSCrc(payload: Buffer): number {
   if (nativeCrc && (payload.length === 7 || payload.length === 14)) return nativeCrc(payload);
   let value = modeSValue(payload);
