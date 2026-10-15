@@ -11,6 +11,7 @@ PostgreSQL ukládá vzorkovanou historii, referenční data a denní statistiky.
 - [Konfigurace](configuration.md)
 - [Vývoj a testování](development.md)
 - [Nasazení a provoz](operations.md)
+- [Produkční výkonnostní test T58: jeden příkaz a historie](t58-production-soak.md)
 
 ## Autoritativní dokumentace
 
