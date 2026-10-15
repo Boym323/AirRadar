@@ -6,6 +6,14 @@ on:
   pull_request:
     # A maintainer can opt into a full deploy-free rehearsal via the release-preview label.
     types: [opened, synchronize, reopened, labeled]
+    # The metadata bot already validates these exact generated files through
+    # a separately dispatched CI run before merging. A second pull_request
+    # workflow has no eligible jobs and can finish red after auto-delete.
+    # Mixed metadata + application changes still trigger normal PR validation.
+    paths-ignore:
+      - CHANGELOG.md
+      - docs/metrics/code-history.json
+      - docs/metrics/code-growth.svg
   workflow_dispatch:
 
 concurrency:
