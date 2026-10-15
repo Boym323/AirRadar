@@ -1,6 +1,6 @@
 import { getNativeBeastEngine } from "./native-acceleration";
 import type { Aircraft, AircraftOperationalStatus, AircraftTargetState, ReceiverPosition } from "@/lib/aircraft/types";
-import type { BeastFrame } from "./beast-parser";
+import { trustedModeSCrcForFrame, type BeastFrame } from "./beast-parser";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { decodeCommB } from "./bds-decoder";
 import { altitudeObservationFor, recordBeastAltitudeDecode, selectAltitudeObservation } from "@/lib/aircraft/altitude-provenance";
@@ -231,7 +231,7 @@ export class BeastDecoder {
     const longFrame = p.length === 14;
     if (longFrame && ![16, 17, 18, 20, 21].includes(df)) return null;
     if (!longFrame && ![0, 4, 5, 11].includes(df)) return null;
-    const parity = modeSCrc(p);
+    const parity = trustedModeSCrcForFrame(frame) ?? modeSCrc(p);
     if (longFrame && (df === 17 || df === 18) && parity !== 0) return null;
     let icaoHex: string;
     if (longFrame && (df === 17 || df === 18)) {

@@ -8,6 +8,7 @@ import { isAbsolute } from "node:path";
 
 export interface NativeBeastParser {
   pushPacked(chunk: Buffer): Buffer;
+  pushPackedWithCrc(chunk: Buffer): Buffer;
   readonly bufferedBytes: number;
 }
 
@@ -32,6 +33,7 @@ export function getNativeBeastEngine(): NativeBeastBindings | null {
     const loaded = createRequire(import.meta.url)(filename) as Partial<NativeBeastBindings>;
     if (typeof loaded.NativeBeastParser !== "function"
       || typeof loaded.NativeBeastParser.prototype?.pushPacked !== "function"
+      || typeof loaded.NativeBeastParser.prototype?.pushPackedWithCrc !== "function"
       || typeof loaded.modeSCrc !== "function") {
       throw new Error("Incompatible native addon ABI");
     }

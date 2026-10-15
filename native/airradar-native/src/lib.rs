@@ -26,9 +26,18 @@ impl Parser {
     }
 
     fn push_packed(&mut self, chunk: &[u8]) -> Vec<u8> {
+        self.push_packed_impl(chunk, false)
+    }
+
+    fn push_packed_with_crc(&mut self, chunk: &[u8]) -> Vec<u8> {
+        self.push_packed_impl(chunk, true)
+    }
+
+    fn push_packed_impl(&mut self, chunk: &[u8], with_crc: bool) -> Vec<u8> {
         self.pending.extend_from_slice(chunk);
-        // Packed frames: type (1) + timestamp (6) + signal (1) + payload (2/7/14).
-        // Cross N-API exactly once per socket chunk, not once per aircraft frame.
+        // One native call for the entire socket chunk, not per decoded frame.
+        // CRC mode appends four big-endian bytes to each complete frame:
+        // type (1) + timestamp (6) + signal (1) + payload (2/7/14) + CRC (4).
         let mut output = Vec::new();
         let mut cursor = 0_usize;
         let len = self.pending.len();
@@ -84,6 +93,13 @@ impl Parser {
             }
             output.push(frame_type);
             output.extend_from_slice(&decoded[..decoded_len]);
+            if with_crc {
+                // CRC is computed from the exact de-escaped Mode-S payload.
+                // A 2-byte Beast 0x31 payload is never accepted by the
+                // aircraft decoder; its sidecar intentionally encodes zero.
+                let checksum = crc24(&decoded[7..decoded_len]);
+                output.extend_from_slice(&checksum.to_be_bytes());
+            }
             cursor = source;
         }
 
@@ -168,6 +184,11 @@ impl NativeBeastParser {
         Buffer::from(self.parser.push_packed(&chunk))
     }
 
+    #[napi]
+    pub fn push_packed_with_crc(&mut self, chunk: Buffer) -> Buffer {
+        Buffer::from(self.parser.push_packed_with_crc(&chunk))
+    }
+
     #[napi(getter)]
     pub fn buffered_bytes(&self) -> u32 {
         self.parser.pending.len().min(u32::MAX as usize) as u32
@@ -232,6 +253,35 @@ mod tests {
         assert!(parser.pending.len() <= 32);
         assert!(parser.pending.capacity() <= 128 * 1024);
         assert_eq!(parser.push(&encode(0x33, &[1; 14])).len(), 1);
+    }
+
+    #[test]
+    fn incremental_packed_crc_preserves_frame_boundaries_and_parity() {
+        let valid = hex_bytes("8d4840d6202cc371c32ce0576098");
+        let mut damaged = valid.clone();
+        *damaged.last_mut().unwrap() ^= 1;
+        let mut parser = Parser::new(DEFAULT_MAX_BUFFER);
+        let mut wire = encode(0x33, &valid);
+        wire.extend_from_slice(&encode(0x33, &damaged));
+        wire.extend_from_slice(&encode(0x31, &[0xa5, 0x40]));
+        let mut packed = Vec::new();
+        for part in wire.chunks(3) {
+            packed.extend_from_slice(&parser.push_packed_with_crc(part));
+        }
+        let mut index = 0;
+        for (kind, data) in [(0x33, valid.as_slice()), (0x33, damaged.as_slice()), (0x31, &[0xa5, 0x40][..])] {
+            let payload_len = data.len();
+            let width = 8 + payload_len + 4;
+            assert_eq!(packed[index], kind);
+            assert_eq!(&packed[index + 8..index + 8 + payload_len], data);
+            let result = u32::from_be_bytes(
+                packed[index + 8 + payload_len..index + width].try_into().unwrap()
+            );
+            assert_eq!(result, crc24(data));
+            index += width;
+        }
+        assert_eq!(index, packed.len());
+        assert_eq!(parser.pending.len(), 0);
     }
 
     #[test]

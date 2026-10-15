@@ -55,3 +55,25 @@ Run `npm run benchmark:rust-crc` under the same opt-in environment to compare
 After an abnormally large input chunk, the parser also shrinks retained Vec
 capacity when it exceeds twice the configured buffer limit (with a 64 KiB
 floor); ordinary small socket chunks remain allocation-reuse friendly.
+
+## Phase 2: inline CRC in the Rust frame parser
+
+When the optional Rust parser is enabled, `pushPackedWithCrc` can compute the
+Mode-S CRC while de-escaping a socket chunk. The packed result adds a four-byte
+big-endian checksum per frame. A private TypeScript `WeakMap` associates the
+precomputed value with its exact parsed frame; arbitrary external `BeastFrame`
+objects **cannot** inject a checksum. Direct callers still use the existing
+standalone native CRC/TypeScript fallback, and the aircraft/CPR/Comm-B state
+machine is unchanged.
+
+Set `AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED=0` to isolate this change while
+keeping the standalone N-API CRC enabled. The original
+`AIRRADAR_NATIVE_BEAST_CRC=0` switch disables both forms. The addon ABI check
+requires `pushPackedWithCrc`; old/incompatible native modules fall back to
+TypeScript rather than being partially loaded.
+
+The dedicated CI includes a fragmented-stream/CRC regression and a three-way
+end-to-end-ish 10,000-frame synthetic comparison of the existing JS framing,
+Rust framing with per-message CRC, and Rust framing with inline batched CRC.
+No database, production stream, SSE, Operational Twin or provider orchestration
+is changed. This phase does not touch PR #926's bounded enrichment scheduler.
