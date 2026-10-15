@@ -1,0 +1,162 @@
+name: T58 Production Soak
+
+on:
+  workflow_dispatch:
+
+run-name: T58 read-only production soak #${{ github.run_number }}
+
+# One T58 at a time. A new dispatch must not interrupt an existing hour.
+concurrency:
+  group: airradar-t58-read-only-soak
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    name: Collect and analyze production T58
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    outputs:
+      report_ready: ${{ steps.prepare.outputs.report_ready }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Read-only preflight and deployed identity pin
+        id: preflight
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t58"
+          chmod 700 "$RUNNER_TEMP/t58"
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t58/preflight.json"
+          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t58/preflight.json")"
+          resolved_sha="$(git rev-parse --verify "$deployed_sha^{commit}")"
+          # Reject runs against a production version predating merged PR #885.
+          git merge-base --is-ancestor e9a9b8354fe1c433b4a3baf406574b9cc3d6f207 "$resolved_sha"
+          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
+          echo "Read-only telemetry ready for deployed commit $deployed_sha"
+
+      - name: Collect 60-minute read-only T58
+        id: soak
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
+          T57_SECONDS: "3600"
+          T57_INTERVAL_SECONDS: "60"
+          T57_WARMUP_SECONDS: "600"
+          T57_OUTPUT: ${{ runner.temp }}/t58/soak.ndjson
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          # The T57 collector projects identity-free aggregates and fails
+          # closed on an unexpected commit. No restart, DB write or build.
+          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t58/collector-result.json"
+
+      - name: Validate and compare report with T57
+        id: prepare
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          summary="$RUNNER_TEMP/t58/soak.summary.json"
+          markdown="$RUNNER_TEMP/t58/soak.summary.md"
+          if [[ -s "$summary" && -s "$markdown" ]]; then
+            node scripts/t58-report.mjs verify "$summary"
+            node scripts/t58-report.mjs comparison "$summary" \
+              "$RUNNER_TEMP/t58/comparison.md" \
+              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            printf 'report_ready=true\n' >> "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/t58/comparison.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf 'report_ready=false\n' >> "$GITHUB_OUTPUT"
+            echo "T58 has no complete summary (see preflight/collector checks)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload only sanitized reports (no raw NDJSON or secrets)
+        if: ${{ always() && steps.prepare.outputs.report_ready == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: t58-sanitized-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t58/soak.summary.json
+            ${{ runner.temp }}/t58/soak.summary.md
+            ${{ runner.temp }}/t58/comparison.md
+          retention-days: 90
+          if-no-files-found: error
+
+  archive:
+    name: Preserve report in isolated Git history
+    needs: collect
+    # Archive valid reports even if the soak finished with incomplete evidence.
+    if: ${{ always() && needs.collect.outputs.report_ready == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Download aggregate report artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: t58-sanitized-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/t58-upload
+
+      - name: Publish immutable run record off main
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node scripts/t58-report.mjs verify "$RUNNER_TEMP/t58-upload/soak.summary.json"
+          archive_branch="audit/t58-history"
+          stamp="$(date -u +%Y/%m/%d)"
+          relative="reports/t58/$stamp/run-$GITHUB_RUN_ID-attempt-$GITHUB_RUN_ATTEMPT"
+          # Branch writes do not trigger production main release pipelines.
+          if git ls-remote --exit-code --heads origin "refs/heads/$archive_branch" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/$archive_branch"
+            git switch --detach FETCH_HEAD
+          else
+            git switch --detach "$GITHUB_SHA"
+          fi
+          mkdir -p "$relative" reports/t58
+          cp "$RUNNER_TEMP/t58-upload/soak.summary.json" "$relative/summary.json"
+          cp "$RUNNER_TEMP/t58-upload/soak.summary.md" "$relative/summary.md"
+          cp "$RUNNER_TEMP/t58-upload/comparison.md" "$relative/comparison.md"
+          verdict="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).verdict)' "$relative/summary.json")"
+          version="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).version)' "$relative/summary.json")"
+          index="reports/t58/INDEX.md"
+          if [[ ! -f "$index" ]]; then
+            printf '# AirRadar T58 production soak history\n\n' > "$index"
+            printf 'Read-only production telemetry; sanitized aggregates only. No raw NDJSON, credentials or aircraft identities.\n\n' >> "$index"
+            printf '| UTC archived | Run | Version | Verdict | Reports |\n| --- | --- | --- | --- | --- |\n' >> "$index"
+          fi
+          now="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          printf '| %s | [#%s](https://github.com/%s/actions/runs/%s) | %s | %s | [summary](%s/summary.md) · [comparison](%s/comparison.md) · [JSON](%s/summary.json) |\n' \
+            "$now" "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$version" "$verdict" \
+            "$relative" "$relative" "$relative" >> "$index"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$relative" "$index"
+          git commit -m "chore(t58): archive read-only soak $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT"
+          git push origin "HEAD:refs/heads/$archive_branch"
+          printf '\n**Permanent report archive:** https://github.com/%s/tree/%s/reports/t58\n' \
+            "$GITHUB_REPOSITORY" "$archive_branch" >> "$GITHUB_STEP_SUMMARY"
