@@ -1,6 +1,6 @@
 import type { Aircraft } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
-import { computeAtcContext } from "@/lib/atc-context/engine";
+import { getCurrentAtcSectorIds } from "@/lib/atc-context/engine";
 import type { PreparedAtcContextDataset } from "@/lib/atc-context/types";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { LandingTerminalEvidenceV1 } from "@/lib/intelligence/terminal-evidence";
@@ -105,6 +105,8 @@ interface TruthPoint {
 
 interface TruthTrailState {
   inputFingerprint: string;
+  sourceTrail: Aircraft["trail"];
+  currentPositionFingerprint: string;
   points: TruthPoint[];
   version: number;
   /** Current points whose timestamp/fingerprint was not unchanged. */
@@ -211,6 +213,9 @@ export interface OperationalTwinEventOutcomePerformance {
   pendingEntriesWithoutNewTruth: number;
   truthPointBuilds: number;
   truthPointsBuilt: number;
+  canonicalFingerprintBuilds: number;
+  trailPointsFingerprinted: number;
+  unchangedTruthStateReuses: number;
   evaluatedTruthPoints: number;
   expiryEntriesScanned: number;
   intelligenceEntriesScanned: number;
@@ -511,6 +516,9 @@ function emptyPerformance(): OperationalTwinEventOutcomePerformance {
     pendingEntriesWithoutNewTruth: 0,
     truthPointBuilds: 0,
     truthPointsBuilt: 0,
+    canonicalFingerprintBuilds: 0,
+    trailPointsFingerprinted: 0,
+    unchangedTruthStateReuses: 0,
     evaluatedTruthPoints: 0,
     expiryEntriesScanned: 0,
     intelligenceEntriesScanned: 0,
@@ -880,7 +888,20 @@ function truthPoints(aircraft: Aircraft): TruthPoint[] {
  * corrections to older points, out-of-order arrivals, truncation and trail
  * replacement even when the newest point did not change.
  */
-function truthInputFingerprint(aircraft: Aircraft): string {
+function currentTruthPositionFingerprint(aircraft: Aircraft): string {
+  return [
+    aircraft.lat,
+    aircraft.lon,
+    altitudeOf(aircraft),
+    aircraft.track,
+    aircraft.groundSpeed,
+    aircraft.verticalRate,
+    aircraft.onGround ? 1 : 0,
+    positionObservedAt(aircraft),
+  ].map((value) => value === null || value === undefined ? "null" : String(value)).join("|");
+}
+
+function truthInputFingerprint(aircraft: Aircraft, currentPositionFingerprint: string): string {
   return JSON.stringify([
     aircraft.trail.slice(-120).map((point) => [
       point.recordedAt,
@@ -890,18 +911,7 @@ function truthInputFingerprint(aircraft: Aircraft): string {
       point.track,
       point.groundSpeed,
     ]),
-    aircraft.lat,
-    aircraft.lon,
-    aircraft.altitude,
-    aircraft.baroAltitude,
-    aircraft.geomAltitude,
-    aircraft.track,
-    aircraft.groundSpeed,
-    aircraft.verticalRate,
-    aircraft.onGround,
-    aircraft.lastSeen,
-    aircraft.seenSeconds,
-    aircraft.seenPosSeconds,
+    currentPositionFingerprint,
   ]);
 }
 
@@ -932,11 +942,24 @@ function atcInputFingerprint(point: TruthPoint): string {
   ].map((value) => value === null ? "null" : String(value)).join("|");
 }
 
+/**
+ * Cache only the inputs affecting the CURRENT sector membership predicate.
+ * Truth timestamp, track, speed, rate and onGround affect future projections,
+ * which the sector-only fast path deliberately does not compute.
+ */
+function currentSectorMembershipFingerprint(point: TruthPoint): string {
+  return [point.lat, point.lon, point.altitudeFt]
+    .map((value) => value === null ? "null" : String(value)).join("|");
+}
+
 function computeSectorIdsAtPoint(
   point: TruthPoint,
   dataset: PreparedAtcContextDataset,
 ): ReadonlySet<string> {
-  const compute = () => computeAtcContext({
+  // ATC truth needs only CURRENT memberships, not ATS routes or forward
+  // projections. Keep the diagnostic phase name for schema compatibility:
+  // its scope is now cheaper sector-only matching, not full ATC context.
+  return forensicsGlobal.measure("atcContextComputation", () => getCurrentAtcSectorIds({
     lat: point.lat,
     lon: point.lon,
     altitude: point.altitudeFt,
@@ -948,9 +971,7 @@ function computeSectorIdsAtPoint(
     verticalRate: point.verticalRateFpm,
     timestamp: new Date(point.at).toISOString(),
     onGround: point.onGround,
-  }, dataset, new Date(point.at));
-  const context = forensicsGlobal.measure("atcContextComputation", compute);
-  return new Set(context.currentAirspaces.map((airspace) => airspace.id));
+  }, dataset));
 }
 
 // Shared diagnostic timer is process-local. Its data is aggregate-only and
@@ -1033,11 +1054,12 @@ class AtcTruthCache {
     }
 
     const datasetId = this.datasetId(dataset);
-    // Sector membership is a pure function of the dataset and truth point.
-    // Do not include aircraft identity: dense snapshots commonly contain the
-    // same sampled point for multiple aircraft and should share the result.
-    const key = `${datasetId}:${point.at}`;
-    const fingerprint = atcInputFingerprint(point);
+    // Cache by membership-relevant coordinates and altitude, not timestamps.
+    // Separate aircraft with the same timestamp but different positions no
+    // longer evict one another, while unchanged positions across successive
+    // receiver updates reuse the exact same answer.
+    const fingerprint = currentSectorMembershipFingerprint(point);
+    const key = `${datasetId}:${fingerprint}`;
     const cached = this.entries.get(key);
     if (cached && cached.dataset === dataset && cached.fingerprint === fingerprint) {
       forensicsGlobal.cache(true);
@@ -1135,6 +1157,8 @@ export class OperationalTwinEventOutcomeValidator {
    * path. Keep the index bounded with the pending map itself.
    */
   private readonly pendingByAircraft = new Map<string, Set<string>>();
+  /** Captures awaiting initial truth evaluation even if the position is unchanged. */
+  private readonly pendingNeedingTruthEvaluation = new Map<string, Set<string>>();
   /** Parsed local truth snapshots shared by all pending events for an aircraft. */
   private readonly truthStates = new Map<string, TruthTrailState>();
   /** Expiry order avoids scanning all pending observations on every refresh. */
@@ -1216,6 +1240,14 @@ export class OperationalTwinEventOutcomeValidator {
         this.pendingByAircraft.set(sample.icaoHex, aircraftPending);
       }
       aircraftPending.add(id);
+      if (this.enableIncrementalTruthEvaluation) {
+        let dirty = this.pendingNeedingTruthEvaluation.get(sample.icaoHex);
+        if (!dirty) {
+          dirty = new Set<string>();
+          this.pendingNeedingTruthEvaluation.set(sample.icaoHex, dirty);
+        }
+        dirty.add(id);
+      }
       this.lastCaptureAt.set(dedupKey, now);
       this.incrementPrediction(sample);
       created += 1;
@@ -1238,9 +1270,23 @@ export class OperationalTwinEventOutcomeValidator {
       this.performance.aircraftWithPending += 1;
       let fullScanPoints: TruthPoint[] | null = null;
       let truthState: TruthTrailState | null = null;
+      let evaluationIds: Iterable<string> = pendingIds;
+      if (this.enableIncrementalTruthEvaluation) {
+        const snapshot = this.getTruthState(icaoHex, aircraft);
+        truthState = snapshot.state;
+        if (!snapshot.changed) {
+          const dirty = this.pendingNeedingTruthEvaluation.get(icaoHex);
+          evaluationIds = dirty ?? [];
+          this.performance.pendingEntriesWithoutNewTruth += pendingIds.size - (dirty?.size ?? 0);
+          if (!dirty?.size) continue;
+        }
+      }
       forensicsGlobal.measure("pendingTruthEvaluation", () => {
-      for (const id of pendingIds) {
+      for (const id of evaluationIds) {
         this.performance.pendingEntriesScanned += 1;
+        const dirty = this.pendingNeedingTruthEvaluation.get(icaoHex);
+        dirty?.delete(id);
+        if (dirty?.size === 0) this.pendingNeedingTruthEvaluation.delete(icaoHex);
         const pending = this.pending.get(id);
         if (!pending || pending.descriptor.kind === "ARRIVAL_ETA" || pending.descriptor.kind === "RUNWAY_EXPECTATION") continue;
         if (!this.enableIncrementalTruthEvaluation) {
@@ -1263,68 +1309,15 @@ export class OperationalTwinEventOutcomeValidator {
           }
           continue;
         }
-        if (truthState === null) {
-          const inputFingerprint = forensicsGlobal.measure("truthInputFingerprint", () => truthInputFingerprint(aircraft));
-          const previousState = this.truthStates.get(icaoHex);
-          if (previousState?.inputFingerprint === inputFingerprint) {
-            truthState = previousState;
-          } else {
-            const points = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
-            truthState = forensicsGlobal.measure("truthStateDiff", () => {
-              const changedIndexes = new Set<number>();
-              const correctionIndexes = new Set<number>();
-              const previousByAt = new Map<number, string>();
-              const previousContents = new Set<string>();
-              if (previousState) {
-                for (const previousPoint of previousState.points) {
-                  previousByAt.set(previousPoint.at, atcInputFingerprint(previousPoint));
-                  previousContents.add(atcInputFingerprint(previousPoint));
-                }
-                for (const [index, point] of points.entries()) {
-                  const fingerprint = atcInputFingerprint(point);
-                  const previousFingerprint = previousByAt.get(point.at);
-                  if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
-                  if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
-                    && (previousFingerprint !== undefined && previousFingerprint !== fingerprint
-                      || previousFingerprint === undefined && !previousContents.has(fingerprint))) {
-                    correctionIndexes.add(index);
-                  }
-                }
-              } else {
-                points.forEach((_, index) => changedIndexes.add(index));
-              }
-              forensicsGlobal.increment("truthInvalidations");
-              return {
-                inputFingerprint,
-                points,
-                version: (previousState?.version ?? 0) + 1,
-                changedIndexes,
-                correctionIndexes,
-              };
-            }, { detectLongOperation: true });
-            this.truthStates.set(icaoHex, truthState);
-            this.performance.truthPointBuilds += 1;
-            this.performance.truthPointsBuilt += points.length;
-          }
-        }
+        if (truthState === null) continue;
         const points = truthState.points;
         const firstPoint = points[0];
         const lastPoint = points.at(-1);
         if (!firstPoint || !lastPoint) continue;
         const previousVersion = pending.lastEvaluatedTruthVersion;
         if (previousVersion === truthState.version) {
-          // Keep the cache's observable reuse semantics for repeated snapshots
-          // without rescanning the historical trail. This is intentionally a
-          // single endpoint check, not a replay of all truth points. A changed
-          // older point never reaches this branch because the shared truth
-          // snapshot version changes even when the endpoint is unchanged.
-          if (lastPoint.at >= pending.earlyAt
-            && lastPoint.at <= pending.expiresAt
-            && pending.descriptor.kind === "ATC_SECTOR_ENTRY") {
-            if (spatialTruthMatches(pending, aircraft, lastPoint, this.atcTruthCache, now)) {
-              this.resolveObserved(pending, lastPoint.at);
-            }
-          }
+          // An unchanged pending outcome requires no repeated ATC lookup.
+          // Newly captured entries still run their first evaluation.
           this.performance.pendingEntriesWithoutNewTruth += 1;
           continue;
         }
@@ -1373,6 +1366,69 @@ export class OperationalTwinEventOutcomeValidator {
     }
   }
 
+
+  private getTruthState(icaoHex: string, aircraft: Aircraft): { state: TruthTrailState; changed: boolean } {
+    const previousState = this.truthStates.get(icaoHex);
+    const currentPositionFingerprint = currentTruthPositionFingerprint(aircraft);
+    if (previousState?.sourceTrail === aircraft.trail
+      && previousState.currentPositionFingerprint === currentPositionFingerprint) {
+      this.performance.unchangedTruthStateReuses += 1;
+      return { state: previousState, changed: false };
+    }
+
+    this.performance.canonicalFingerprintBuilds += 1;
+    this.performance.trailPointsFingerprinted += Math.min(aircraft.trail.length, 120);
+    const inputFingerprint = forensicsGlobal.measure("truthInputFingerprint", () =>
+      truthInputFingerprint(aircraft, currentPositionFingerprint));
+    if (previousState?.inputFingerprint === inputFingerprint) {
+      // Remember the source identity as well as its canonical content so a
+      // cloned but equal trail does not need serialization on every refresh.
+      const reusedState = { ...previousState, sourceTrail: aircraft.trail, currentPositionFingerprint };
+      this.truthStates.set(icaoHex, reusedState);
+      return { state: reusedState, changed: false };
+    }
+
+    const points = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
+    const state = forensicsGlobal.measure("truthStateDiff", (): TruthTrailState => {
+    const changedIndexes = new Set<number>();
+    const correctionIndexes = new Set<number>();
+    const previousByAt = new Map<number, string>();
+    const previousContents = new Set<string>();
+    if (previousState) {
+      for (const previousPoint of previousState.points) {
+        const fingerprint = atcInputFingerprint(previousPoint);
+        previousByAt.set(previousPoint.at, fingerprint);
+        previousContents.add(fingerprint);
+      }
+      for (const [index, point] of points.entries()) {
+        const fingerprint = atcInputFingerprint(point);
+        const previousFingerprint = previousByAt.get(point.at);
+        if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
+        if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
+          && (previousFingerprint !== undefined && previousFingerprint !== fingerprint
+            || previousFingerprint === undefined && !previousContents.has(fingerprint))) {
+          correctionIndexes.add(index);
+        }
+      }
+    } else {
+      points.forEach((_, index) => changedIndexes.add(index));
+    }
+    return {
+      inputFingerprint,
+      sourceTrail: aircraft.trail,
+      currentPositionFingerprint,
+      points,
+      version: (previousState?.version ?? 0) + 1,
+      changedIndexes,
+      correctionIndexes,
+    };
+    }, { detectLongOperation: true });
+    forensicsGlobal.increment("truthInvalidations");
+    this.truthStates.set(icaoHex, state);
+    this.performance.truthPointBuilds += 1;
+    this.performance.truthPointsBuilt += points.length;
+    return { state, changed: true };
+  }
   observeIntelligence(events: readonly FlightIntelligenceEvent[], now = Date.now()): void {
     if (!events.length) {
       this.expire(now);
@@ -1570,6 +1626,7 @@ export class OperationalTwinEventOutcomeValidator {
   reset(): void {
     this.pending.clear();
     this.pendingByAircraft.clear();
+    this.pendingNeedingTruthEvaluation.clear();
     this.truthStates.clear();
     this.pendingExpiryQueue = [];
     this.pendingCaptureQueue = [];
@@ -1753,8 +1810,12 @@ export class OperationalTwinEventOutcomeValidator {
     this.pending.delete(id);
     const aircraftPending = this.pendingByAircraft.get(pending.icaoHex);
     aircraftPending?.delete(id);
+    const dirty = this.pendingNeedingTruthEvaluation.get(pending.icaoHex);
+    dirty?.delete(id);
+    if (dirty?.size === 0) this.pendingNeedingTruthEvaluation.delete(pending.icaoHex);
     if (aircraftPending && aircraftPending.size === 0) {
       this.pendingByAircraft.delete(pending.icaoHex);
+      this.pendingNeedingTruthEvaluation.delete(pending.icaoHex);
       this.truthStates.delete(pending.icaoHex);
     }
     return pending;
