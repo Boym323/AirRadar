@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, constants, fstatSync, openSync, readSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,70 @@ import { dirname, resolve } from "node:path";
 const DEFAULT_BASE_URL = "https://airradar.pomykal.cz";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 8_000;
+const MAX_INPUT_BYTES = 2 * 1024 * 1024;
+const MAX_JSON_REPORT_BYTES = 2 * 1024 * 1024;
+const MAX_MARKDOWN_REPORT_BYTES = 128 * 1024;
+const FILE_READ_CHUNK_BYTES = 16 * 1024;
+
+/**
+ * Read a bounded regular JSON file through one descriptor: unlike
+ * existsSync(path) -> readFileSync(path), this cannot switch to a
+ * different inode between an existence check and read. The nonblocking,
+ * no-follow open rejects FIFO/symlink surprises before reading.
+ */
+function readAuditJsonFile(path, { allowMissing = false } = {}) {
+  let fd;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  } catch (error) {
+    if (allowMissing && error?.code === "ENOENT") return null;
+    throw error;
+  }
+  try {
+    const metadata = fstatSync(fd);
+    if (!metadata.isFile() || metadata.size > MAX_INPUT_BYTES) {
+      throw new Error("invalid_audit_input_file");
+    }
+    const chunks = [];
+    const buffer = Buffer.allocUnsafe(FILE_READ_CHUNK_BYTES);
+    let length = 0;
+    while (true) {
+      const bytes = readSync(fd, buffer, 0, Math.min(FILE_READ_CHUNK_BYTES, MAX_INPUT_BYTES + 1 - length), null);
+      if (bytes === 0) break;
+      length += bytes;
+      if (length > MAX_INPUT_BYTES) throw new Error("audit_input_too_large");
+      chunks.push(Buffer.from(buffer.subarray(0, bytes)));
+    }
+    return JSON.parse(Buffer.concat(chunks, length).toString("utf8"));
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Operator-selected output only. Exclusive-create is intentionally
+ * non-idempotent: never truncate an existing report or follow a symlink.
+ * Use a fresh destination directory (e.g. GitHub RUNNER_TEMP) each run.
+ */
+async function writeAuditFile(path, payload, maxBytes) {
+  if (typeof path !== "string" || !path || path.length > 2048 || path.includes("\0")) {
+    throw new Error("invalid_audit_output_path");
+  }
+  if (Buffer.byteLength(payload, "utf8") > maxBytes) throw new Error("audit_output_too_large");
+  const destination = resolve(path);
+  await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+  writeFileSync(destination, payload, { flag: "wx", mode: 0o600 });
+}
+
+export async function writeAuditOutputs({ report, markdown, jsonPath = null, markdownPath = null }) {
+  if (!jsonPath && !markdownPath) return;
+  if (jsonPath && markdownPath && resolve(jsonPath) === resolve(markdownPath)) {
+    throw new Error("audit_output_paths_must_differ");
+  }
+  const json = jsonPath ? JSON.stringify(report, null, 2) + "\n" : null;
+  if (jsonPath) await writeAuditFile(jsonPath, json, MAX_JSON_REPORT_BYTES);
+  if (markdownPath) await writeAuditFile(markdownPath, markdown, MAX_MARKDOWN_REPORT_BYTES);
+}
 const PROVIDERS = [
   ["readsb", "Local readsb JSON / Beast receiver"],
   ["adsbhub", "ADSBHub SBS/30003 network coverage"],
@@ -47,7 +111,7 @@ function safeInteger(value) {
 
 function readPackageVersion(root) {
   try {
-    const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
+    const packageJson = readAuditJsonFile(resolve(root, "package.json"));
     return safeText(packageJson.version, 32) ?? "unknown";
   } catch {
     return "unknown";
@@ -377,7 +441,7 @@ export function renderMarkdown(report) {
 
 async function loadFixture(path) {
   if (!path) return { health: null, integrations: null, runtime: null, version: null };
-  const value = JSON.parse(readFileSync(path, "utf8"));
+  const value = readAuditJsonFile(path);
   return { health: value.health ?? null, integrations: value.integrations ?? null, runtime: value.runtime ?? null, version: value.version ?? null };
 }
 
@@ -402,7 +466,7 @@ export async function runAudit({ root = process.cwd(), mode = "readonly", baseUr
     version = results[3].value;
   }
   let previous = null;
-  if (previousPath && existsSync(previousPath)) previous = JSON.parse(readFileSync(previousPath, "utf8"));
+  if (previousPath) previous = readAuditJsonFile(previousPath, { allowMissing: true });
   return buildReport({ root, mode, health, integrations, runtime, version, previous });
 }
 
@@ -417,14 +481,7 @@ async function main() {
   const markdownPath = option("--markdown");
   const report = await runAudit({ root: process.cwd(), mode, baseUrl: option("--base-url", process.env.AIRRADAR_INTEGRATION_DIAGNOSTICS_BASE_URL ?? DEFAULT_BASE_URL), fixturePath: option("--fixture", process.env.AIRRADAR_INTEGRATION_AUDIT_FIXTURE), previousPath: option("--previous") });
   const markdown = renderMarkdown(report);
-  if (jsonPath) {
-    await mkdir(dirname(resolve(jsonPath)), { recursive: true });
-    writeFileSync(jsonPath, JSON.stringify(report, null, 2) + "\n", { mode: 0o600 });
-  }
-  if (markdownPath) {
-    await mkdir(dirname(resolve(markdownPath)), { recursive: true });
-    writeFileSync(markdownPath, markdown, { mode: 0o600 });
-  }
+  await writeAuditOutputs({ report, markdown, jsonPath, markdownPath });
   process.stdout.write(JSON.stringify(report) + "\n");
   if (report.verdict === "DEGRADED") process.exitCode = 2;
 }
