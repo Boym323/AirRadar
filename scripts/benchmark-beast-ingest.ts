@@ -50,7 +50,11 @@ function sample(mode: Mode) {
   }
   const elapsedMs = performance.now() - started;
   const cpu = process.cpuUsage(baselineCpu);
-  const snapshot = JSON.stringify(decoder.snapshot(observedAt + 1));
+  // A live snapshot derives seenSeconds from Date.now(), not the fixed
+  // input observation time. Exclude only that time-of-check field.
+  const snapshot = JSON.stringify(
+    decoder.snapshot(observedAt + 1).map((item) => ({ ...item, seenSeconds: 0 })),
+  );
   if (frames !== 10_000 || parser.bufferedBytes !== 0) throw new Error("Unconsumed or missing frames");
   return { elapsedMs, cpuMs: (cpu.user + cpu.system) / 1000, accepted, snapshot };
 }

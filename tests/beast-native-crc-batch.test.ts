@@ -62,7 +62,10 @@ describe.skipIf(!enabled)("Rust batched CRC and stateful BEAST decode", () => {
         const aircraft = decoder.decode(frame, timestamp);
         outcomes.push(aircraft?.icaoHex ?? null);
       }
-      snapshots.push({ outcomes, aircraft: decoder.snapshot(timestamp + 1), diagnostics: decoder.getDiagnostics() });
+      // seenSeconds is derived from the wall clock inside snapshot(), so
+      // compare its deterministic aircraft fields without timing jitter.
+      const aircraft = decoder.snapshot(timestamp + 1).map((item) => ({ ...item, seenSeconds: 0 }));
+      snapshots.push({ outcomes, aircraft, diagnostics: decoder.getDiagnostics() });
     }
     expect(snapshots[1]).toEqual(snapshots[0]);
     expect(snapshots[2]).toEqual(snapshots[0]);
