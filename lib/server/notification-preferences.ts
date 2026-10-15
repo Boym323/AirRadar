@@ -23,6 +23,14 @@ import { getRuntimeStateDirectory } from "@/lib/server/runtime-state";
 
 const VERSION = 1 as const;
 
+/** Reconstruct all persisted values from literal enums, never raw HTTP values. */
+function persistedMode(value: unknown): NotificationPreferenceMode {
+  if (value === "OFF") return "OFF";
+  if (value === "CENTER_ONLY") return "CENTER_ONLY";
+  if (value === "PUSH") return "PUSH";
+  throw new Error("invalid notification preference mode");
+}
+
 interface StoredNotificationPreferences {
   version: typeof VERSION;
   values: NotificationPreferenceValues;
@@ -97,8 +105,16 @@ export class JsonNotificationPreferencesStore implements NotificationPreferences
     const temporaryPath = join(directory, `.${basename(this.path)}.${process.pid}.${randomUUID()}.tmp`);
     const payload: StoredNotificationPreferences = {
       version: VERSION,
-      values: snapshot.values,
-      updatedAt: snapshot.updatedAt ?? new Date().toISOString(),
+      values: {
+        watchlist: persistedMode(snapshot.values.watchlist),
+        emergency: persistedMode(snapshot.values.emergency),
+        firstSeen: persistedMode(snapshot.values.firstSeen),
+        receptionRecord: persistedMode(snapshot.values.receptionRecord),
+        flightIntelligence: persistedMode(snapshot.values.flightIntelligence),
+        predictive: persistedMode(snapshot.values.predictive),
+      },
+      updatedAt: snapshot.updatedAt && Number.isFinite(Date.parse(snapshot.updatedAt))
+        ? new Date(snapshot.updatedAt).toISOString() : new Date().toISOString(),
     };
     let fd: number | null = null;
     try {

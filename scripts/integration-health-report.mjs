@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { appendFileSync } from "node:fs";
+import { safeTimestamp } from "./production-audit-sanitizers.mjs";
 
 /**
  * Reports only bounded aggregate counters already collected in the application.
@@ -12,9 +13,12 @@ export function summarizeIntegrationHealth(data) {
   const requests = Number.isSafeInteger(p.requests) && p.requests >= 0 ? p.requests : 0;
   const success = Number.isSafeInteger(p.success) && p.success >= 0 ? p.success : 0;
   const failed = Number.isSafeInteger(p.failed) && p.failed >= 0 ? p.failed : 0;
-  const lastFailure = Date.parse(p.lastFailureAt ?? "");
-  const lastSuccess = Date.parse(p.lastSuccessAt ?? "");
-  const blockedUntil = Date.parse(p.blockedUntilAt ?? "");
+  const lastFailureAt = safeTimestamp(p.lastFailureAt);
+  const lastSuccessAt = safeTimestamp(p.lastSuccessAt);
+  const blockedUntilAt = safeTimestamp(p.blockedUntilAt);
+  const lastFailure = Date.parse(lastFailureAt ?? "");
+  const lastSuccess = Date.parse(lastSuccessAt ?? "");
+  const blockedUntil = Date.parse(blockedUntilAt ?? "");
   let status;
   if (!p.enabled) status = "DISABLED";
   else if (Number.isFinite(blockedUntil) && blockedUntil > Date.now()) status = "BLOCKED";
@@ -43,15 +47,15 @@ export function summarizeIntegrationHealth(data) {
   return {
     status,
     routeset: { enabled: !!p.enabled, requests, success, failed, lastHttpStatus: http,
-      lastFailureAt: typeof p.lastFailureAt === "string" ? p.lastFailureAt : null,
-      lastSuccessAt: typeof p.lastSuccessAt === "string" ? p.lastSuccessAt : null,
+      lastFailureAt,
+      lastSuccessAt,
       blockedUntilAt: Number.isFinite(blockedUntil) && blockedUntil > Date.now()
-        ? new Date(blockedUntil).toISOString() : null,
+        ? blockedUntilAt : null,
       skippedBlocked: Number.isSafeInteger(p.skippedBlocked) && p.skippedBlocked >= 0 ? p.skippedBlocked : 0,
       reasons },
     routeCache: {
-      dbError24h: Number.isSafeInteger(data.route?.dbError) ? data.route.dbError : null,
-      dbBypassed24h: Number.isSafeInteger(data.route?.dbBypassed) ? data.route.dbBypassed : null,
+      dbError24h: Number.isSafeInteger(data.route?.dbError) && data.route.dbError >= 0 ? data.route.dbError : null,
+      dbBypassed24h: Number.isSafeInteger(data.route?.dbBypassed) && data.route.dbBypassed >= 0 ? data.route.dbBypassed : null,
       reasonCountersSinceStart: Object.fromEntries([
         "timeouts", "queryFailures", "connectionFailures",
         "bypassBackoff", "bypassConcurrency", "bypassUnconfigured",

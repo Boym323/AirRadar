@@ -1,3 +1,4 @@
+import { safeCommit, safeStoreId, safeVersion } from "./production-audit-sanitizers.mjs";
 // T5.6: strictly bounded, identifier-free read-only memory projections.
 // Post-major-GC snapshots are approximate: the observer callback may execute
 // after further JavaScript allocations. They do not establish a leak.
@@ -33,10 +34,10 @@ export function projectT56Sample(status, metrics, at = new Date().toISOString())
   const major = runtime.postMajorGc ?? null;
   return {
     at,
-    commit: typeof status.application?.commit === "string" ? status.application.commit : null,
-    version: typeof status.application?.version === "string" ? status.application.version : null,
+    commit: safeCommit(status.application?.commit),
+    version: safeVersion(status.application?.version),
     pid: finite(diagnostics.processId),
-    storeId: typeof diagnostics.diagnosticsStoreId === "string" ? diagnostics.diagnosticsStoreId : null,
+    storeId: safeStoreId(diagnostics.diagnosticsStoreId),
     rssBytes: finite(runtime.rssBytes),
     heapUsedBytes: finite(runtime.heapUsedBytes),
     heapTotalBytes: finite(runtime.heapTotalBytes),

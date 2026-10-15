@@ -52,10 +52,37 @@ export function parseNotificationPreferencePatch(input: unknown): Partial<Notifi
   const keys = Object.keys(record);
   if (!keys.length || keys.some((key) => !allowed.has(key))) return null;
   const patch: Partial<NotificationPreferenceValues> = {};
-  for (const key of keys) {
-    const mode = record[key];
+  // Literal assignments make the trusted destination keys unambiguous to
+  // reviewers and static taint analysis; no computed-property write exists.
+  if (Object.hasOwn(record, "watchlist")) {
+    const mode = record.watchlist;
     if (!isNotificationPreferenceMode(mode)) return null;
-    patch[key as NotificationPreferenceKey] = mode;
+    patch.watchlist = mode;
+  }
+  if (Object.hasOwn(record, "emergency")) {
+    const mode = record.emergency;
+    if (!isNotificationPreferenceMode(mode)) return null;
+    patch.emergency = mode;
+  }
+  if (Object.hasOwn(record, "firstSeen")) {
+    const mode = record.firstSeen;
+    if (!isNotificationPreferenceMode(mode)) return null;
+    patch.firstSeen = mode;
+  }
+  if (Object.hasOwn(record, "receptionRecord")) {
+    const mode = record.receptionRecord;
+    if (!isNotificationPreferenceMode(mode)) return null;
+    patch.receptionRecord = mode;
+  }
+  if (Object.hasOwn(record, "flightIntelligence")) {
+    const mode = record.flightIntelligence;
+    if (!isNotificationPreferenceMode(mode)) return null;
+    patch.flightIntelligence = mode;
+  }
+  if (Object.hasOwn(record, "predictive")) {
+    const mode = record.predictive;
+    if (!isNotificationPreferenceMode(mode)) return null;
+    patch.predictive = mode;
   }
   return patch;
 }

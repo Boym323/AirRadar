@@ -22,6 +22,19 @@ describe("publicly logged aggregate route health (no upstream probes)", () => {
     expect(JSON.stringify(result)).not.toContain("SENSITIVE-CALLSIGN");
     expect(JSON.stringify(result)).not.toContain("secret-token");
   });
+  it("normalizes remote provider dates and excludes arbitrary response text", () => {
+    const report = summarizeIntegrationHealth(fixture({
+      lastFailureAt: "SENSITIVE\n# injected header",
+      lastSuccessAt: "2026-10-11T12:02:00.000Z",
+      blockedUntilAt: "not-a-date",
+    }));
+    expect(report.routeset.lastFailureAt).toBeNull();
+    expect(report.routeset.lastSuccessAt).toBe("2026-10-11T12:02:00.000Z");
+    expect(report.routeset.blockedUntilAt).toBeNull();
+    expect(JSON.stringify(report)).not.toContain("SENSITIVE");
+    expect(JSON.stringify(report)).not.toContain("injected header");
+  });
+
   it("does not label disabled or unmeasured providers as healthy", () => {
     expect(summarizeIntegrationHealth(fixture({ enabled: false })).status).toBe("DISABLED");
     expect(summarizeIntegrationHealth(fixture({

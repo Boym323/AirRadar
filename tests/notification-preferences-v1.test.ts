@@ -41,6 +41,12 @@ describe("Notification Preferences V1", () => {
     expect(parseNotificationPreferenceValues({ ...DEFAULT_NOTIFICATION_PREFERENCES, firstSeen: "LOUD" })).toBeNull();
     expect(parseNotificationPreferencePatch({ firstSeen: "PUSH" })).toEqual({ firstSeen: "PUSH" });
     expect(parseNotificationPreferencePatch({ unknown: "PUSH" })).toBeNull();
+    const malicious = JSON.parse('{"__proto__":"PUSH","firstSeen":"OFF"}') as unknown;
+    expect(parseNotificationPreferencePatch(malicious)).toBeNull();
+    expect(parseNotificationPreferencePatch({ constructor: "PUSH" })).toBeNull();
+    expect(parseNotificationPreferencePatch({ firstSeen: "PUSH", predictive: "OFF" }))
+      .toEqual({ firstSeen: "PUSH", predictive: "OFF" });
+    expect(({} as { polluted?: unknown }).polluted).toBeUndefined();
   });
 
   it("updates preferences without mutating unrelated defaults", () => {
@@ -60,6 +66,11 @@ describe("Notification Preferences V1", () => {
       expect(store.get().values.firstSeen).toBe("CENTER_ONLY");
       store.update({ firstSeen: "PUSH" });
       expect(new JsonNotificationPreferencesStore(path).get().values.firstSeen).toBe("PUSH");
+      expect(new JsonNotificationPreferencesStore(path).get().updatedAt)
+        .toBe(store.get().updatedAt);
+      expect(() => store.update(JSON.parse('{"__proto__":"OFF"}') as unknown))
+        .toThrow("invalid notification preferences");
+      expect(new JsonNotificationPreferencesStore(path).get().values.emergency).toBe("PUSH");
 
       writeFileSync(path, "{not-json", "utf8");
       const recovered = new JsonNotificationPreferencesStore(path).get();

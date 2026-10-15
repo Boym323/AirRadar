@@ -10,8 +10,7 @@
  * API responses. Writes a mode-0600 JSON and Markdown analysis to /tmp.
  * No restarts, database writes, inspector or heap snapshots.
  */
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { writePrivateAuditReport } from "./private-audit-report.mjs";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
@@ -127,9 +126,7 @@ async function main() {
     rows,
     unavailable,
   };
-  await mkdir(dirname(output), { recursive: true });
-  await writeFile(output, JSON.stringify(report, null, 2) + "\n", { flag: "wx", mode: 0o600 });
-  await writeFile(summaryPath, markdown(summary), { flag: "wx", mode: 0o600 });
+  await writePrivateAuditReport(output, report, markdown(summary));
   process.stdout.write(JSON.stringify({
     report: output, markdown: summaryPath, verdict: summary.verdict,
     samples: summary.samples, unavailableSamples: summary.unavailableSamples,
