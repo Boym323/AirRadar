@@ -37,7 +37,8 @@ function median(values: number[]): number {
 }
 sample(jsCrc);
 sample(binding.modeSCrc);
-const ts = [], rust = [];
+type Sample = ReturnType<typeof sample>;
+const ts: Sample[] = [], rust: Sample[] = [];
 for (let i = 0; i < 6; i += 1) {
   if (i % 2 === 0) { ts.push(sample(jsCrc)); rust.push(sample(binding.modeSCrc)); }
   else { rust.push(sample(binding.modeSCrc)); ts.push(sample(jsCrc)); }

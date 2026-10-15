@@ -54,7 +54,8 @@ function median(values: number[]) {
   return (sorted[2]! + sorted[3]!) / 2;
 }
 sample(false); sample(true);
-const ts = [], rust = [];
+type Sample = ReturnType<typeof sample>;
+const ts: Sample[] = [], rust: Sample[] = [];
 for (let trial = 0; trial < 6; trial += 1) {
   if (trial % 2 === 0) {
     ts.push(sample(false)); rust.push(sample(true));
