@@ -1,4 +1,4 @@
-import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 
 const MAX_JSON_BYTES = 2 * 1024 * 1024;
@@ -28,10 +28,8 @@ export async function writePrivateAuditReport(output, report, markdown) {
     await writeFile(output, json, { flag: "wx", mode: 0o600 });
     wroteJson = true;
     await writeFile(mdPath, md, { flag: "wx", mode: 0o600 });
-    // Mode is set on create, not corrected after exposing sensitive data.
-    // The size checks bound resource usage even under unusual source metrics.
-    const [jsonStats, mdStats] = await Promise.all([stat(output), stat(mdPath)]);
-    if (!jsonStats.isFile() || !mdStats.isFile()) throw new Error("invalid_private_audit_target");
+    // Exclusive creation with 0600 permissions applies to both files.
+    // Neither destination is reopened by path after creation.
   } catch (error) {
     if (wroteJson) {
       try { await unlink(output); } catch { /* retain original error */ }
