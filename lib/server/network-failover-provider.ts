@@ -4,11 +4,33 @@ import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/ser
 import { AdsbHubProvider } from "@/lib/server/adsbhub-provider";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
 import { AdsbLolRawProvider } from "@/lib/server/adsblol-raw-provider";
-import { isAdsbLolHttpFallbackEnabled, isAdsbLolRawEnabled } from "@/lib/server/config";
+import { isAdsbHubEnabled, isAdsbLolEnabled, isAdsbLolHttpFallbackEnabled, isAdsbLolRawEnabled } from "@/lib/server/config";
 
 type Selected = "mixed" | "adsbhub" | "adsblol-raw" | "adsblol-http" | "unavailable";
 
-/** Runs all configured network lanes and publishes their deduplicated union. */
+/**
+ * Each upstream is independently opted in. ADSBHUB_ENABLED must never cause
+ * ADSB.lol traffic, and ADSBLOL_ENABLED must never open an ADSBHub socket.
+ * The networkEnabled argument remains the global master switch for callers.
+ */
+export function resolveNetworkLaneActivation(
+  networkEnabled: boolean,
+  options: {
+    adsbHubEnabled: boolean;
+    adsbLolEnabled: boolean;
+    adsbLolRawEnabled: boolean;
+    adsbLolHttpFallbackEnabled: boolean;
+  },
+) {
+  const adsbLol = networkEnabled && options.adsbLolEnabled;
+  return {
+    hub: networkEnabled && options.adsbHubEnabled,
+    raw: adsbLol && options.adsbLolRawEnabled,
+    http: adsbLol && options.adsbLolHttpFallbackEnabled,
+  };
+}
+
+/** Runs explicitly enabled network lanes and publishes their deduplicated union. */
 export class NetworkFailoverProvider implements NetworkAircraftProvider {
   readonly name = "network";
   private selected: Selected = "unavailable";
@@ -21,14 +43,19 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
   start(): void { this.hub.start(); this.raw?.start(); this.http?.start(); }
   async stop(): Promise<void> { await Promise.all([this.hub.stop(), this.raw?.stop(), this.http?.stop()]); }
   getNextPollDelayMs(): number {
-    return Math.min(
-      this.hub.getNextPollDelayMs(),
-      this.raw?.getNextPollDelayMs?.() ?? Number.POSITIVE_INFINITY,
-      this.http?.getNextPollDelayMs?.() ?? Number.POSITIVE_INFINITY,
-    );
+    // A disabled ADSBHub lane used to force a 1 s refresh even for an HTTP-only
+    // integration configured to poll every 10 s. Never schedule off disabled lanes.
+    const enabled = [this.hub, this.raw, this.http]
+      .filter((provider): provider is NonNullable<typeof provider> =>
+        provider !== null && provider.getDiagnostics().enabled);
+    if (!enabled.length) return Number.POSITIVE_INFINITY;
+    return Math.min(...enabled.map((provider) =>
+      provider.getNextPollDelayMs?.() ?? provider.getDiagnostics().pollIntervalMs));
   }
   async getSnapshot(): Promise<NetworkAircraftSnapshot> {
-    const providers = [this.hub, this.raw, this.http].filter((value): value is NonNullable<typeof value> => value !== null);
+    const providers = [this.hub, this.raw, this.http]
+      .filter((value): value is NonNullable<typeof value> =>
+        value !== null && value.getDiagnostics().enabled);
     const results = await Promise.allSettled(providers.map((provider) => provider.getSnapshot()));
     const snapshots = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
     const aircraft = new Map<string, Aircraft>();
@@ -70,7 +97,10 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
     const values = [hub, raw, http].filter((value): value is NetworkProviderDiagnostics => value !== undefined);
     const online = values.some((value) => value.status === "online");
     const usable = values.some((value) => value.status === "online" || value.status === "degraded");
-    const primary = values.find((value) => value.status === "online") ?? values[0] ?? hub;
+    const primary = values.find((value) => value.status === "online")
+      ?? values.find((value) => value.status === "degraded")
+      ?? values.find((value) => value.enabled)
+      ?? hub;
     return {
       ...primary,
       enabled: values.some((value) => value.enabled),
@@ -206,8 +236,14 @@ function latestNetworkSeen(left: string, right: string): string {
 }
 
 export function createNetworkFailoverProvider(receiver: ReceiverPosition, enabled: boolean): NetworkFailoverProvider {
-  const hub = new AdsbHubProvider(receiver, { enabled });
-  const raw = enabled && isAdsbLolRawEnabled() ? new AdsbLolRawProvider(receiver) : null;
-  const http = enabled && isAdsbLolHttpFallbackEnabled() ? new AdsbLolProvider(receiver, { enabled: true }) : null;
+  const lanes = resolveNetworkLaneActivation(enabled, {
+    adsbHubEnabled: isAdsbHubEnabled(),
+    adsbLolEnabled: isAdsbLolEnabled(),
+    adsbLolRawEnabled: isAdsbLolRawEnabled(),
+    adsbLolHttpFallbackEnabled: isAdsbLolHttpFallbackEnabled(),
+  });
+  const hub = new AdsbHubProvider(receiver, { enabled: lanes.hub });
+  const raw = lanes.raw ? new AdsbLolRawProvider(receiver) : null;
+  const http = lanes.http ? new AdsbLolProvider(receiver, { enabled: true }) : null;
   return new NetworkFailoverProvider(hub, raw, http);
 }

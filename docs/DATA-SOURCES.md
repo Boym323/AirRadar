@@ -14,6 +14,14 @@ constraints.
 | ADSBHub aggregated SBS/30003 | `AdsbHubProvider` consumes `data.adsbhub.org:5002` as the primary optional network source. The independent feeder path is `192.168.1.50:30002` → `data.adsbhub.org:5001`. | Generic aggregated SBS data; do not label rows MLAT or infer upstream origin from the SBS message. Network-only, bounded by radius/TTL/track cap, `origin: "adsbhub"`, and excluded from local history, statistics, RSSI, receiver health, and enrichment. AirRadar does not manage feeder-side services. |
 | ADSB.lol public API | `AdsbLolProvider` reads the public geographic endpoint as the raw-stream fallback. | The public API radius is capped at 250 NM and is rate-limited. Retain ADSB.lol attribution and comply with current ODbL terms. |
 
+Each live network upstream now requires its own opt-in. `ADSBHUB_ENABLED`
+controls only the ADSBHub consumer; `ADSBLOL_ENABLED` controls only ADSB.lol
+raw/HTTP consumers, with their own secondary flags. The shared network provider
+never starts or polls a disabled lane. When HTTP is the sole enabled lane,
+network publication follows its request/backoff interval, not the disabled
+ADSBHub 1-second publish interval. Multiple explicitly enabled lanes still
+publish their provenance-preserving union.
+
 Source classification is based on observation provenance: LOCAL means the
 local receiver currently observes the ICAO, NETWORK means the selected network
 provider currently observes it, and OVERLAP means both. Provider identity

@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { isFreshPosition, positionObservedAt } from "@/lib/aircraft/source-merge";
-import { mergeNetworkObservations } from "@/lib/server/network-failover-provider";
+import { createNetworkFailoverProvider, mergeNetworkObservations, resolveNetworkLaneActivation } from "@/lib/server/network-failover-provider";
 import type { Aircraft, AircraftDataOrigin } from "@/lib/aircraft/types";
 
 const receiver = { lat: 50, lon: 14, name: "Test receiver" };
@@ -72,5 +72,69 @@ describe("network observation merge", () => {
     expect(merged.distanceKm).toBeNull();
     expect(merged.bearing).toBeNull();
     expect(merged.provenance?.positionOrigin).toBeNull();
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+describe("independent network integration activation", () => {
+  it("does not activate ADSBHub by enabling ADSB.lol, or vice versa", () => {
+    const make = (hub: boolean, lol: boolean, raw = false, http = true) =>
+      resolveNetworkLaneActivation(true, {
+        adsbHubEnabled: hub, adsbLolEnabled: lol,
+        adsbLolRawEnabled: raw, adsbLolHttpFallbackEnabled: http,
+      });
+    expect(make(false, false)).toEqual({ hub: false, raw: false, http: false });
+    expect(make(true, false)).toEqual({ hub: true, raw: false, http: false });
+    expect(make(false, true)).toEqual({ hub: false, raw: false, http: true });
+    expect(make(false, true, true, false)).toEqual({ hub: false, raw: true, http: false });
+    expect(make(true, true, true)).toEqual({ hub: true, raw: true, http: true });
+    expect(resolveNetworkLaneActivation(false, {
+      adsbHubEnabled: true, adsbLolEnabled: true,
+      adsbLolRawEnabled: true, adsbLolHttpFallbackEnabled: true,
+    })).toEqual({ hub: false, raw: false, http: false });
+  });
+
+  it("keeps disabled sources disabled in diagnostics without opening sockets", () => {
+    vi.stubEnv("ADSBHUB_ENABLED", "false");
+    vi.stubEnv("ADSBLOL_ENABLED", "false");
+    vi.stubEnv("ADSBLOL_HTTP_FALLBACK_ENABLED", "true");
+    const network = createNetworkFailoverProvider(receiver, true);
+    expect(network.getDiagnostics().enabled).toBe(false);
+    expect(network.getDiagnostics().adsbhubLane?.enabled).toBe(false);
+    expect(network.getNextPollDelayMs()).toBe(Number.POSITIVE_INFINITY);
+
+    vi.stubEnv("ADSBHUB_ENABLED", "true");
+    const hubOnly = createNetworkFailoverProvider(receiver, true);
+    expect(hubOnly.getDiagnostics().adsbhubLane?.enabled).toBe(true);
+    expect(hubOnly.getDiagnostics().enabled).toBe(true);
+  });
+
+  it("does not let a disabled 1s hub lane speed up HTTP-only network polling", async () => {
+    vi.stubEnv("ADSBHUB_ENABLED", "false");
+    vi.stubEnv("ADSBLOL_ENABLED", "true");
+    vi.stubEnv("ADSBLOL_RAW_ENABLED", "false");
+    vi.stubEnv("ADSBLOL_HTTP_FALLBACK_ENABLED", "true");
+    vi.stubEnv("ADSBLOL_POLL_INTERVAL_MS", "10000");
+    const calls = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      now: Date.now(), ac: [], total: 0, msg: "No error",
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", calls);
+    const network = createNetworkFailoverProvider(receiver, true);
+    try {
+      expect(network.getDiagnostics().adsbhubLane?.enabled).toBe(false);
+      expect(network.getDiagnostics().enabled).toBe(true);
+      expect((await network.getSnapshot()).aircraft).toEqual([]);
+      expect(calls).toHaveBeenCalledTimes(1);
+      // Until this fix, the unused ADSBHub lane always forced a 1s loop.
+      expect(network.getNextPollDelayMs()).toBeGreaterThan(1000);
+      await network.getSnapshot();
+      expect(calls).toHaveBeenCalledTimes(1);
+    } finally {
+      await network.stop();
+    }
   });
 });
