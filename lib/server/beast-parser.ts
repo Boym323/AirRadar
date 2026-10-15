@@ -35,7 +35,12 @@ export class BeastParser {
       ? null : getNativeBeastEngine();
     this.native = binding ? new binding.NativeBeastParser(maxBufferedBytes) : null;
     // Preserve the independent existing AIRRADAR_NATIVE_BEAST_CRC=0 kill switch.
-    this.precomputeCrc = this.native !== null && options.precomputeCrc !== false
+    // Inline CRC's end-to-end median was not faster than standalone N-API
+    // CRC in the matched ingest benchmark. Keep the experiment opt-in.
+    const inlineCrcRequested = options.precomputeCrc === true
+      || (options.precomputeCrc !== false
+        && process.env.AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED === "1");
+    this.precomputeCrc = this.native !== null && inlineCrcRequested
       && process.env.AIRRADAR_NATIVE_BEAST_CRC !== "0"
       && process.env.AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED !== "0";
   }

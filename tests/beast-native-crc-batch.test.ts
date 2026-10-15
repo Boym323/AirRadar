@@ -25,7 +25,7 @@ describe.skipIf(!enabled)("Rust batched CRC and stateful BEAST decode", () => {
       Buffer.from("8d4840d6202cc371c32ce0576099", "hex"),
       Buffer.from("8d485020994409940838175b284f", "hex"),
     ];
-    const parser = new BeastParser();
+    const parser = new BeastParser(64 * 1024, { precomputeCrc: true });
     const legacy = new BeastParser(64 * 1024, { native: false });
     const withoutSidecar = new BeastParser(64 * 1024, { precomputeCrc: false });
     const data = Buffer.concat(payloads.map(wire));

@@ -66,8 +66,10 @@ objects **cannot** inject a checksum. Direct callers still use the existing
 standalone native CRC/TypeScript fallback, and the aircraft/CPR/Comm-B state
 machine is unchanged.
 
-Set `AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED=0` to isolate this change while
-keeping the standalone N-API CRC enabled. The original
+Inline CRC is **disabled by default**, even with native framing enabled:
+the synthetic stateful-decoder benchmark did not show an improvement over
+standalone native CRC. Set `AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED=1` to opt in
+to this experiment. Set it to `0` to force it off. The original
 `AIRRADAR_NATIVE_BEAST_CRC=0` switch disables both forms. The addon ABI check
 requires `pushPackedWithCrc`; old/incompatible native modules fall back to
 TypeScript rather than being partially loaded.
@@ -89,3 +91,9 @@ u128 long-division implementation.
 `benchmark-rust-beast.ts` deliberately disables inline CRC to compare
 parser-only costs. `benchmark-beast-ingest.ts` includes three separate
 parser+stateful-decoder modes for a fairer end-to-end-ish comparison.
+
+On a GitHub Actions Linux synthetic 10,000-frame replay, parser+decoder
+medians were TS framing/native CRC 30.63 ms, Rust framing/native CRC
+28.03 ms, Rust framing+inline CRC 28.73 ms. Inline CRC remained about
+2.5% slower than the separate native CRC and is deliberately not a default.
+No live ingest, memory trend, or event-loop P99 change is claimed.
