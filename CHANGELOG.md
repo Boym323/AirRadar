@@ -17,6 +17,35 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.469] - 2026-10-15
+
+Changes since v1.0.468.
+
+**Features touched:** Aircraft & Flight Detail, Track Fusion Shadow.
+
+### Added
+
+- Persist and replay parsed ACARS/VDL2 route evidence (#927) (b3ee6ac8)
+
+### Performance
+
+- Bound large metadata batches and fix event-loop audit evidence (#926) (c3866074)
+
+### Maintenance
+
+- Sync generated repository metadata (#930) (f012b3fe)
+- GitHub benchmark suite pro Operational Twin a Track Fusion (#929) (ac36909b)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(enrichment): bound large metadata batches and fix event-loop audit evidence (#926) (c3866074)
+- chore(metadata): sync generated repository metadata (#930) (f012b3fe)
+- feat: persist and replay parsed ACARS/VDL2 route evidence (#927) (b3ee6ac8)
+- test(perf): GitHub benchmark suite pro Operational Twin a Track Fusion (#929) (ac36909b)
+
+</details>
+
 ## [1.0.468] - 2026-10-15
 
 Changes since v1.0.467.
