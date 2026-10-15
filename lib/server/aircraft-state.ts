@@ -1458,11 +1458,17 @@ export class AircraftStateService {
     }
 
     const now = Date.now();
-    const activeHexes = snapshot.aircraft.map((item) => item.icaoHex);
+    const sampleIntervalMs = getHistorySampleIntervalMs();
+    const activeHexes: string[] = [];
+    const due: Aircraft[] = [];
     for (const item of snapshot.aircraft) {
+      activeHexes.push(item.icaoHex);
       if (item.lat === null || item.lon === null) continue;
       const previous = this.lastHistorySample.get(item.icaoHex);
-      const currentPersist = previous === undefined || sampledAt - previous >= getHistorySampleIntervalMs();
+      const currentPersist = previous === undefined || sampledAt - previous >= sampleIntervalMs;
+      // Merge metadata/route only for position samples actually due for
+      // persistence. The shadow policy still observes every valid position.
+      if (currentPersist) due.push(historyAircraftForSnapshot(item, this.aircraft.get(item.icaoHex)));
       flightPositionPersistenceShadow.observe({
         aircraftHex: item.icaoHex,
         currentPersist,
@@ -1477,13 +1483,6 @@ export class AircraftStateService {
       });
     }
     flightPositionPersistenceShadow.cleanup(activeHexes, now);
-    const due = snapshot.aircraft
-      .map((item) => historyAircraftForSnapshot(item, this.aircraft.get(item.icaoHex)))
-      .filter((item) => item.lat !== null && item.lon !== null)
-      .filter((item) => {
-        const previous = this.lastHistorySample.get(item.icaoHex);
-        return previous === undefined || sampledAt - previous >= getHistorySampleIntervalMs();
-      });
     if (due.length) {
       // Weather is a separate sparse lane. It is intentionally fire-and-forget
       // so a database hiccup cannot add latency to the live Beast/SSE loop.
