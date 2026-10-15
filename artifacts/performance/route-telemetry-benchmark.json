@@ -1,0 +1,24 @@
+{
+  "benchmark": "route-telemetry-record",
+  "baselineSha": "8f0655dec240ab5382ccd45ac48adb642c8666eb",
+  "optimizedSha": "47a577ad040e8eeecebc834ecb1a35d00b11856a",
+  "workload": {
+    "eventsPerRound": 250000,
+    "rounds": 7,
+    "clock": "fixed 2026-10-15T12:00:00Z",
+    "scope": "RouteEnrichmentTelemetry.record('ramHit') only; no file persistence"
+  },
+  "baseline": {
+    "medianMs": 187.32604,
+    "nsPerEvent": 749.30416
+  },
+  "optimized": {
+    "medianMs": 149.9485219999999,
+    "nsPerEvent": 599.7940879999996,
+    "replicateMedianMs": [152.51844400000004, 149.9485219999999, 149.312631]
+  },
+  "result": {
+    "medianImprovementPercent": 19.69,
+    "interpretation": "Local synthetic hot-path benchmark; not a production or PostgreSQL speedup claim."
+  }
+}

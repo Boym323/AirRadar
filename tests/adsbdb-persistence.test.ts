@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AircraftMetadata } from "@/lib/aircraft/types";
 import { AdsbDbPersistence } from "@/lib/server/adsbdb-persistence";
 import { EnrichmentService, metadataCacheKey } from "@/lib/server/enrichment-cache";
+import { logger } from "@/lib/server/logger";
 
 const roots: string[] = [];
 
@@ -213,5 +214,34 @@ describe("persistent ADSBDB cache", () => {
     await expect(missing.enrich(target, new Date(now))).resolves.toBeNull();
     expect(missing.getDiagnostics().adsbdb.persistence.loadedMetadataEntries).toBe(1);
     expect(missing.getDiagnostics().adsbdb.hits.staleFallback).toBe(0);
+  });
+
+  it("bounds stale-fallback log deduplication independently of persistence size", async () => {
+    let now = Date.parse("2026-09-12T12:00:00.000Z");
+    const file = await cacheFile();
+    const persistence = new AdsbDbPersistence({
+      cacheFile: file, metadataTtlMs: 24 * 60 * 60_000, routeTtlMs: 6 * 60 * 60_000,
+      metadataMaxStaleMs: 7 * 24 * 60 * 60_000, routeMaxStaleMs: 24 * 60 * 60_000,
+      metadataMaxEntries: 5_000, routeMaxEntries: 2, checkpointIntervalMs: 0, now: () => now,
+    });
+    const hexes = Array.from({ length: 4_097 }, (_, index) => `A${index.toString(16).padStart(5, "0")}`);
+    for (const hex of hexes) persistence.set("metadata", metadataCacheKey(hex), metadata(), now);
+    now += 2 * 24 * 60 * 60_000;
+
+    const warning = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    try {
+      const service = new EnrichmentService(
+        { aircraftMetadata: { name: "adsbdb", getMetadata: vi.fn().mockRejectedValue(new Error("timeout")) } },
+        undefined,
+        persistence,
+      );
+      for (const hex of hexes) {
+        await service.enrich({ icaoHex: hex } as Parameters<EnrichmentService["enrich"]>[0], new Date(now));
+        (service as unknown as { adsbDbRetryAt: number }).adsbDbRetryAt = 0;
+      }
+      expect((service as unknown as { staleFallbackLogged: Map<string, true> }).staleFallbackLogged.size).toBe(4_096);
+    } finally {
+      warning.mockRestore();
+    }
   });
 });

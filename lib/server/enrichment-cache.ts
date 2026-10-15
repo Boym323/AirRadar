@@ -20,6 +20,7 @@ export const ENRICHMENT_TTLS = {
 
 const ADSBDB_RETRY_INITIAL_MS = 5_000;
 const ADSBDB_RETRY_MAX_MS = 5 * 60_000;
+const MAX_STALE_FALLBACK_LOG_KEYS = 4_096;
 
 /**
  * ADSBDB route lookups are keyed by callsign, while a callsign can be reused
@@ -202,7 +203,9 @@ export class EnrichmentService {
   private flightPlanCacheHits = 0;
   private readonly adsbDbPersistence: AdsbDbPersistence | null;
   private readonly adsbDbHits = { memory: 0, persistent: 0, live: 0, staleFallback: 0 };
-  private readonly staleFallbackLogged = new Set<string>();
+  // Logging deduplication is not a cache contract. Keep it bounded even when
+  // the persistence cache evicts old keys over a long-lived process.
+  private readonly staleFallbackLogged = new Map<string, true>();
   private adsbDbRetryAt = 0;
   private adsbDbFailureStreak = 0;
 
@@ -515,7 +518,11 @@ export class EnrichmentService {
         this.adsbDbHits.staleFallback += 1;
         const logKey = `${kind}:${key}`;
         if (!this.staleFallbackLogged.has(logKey)) {
-          this.staleFallbackLogged.add(logKey);
+          if (this.staleFallbackLogged.size >= MAX_STALE_FALLBACK_LOG_KEYS) {
+            const oldest = this.staleFallbackLogged.keys().next().value;
+            if (oldest !== undefined) this.staleFallbackLogged.delete(oldest);
+          }
+          this.staleFallbackLogged.set(logKey, true);
           logger.warn({ subsystem: "adsbdb", kind, ageMs: Math.max(0, Date.now() - stale.fetchedAtMs) }, "Provider unavailable; using stale cache");
         }
         return stale.value as T;
