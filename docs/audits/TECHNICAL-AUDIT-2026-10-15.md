@@ -204,7 +204,7 @@ useful regression gates, not production causality evidence.
 The audit branch is intended for one reviewable PR containing the audit
 automation and tests. It must pass Vitest, TypeScript, ESLint, production
 build/release-preview, browser gates, performance regression and CodeQL before
-merge. No PR was opened or merged during this audit, and no release was run.
+merge. The implementation is prepared in draft [PR #912](https://github.com/Boym323/AirRadar/pull/912); it was not merged and no release was run.
 
 After explicit approval, the safe rollout is:
 

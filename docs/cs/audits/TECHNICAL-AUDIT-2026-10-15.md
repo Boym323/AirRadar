@@ -191,8 +191,9 @@ důkaz produkční kauzality.
 
 Auditní branch má obsahovat jeden reviewovatelný PR s automatizací a testy.
 Před merge musí projít Vitest, TypeScript, ESLint, production build/
-release-preview, browser gates, performance regression a CodeQL. Během auditu
-nebyl PR otevřen ani mergnut a release se nespouštěl.
+release-preview, browser gates, performance regression a CodeQL. Implementace je
+připravena v draftu [PR #912](https://github.com/Boym323/AirRadar/pull/912);
+PR nebyl mergnut a release se nespouštěl.
 
 Po výslovném schválení je bezpečný postup:
 
