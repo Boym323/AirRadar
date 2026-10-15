@@ -18,6 +18,53 @@ export function isProductionGateMarkerSmokeViewport(viewport) {
   return viewport?.width === 821;
 }
 
+/**
+ * Open the real traffic drawer and expand it on mobile before interacting
+ * with aircraft rows. A just-opened mobile drawer is initially compact, and
+ * checking mobile-collapse.isVisible() immediately after a click can race the
+ * React render and silently skip expansion.
+ */
+export async function ensureRadarTrafficRowVisible(page, viewportWidth, targetName = "radar") {
+  const sidebar = page.locator('[data-testid="radar-sidebar"]');
+  try {
+    if (await sidebar.getAttribute("aria-hidden") === "true") {
+      const trigger = page.locator('[data-testid="traffic-trigger"]');
+      await trigger.waitFor({ state: "visible", timeout: 15_000 });
+      await trigger.click();
+    }
+    await page.locator('[data-testid="radar-sidebar"].drawer-traffic')
+      .waitFor({ state: "visible", timeout: 15_000 });
+    if (viewportWidth <= 820) {
+      const expand = sidebar.locator(".mobile-collapse");
+      // Wait for the *open* drawer before reading the expand button. The
+      // button is not visible while its parent drawer remains hidden.
+      await expand.waitFor({ state: "visible", timeout: 15_000 });
+      if (await expand.getAttribute("aria-expanded") !== "true") await expand.click();
+      await page.locator('[data-testid="radar-sidebar"].drawer-traffic:not(.compact)')
+        .waitFor({ state: "visible", timeout: 15_000 });
+    }
+    const row = sidebar.locator(".aircraft-row").first();
+    await row.waitFor({ state: "visible", timeout: 15_000 });
+    return row;
+  } catch (error) {
+    const diagnostic = await sidebar.evaluate((element) => {
+      const first = element.querySelector(".aircraft-row");
+      return {
+        className: element.className,
+        ariaHidden: element.getAttribute("aria-hidden"),
+        expandAriaExpanded: element.querySelector(".mobile-collapse")?.getAttribute("aria-expanded"),
+        aircraftRows: element.querySelectorAll(".aircraft-row").length,
+        firstRowVisibility: first ? getComputedStyle(first).visibility : null,
+        firstRowDisplay: first ? getComputedStyle(first).display : null,
+      };
+    }).catch(() => ({ drawer: "unavailable" }));
+    throw new Error(
+      `Visual smoke ${targetName} traffic drawer not ready: ${JSON.stringify(diagnostic)}; ${String(error)}`,
+      { cause: error },
+    );
+  }
+}
+
 function validReleaseVersion(value) {
   return typeof value === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/.test(value);
 }
@@ -1604,13 +1651,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             }
           }
           if (target.selectAircraft) {
-            const trafficTrigger = visualPage.locator('[data-testid="traffic-trigger"]');
-            if (await trafficTrigger.isVisible()) await trafficTrigger.click();
+            let firstAircraft;
+            try {
+              firstAircraft = await ensureRadarTrafficRowVisible(visualPage, target.viewport.width, target.name);
+            } catch (error) {
+              await visualPage.screenshot({ path: resolve(visualSmokeDirectory, `${target.name}-traffic-failure.png`) }).catch(() => {});
+              throw error;
+            }
             const sidebar = visualPage.locator('[data-testid="radar-sidebar"]');
-            const collapse = sidebar.locator(".mobile-collapse");
-            if (target.viewport.width <= 820 && await collapse.isVisible()) await collapse.click();
-            await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible", timeout: 15_000 });
-            await sidebar.locator(".aircraft-row").first().click();
+            await firstAircraft.click();
             await visualPage.locator('[data-testid="aircraft-quick-detail"]').waitFor({ state: "visible", timeout: 15_000 });
             // CSS overflow sweeps miss overlapping numbers inside the drawer.
             // Measure the actual rendered glyph bounds on desktop/tablet/mobile.
