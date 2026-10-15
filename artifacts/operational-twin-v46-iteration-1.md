@@ -91,3 +91,20 @@ interruption was performed. Production-equivalent replay, large-geometry
 regression, tail latency and acceptance remain outstanding. PR stays draft.
 PR #878 separately addresses asynchronous dataset preparation and cache
 freshness; merging both later requires resolving changes in ATC engine code.
+
+
+## V4.6.3 current-sector cache identity
+
+The sector-only predicate depends on the prepared dataset identity,
+latitude, longitude and the truth altitude used for both geometric and
+barometric comparisons. Unlike full ATC future-projection context, it does
+not depend on observation timestamp, track, groundspeed, vertical rate or
+on-ground state. ATC truth cache keys now include the membership-relevant
+coordinate/altitude fingerprint, not the observation time. This both
+avoids recomputation after timestamp/heading churn and prevents distinct
+aircraft at different positions but the same timestamp from evicting each
+other's entries. Existing LRU/TTL bounds, invalidation by immutable prepared
+dataset identity, and truth-snapshot change detection remain intact.
+Regressions explicitly cover time/heading churn and different locations
+with an identical timestamp. Effect on production hit rate requires
+controlled matched workload measurements; no percentage gain is claimed.

@@ -585,6 +585,46 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1 });
   });
 
+  it("reuses sector truth when only time, heading and groundspeed change", () => {
+    const dataset = testAtcDataset();
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([event("ATC_SECTOR_ENTRY", 5, {
+      id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5,
+    })]), { atcDataset: dataset, sigmets: null, destination: null });
+
+    const first = aircraft(baseNow, 49, 18.5);
+    const second = aircraft(baseNow + 1_000, 49, 18.5);
+    second.track = 270;
+    second.groundSpeed = 250;
+
+    validator.observeLocal(new Map([[first.icaoHex, first]]), baseNow + 60_000);
+    validator.observeLocal(new Map([[second.icaoHex, second]]), baseNow + 120_000);
+    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1, size: 1 });
+    expect(validator.report(new Date(baseNow + 120_000)).pending).toBe(1);
+  });
+
+  it("does not share cached sector truth between different coordinates at the same timestamp", () => {
+    const dataset = testAtcDataset();
+    const validator = new OperationalTwinEventOutcomeValidator();
+    const predictedAt = baseNow + 5 * 60_000;
+    for (const icaoHex of ["ABC123", "DIFF02", "SAME03"]) {
+      const current = situation([event("ATC_SECTOR_ENTRY", 5, {
+        id: `sector:TARGET:${predictedAt}`, lat: 49, lon: 17.5,
+      })]);
+      current.aircraft.icaoHex = icaoHex;
+      validator.capture(current, { atcDataset: dataset, sigmets: null, destination: null });
+    }
+    const originals = new Map([
+      ["ABC123", aircraft(baseNow, 49, 18.5)],
+      ["DIFF02", { ...aircraft(baseNow, 49, 18.6), icaoHex: "DIFF02" }],
+      ["SAME03", { ...aircraft(baseNow, 49, 18.5), icaoHex: "SAME03" }],
+    ]);
+    validator.observeLocal(originals, baseNow + 60_000);
+    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 2, size: 2 });
+    expect(validator.report(new Date(baseNow + 60_000)).pending).toBe(3);
+  });
+
   it("invalidates a same-timestamp cache entry when the position is corrected", () => {
     const dataset = testAtcDataset();
     const predictedAt = baseNow + 5 * 60_000;

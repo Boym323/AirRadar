@@ -942,6 +942,16 @@ function atcInputFingerprint(point: TruthPoint): string {
   ].map((value) => value === null ? "null" : String(value)).join("|");
 }
 
+/**
+ * Cache only the inputs affecting the CURRENT sector membership predicate.
+ * Truth timestamp, track, speed, rate and onGround affect future projections,
+ * which the sector-only fast path deliberately does not compute.
+ */
+function currentSectorMembershipFingerprint(point: TruthPoint): string {
+  return [point.lat, point.lon, point.altitudeFt]
+    .map((value) => value === null ? "null" : String(value)).join("|");
+}
+
 function computeSectorIdsAtPoint(
   point: TruthPoint,
   dataset: PreparedAtcContextDataset,
@@ -1044,11 +1054,12 @@ class AtcTruthCache {
     }
 
     const datasetId = this.datasetId(dataset);
-    // Sector membership is a pure function of the dataset and truth point.
-    // Do not include aircraft identity: dense snapshots commonly contain the
-    // same sampled point for multiple aircraft and should share the result.
-    const key = `${datasetId}:${point.at}`;
-    const fingerprint = atcInputFingerprint(point);
+    // Cache by membership-relevant coordinates and altitude, not timestamps.
+    // Separate aircraft with the same timestamp but different positions no
+    // longer evict one another, while unchanged positions across successive
+    // receiver updates reuse the exact same answer.
+    const fingerprint = currentSectorMembershipFingerprint(point);
+    const key = `${datasetId}:${fingerprint}`;
     const cached = this.entries.get(key);
     if (cached && cached.dataset === dataset && cached.fingerprint === fingerprint) {
       forensicsGlobal.cache(true);
