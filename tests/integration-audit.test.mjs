@@ -133,7 +133,7 @@ describe("integration audit", () => {
   it("enforces output limits and refuses unsafe output paths", async () => {
     const dir = privateTempDir();
     await expect(writeAuditOutputs({
-      report: { ok: true }, markdown: "x".repeat(130_000),
+      report: { ok: true }, markdown: "x".repeat(128 * 1024 + 1),
       jsonPath: join(dir, "too-large.json"), markdownPath: join(dir, "too-large.md"),
     })).rejects.toThrow("audit_output_too_large");
     await expect(writeAuditOutputs({
