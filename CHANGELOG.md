@@ -17,6 +17,39 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.462] - 2026-10-15
+
+Changes since v1.0.461.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Add bounded integration health audit (#912) (3c730c76)
+
+### Performance
+
+- Integrate history SQL and Twin truth-window optimization (#906) (90b17978)
+
+### Documentation
+
+- Update changelog for v1.0.462 (e8282c48)
+
+### Maintenance
+
+- Sync generated repository metadata (#910) (3e13ceb5)
+- Sync generated repository metadata (#911) (475c40ed)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(runtime): integrate history SQL and Twin truth-window optimization (#906) (90b17978)
+- chore(metadata): sync generated repository metadata (#910) (3e13ceb5)
+- docs: update changelog for v1.0.462 (e8282c48)
+- chore(metadata): sync generated repository metadata (#911) (475c40ed)
+- feat(audit): add bounded integration health audit (#912) (3c730c76)
+
+</details>
 ## [1.0.461] - 2026-10-15
 
 Changes since v1.0.460.
