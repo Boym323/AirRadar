@@ -10,6 +10,9 @@ on:
       - 'tests/beast-native-parity.test.ts'
       - 'tests/beast-native-crc-batch.test.ts'
       - 'scripts/benchmark-beast-ingest.ts'
+      - 'scripts/benchmark-native-waypoints.ts'
+      - 'tests/native-waypoint-experiment.test.ts'
+      - 'lib/operational-twin/native-waypoint-experiment.ts'
       - '.github/workflows/rust-beast-parity.yml'
   workflow_dispatch:
 
@@ -54,3 +57,10 @@ jobs:
           AIRRADAR_NATIVE_BEAST: '1'
           AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
         run: JITI_TSCONFIG_PATHS=true ./node_modules/.bin/jiti scripts/benchmark-beast-ingest.ts
+      - name: Experimental Operational Twin waypoint parity and benchmark
+        env:
+          AIRRADAR_NATIVE_BEAST: '1'
+          AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
+        run: |
+          npx vitest run tests/native-waypoint-experiment.test.ts
+          npm run benchmark:rust-waypoints

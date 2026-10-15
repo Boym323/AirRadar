@@ -13,6 +13,8 @@ export interface NativeBeastParser {
 }
 
 interface NativeBeastBindings {
+  /** Experimental batched waypoint predicate, not used in production. */
+  batchWaypointMatches(points: Float64Array, waypointLat: number, waypointLon: number): Buffer;
   NativeBeastParser: new (maxBufferedBytes?: number) => NativeBeastParser;
   modeSCrc(payload: Buffer): number;
 }
@@ -34,7 +36,8 @@ export function getNativeBeastEngine(): NativeBeastBindings | null {
     if (typeof loaded.NativeBeastParser !== "function"
       || typeof loaded.NativeBeastParser.prototype?.pushPacked !== "function"
       || typeof loaded.NativeBeastParser.prototype?.pushPackedWithCrc !== "function"
-      || typeof loaded.modeSCrc !== "function") {
+      || typeof loaded.modeSCrc !== "function"
+      || typeof loaded.batchWaypointMatches !== "function") {
       throw new Error("Incompatible native addon ABI");
     }
     cached = loaded as NativeBeastBindings;
