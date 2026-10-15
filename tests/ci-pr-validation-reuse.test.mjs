@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assessPreviewReuse } from "../scripts/ci-pr-validation-reuse.mjs";
+import { assessPreviewReuse, verify } from "../scripts/ci-pr-validation-reuse.mjs";
 
 const mainSha = "a".repeat(40);
 const headSha = "b".repeat(40);
@@ -98,4 +98,45 @@ test("empty PR associations require authenticated branch, SHA and repository", (
   assert.equal(evaluate({ runs: [unlinked, { ...codeql, pull_requests: [
     { number: 901, head: { sha: headSha }, base: { ref: "main" } },
   ] }] }).reusable, false);
+});
+
+test("GitHub API discovery downloads jobs for PR runs with empty pull_requests", async () => {
+  const associated = [ciRun, codeql].map((run) => ({ ...run, pull_requests: [] }));
+  const endpoints = [];
+  const mocked = new Map([
+    [`/commits/${mainSha}/pulls?per_page=20`, [pr]],
+    [`/pulls/${pr.number}`, pr],
+    [`/git/commits/${mainSha}`, evidence.mainCommit],
+    [`/git/commits/${headSha}`, evidence.prCommit],
+    [`/pulls/${pr.number}/files?per_page=100`, evidence.changedFiles],
+    [`/actions/runs?event=pull_request&head_sha=${headSha}&per_page=100`,
+      { workflow_runs: associated }],
+    [`/actions/runs/${ciRun.id}/jobs?per_page=100`, { total_count: jobs.length, jobs }],
+  ]);
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const prefix = `/repos/${repo}`;
+    assert.ok(parsed.pathname.startsWith(prefix));
+    const key = parsed.pathname.slice(prefix.length) + parsed.search;
+    endpoints.push(key);
+    assert.ok(mocked.has(key), `unexpected GitHub API call: ${key}`);
+    return { ok: true, json: async () => mocked.get(key) };
+  };
+  const opts = { repository: repo, sha: mainSha, token: "mock-token", fetchImpl };
+  assert.deepEqual(await verify(opts), {
+    reusable: true, reason: "exact tree and complete green release-preview", pr: 900, run: 55,
+  });
+  assert.ok(endpoints.includes(`/actions/runs/${ciRun.id}/jobs?per_page=100`));
+
+  // A truncated jobs page or conflicting CodeQL association must fail closed.
+  mocked.set(`/actions/runs/${ciRun.id}/jobs?per_page=100`,
+    { total_count: 101, jobs });
+  assert.equal((await verify(opts)).reusable, false);
+  mocked.set(`/actions/runs/${ciRun.id}/jobs?per_page=100`,
+    { total_count: jobs.length, jobs });
+  mocked.set(`/actions/runs?event=pull_request&head_sha=${headSha}&per_page=100`,
+    { workflow_runs: [associated[0], { ...associated[1], pull_requests: [
+      { number: 901, head: { sha: headSha }, base: { ref: "main" } },
+    ] }] });
+  assert.equal((await verify(opts)).reusable, false);
 });
