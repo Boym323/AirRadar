@@ -68,6 +68,7 @@
     "benchmark:twin-forensics": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-operational-twin-forensics.ts",
     "benchmark:twin-aged-state": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-operational-twin-aged-state.ts",
     "benchmark:radar:soak": "RADAR_PERF_SOAK=1 RADAR_PERF_SCENARIOS=1600,3000,5000 RADAR_PERF_MEASURE_MS=90000 node scripts/radar-performance-baseline.mjs",
+    "benchmark:rust-beast": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-rust-beast.ts",
     "benchmark:route-telemetry": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-route-telemetry.ts",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
     "intelligence:corpus": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-v1-corpus.ts",

@@ -36,3 +36,8 @@ Operational Twin truth matching and history persistence are intentionally
 NOT ported by this prototype. They require a different batched API and validated
 modern baselines; copying each aircraft or event into Rust could be slower.
 This is not a complete replacement of the BEAST aircraft decoder.
+
+Run `npm run benchmark:rust-beast` with the same opt-in environment to print
+a report-only, alternating-order synthetic comparison of 25,000 BEAST frames
+per trial over six trials. This microbenchmark does not measure real feed
+throughput, end-to-end decode, native conversion allocation or RSS retention.
