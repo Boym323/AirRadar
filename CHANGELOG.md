@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.459] - 2026-10-15
+
+Changes since v1.0.458.
+
+### Fixed
+
+- Harden CodeQL persistence, preferences and private runtime reports (#896) (c4926991)
+
+### Maintenance
+
+- Sync generated repository metadata (#900) (0787a25c)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#900) (0787a25c)
+- fix(security): harden CodeQL persistence, preferences and private runtime reports (#896) (c4926991)
+
+</details>
 ## [1.0.458] - 2026-10-15
 
 Changes since v1.0.457.
