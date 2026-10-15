@@ -146,7 +146,7 @@ describe("integration audit", () => {
 describe("Integration Health observational warning policy", () => {
   it("publishes a sanitized Markdown summary only after a successful observational audit", () => {
     const workflow = readFileSync(new URL("../.github/workflows/integration-health.yml", import.meta.url), "utf8");
-    const step = workflow.split("      - name: Run bounded read-only integration audit (degradation warns)\\n")[1]
+    const step = workflow.split("      - name: Run bounded read-only integration audit (degradation warns)\n")[1]
       ?.split("      - name: Upload sanitized audit report")[0];
     expect(step).toBeDefined();
     expect(step).toContain("--degraded-policy warn");
