@@ -6,14 +6,14 @@
 - Production SHA: `e8282c48` documented by the 2026-10-15 technical audit; not independently re-read in this turn
 - Active branch: `perf/bounded-enrichment-telemetry`
 - Last validated SHA: `47a577ad040e8eeecebc834ecb1a35d00b11856a` locally
-- CI status: local full Vitest, isolated typecheck and ESLint pass; branch CI not run yet
-- CodeQL Security status: latest documented application CodeQL passed; no new branch CodeQL result yet
+- CI status: PR #917 checks queued (CI run 38769850361, CodeQL run 38769850413)
+- CodeQL Security status: branch CodeQL queued; latest documented application CodeQL passed
 
 ## Completed
 - Area: Runtime telemetry CPU hot path and enrichment memory retention.
 - Problem: hourly telemetry map pruning ran on every metric event; stale-fallback log dedupe retained unbounded keys.
 - Fix: gate telemetry pruning to at most once/hour; replace the stale log `Set` with FIFO-bounded 4,096-key dedupe.
-- Commit/PR: `47a577ad`; PR not opened yet.
+- Commit/PR: `47a577ad`; draft PR [#917](https://github.com/Boym323/AirRadar/pull/917).
 - Test result: targeted 18/18 pass; full suite 2,908 pass / 11 skipped; typecheck pass in isolated dist; ESLint 0 errors / 14 existing warnings.
 - Measured benefit: local `record()` microbenchmark median 749.3 → 599.8 ns/event (19.69% lower); production speedup NOT CLAIMED.
 
@@ -22,7 +22,7 @@
 - Confirmed cause: see completed item above.
 - Files changed: `lib/server/route-enrichment-telemetry.ts`, `lib/server/enrichment-cache.ts`, tests, benchmark, and evidence.
 - Last verified state: commit `47a577ad`; local validation complete; no production changes.
-- Next step: push branch, open draft PR, and monitor CI/CodeQL.
+- Next step: monitor PR #917 CI/CodeQL and record final conclusions.
 
 ## Blocked
 - Production PostgreSQL execution time, pool acquisition, lock waits, RSS trend, and event-loop causality remain unverified from repository/public evidence. No production load test, DB write, config change, restart, or release is authorized.
@@ -40,11 +40,11 @@
 - Keep the optimization process-local and bounded; logging dedupe is best-effort and must not affect route results.
 
 ## Pull Requests
-- None for this branch yet.
+- PR #917 — bounded enrichment telemetry and stale-fallback retention — draft/open — head `102b25e9` when opened — CI and CodeQL queued.
+- Existing open PR: #916 metadata sync; unrelated.
 - Existing open PR: #916 metadata sync; unrelated.
 
 ## Next Actions
-1. Push `perf/bounded-enrichment-telemetry` and open one thematic draft PR.
-2. Monitor PR CI, release-preview build/browser gates, performance regression, and CodeQL.
-3. Record the PR head SHA and checks; do not merge, deploy, or release.
-4. Recheck branch ancestry against current `main` before final handoff.
+1. Monitor PR #917 CI, release-preview build/browser gates, performance regression, and CodeQL.
+2. Record final PR head SHA and checks; do not merge, deploy, or release.
+3. Recheck branch ancestry against current `main` before final handoff.
