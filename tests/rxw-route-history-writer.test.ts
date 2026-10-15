@@ -99,6 +99,16 @@ describe("RXW route history writer backpressure and query", () => {
     expect(query.text).toContain("ON CONFLICT");
   });
 
+  it("drains multiple batches before a graceful DB shutdown", async () => {
+    const writer = new RxwRouteHistoryWriter();
+    for (let i = 0; i < 70; i++) {
+      writer.enqueue(communication(String(i), { icao_hex: (0x400000 + i).toString(16) }), null);
+    }
+    await writer.drainForShutdown();
+    expect(writer.diagnostics()).toMatchObject({ pending: 0, written: 70 });
+    expect(mockDb.execute).toHaveBeenCalledTimes(3);
+  });
+
   it("uses indexed typed fields without a server-side JSON object roundtrip", async () => {
     const data = buildRxwRouteSnapshot(communication("row"), null)!;
     mockDb.query.mockResolvedValue([data]);

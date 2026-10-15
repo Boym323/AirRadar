@@ -768,6 +768,8 @@ změněná trasa zůstane samostatná. Omezená paměťová deduplikace 4 096
 úspěšných ID šetří SQL operace; unikátní databázový klíč funguje i po restartu.
 Při chybě se dávka vrací na začátek fronty a opakuje po 5 sekundách až
 5 minutách (exponenciální prodleva); zahazují se jen nové záznamy nad limitem.
+Při řádném ukončení se příjem RXW nejprve zastaví a před uzavřením
+databáze se v rámci stávajícího časového rozpočtu vyprázdní čekající dávky.
 Mazání starých záznamů probíhá při prázdné frontě, bez překryvu s běžnými
 zápisy; historické dotazy používají indexované sloupce bez převodu přes JSON.
 Retence je standardně 30 dnů

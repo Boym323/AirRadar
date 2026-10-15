@@ -796,8 +796,9 @@ are coalesced into ten-minute UTC buckets by semantic SHA-256; route changes
 remain distinct. A bounded 4,096-entry recent-ID cache avoids repeated SQL;
 PostgreSQL's unique key covers restarts. Failed batches return to the front
 of the bounded queue with exponential retry (5 seconds to 5 minutes), rather
-than disappearing. Only new arrivals beyond capacity are dropped. Retention
-pruning is delayed until the queue is idle and never overlaps foreground
+than disappearing. Only new arrivals beyond capacity are dropped. On graceful shutdown the hub stops intake and drains queued batches before
+the shared database connection closes, within the existing shutdown budget.
+Retention pruning is delayed until the queue is idle and never overlaps foreground
 writes. Historical reads select typed indexed columns without JSON roundtrips. Rows expire after 30 days by default (1–90 configurable) and are
 pruned in bounded 2,000-row batches. They cannot reconstruct messages from
 before the feature was enabled. `RXW_ROUTE_HISTORY_ENABLED=false` is the

@@ -250,6 +250,18 @@ export class RxwRouteHistoryWriter {
     }
   }
 
+  /**
+   * Best effort during SIGTERM, after RXW stops receiving, before closing DB.
+   * No new timers are allowed to cause a second concurrent flush.
+   */
+  async drainForShutdown(): Promise<void> {
+    for (let batch = 0; batch < Math.ceil(RXW_HISTORY_QUEUE_LIMIT / RXW_HISTORY_BATCH_SIZE); batch++) {
+      if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+      if (this.writing || !this.queue.size || Date.now() < this.retryAfter) break;
+      await this.flush();
+    }
+  }
+
   /** Retention maintenance is deferred until the ingestion write lane is idle. */
   private schedulePrune(): void {
     if (this.pruneTimer || this.writing || this.queue.size

@@ -61,13 +61,14 @@ export class RxwHubService {
     };
   }
 
+  // Allocate the callback only once rather than once per received message.
+  private readonly archiveRoute = (message: RxwCommunication, plan: RxwWaypointPlan | null): void => {
+    getRxwRouteHistoryWriter().enqueue(message, plan);
+  };
+
   private ingest(item: unknown): void {
     this.receivedItems++;
-    const persist = isRxwRouteHistoryEnabled()
-      ? (message: RxwCommunication, plan: RxwWaypointPlan | null) => {
-        getRxwRouteHistoryWriter().enqueue(message, plan);
-      }
-      : undefined;
+    const persist = isRxwRouteHistoryEnabled() ? this.archiveRoute : undefined;
     if (this.store.ingest(item, Date.now(), persist)) this.lastReceivedAt = new Date().toISOString();
   }
 
