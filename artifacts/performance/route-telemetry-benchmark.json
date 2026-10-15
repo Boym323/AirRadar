@@ -1,7 +1,7 @@
 {
   "benchmark": "route-telemetry-record",
   "baselineSha": "8f0655dec240ab5382ccd45ac48adb642c8666eb",
-  "optimizedSha": "working-tree-before-commit",
+  "optimizedSha": "47a577ad040e8eeecebc834ecb1a35d00b11856a",
   "workload": {
     "eventsPerRound": 250000,
     "rounds": 7,
