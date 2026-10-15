@@ -329,7 +329,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(computeAtcContext).toHaveBeenCalledTimes(1);
   });
 
-  it("reuses ATC truth across repeated snapshots and newly allocated Aircraft objects", () => {
+  it("does not repeat ATC truth lookup across unchanged snapshots and newly allocated Aircraft objects", () => {
     const dataset = testAtcDataset();
     const predictedAt = baseNow + 5 * 60_000;
     const validator = new OperationalTwinEventOutcomeValidator();
@@ -342,7 +342,8 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     const second = { ...first, trail: [...first.trail] };
     validator.observeLocal(new Map([[second.icaoHex, second]]), baseNow + 120_000);
     expect(computeAtcContext).toHaveBeenCalledTimes(1);
-    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1, size: 1 });
+    expect(validator.getAtcCacheStats()).toMatchObject({ hits: 0, misses: 1, size: 1 });
+    expect(validator.report(new Date(baseNow + 120_000)).performance.pendingEntriesWithoutNewTruth).toBe(1);
   });
 
   it("does not rescan unchanged local truth points for pending events", () => {
@@ -370,6 +371,25 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(secondReport.overall).toEqual(firstReport.overall);
     expect(secondReport.performance.evaluatedTruthPoints).toBe(firstReport.performance.evaluatedTruthPoints);
     expect(secondReport.performance.pendingEntriesWithoutNewTruth).toBe(1);
+  });
+
+  it("keeps canonical truth unchanged when provider ages change but positionObservedAt does not", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const validator = new OperationalTwinEventOutcomeValidator();
+    validator.capture(situation([
+      event("WAYPOINT", 5, { id: `waypoint:VLM:${predictedAt}`, title: "VLM", lat: 49, lon: 17.5 }),
+    ]), { atcDataset: null, sigmets: null, destination: null });
+
+    const first = aircraft(baseNow, 49, 18.5);
+    first.trail = [{ recordedAt: new Date(baseNow).toISOString(), lat: 49, lon: 18.5, altitude: 30000, track: 90, groundSpeed: 420 }];
+    validator.observeLocal(new Map([[first.icaoHex, first]]), baseNow + 30_000);
+    const builds = validator.report(new Date(baseNow + 30_000)).performance.truthPointBuilds;
+
+    const second = { ...first, lastSeen: new Date(baseNow + 1_000).toISOString(), seenSeconds: 0, seenPosSeconds: 1 };
+    validator.observeLocal(new Map([[second.icaoHex, second]]), baseNow + 31_000);
+    const performance = validator.report(new Date(baseNow + 31_000)).performance;
+    expect(performance.truthPointBuilds).toBe(builds);
+    expect(performance.unchangedTruthStateReuses).toBe(1);
   });
 
   it("matches the full-scan reference across trail corrections, duplicates, reordering, and replacement", () => {

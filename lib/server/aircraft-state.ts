@@ -1422,6 +1422,15 @@ export class AircraftStateService {
       const base = sourceChanged ? [] : previousTrail;
       const point = trailPointFromAircraft(incoming);
       if (incoming.origin === "local") {
+        const last = base.at(-1);
+        if (point && last
+          && last.recordedAt === point.recordedAt
+          && last.lat === point.lat && last.lon === point.lon
+          && (last.altitude ?? null) === (point.altitude ?? null)
+          && (last.track ?? null) === (point.track ?? null)
+          && (last.groundSpeed ?? null) === (point.groundSpeed ?? null)) {
+          return base;
+        }
         return point ? appendBoundedServerTrailPoint(base, point) : base;
       }
       const next = point ? appendTrailPoint(base, point) : base;
