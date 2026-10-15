@@ -259,7 +259,9 @@ describe("T5.7C 24-hour read-only soak", () => {
       row.eventLoopWindows[0].maxMs = index === 25 ? 14_000 : index + 1;
       const phases = Object.fromEntries(phaseNames.map((name) => [name, {
         calls: 1, sampledCalls: 1,
-        estimatedCpuMs: name === "pendingTraversal" ? index + 1
+        // Match the deliberately injected 14-second loop outlier to the
+        // non-overlapping CPU control; an unmatched outlier cannot yield r=1.
+        estimatedCpuMs: name === "pendingTraversal" ? (index === 25 ? 14_000 : index + 1)
           : name === "pendingTruthEvaluation" ? 61 - index : 0,
         estimatedWallMs: 0, sampleP95Ms: null, sampleP99Ms: null, sampleMaxMs: null,
         sampleCpuP95Ms: null, sampleCpuP99Ms: null, sampleCpuMaxMs: null,
