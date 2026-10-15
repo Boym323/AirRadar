@@ -1013,10 +1013,12 @@ export class AircraftStateService {
     const previousObservedHexes = this.localObservedHexes;
     const currentHexes = new Set<string>();
     const now = Date.now();
+    const localStaleAfterMs = getAircraftStaleAfterMs();
+    const reappearWindowMs = getAircraftReappearWindowMs();
     for (const incoming of snapshot.aircraft) {
-      if (Date.parse(incoming.lastSeen) < now - getAircraftStaleAfterMs()) continue;
+      if (Date.parse(incoming.lastSeen) < now - localStaleAfterMs) continue;
       currentHexes.add(incoming.icaoHex);
-      this.continuity.recordObservation("local", incoming.icaoHex, now, getAircraftReappearWindowMs());
+      this.continuity.recordObservation("local", incoming.icaoHex, now, reappearWindowMs);
       this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "local");
       const previous = this.localAircraft.get(incoming.icaoHex);
       const localIncoming = plausiblePosition(previous, { ...incoming, origin: "local" as const });
@@ -1205,16 +1207,22 @@ export class AircraftStateService {
     const previousObservedHexes = this.networkObservedHexes;
     const currentHexes = new Set<string>();
     const now = Date.now();
-    const cutoff = now - getAdsbLolStaleAfterMs();
+    const networkStaleAfterMs = getAdsbLolStaleAfterMs();
+    const reappearWindowMs = getAircraftReappearWindowMs();
+    // These deployment settings are stable during one snapshot. Avoid parsing
+    // process.env twice per aircraft across high-volume network updates.
+    const trailMaxAgeMs = getNetworkTrailMaxAgeMs();
+    const trailMaxPoints = getNetworkTrailMaxPoints();
+    const cutoff = now - networkStaleAfterMs;
     for (const incoming of snapshot.aircraft) {
       const lastSeen = Date.parse(incoming.lastSeen);
       if (!Number.isFinite(lastSeen) || lastSeen < cutoff) continue;
       currentHexes.add(incoming.icaoHex);
-      this.continuity.recordObservation("network", incoming.icaoHex, now, getAircraftReappearWindowMs());
+      this.continuity.recordObservation("network", incoming.icaoHex, now, reappearWindowMs);
       this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
       const previous = this.networkAircraft.get(incoming.icaoHex);
       const networkIncoming = plausiblePosition(previous, { ...incoming, origin: incoming.origin ?? "adsblol" });
-      const trail = this.updateTrail(previous, networkIncoming);
+      const trail = this.updateTrail(previous, networkIncoming, trailMaxAgeMs, trailMaxPoints);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }
     this.continuity.observeMembership("network", previousObservedHexes, currentHexes, now);
@@ -1421,7 +1429,12 @@ export class AircraftStateService {
     }
   }
 
-  private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
+  private updateTrail(
+    previous: Aircraft | undefined,
+    incoming: Aircraft,
+    networkMaxAgeMs?: number,
+    networkMaxPoints?: number,
+  ): TrailPoint[] {
     return measureRuntime("snapshot.trail-update", 1, () => {
       const previousTrail = previous?.trail ?? [];
       const sourceChanged = Boolean(previous?.provenance?.positionOrigin && incoming.provenance?.positionOrigin
@@ -1441,8 +1454,8 @@ export class AircraftStateService {
         }
         return point ? appendBoundedServerTrailPoint(base, point) : base;
       }
-      const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
-      return appendBoundedNetworkTrailPoint(base, point, cutoff, getNetworkTrailMaxPoints());
+      const cutoff = Date.parse(incoming.lastSeen) - (networkMaxAgeMs ?? getNetworkTrailMaxAgeMs());
+      return appendBoundedNetworkTrailPoint(base, point, cutoff, networkMaxPoints ?? getNetworkTrailMaxPoints());
     });
   }
 
