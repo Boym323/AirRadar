@@ -108,6 +108,8 @@ interface TruthTrailState {
   sourceTrail: Aircraft["trail"];
   currentPositionFingerprint: string;
   points: TruthPoint[];
+  /** Content identities reused across pending checks and truth-state diffs. */
+  pointFingerprints: readonly string[];
   version: number;
   /** Current points whose timestamp/fingerprint was not unchanged. */
   changedIndexes: ReadonlySet<number>;
@@ -1036,6 +1038,9 @@ class AtcTruthCache {
   private evictions = 0;
   private expirations = 0;
   private lastCleanupAt = Number.NEGATIVE_INFINITY;
+  /** LRU order follows access time unless a clock rollback was observed. */
+  private latestAccessAt = Number.NEGATIVE_INFINITY;
+  private accessTimesMonotonic = true;
 
   constructor(
     private readonly enabled = true,
@@ -1053,6 +1058,8 @@ class AtcTruthCache {
       return computeSectorIdsAtPoint(point, dataset);
     }
 
+    if (now < this.latestAccessAt) this.accessTimesMonotonic = false;
+    else this.latestAccessAt = now;
     const datasetId = this.datasetId(dataset);
     // Cache by membership-relevant coordinates and altitude, not timestamps.
     // Separate aircraft with the same timestamp but different positions no
@@ -1109,6 +1116,8 @@ class AtcTruthCache {
     this.evictions = 0;
     this.expirations = 0;
     this.lastCleanupAt = Number.NEGATIVE_INFINITY;
+    this.latestAccessAt = Number.NEGATIVE_INFINITY;
+    this.accessTimesMonotonic = true;
   }
 
   private datasetId(dataset: PreparedAtcContextDataset): number {
@@ -1121,7 +1130,13 @@ class AtcTruthCache {
 
   private removeExpired(now: number): void {
     for (const [key, entry] of this.entries) {
-      if (now - entry.lastUsedAt <= ATC_CACHE_TTL_MS) continue;
+      if (now - entry.lastUsedAt <= ATC_CACHE_TTL_MS) {
+        // Hits move an entry to the newest end of the Map. With monotonic
+        // access times, everything following a live entry is also live.
+        // After a clock rollback, conservatively retain the full scan.
+        if (this.accessTimesMonotonic) break;
+        continue;
+      }
       this.entries.delete(key);
       this.expirations += 1;
       forensicsGlobal.increment("atcCacheExpirations");
@@ -1331,7 +1346,7 @@ export class OperationalTwinEventOutcomeValidator {
         let evaluatedPoints = 0;
         for (let index = 0; index < points.length; index += 1) {
           const point = points[index]!;
-          const content = staticTruth ? atcInputFingerprint(point) : null;
+          const content = staticTruth ? truthState.pointFingerprints[index]! : null;
           const afterCursor = previousLastEvaluatedAt === null || point.at > previousLastEvaluatedAt;
           const changedBeforeCursor = truthState.correctionIndexes.has(index)
             || (temporalTruth && truthState.changedIndexes.has(index));
@@ -1390,18 +1405,21 @@ export class OperationalTwinEventOutcomeValidator {
 
     const points = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
     const state = forensicsGlobal.measure("truthStateDiff", (): TruthTrailState => {
+    // Compute each truth identity once per changed trail, not once per pending
+    // prediction. The values are immutable for this truth-state version.
+    const pointFingerprints = points.map(atcInputFingerprint);
     const changedIndexes = new Set<number>();
     const correctionIndexes = new Set<number>();
     const previousByAt = new Map<number, string>();
     const previousContents = new Set<string>();
     if (previousState) {
-      for (const previousPoint of previousState.points) {
-        const fingerprint = atcInputFingerprint(previousPoint);
+      for (const [index, previousPoint] of previousState.points.entries()) {
+        const fingerprint = previousState.pointFingerprints[index]!;
         previousByAt.set(previousPoint.at, fingerprint);
         previousContents.add(fingerprint);
       }
       for (const [index, point] of points.entries()) {
-        const fingerprint = atcInputFingerprint(point);
+        const fingerprint = pointFingerprints[index]!;
         const previousFingerprint = previousByAt.get(point.at);
         if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
         if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
@@ -1418,6 +1436,7 @@ export class OperationalTwinEventOutcomeValidator {
       sourceTrail: aircraft.trail,
       currentPositionFingerprint,
       points,
+      pointFingerprints,
       version: (previousState?.version ?? 0) + 1,
       changedIndexes,
       correctionIndexes,
