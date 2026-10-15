@@ -91,3 +91,24 @@ Jde o odhad z řídicího toku, **nikoli naměřené úspory CPU ani HTTP**.
 - `docs/INTEGRATION-HEALTH-INCIDENT-20261015.md`
 - `docs/audits/TECHNICAL-AUDIT-2026-10-15.md`
 - [T58 report](https://github.com/Boym323/AirRadar/blob/audit/t58-history/reports/t58/2026/10/15/run-38775992637-attempt-1/comparison.md)
+
+## Pokračování: změřit skutečný přínos síťových zdrojů před jejich vypnutím
+
+Odpověď `/api/system/integrations` přístupná pouze administrátorovi nyní
+obsahuje `networkSourceValue`. Jednou za 60 sekund aktivního publikování
+síťových dat vzorkuje zapnuté snapshoty ADSBHub, ADSB.lol raw a ADSB.lol HTTP.
+Pro každý zdroj poskytuje počty hlášených letadel, unikátních čerstvých poloh,
+poloh dostupných jen v jednom úspěšně vzorkovaném síťovém zdroji,
+překrývajících se poloh a počet unikátních poloh celkem. Vypnuté zdroje
+chybějí, selhání má hodnotu null a `complete=false` znamená, že nelze
+bezpečně vyhodnotit jedinečnost vůči všem zapnutým zdrojům. Identifikátory
+letadel ani souřadnice se do diagnostiky nevypisují a neuchovávají.
+Sloučení živého radaru ani frekvenci dotazování zdrojů měření nemění.
+
+**Rozhodovací pravidlo:** porovnat více oken s podobným provozem a
+čerstvostí dat, nikoli jeden snapshot. Unikátní síťová poloha znamená
+jedinečnost *mezi zapnutými síťovými zdroji*, nikoliv vůči LOKÁLNÍMU přijímači.
+Také je nutné ověřit, zda jsou unikátní pozorování skutečně viditelná v
+režimu Extended. Zdroj nevypínat jen kvůli objemu zpráv. Sloučení síťových
+dat již pro překryv nepoužívá dočasné pole ani řazení; zlepšení CPU/paměti
+nelze tvrdit bez měření po nasazení.

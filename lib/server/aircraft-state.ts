@@ -792,6 +792,11 @@ export class AircraftStateService {
     return this.networkProvider.getDiagnostics();
   }
 
+  /** Optional admin-only, identity-free source-value snapshot; no upstream I/O. */
+  getNetworkSourceValueDiagnostics() {
+    return this.networkProvider.getSourceValueDiagnostics?.() ?? null;
+  }
+
   getReceiverCoverageDiagnostics() { return this.receiverCoverage.getDiagnostics(); }
   getLiveReceiverCoverage(): CoverageResponse { return this.receiverCoverage.getLive(); }
 

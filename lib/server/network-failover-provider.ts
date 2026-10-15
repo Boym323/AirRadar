@@ -1,10 +1,11 @@
 import type { Aircraft, NetworkProviderDiagnostics, ReceiverPosition } from "@/lib/aircraft/types";
 import { hasUsablePosition, positionObservedAt } from "@/lib/aircraft/source-merge";
+import { summarizeNetworkSourceValue, type NetworkSourceLane, type NetworkSourceValueDiagnostics } from "@/lib/server/network-source-value";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import { AdsbHubProvider } from "@/lib/server/adsbhub-provider";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
 import { AdsbLolRawProvider } from "@/lib/server/adsblol-raw-provider";
-import { isAdsbHubEnabled, isAdsbLolEnabled, isAdsbLolHttpFallbackEnabled, isAdsbLolRawEnabled } from "@/lib/server/config";
+import { getAdsbLolStaleAfterMs, isAdsbHubEnabled, isAdsbLolEnabled, isAdsbLolHttpFallbackEnabled, isAdsbLolRawEnabled } from "@/lib/server/config";
 
 type Selected = "mixed" | "adsbhub" | "adsblol-raw" | "adsblol-http" | "unavailable";
 
@@ -35,6 +36,8 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
   readonly name = "network";
   private selected: Selected = "unavailable";
   private transitionAt: string | null = null;
+  private lastSourceValueSampleAt = 0;
+  private sourceValue: NetworkSourceValueDiagnostics | null = null;
   constructor(
     private readonly hub: AdsbHubProvider,
     private readonly raw: AdsbLolRawProvider | null,
@@ -42,6 +45,15 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
   ) {}
   start(): void { this.hub.start(); this.raw?.start(); this.http?.start(); }
   async stop(): Promise<void> { await Promise.all([this.hub.stop(), this.raw?.stop(), this.http?.stop()]); }
+  /** Read-only; caller cannot start streams or access ICAO identities here. */
+  getSourceValueDiagnostics(): NetworkSourceValueDiagnostics | null {
+    if (!this.sourceValue) return null;
+    return {
+      ...this.sourceValue,
+      sources: Object.fromEntries(Object.entries(this.sourceValue.sources)
+        .map(([lane, value]) => [lane, value === null ? null : { ...value }])),
+    };
+  }
   getNextPollDelayMs(): number {
     // A disabled ADSBHub lane used to force a 1 s refresh even for an HTTP-only
     // integration configured to poll every 10 s. Never schedule off disabled lanes.
@@ -53,11 +65,30 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
       provider.getNextPollDelayMs?.() ?? provider.getDiagnostics().pollIntervalMs));
   }
   async getSnapshot(): Promise<NetworkAircraftSnapshot> {
-    const providers = [this.hub, this.raw, this.http]
-      .filter((value): value is NonNullable<typeof value> =>
-        value !== null && value.getDiagnostics().enabled);
-    const results = await Promise.allSettled(providers.map((provider) => provider.getSnapshot()));
+    const active = ([
+      { lane: "adsbhub" as const, provider: this.hub },
+      ...(this.raw ? [{ lane: "adsblolRaw" as const, provider: this.raw }] : []),
+      ...(this.http ? [{ lane: "adsblolHttp" as const, provider: this.http }] : []),
+    ] as Array<{ lane: NetworkSourceLane; provider: NetworkAircraftProvider }>)
+      .filter(({ provider }) => provider.getDiagnostics().enabled);
+    const results = await Promise.allSettled(active.map(({ provider }) => provider.getSnapshot()));
     const snapshots = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+    const now = Date.now();
+    if (active.length > 0 && (this.sourceValue === null || now < this.lastSourceValueSampleAt
+      || now - this.lastSourceValueSampleAt >= 60_000)) {
+      // One short-lived identity map per minute. Never retain individual ICAOs.
+      const samples: Partial<Record<NetworkSourceLane, ReadonlyArray<Aircraft> | null>> = {};
+      for (const [index, { lane, provider }] of active.entries()) {
+        const result = results[index];
+        const status = provider.getDiagnostics().status;
+        // An internally failed provider may still resolve getSnapshot() with
+        // an empty/stale cache. Do not misclassify it as zero incremental value.
+        samples[lane] = result.status === "fulfilled" && (status === "online" || status === "degraded")
+          ? result.value.aircraft : null;
+      }
+      this.sourceValue = summarizeNetworkSourceValue(samples, now, getAdsbLolStaleAfterMs());
+      this.lastSourceValueSampleAt = now;
+    }
     const aircraft = new Map<string, Aircraft>();
     for (const snapshot of snapshots) {
       for (const item of snapshot.aircraft) {
@@ -69,9 +100,11 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
       }
     }
     this.lastAircraftCount = aircraft.size;
-    this.lastPositionedCount = [...aircraft.values()].filter((item) => item.lat !== null && item.lon !== null).length;
-    const activeSources = providers
-      .map((provider) => provider.getDiagnostics())
+    let positioned = 0;
+    for (const item of aircraft.values()) if (item.lat !== null && item.lon !== null) positioned += 1;
+    this.lastPositionedCount = positioned;
+    const activeSources = active
+      .map(({ provider }) => provider.getDiagnostics())
       .filter((diagnostics) => diagnostics.status === "online" || diagnostics.status === "degraded");
     this.transition(activeSources.length > 1
       ? "mixed"
@@ -158,9 +191,10 @@ export function mergeNetworkObservations(left: Aircraft, right: Aircraft): Aircr
     lastNetworkSeen: latestNetworkSeen(left.lastSeen, right.lastSeen),
     networkSources: sources,
   };
-  const position = [winner, other]
-    .filter((item) => hasUsablePosition(item))
-    .sort(comparePositionCandidates)[0];
+  // Avoid temporary arrays and sort in the per-overlap hot path.
+  const position = hasUsablePosition(winner)
+    ? (hasUsablePosition(other) && comparePositionCandidates(other, winner) < 0 ? other : winner)
+    : hasUsablePosition(other) ? other : undefined;
   const merged = {
     ...winner,
     callsign: winner.callsign ?? other.callsign,

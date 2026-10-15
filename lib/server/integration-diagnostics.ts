@@ -10,9 +10,11 @@ import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity
 export function getIntegrationDiagnostics() {
   const route = getRouteEnrichmentTelemetry().getSnapshot();
   const navigation = getNavigationIntegrityService().getDiagnostics();
+  const aircraftState = getAircraftStateService();
   return {
     rxw: getRxwHubService().getDiagnostics(),
-    adsbhub: getAircraftStateService().getNetworkDiagnostics().adsbhubLane ?? null,
+    adsbhub: aircraftState.getNetworkDiagnostics().adsbhubLane ?? null,
+    networkSourceValue: aircraftState.getNetworkSourceValueDiagnostics(),
     databaseLatency: databaseLatencySummary(getRuntimeTelemetryHistory().samples),
     routeCacheLatency: getRouteEnrichmentTelemetry().getDbLatencyDistribution(),
     routeProviders: {

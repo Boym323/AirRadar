@@ -1,5 +1,6 @@
 import type { AircraftMetadata, CoverageMode, FlightPlan, FlightRoute, NetworkProviderDiagnostics, ProviderSnapshot } from "@/lib/aircraft/types";
 import type { AtcActivity, AtcSector } from "@/lib/atc/types";
+import type { NetworkSourceValueDiagnostics } from "@/lib/server/network-source-value";
 
 export interface AircraftProvider {
   readonly name: string;
@@ -26,6 +27,8 @@ export interface NetworkAircraftProvider {
   start(): void;
   getSnapshot(): Promise<NetworkAircraftSnapshot>;
   getDiagnostics(): NetworkProviderDiagnostics;
+  /** Aggregate, identity-free contribution sampling; never triggers upstream I/O. */
+  getSourceValueDiagnostics?(): NetworkSourceValueDiagnostics | null;
   /** Delay until the provider may perform its next upstream attempt. */
   getNextPollDelayMs?(): number;
   stop(): Promise<void>;
