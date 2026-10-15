@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { closeSync, constants, fstatSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { renderMarkdown, runAudit, writeAuditOutputs } from "../scripts/integration-audit.mjs";
+import { auditExitCode, renderMarkdown, runAudit, writeAuditOutputs } from "../scripts/integration-audit.mjs";
 
 const tempDirectories = [];
 function privateTempDir() {
@@ -139,5 +140,73 @@ describe("integration audit", () => {
     await expect(writeAuditOutputs({
       report: {}, markdown: "", markdownPath: `bad${String.fromCharCode(0)}path.md`,
     })).rejects.toThrow("invalid_audit_output_path");
+  });
+});
+
+describe("Integration Health observational warning policy", () => {
+  it("publishes a sanitized Markdown summary only after a successful observational audit", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/integration-health.yml", import.meta.url), "utf8");
+    const step = workflow.split("      - name: Run bounded read-only integration audit (degradation warns)\n")[1]
+      ?.split("      - name: Upload sanitized audit report")[0];
+    expect(step).toBeDefined();
+    expect(step).toContain("--degraded-policy warn");
+    expect(step).toContain('echo "## Integration audit" >> "$GITHUB_STEP_SUMMARY"');
+    const appendSummary = 'cat -- "$RUNNER_TEMP/airradar-audit/report.md" >> "$GITHUB_STEP_SUMMARY"';
+    expect(step).toContain(appendSummary);
+    expect(step.indexOf("--degraded-policy warn")).toBeLessThan(step.indexOf(appendSummary));
+    expect(step).not.toContain("|| true");
+    expect(step).not.toContain("continue-on-error");
+    expect(workflow).toContain("if: always()");
+  });
+
+  it("keeps strict readiness failure while allowing observational reporting", () => {
+    expect(auditExitCode("DEGRADED")).toBe(2);
+    expect(auditExitCode("DEGRADED", "fail")).toBe(2);
+    expect(auditExitCode("DEGRADED", "warn")).toBe(0);
+    expect(auditExitCode("PASS_WITH_LIMITATIONS", "fail")).toBe(0);
+    expect(auditExitCode("PASS_WITH_LIMITATIONS", "warn")).toBe(0);
+    expect(auditExitCode("PASS", "fail")).toBe(0);
+    expect(() => auditExitCode("DEGRADED", "silent")).toThrow("invalid_audit_degraded_policy");
+  });
+
+  it("writes DEGRADED artifact and static Actions warning without hiding the status", () => {
+    const dir = privateTempDir();
+    const fixturePath = join(dir, "fixture.json");
+    writeFileSync(fixturePath, JSON.stringify(fixture), { flag: "wx", mode: 0o600 });
+    const jsonPath = join(dir, "audit.json");
+    const mdPath = join(dir, "audit.md");
+    const params = [
+      "scripts/integration-audit.mjs", "--mode", "offline", "--fixture", fixturePath,
+      "--degraded-policy", "warn", "--json", jsonPath, "--markdown", mdPath,
+    ];
+    const result = spawnSync(process.execPath, params, { cwd: process.cwd(), encoding: "utf8", timeout: 10_000 });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("::warning title=AirRadar integration health::DEGRADED");
+    expect(result.stdout).not.toContain("SECRET-ROUTE-PAYLOAD");
+    const report = JSON.parse(readPrivateOutput(jsonPath));
+    expect(report.verdict).toBe("DEGRADED");
+    expect(report.checks.find((check) => check.id === "adsblol-routeset").status).toBe("BLOCKED");
+    expect(report.checks.find((check) => check.id === "route-cache").status).toBe("DEGRADED");
+    expect(readPrivateOutput(mdPath)).toContain("Verdict: **DEGRADED**");
+
+    // Strict policy remains the default for release readiness gates.
+    const strict = spawnSync(process.execPath,
+      ["scripts/integration-audit.mjs", "--mode", "offline", "--fixture", fixturePath],
+      { cwd: process.cwd(), encoding: "utf8", timeout: 10_000 });
+    expect(strict.error).toBeUndefined();
+    expect(strict.status).toBe(2);
+    expect(strict.stdout).not.toContain("::warning title=");
+  });
+
+  it("fails on unsafe/unavailable audit input even under observational policy", () => {
+    const dir = privateTempDir();
+    const missing = spawnSync(process.execPath,
+      ["scripts/integration-audit.mjs", "--mode", "offline", "--fixture", join(dir, "missing.json"),
+        "--degraded-policy", "warn"],
+      { cwd: process.cwd(), encoding: "utf8", timeout: 10_000 });
+    expect(missing.error).toBeUndefined();
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toContain("Integration audit unavailable");
   });
 });

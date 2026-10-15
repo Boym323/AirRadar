@@ -34,13 +34,22 @@ jobs:
           node-version: 22
       - name: Inspect existing production counters (no external provider requests)
         run: node scripts/integration-health-report.mjs
-      - name: Run bounded read-only integration audit
+      # This is an observational scheduled health report, not a production
+      # readiness gate. Real DEGRADED/BLOCKED evidence remains in the artifact
+      # and emits an Actions warning. Runtime/tool/security failures still fail.
+      - name: Run bounded read-only integration audit (degradation warns)
         run: |
           mkdir -p "$RUNNER_TEMP/airradar-audit"
           node scripts/integration-audit.mjs \
             --mode readonly \
+            --degraded-policy warn \
             --json "$RUNNER_TEMP/airradar-audit/report.json" \
             --markdown "$RUNNER_TEMP/airradar-audit/report.md"
+          # The reporter exits 0 only when the report is successfully written.
+          # Never copy an absent or incomplete artifact into the job summary.
+          # Its Markdown is allowlisted/sanitized and size-bounded by the CLI.
+          echo "## Integration audit" >> "$GITHUB_STEP_SUMMARY"
+          cat -- "$RUNNER_TEMP/airradar-audit/report.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload sanitized audit report
         if: always()
         uses: actions/upload-artifact@v7

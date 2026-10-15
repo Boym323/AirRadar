@@ -474,6 +474,18 @@ export async function runAudit({ root = process.cwd(), mode = "readonly", baseUr
   return buildReport({ root, mode, health, integrations, runtime, version, previous });
 }
 
+/**
+ * An observational GitHub Actions check should flag real service degradation,
+ * but not masquerade as a code/test failure. The default is deliberately
+ * strict for operator-run readiness gates and manual CLI users.
+ *
+ * I/O, invalid input and unsafe output paths remain fatal in BOTH modes.
+ */
+export function auditExitCode(verdict, degradedPolicy = "fail") {
+  if (!["fail", "warn"].includes(degradedPolicy)) throw new Error("invalid_audit_degraded_policy");
+  return verdict === "DEGRADED" && degradedPolicy === "fail" ? 2 : 0;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const option = (name, fallback = null) => {
@@ -487,7 +499,14 @@ async function main() {
   const markdown = renderMarkdown(report);
   await writeAuditOutputs({ report, markdown, jsonPath, markdownPath });
   process.stdout.write(JSON.stringify(report) + "\n");
-  if (report.verdict === "DEGRADED") process.exitCode = 2;
+  const degradedPolicy = option("--degraded-policy", "fail");
+  const exitCode = auditExitCode(report.verdict, degradedPolicy);
+  if (report.verdict === "DEGRADED" && degradedPolicy === "warn") {
+    // Fixed-text Actions annotation; never interpolate HTTP-derived fields
+    // into the workflow command or GitHub Step Summary filesystem sink.
+    process.stdout.write("::warning title=AirRadar integration health::DEGRADED production integrations detected. Review the sanitized integration-audit artifact.\n");
+  }
+  if (exitCode !== 0) process.exitCode = exitCode;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
