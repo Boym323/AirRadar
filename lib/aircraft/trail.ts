@@ -152,6 +152,106 @@ function appendBoundedTrailPoint(
   return start === 0 ? next : next.slice(start);
 }
 
+/**
+ * Network trails are replaced rather than mutated on every snapshot. Keep a
+ * weak mark for arrays whose timestamps are finite and chronological: these
+ * can be age-pruned by binary search instead of scanning/parsing every point
+ * on every network poll. Imported/legacy arrays take the exact old path until
+ * they meet the same invariant; the weak mark never retains an expired trail.
+ */
+const chronologicalNetworkTrails = new WeakSet<readonly TrailPoint[]>();
+
+function isChronologicalNetworkTrail(trail: readonly TrailPoint[]): boolean {
+  let previousAt = Number.NEGATIVE_INFINITY;
+  for (const point of trail) {
+    const at = recordedAtMs(point);
+    if (!Number.isFinite(at) || at < previousAt) return false;
+    previousAt = at;
+  }
+  return true;
+}
+
+/**
+ * Append/replace/prune a network trail while preserving the original
+ * appendTrailPoint() plausibility and timestamp rules.
+ *
+ * maxPoints must be a positive integer (enforced by runtime config).
+ * Input arrays are treated as immutable snapshots by AircraftStateService.
+ */
+export function appendBoundedNetworkTrailPoint(
+  trail: readonly TrailPoint[],
+  point: TrailPosition | null,
+  cutoff: number,
+  maxPoints: number,
+): TrailPoint[] {
+  if (trail.length > 0 && !chronologicalNetworkTrails.has(trail)) {
+    // Preserve malformed and out-of-order imported trails exactly as before.
+    // Never assume the first timestamp is the oldest without checking.
+    const next = point ? appendTrailPoint(trail, point) : trail;
+    const filtered = next.filter((entry) => {
+      const at = recordedAtMs(entry);
+      return !Number.isFinite(cutoff) || (Number.isFinite(at) && at >= cutoff);
+    });
+    const bounded = filtered.slice(-maxPoints);
+    if (isChronologicalNetworkTrail(bounded)) chronologicalNetworkTrails.add(bounded);
+    return bounded;
+  }
+
+  const previous = trail.at(-1);
+  let replacement: TrailPoint | null = null;
+  let replaceLast = false;
+  if (point) {
+    const at = recordedAtMs(point);
+    const previousAt = previous ? recordedAtMs(previous) : Number.NEGATIVE_INFINITY;
+    if (Number.isFinite(at)
+      && (!previous || (at > previousAt && isPlausibleTransition(previous, point)))) {
+      replacement = {
+        lat: point.lat,
+        lon: point.lon,
+        recordedAt: point.recordedAt,
+        altitude: point.altitude ?? null,
+        groundSpeed: point.groundSpeed ?? null,
+        track: point.track ?? null,
+      };
+      replaceLast = Boolean(previous
+        && Math.abs(previous.lat - point.lat) <= 0.00001
+        && Math.abs(previous.lon - point.lon) <= 0.00001);
+    }
+  }
+
+  // A same-position update replaces the previous endpoint, rather than
+  // extending the trail. A rejected/stale point leaves the endpoint intact.
+  const end = replaceLast ? trail.length - 1 : trail.length;
+  let start = 0;
+  if (Number.isFinite(cutoff)) {
+    let low = 0;
+    let high = end;
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      if (recordedAtMs(trail[mid]!) < cutoff) low = mid + 1;
+      else high = mid;
+    }
+    start = low;
+  }
+
+  const includeNew = replacement !== null
+    && (!Number.isFinite(cutoff) || recordedAtMs(replacement) >= cutoff);
+  const oldCount = end - start;
+  // Preserve Array.slice(-maxPoints) semantics for positive maxPoints.
+  const drop = Math.max(0, oldCount + (includeNew ? 1 : 0) - maxPoints);
+  start += Math.min(drop, oldCount);
+
+  if (!replacement && start === 0 && end === trail.length) {
+    // No new position, no expiry and no over-limit points: zero allocation.
+    return trail as TrailPoint[];
+  }
+
+  const result = trail.slice(start, end);
+  if (includeNew) result.push(replacement!);
+  chronologicalNetworkTrails.add(result);
+  return result;
+}
+
 export function appendBoundedServerTrailPoint(
   trail: readonly TrailPoint[],
   point: TrailPosition,
