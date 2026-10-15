@@ -78,9 +78,13 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
       || now - this.lastSourceValueSampleAt >= 60_000)) {
       // One short-lived identity map per minute. Never retain individual ICAOs.
       const samples: Partial<Record<NetworkSourceLane, ReadonlyArray<Aircraft> | null>> = {};
-      for (const [index, { lane }] of active.entries()) {
+      for (const [index, { lane, provider }] of active.entries()) {
         const result = results[index];
-        samples[lane] = result.status === "fulfilled" ? result.value.aircraft : null;
+        const status = provider.getDiagnostics().status;
+        // An internally failed provider may still resolve getSnapshot() with
+        // an empty/stale cache. Do not misclassify it as zero incremental value.
+        samples[lane] = result.status === "fulfilled" && (status === "online" || status === "degraded")
+          ? result.value.aircraft : null;
       }
       this.sourceValue = summarizeNetworkSourceValue(samples, now, getAdsbLolStaleAfterMs());
       this.lastSourceValueSampleAt = now;
