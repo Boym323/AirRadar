@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { summarizeIntegrationHealth } from "../scripts/integration-health-report.mjs";
+import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  INTEGRATION_HEALTH_STEP_SUMMARY,
+  summarizeIntegrationHealth,
+  writeIntegrationHealthStepSummary,
+} from "../scripts/integration-health-report.mjs";
 
 const fixture = (overrides = {}) => ({
   routeProviders: { postgres: { timeouts: 9, queryFailures: 2, connectionFailures: 1, bypassBackoff: 12, bypassConcurrency: 3, bypassUnconfigured: 0, lastErrorKind: "timeout" }, routeset: {
@@ -44,5 +51,41 @@ describe("publicly logged aggregate route health (no upstream probes)", () => {
     expect(summarizeIntegrationHealth(fixture({ requests: 0, failed: 0 })).status).toBe("INSUFFICIENT_DATA");
     expect(summarizeIntegrationHealth(fixture({ success: 3, lastSuccessAt: "2026-10-11T12:02:00.000Z" })).status).toBe("OK");
     expect(summarizeIntegrationHealth(fixture({ success: 3, lastSuccessAt: "2026-10-11T11:59:00.000Z" })).status).toBe("INTERMITTENT");
+  });
+});
+
+describe("CodeQL #50: HTTP diagnostics never flow to GitHub summary file", () => {
+  it("writes only a fixed summary while keeping allowlisted metrics available in logs", () => {
+    const poison = "NETWORK-PAYLOAD\n# forged Markdown heading [unsafe](javascript:alert(1))";
+    const payload = fixture({
+      lastFailureAt: poison,
+      reasons: { http: 123456, timeout: 987654 },
+      requests: 654321,
+      failed: 123456,
+    });
+    payload.token = poison;
+    payload.routeCacheLatency = { sampleCount: 765432, p99Ms: 98765 };
+
+    const projected = summarizeIntegrationHealth(payload);
+    expect(projected.routeset.reasons.http).toBe(123456);
+    expect(JSON.stringify(projected)).not.toContain(poison);
+
+    const directory = mkdtempSync(join(tmpdir(), "airradar-integration-summary-"));
+    const summaryPath = join(directory, "step-summary.md");
+    try {
+      // The runner creates this file before running the step.
+      appendFileSync(summaryPath, "");
+      writeIntegrationHealthStepSummary(summaryPath);
+      const stored = readFileSync(summaryPath, "utf8");
+      expect(stored).toBe(INTEGRATION_HEALTH_STEP_SUMMARY);
+      expect(stored).toContain("## AirRadar route health (observational)\n\n");
+      expect(stored).toContain("step logs");
+      expect(stored).not.toContain(poison);
+      expect(stored).not.toContain("654321");
+      expect(stored).not.toContain("123456");
+      expect(stored).not.toContain("98765");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
