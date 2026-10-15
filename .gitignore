@@ -36,5 +36,8 @@ artifacts/visual-smoke/
 artifacts/aircraft-icon-audit.json
 artifacts/predictive-validation-prospective-v2.*
 
+# Optional Rust N-API build outputs
+/native/airradar-native/target/
+
 # Local deterministic performance reports (GitHub Actions uploads them instead)
 /.benchmarks/

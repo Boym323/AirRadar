@@ -1,0 +1,56 @@
+name: Rust BEAST native parity
+
+on:
+  pull_request:
+    paths:
+      - 'native/airradar-native/**'
+      - 'lib/server/beast-parser.ts'
+      - 'lib/server/beast-decoder.ts'
+      - 'lib/server/native-acceleration.ts'
+      - 'tests/beast-native-parity.test.ts'
+      - 'tests/beast-native-crc-batch.test.ts'
+      - 'scripts/benchmark-beast-ingest.ts'
+      - '.github/workflows/rust-beast-parity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-native-parity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Rust unit tests
+        run: cargo test --manifest-path native/airradar-native/Cargo.toml --lib
+      - name: Build Rust N-API addon
+        run: |
+          cargo build --release --manifest-path native/airradar-native/Cargo.toml
+          cp native/airradar-native/target/release/libairradar_native.so /tmp/airradar_native.node
+      - name: Install JavaScript dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: TypeScript and Rust differential parity
+        env:
+          AIRRADAR_NATIVE_BEAST: '1'
+          AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
+        run: npx vitest run tests/beast-parser.test.ts tests/beast-decoder.test.ts tests/beast-native-parity.test.ts tests/beast-native-crc-batch.test.ts
+      - name: Report synthetic parser comparison
+        env:
+          AIRRADAR_NATIVE_BEAST: '1'
+          AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
+        run: npm run benchmark:rust-beast
+      - name: Report synthetic CRC comparison
+        env:
+          AIRRADAR_NATIVE_BEAST: '1'
+          AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
+        run: npm run benchmark:rust-crc
+      - name: Compare integrated BEAST ingest including stateful decoder
+        env:
+          AIRRADAR_NATIVE_BEAST: '1'
+          AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
+        run: JITI_TSCONFIG_PATHS=true ./node_modules/.bin/jiti scripts/benchmark-beast-ingest.ts
