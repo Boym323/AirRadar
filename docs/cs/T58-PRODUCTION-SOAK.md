@@ -38,7 +38,7 @@ nepřistupuje k databázi pro zápis a nemění nastavení produkce.**
   **sám nezapíná** a bez ní se záměrně nespustí. Případná změna vyžaduje
   samostatně schválený release; žádný automatický restart.
 
-## Sběr a porovnání
+**Spouštěný sběrný příkaz**
 
 Workflow používá následující čtecí sběrač a existující analytický skript:
 
@@ -87,7 +87,7 @@ ATC cache, RSS a počet letadel/čekajících predikcí. Zohledňuje, že jde o
 `PASS_WITH_LIMITATIONS` znamená dostatečnou úplnost dat, nikoliv záruku
 zrychlení. Automatické pravidelné spouštění není součástí tohoto řešení.
 
-## Referenční metriky T57
+**Referenční metriky T57**
 
 | Ukazatel | T57 |
 | --- | ---: |
