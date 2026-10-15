@@ -59,6 +59,8 @@ const FAST_PERFORMANCE_SCENARIOS = "100,1000,3000";
 const DOCUMENTATION = [
   /^docs\/.*\.md$/, /^README\.md$/, /^CHANGELOG\.md$/,
   /^docs\/metrics\/(?:code-history\.json|code-growth\.svg)$/,
+  /^artifacts\/performance\/OPTIMIZATION-PROGRESS\.md$/,
+  /^artifacts\/performance\/route-telemetry-benchmark\.json$/,
 ];
 const RULES = [
   // Pure ATC geometry/context and outcome evaluation affect the radar but
