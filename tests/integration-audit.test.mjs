@@ -85,6 +85,34 @@ describe("integration audit", () => {
       expect(compared.comparison.status).toBe("COMPARED");
   });
 
+  it("does not certify a healthy event loop without completed valid windows", async () => {
+    const dir = privateTempDir();
+    const path = join(dir, "event-loop-fixture.json");
+    const base = structuredClone(fixture);
+    base.runtime.runtime.eventLoopLagWindows = [];
+    writeFileSync(path, JSON.stringify(base), { flag: "wx", mode: 0o600 });
+    const noWindows = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path });
+    expect(noWindows.checks.find((check) => check.id === "event-loop")).toMatchObject({
+      status: "NOT VERIFIED",
+      metrics: { maxWindowMs: null },
+    });
+
+    const invalidPath = join(dir, "invalid-windows.json");
+    base.runtime.runtime.eventLoopLagWindows = [{ maxMs: -3 }, { maxMs: "invalid" }];
+    writeFileSync(invalidPath, JSON.stringify(base), { flag: "wx", mode: 0o600 });
+    const invalid = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: invalidPath });
+    expect(invalid.checks.find((check) => check.id === "event-loop").status).toBe("NOT VERIFIED");
+
+    const healthyPath = join(dir, "completed-window.json");
+    base.runtime.runtime.eventLoopLagWindows = [{ maxMs: 240 }];
+    writeFileSync(healthyPath, JSON.stringify(base), { flag: "wx", mode: 0o600 });
+    const completed = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: healthyPath });
+    expect(completed.checks.find((check) => check.id === "event-loop")).toMatchObject({
+      status: "VERIFIED HEALTHY",
+      metrics: { maxWindowMs: 240 },
+    });
+  });
+
   it("creates bounded JSON and Markdown reports privately without overwriting existing files", async () => {
     const dir = privateTempDir();
     const jsonPath = join(dir, "report.json");
