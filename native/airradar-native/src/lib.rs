@@ -147,22 +147,49 @@ impl Parser {
     }
 }
 
-/// Mode-S CRC remainder; data is 7 or 14 bytes (fits in u128).
-/// No BigInt allocation and no callbacks per message.
+// The CRC polynomial is x^24 + 0xfff409. Build the lookup table at compile
+// time; do not allocate or initialize it on the hot path.
+const fn build_crc24_table() -> [u32; 256] {
+    let mut table = [0_u32; 256];
+    let mut index = 0;
+    while index < 256 {
+        let mut remainder = (index as u32) << 16;
+        let mut bit = 0;
+        while bit < 8 {
+            remainder = if remainder & 0x800000 != 0 {
+                (remainder << 1) ^ 0xfff409
+            } else {
+                remainder << 1
+            };
+            remainder &= 0xffffff;
+            bit += 1;
+        }
+        table[index] = remainder;
+        index += 1;
+    }
+    table
+}
+
+const CRC24_TABLE: [u32; 256] = build_crc24_table();
+
+/// Exact 24-bit Mode-S polynomial remainder (NOT only a CRC-valid boolean).
+/// The first n-3 bytes are divided with a bytewise lookup and the trailing
+/// 24-bit parity field is XORed unchanged. This preserves the ICAO address
+/// syndrome for DF4/5/20/21, where the exact CRC remainder is required.
 fn crc24(data: &[u8]) -> u32 {
     if data.len() != 7 && data.len() != 14 {
         return 0;
     }
-    let mut bits = 0_u128;
-    for &byte in data {
-        bits = (bits << 8) | u128::from(byte);
+    let end = data.len() - 3;
+    let mut crc = 0_u32;
+    for &byte in &data[..end] {
+        let index = ((crc >> 16) as u8 ^ byte) as usize;
+        crc = ((crc << 8) & 0xffffff) ^ CRC24_TABLE[index];
     }
-    for bit in (24..data.len() * 8).rev() {
-        if bits & (1_u128 << bit) != 0 {
-            bits ^= 0xfff409_u128 << (bit - 24);
-        }
-    }
-    (bits & 0xff_ffff) as u32
+    let parity = (u32::from(data[end]) << 16)
+        | (u32::from(data[end + 1]) << 8)
+        | u32::from(data[end + 2]);
+    crc ^ parity
 }
 
 #[napi(js_name = "NativeBeastParser")]
@@ -282,6 +309,36 @@ mod tests {
         }
         assert_eq!(index, packed.len());
         assert_eq!(parser.pending.len(), 0);
+    }
+
+    /// Bitwise reference retained in tests to validate every syndrome bit,
+    /// including address-parity replies, not just CRC=0 validity.
+    fn crc24_reference(data: &[u8]) -> u32 {
+        let mut bits = 0_u128;
+        for &byte in data {
+            bits = (bits << 8) | u128::from(byte);
+        }
+        for bit in (24..data.len() * 8).rev() {
+            if bits & (1_u128 << bit) != 0 {
+                bits ^= 0xfff409_u128 << (bit - 24);
+            }
+        }
+        (bits & 0xffffff) as u32
+    }
+
+    #[test]
+    fn crc_lookup_matches_reference_for_exact_syndromes() {
+        let mut seed = 0x7f23a963_u32;
+        for len in [7_usize, 14_usize] {
+            for _ in 0..15_000 {
+                let mut frame = vec![0_u8; len];
+                for byte in &mut frame {
+                    seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                    *byte = (seed >> 24) as u8;
+                }
+                assert_eq!(crc24(&frame), crc24_reference(&frame));
+            }
+        }
     }
 
     #[test]
