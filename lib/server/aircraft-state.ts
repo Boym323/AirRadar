@@ -43,7 +43,7 @@ import { getRuntimePerformanceDiagnostics, measureRuntime, measureRuntimeAsync }
 import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
-import { appendBoundedServerTrailPoint, appendTrailPoint, trailPointFromAircraft, SERVER_LOCAL_TRAIL_MAX_POINTS } from "@/lib/aircraft/trail";
+import { appendBoundedNetworkTrailPoint, appendBoundedServerTrailPoint, trailPointFromAircraft, SERVER_LOCAL_TRAIL_MAX_POINTS } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
@@ -1433,13 +1433,8 @@ export class AircraftStateService {
         }
         return point ? appendBoundedServerTrailPoint(base, point) : base;
       }
-      const next = point ? appendTrailPoint(base, point) : base;
       const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
-      const bounded = next.filter((point) => {
-        const recordedAt = Date.parse(point.recordedAt);
-        return !Number.isFinite(cutoff) || (Number.isFinite(recordedAt) && recordedAt >= cutoff);
-      });
-      return bounded.slice(-getNetworkTrailMaxPoints());
+      return appendBoundedNetworkTrailPoint(base, point, cutoff, getNetworkTrailMaxPoints());
     });
   }
 
