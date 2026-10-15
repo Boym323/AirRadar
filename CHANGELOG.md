@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.466] - 2026-10-15
+
+Changes since v1.0.465.
+
+### Changed
+
+- Remove ADSB.lol routeset integration and related tests (de364cde)
+
+### Maintenance
+
+- Sync generated repository metadata (#921) (0a61c305)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#921) (0a61c305)
+- refactor: remove ADSB.lol routeset integration and related tests (de364cde)
+
+</details>
 ## [1.0.465] - 2026-10-15
 
 Changes since v1.0.464.
