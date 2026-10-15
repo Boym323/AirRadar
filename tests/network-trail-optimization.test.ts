@@ -49,14 +49,14 @@ describe("incremental bounded network trail", () => {
       const mode = index % 17;
       let incoming: TrailPoint | null;
       if (mode === 0) incoming = null;
-      else if (mode === 1) incoming = point(index - 4, 14 + index / 1_000_000);
+      else if (mode === 1) incoming = point(index - 4, 14 + index / 10_000);
       else if (mode === 2) incoming = point(index, 130); // impossible jump
       else if (mode === 3) incoming = point(index, 14, "invalid"); // malformed timestamp
       else if (mode === 4 && optimized.length) incoming = {
         ...optimized[optimized.length - 1]!,
         recordedAt: new Date(baseTime + index * 1000).toISOString(),
       }; // same-position endpoint replacement
-      else incoming = point(index, 14 + index / 1_000_000);
+      else incoming = point(index, 14 + index / 10_000);
       const cutoff = mode === 5 ? Number.NaN : baseTime + (index - 85) * 1000;
       const maxPoints = index % 31 === 0 ? 1 : 120;
       optimized = appendBoundedNetworkTrailPoint(optimized, incoming, cutoff, maxPoints);
@@ -91,7 +91,7 @@ describe("incremental bounded network trail", () => {
   });
 
   it("respects bounded maximum, age expiry, same-position tail, and identity across sources", () => {
-    const initial = Array.from({ length: 70 }, (_, index) => point(index, 14 + index / 1_000_000));
+    const initial = Array.from({ length: 70 }, (_, index) => point(index, 14 + index / 10_000));
     let previous: TrailPoint[] = [];
     for (const entry of initial) {
       previous = appendBoundedNetworkTrailPoint(previous, entry, baseTime - 1, 30);
