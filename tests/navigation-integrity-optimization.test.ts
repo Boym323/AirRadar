@@ -61,7 +61,7 @@ describe("Navigation Integrity optimized detector (pre-optimization oracle)", ()
       return observation(index, {
         aircraftHex: hex,
         lat: 49.25 + (index % 2) * 0.21, lon: 16.65,
-        altitudeBand: 3, nic, nacP: nic < 6 ? 4 : 8,
+        altitudeBand: 3, nic, nacP: nic < 6 ? 4 : 8, nacV: 3,
         observedAt: at, receivedAt: at,
         source: index % 2 ? "NETWORK" : "LOCAL",
       });
