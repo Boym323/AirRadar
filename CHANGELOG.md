@@ -17,6 +17,45 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.457] - 2026-10-15
+
+Changes since v1.0.456.
+
+**Features touched:** System Observability.
+
+### Fixed
+
+- Isolate production typecheck (08b009f7)
+
+### Performance
+
+- Unified ATC prep, Operational Twin and SSE optimization (#878 + #893) (#895) (cacd9154)
+
+### Documentation
+
+- Update changelog for v1.0.457 (630ab232)
+- Update changelog for v1.0.457 (491d7a64)
+- Document T58 one-command soak and GitHub history in README and bilingual Wiki (#892) (92fd31bb)
+
+### Maintenance
+
+- Sync generated repository metadata (#890) (f4b430e0)
+- Sync generated repository metadata (#891) (80652844)
+- Sync generated repository metadata (#894) (7775bf41)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#890) (f4b430e0)
+- docs: update changelog for v1.0.457 (630ab232)
+- chore(metadata): sync generated repository metadata (#891) (80652844)
+- docs: update changelog for v1.0.457 (491d7a64)
+- fix(release): isolate production typecheck (08b009f7)
+- docs: document T58 one-command soak and GitHub history in README and bilingual Wiki (#892) (92fd31bb)
+- chore(metadata): sync generated repository metadata (#894) (7775bf41)
+- perf(runtime): unified ATC prep, Operational Twin and SSE optimization (#878 + #893) (#895) (cacd9154)
+
+</details>
 ## [1.0.456] - 2026-10-15
 
 Changes since v1.0.455.
