@@ -706,10 +706,14 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
       const current = situation([event("ATC_SECTOR_ENTRY", 5, { id: `sector:TARGET:${baseNow + 5 * 60_000}:${index}`, lat: 49, lon: 18.5 })]);
       current.aircraft.icaoHex = icaoHex;
       validator.capture(current, { atcDataset: dataset, sigmets: null, destination: null });
-      const truth = { ...aircraft(baseNow + index * 1_000, 49, 18.5), icaoHex };
+      // Capacity is keyed by distinct truth positions, not observation times.
+      // Identical positions are deliberately shared by the optimized cache.
+      const truth = { ...aircraft(baseNow + index * 1_000, 49, 18.5 + index * 0.1), icaoHex };
       validator.observeLocal(new Map([[icaoHex, truth]]), baseNow + 60_000 + index);
     }
-    expect(validator.getAtcCacheStats()).toMatchObject({ size: 2, maxEntries: 2, evictions: 1 });
+    expect(validator.getAtcCacheStats()).toMatchObject({
+      size: 2, maxEntries: 2, evictions: 1, hits: 0, misses: 3,
+    });
   });
 
   it("does not share sector truth between aircraft at different points", () => {
