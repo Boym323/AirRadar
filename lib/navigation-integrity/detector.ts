@@ -59,23 +59,28 @@ export function detectNavigationIntegrityAnomalies(
   baselines: Map<string, NavigationIntegrityBaseline> = buildBaseline(observations),
 ): NavigationIntegrityAnomaly[] {
   const affectedByCell = new Map<string, NavigationIntegrityObservation[]>();
-  const normalByCell = new Map<string, Set<string>>();
-  // Classify each observation once and index normal context once for all
-  // candidates, rather than rescanning all N observations for each group.
+  // The normal-only fast path avoids allocating a normal-cell index at all.
   for (const observation of observations) {
+    if (!qualifying(observation)) continue;
     const key = cellKey(observation.lat, observation.lon, observation.altitudeBand);
-    if (!qualifying(observation)) {
-      let normal = normalByCell.get(key);
-      if (!normal) {
-        normal = new Set<string>();
-        normalByCell.set(key, normal);
-      }
-      normal.add(observation.aircraftHex);
-      continue;
-    }
     const items = affectedByCell.get(key) ?? [];
     items.push(observation);
     affectedByCell.set(key, items);
+  }
+  if (affectedByCell.size === 0) return [];
+
+  // Relevant normal context is indexed once for all candidate groups.
+  // Only cells with affected observations can ever belong to those groups.
+  const normalByCell = new Map<string, Set<string>>();
+  for (const observation of observations) {
+    const key = cellKey(observation.lat, observation.lon, observation.altitudeBand);
+    if (!affectedByCell.has(key) || qualifying(observation)) continue;
+    let normal = normalByCell.get(key);
+    if (!normal) {
+      normal = new Set<string>();
+      normalByCell.set(key, normal);
+    }
+    normal.add(observation.aircraftHex);
   }
   return connectedCellGroups(affectedByCell.keys()).flatMap((group, groupIndex) => {
     const items = group.flatMap((key) => affectedByCell.get(key) ?? []);
