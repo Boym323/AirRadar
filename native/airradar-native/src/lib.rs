@@ -353,3 +353,48 @@ mod tests {
         (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap()).collect()
     }
 }
+
+// Experimental Operational Twin numeric kernel. Exact 3 NM waypoint predicate,
+// evaluated in one call for an entire point window (lat/lon interleaved).
+// Production Operational Twin is NOT rewired until benchmarks justify the ABI.
+fn waypoint_mask(points: &[f64], waypoint_lat: f64, waypoint_lon: f64) -> Vec<u8> {
+    let mut matches = Vec::with_capacity(points.len() / 2);
+    let target_lat = waypoint_lat.to_radians();
+    for pair in points.chunks_exact(2) {
+        let lat = pair[0];
+        let lon = pair[1];
+        let lat1 = lat.to_radians();
+        let dlat = (waypoint_lat - lat).to_radians();
+        let dlon = (waypoint_lon - lon).to_radians();
+        let a = (dlat / 2.0).sin().powi(2)
+            + lat1.cos() * target_lat.cos() * (dlon / 2.0).sin().powi(2);
+        let distance = 6371.0 * 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
+        matches.push(u8::from(distance / 1.852 <= 3.0));
+    }
+    matches
+}
+
+#[napi(js_name = "batchWaypointMatches")]
+pub fn batch_waypoint_matches(
+    points: napi::bindgen_prelude::Float64Array,
+    waypoint_lat: f64,
+    waypoint_lon: f64,
+) -> Buffer {
+    Buffer::from(waypoint_mask(&points, waypoint_lat, waypoint_lon))
+}
+
+#[cfg(test)]
+mod waypoint_tests {
+    use super::waypoint_mask;
+
+    #[test]
+    fn near_far_invalid_and_order() {
+        let input = [50.0, 14.0, 50.01, 14.0, 51.0, 14.0, f64::NAN, 14.0];
+        assert_eq!(waypoint_mask(&input, 50.0, 14.0), vec![1, 1, 0, 0]);
+    }
+
+    #[test]
+    fn empty_is_empty() {
+        assert!(waypoint_mask(&[], 50.0, 14.0).is_empty());
+    }
+}
