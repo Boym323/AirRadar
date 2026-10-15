@@ -108,3 +108,48 @@ dataset identity, and truth-snapshot change detection remain intact.
 Regressions explicitly cover time/heading churn and different locations
 with an identical timestamp. Effect on production hit rate requires
 controlled matched workload measurements; no percentage gain is claimed.
+
+
+## T57 matched synthetic validator replay — reproducibility gate
+
+A new **non-production, deterministic** benchmark
+`scripts/benchmark-operational-twin-t57.ts` uses the final T57 workload
+shape: 78 local aircraft, 20 pending predictions, 120-point local trails,
+a 3-second snapshot interval, shared immutable trail references and
+periodic corrections. It compares full-scan and incremental algorithms on
+the **same commit**, checking **semantic equality** before reporting timing.
+It reports per-run CPU, wall-time P50/P95/P99/max, GC/RSS context, event-loop
+delay, ATC cache hits/misses, pending cardinality, and instrumentation counts.
+The focused 30-second semantic gate is run as a Vitest test in CI; reported
+timings are diagnostic (no noisy strict CI speed threshold).
+
+Representative run (60 synthetic seconds, two paired repetitions):
+
+```sh
+npm run benchmark:twin-t57
+```
+
+Full opt-in stress workload (1s/3s/10s × 50/70/100/250 aircraft ×
+1,000/3,000/6,000 pending; one simulated hour per case; three independent
+paired repetitions; **very expensive, must run on a separate idle host**):
+
+```sh
+RADAR_TWIN_T57_PROFILE=matrix npm run benchmark:twin-t57
+```
+
+For a limited local matrix, use
+`RADAR_TWIN_T57_COUNTS`, `RADAR_TWIN_T57_PENDING`,
+`RADAR_TWIN_T57_INTERVALS`, `RADAR_TWIN_T57_DURATION_SECONDS`,
+and `RADAR_TWIN_T57_REPEATS`. Output is JSON with no aircraft IDs or
+coordinates; no production API or database is contacted. Do not run it on
+the live production host during a soak.
+
+**Critical limitation:** `full-scan` vs `incremental` within the current
+branch is **not** a true before/after of production `ca25f52b`; both
+arms use the same improved current-sector ATC fast path and cache key.
+A production-commit comparison must instrument a separate, throwaway
+checkout or worktree using the same fixture code, with matching Node
+version, resource limits, environment and runner. This benchmark also
+does not replay a full `AircraftStateService` pipeline, production sector
+geometry, raw receiver frames or actual incoming event/expiry patterns.
+No benchmark measurements or release acceptance are claimed until run.
