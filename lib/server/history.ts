@@ -1194,23 +1194,33 @@ export async function recordAircraftSnapshot(
       if (!dbAircraft) throw new Error("Aircraft persistence returned no row");
 
       // A first-ever alert must be based on a durable Flight, not on a
-      // process-local Aircraft row. The optional capability check keeps the
-      // narrow fake persistence adapters used by tests backwards compatible.
-      let priorFlights: unknown[] | null = null;
-      if (!durableFlightPresence.has(dbAircraft.id)) {
-        const priorFlightsQuery = schema.Flight.where({ aircraftId: dbAircraft.id }) as unknown as {
-          limit?: (value: number) => { all(): Promise<unknown[]> };
-        };
-        priorFlights = typeof priorFlightsQuery.limit === "function"
-          ? await statement(() => priorFlightsQuery.limit!(1).all())
-          : null;
-        if (priorFlights !== null) rememberBounded(durableFlightPresence, dbAircraft.id, priorFlights.length > 0);
-      }
+      // process-local Aircraft row. Look up the active flight first: when one
+      // exists, it already proves durable flight history and the second
+      // existence SELECT can be skipped (common after restart/cache eviction).
+      // Only probe previous flights when no active flight was found. Retain
+      // the optional capability guard for narrow persistence test adapters.
       let flight = await statement(() => schema.Flight
         .where({ aircraftId: dbAircraft!.id })
         .where({ endTime: null })
         .orderBy((row) => row.startTime.desc())
         .first());
+      let firstDurableFlight = false;
+      if (!durableFlightPresence.has(dbAircraft.id)) {
+        if (flight) {
+          rememberBounded(durableFlightPresence, dbAircraft.id, true);
+        } else {
+          const priorFlightsQuery = schema.Flight.where({ aircraftId: dbAircraft.id }) as unknown as {
+            limit?: (value: number) => { all(): Promise<unknown[]> };
+          };
+          const priorFlights = typeof priorFlightsQuery.limit === "function"
+            ? await statement(() => priorFlightsQuery.limit!(1).all())
+            : null;
+          if (priorFlights !== null) {
+            rememberBounded(durableFlightPresence, dbAircraft.id, priorFlights.length > 0);
+            firstDurableFlight = priorFlights.length === 0;
+          }
+        }
+      }
 
       const callsignChanged = Boolean(flight?.callsign && item.callsign && flight.callsign !== item.callsign);
       const continuityBroken = Boolean(
@@ -1242,7 +1252,6 @@ export async function recordAircraftSnapshot(
         }
       }
 
-      const firstDurableFlight = priorFlights !== null && priorFlights.length === 0 && !flight;
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
           const previousFlight = flight;
