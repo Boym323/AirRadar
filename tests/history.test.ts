@@ -72,6 +72,60 @@ describe("historical flight maintenance", () => {
     expect(transactionAttempts).toBe(2);
   });
 
+  it("avoids redundant prior-flight SQL when an open durable Flight already exists", async () => {
+    const recordedAt = new Date("2026-01-01T12:00:20Z");
+    const aircraft = normalizeAircraft(
+      { hex: "DEF889", flight: "ACTIVE1", lat: 50, lon: 14, seen: 0, seen_pos: 0 },
+      { lat: 50, lon: 14, name: "Test" },
+      recordedAt,
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    const priorFlightsLimit = vi.fn(() => ({ all: vi.fn().mockResolvedValue([{ id: 10 }]) }));
+    const openFlight = {
+      id: 10, callsign: "ACTIVE1", lastSeenAt: Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime() - 10_000),
+      endTime: null, maxAltitude: null, minDistanceKm: null, destination: null,
+    };
+    const updateFlight = vi.fn().mockResolvedValue(openFlight);
+    const flightWhere = vi.fn((filter: Record<string, unknown>) => {
+      if ("aircraftId" in filter) return {
+        limit: priorFlightsLimit,
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(openFlight) }),
+        }),
+      };
+      return { update: updateFlight };
+    });
+    const positionCreate = vi.fn().mockResolvedValue({ id: 101 });
+    const database = {
+      orm: {
+        public: {
+          Aircraft: {
+            where: vi.fn().mockReturnValue({
+              first: vi.fn().mockResolvedValue({ id: 987654321, registration: null, aircraftType: null }),
+              update: vi.fn().mockResolvedValue({ id: 987654321 }),
+            }),
+          },
+          Flight: { where: flightWhere, create: vi.fn() },
+          FlightPosition: {
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+            }),
+            create: positionCreate,
+          },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+    const result = await recordAircraftSnapshot([aircraft], recordedAt);
+    expect(result.failed).toEqual([]);
+    expect(result.succeeded).toEqual(["DEF889"]);
+    expect(priorFlightsLimit).not.toHaveBeenCalled();
+    expect(updateFlight).toHaveBeenCalledTimes(1);
+    expect(positionCreate).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps existing Flight and FlightPosition timestamp inputs temporal", async () => {
     const recordedAt = new Date("2026-01-01T12:00:10Z");
     const previousSeenAt = Temporal.Instant.fromEpochMilliseconds(new Date("2026-01-01T12:00:00Z").getTime());
