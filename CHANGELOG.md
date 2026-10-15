@@ -36,6 +36,7 @@ Changes since v1.0.455.
 - ops: one-command T58 production soak with permanent GitHub report history (#889) (e15b807f)
 
 </details>
+
 ## [1.0.455] - 2026-10-15
 
 Changes since v1.0.454.
@@ -55,6 +56,7 @@ Changes since v1.0.454.
 - perf(twin): V4.6 reduce repeated truth work (#885) (e9a9b835)
 
 </details>
+
 ## [1.0.454] - 2026-10-15
 
 Changes since v1.0.453.
@@ -74,6 +76,7 @@ Changes since v1.0.453.
 - perf(diagnostics): add V4.6.2 operational twin forensics (#886) (ca25f52b)
 
 </details>
+
 ## [1.0.453] - 2026-10-14
 
 Changes since v1.0.452.
@@ -95,6 +98,7 @@ Changes since v1.0.452.
 - perf(runtime): recover aged Operational Twin truth validation (#883) (e8260a6a)
 
 </details>
+
 ## [1.0.452] - 2026-10-14
 
 Changes since v1.0.451.
@@ -116,6 +120,7 @@ Changes since v1.0.451.
 - perf(runtime): recover nearest-airport event-loop hotspot (#881) (8ea6082f)
 
 </details>
+
 ## [1.0.451] - 2026-10-14
 
 Changes since v1.0.450.
@@ -137,6 +142,7 @@ Changes since v1.0.450.
 - fix(runtime): isolate production build identity and guard active Next runtime (ed561c9f)
 
 </details>
+
 ## [1.0.450] - 2026-10-14
 
 Changes since v1.0.449.
@@ -158,6 +164,7 @@ Changes since v1.0.449.
 - feat(atc): add systemd service and timer for ATC canary watchdog (07aa7597)
 
 </details>
+
 ## [1.0.449] - 2026-10-14
 
 Changes since v1.0.448.
@@ -179,6 +186,7 @@ Changes since v1.0.448.
 - fix(atc): remove redundant assignment pipeline work (f8d80837)
 
 </details>
+
 ## [1.0.448] - 2026-10-14
 
 Changes since v1.0.447.
@@ -200,6 +208,7 @@ Changes since v1.0.447.
 - fix(atc): bound shadow prediction scheduling (89d2d789)
 
 </details>
+
 ## [1.0.447] - 2026-10-14
 
 Changes since v1.0.446.
@@ -221,6 +230,7 @@ Changes since v1.0.446.
 - fix(ci): stabilize full visual release gate at two workers (#871) (c4c050a3)
 
 </details>
+
 ## [1.0.446] - 2026-10-14
 
 Changes since v1.0.445.
@@ -237,6 +247,7 @@ Changes since v1.0.445.
 - ci: speed up release browser gates and stream deployment progress (#867) (f551c2d9)
 
 </details>
+
 ## [1.0.445] - 2026-10-13
 
 Changes since v1.0.444.
@@ -266,6 +277,7 @@ Changes since v1.0.444.
 - fix: restore AirRadar runtime stability and optimize ATC resolution (e3b0bf9e)
 
 </details>
+
 ## [1.0.444] - 2026-10-13
 
 Changes since v1.0.443.
@@ -287,6 +299,7 @@ Changes since v1.0.443.
 - perf(operational-twin): memoize sector truth lookups (#861) (1b26a03d)
 
 </details>
+
 ## [1.0.443] - 2026-10-13
 
 Changes since v1.0.442.
@@ -306,6 +319,7 @@ Changes since v1.0.442.
 - perf(route-cache): isolate foreground calls from maintenance (#859) (c2fc1d4a)
 
 </details>
+
 ## [1.0.442] - 2026-10-13
 
 Changes since v1.0.441.
@@ -325,6 +339,7 @@ Changes since v1.0.441.
 - perf(route-cache): split maintenance settlement attribution (#857) (3aeae1fb)
 
 </details>
+
 ## [1.0.441] - 2026-10-13
 
 Changes since v1.0.440.
@@ -355,6 +370,7 @@ Changes since v1.0.440.
 - perf(route-cache): V5.6 separate read/write/maintenance DB settlement evidence (#855) (b14cf3bc)
 
 </details>
+
 ## [1.0.440] - 2026-10-13
 
 Changes since v1.0.439.
@@ -390,6 +406,7 @@ Changes since v1.0.439.
 - fix(release): verify automated tag target (#851) (d6831804)
 
 </details>
+
 ## [1.0.439] - 2026-10-13
 
 Changes since v1.0.438.
@@ -417,6 +434,7 @@ Changes since v1.0.438.
 - perf(twin): index pending local truth outcomes (#847) (f4bbf269)
 
 </details>
+
 ## [1.0.438] - 2026-10-13
 
 Changes since v1.0.437.
@@ -458,6 +476,7 @@ Changes since v1.0.436.
 - perf(route-cache): add V5 SQL settlement and event-loop attribution (#843) (3596e96e)
 
 </details>
+
 ## [1.0.436] - 2026-10-13
 
 Changes since v1.0.435.
@@ -477,6 +496,7 @@ Changes since v1.0.435.
 - feat(t57-soak): enhance route cache metrics and session management (5128516f)
 
 </details>
+
 ## [1.0.435] - 2026-10-12
 
 Changes since v1.0.434.
@@ -497,6 +517,7 @@ Changes since v1.0.434.
 - Merge remote-tracking branch 'origin/main' (86f3998f)
 
 </details>
+
 ## [1.0.434] - 2026-10-12
 
 Changes since v1.0.433.
@@ -515,6 +536,7 @@ Changes since v1.0.433.
 - build(deps-dev): bump eslint from 9.39.5 to 10.12.0 (#835) (3b1edac1)
 
 </details>
+
 ## [1.0.433] - 2026-10-12
 
 Changes since v1.0.432.
@@ -542,6 +564,7 @@ Changes since v1.0.432.
 - Merge pull request #834 from Boym323/dependabot/npm_and_yarn/vite-8.3.4 (58d2cb13)
 
 </details>
+
 ## [1.0.432] - 2026-10-11
 
 Changes since v1.0.431.
@@ -586,6 +609,7 @@ Changes since v1.0.431.
 - perf(route-cache): prepare V3 production latency attribution (#831) (e36f07b8)
 
 </details>
+
 ## [1.0.431] - 2026-10-11
 
 Changes since v1.0.430.
@@ -608,6 +632,7 @@ Changes since v1.0.430.
 - Merge pull request #829 from Boym323/perf/production-performance-audit-v1 (cdc907ac)
 
 </details>
+
 ## [1.0.430] - 2026-10-11
 
 Changes since v1.0.429.
@@ -646,6 +671,7 @@ Changes since v1.0.429.
 - Merge pull request #827 from Boym323/fix/main-release-gates-atc-migration (9f968359)
 
 </details>
+
 ## [1.0.429] - 2026-10-11
 
 Changes since v1.0.428.
@@ -677,6 +703,7 @@ Changes since v1.0.428.
 - ops(browser): enhance visual smoke test reliability with retry logic and timeout adjustments (f9de49ef)
 
 </details>
+
 ## [1.0.428] - 2026-10-11
 
 Changes since v1.0.427.
@@ -700,6 +727,7 @@ Changes since v1.0.427.
 - fix(routes): preserve upstream 403 circuit breaker across deployments (#820) (f8973492)
 
 </details>
+
 ## [1.0.427] - 2026-10-11
 
 Changes since v1.0.426.
@@ -716,6 +744,7 @@ Changes since v1.0.426.
 - ops(system): expose production route-cache timeout and SQL failure attribution (#816) (813eabda)
 
 </details>
+
 ## [1.0.426] - 2026-10-11
 
 Changes since v1.0.425.
@@ -747,6 +776,7 @@ Changes since v1.0.425.
 - fix(routes): shared HTTP 403 circuit breaker, fail-soft fallback and postdeploy evidence (#815) (b1670693)
 
 </details>
+
 ## [1.0.425] - 2026-10-11
 
 Changes since v1.0.424.
@@ -772,6 +802,7 @@ Changes since v1.0.424.
 - feat(system): real production DB and route-cache P50/P95/P99 from existing telemetry (#812) (382a6903)
 
 </details>
+
 ## [1.0.424] - 2026-10-11
 
 Changes since v1.0.423.
@@ -796,6 +827,7 @@ Changes since v1.0.423.
 - fix(browser): strict one-shot retry for transient third-party vector tiles (#806) (2c4022fd)
 
 </details>
+
 ## [1.0.423] - 2026-10-11
 
 Changes since v1.0.422.
@@ -817,6 +849,7 @@ Changes since v1.0.422.
 - fix(routes): bounded Retry-After and resilient routeset backoff (#804) (dce724f6)
 
 </details>
+
 ## [1.0.422] - 2026-10-11
 
 Changes since v1.0.421.
@@ -836,6 +869,7 @@ Changes since v1.0.421.
 - perf(ci): optimize release validation, selective browser gates and observability (#801) (95c5ec8d)
 
 </details>
+
 ## [1.0.421] - 2026-10-11
 
 Changes since v1.0.420.
@@ -867,6 +901,7 @@ Changes since v1.0.420.
 - feat(perf): add radar performance soak artifacts and baseline metrics (7f308f84)
 
 </details>
+
 ## [1.0.420] - 2026-10-11
 
 Changes since v1.0.419.
