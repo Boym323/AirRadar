@@ -11,6 +11,27 @@ const job = (name) => {
   return next < 0 ? workflow.slice(start) : workflow.slice(start, start + name.length + 4 + next);
 };
 
+test("metadata-only PRs do not spawn redundant CI while explicit validation remains mandatory", () => {
+  // The metadata bot validates this exact content with a separately
+  // dispatched CI run and publishes the resulting required status.
+  const pullTrigger = workflow.split("  pull_request:\n")[1]?.split("  workflow_dispatch:")[0];
+  assert.ok(pullTrigger, "missing pull_request configuration");
+  const ignored = pullTrigger.match(/    paths-ignore:\n((?:      - [^\n]+\n)+)/);
+  assert.ok(ignored, "metadata-only paths-ignore must be explicit");
+  const paths = ignored[1].split("\n").filter(Boolean).map((line) => line.trim().slice(2));
+  assert.deepEqual(paths.slice().sort(), [
+    "CHANGELOG.md",
+    "docs/metrics/code-growth.svg",
+    "docs/metrics/code-history.json",
+  ].sort());
+  assert.match(workflow, /  push:\n    branches: \[main, master\]/);
+  assert.match(workflow, /  workflow_dispatch:/);
+  const metadata = readFileSync(new URL("../.github/workflows/repository-metadata.yml", import.meta.url), "utf8");
+  assert.match(metadata, /gh workflow run ci\.yml/);
+  assert.match(metadata, /gh run watch "\$\{run_id\}"/);
+  assert.match(metadata, /-f context=validate/);
+});
+
 test("PR previews cannot trigger self-hosted production deploy", () => {
   const deploy = job("deploy");
   assert.match(deploy, /^    if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main' && needs\.release-scope\.outputs\.deploy == 'true'$/m);
