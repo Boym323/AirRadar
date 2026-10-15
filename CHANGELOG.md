@@ -17,28 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.462] - 2026-10-15
-
-Changes since v1.0.461.
-
-**Features touched:** System Observability.
-
-### Performance
-
-- Integrate history SQL and Twin truth-window optimization (#906) (90b17978)
-
-### Maintenance
-
-- Sync generated repository metadata (#910) (3e13ceb5)
-
-<details>
-<summary>Technical commits</summary>
-
-- perf(runtime): integrate history SQL and Twin truth-window optimization (#906) (90b17978)
-- chore(metadata): sync generated repository metadata (#910) (3e13ceb5)
-
-</details>
-
 ## [1.0.461] - 2026-10-15
 
 Changes since v1.0.460.
@@ -60,6 +38,7 @@ Changes since v1.0.460.
 - fix(routeset): identify AirRadar to ADSB.lol upstream (#821) (#905) (1eb3f6e7)
 
 </details>
+
 ## [1.0.460] - 2026-10-15
 
 Changes since v1.0.459.
@@ -83,6 +62,7 @@ Changes since v1.0.459.
 - perf(navigation): linearize candidate evidence and reuse integrity cell statistics (#902) (eb03cdfe)
 
 </details>
+
 ## [1.0.459] - 2026-10-15
 
 Changes since v1.0.458.
@@ -102,6 +82,7 @@ Changes since v1.0.458.
 - fix(security): harden CodeQL persistence, preferences and private runtime reports (#896) (c4926991)
 
 </details>
+
 ## [1.0.458] - 2026-10-15
 
 Changes since v1.0.457.
@@ -121,6 +102,7 @@ Changes since v1.0.457.
 - fix(ci): avoid red no-job runs for auto-merged metadata PRs (#898) (5b4d7acd)
 
 </details>
+
 ## [1.0.457] - 2026-10-15
 
 Changes since v1.0.456.
@@ -160,6 +142,7 @@ Changes since v1.0.456.
 - perf(runtime): unified ATC prep, Operational Twin and SSE optimization (#878 + #893) (#895) (cacd9154)
 
 </details>
+
 ## [1.0.456] - 2026-10-15
 
 Changes since v1.0.455.
