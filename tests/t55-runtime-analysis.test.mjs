@@ -47,6 +47,16 @@ describe("T5.5 runtime production audit projections", () => {
     expect(JSON.stringify(result)).not.toContain("../../malicious");
   });
 
+  it("drops arbitrary remote text from the persisted identification fields", () => {
+    const projected = projectT55Sample({
+      detailLevel: "admin",
+      application: { commit: "Authorization: Bearer SECRET", version: "1.0.390\\nsecret" },
+      runtime: { autocommitOperationAttribution: { processId: 123, diagnosticsStoreId: "spoof\\nsecret" } },
+    }, { schemaVersion: 2, scope: "process-local", runtime: { status: "enabled" } });
+    expect(projected).toMatchObject({ commit: null, version: null, storeId: null });
+    expect(JSON.stringify(projected)).not.toContain("SECRET");
+  });
+
   it("fails closed when schema, authorization, or enabled runtime metrics are absent", () => {
     expect(() => projectT55Sample({}, { schemaVersion: 1 })).toThrow("t55_runtime_diagnostics_unavailable");
     expect(() => projectT55Sample({}, { schemaVersion: 2, scope: "process-local", runtime: { status: "enabled" } }))
