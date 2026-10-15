@@ -635,4 +635,5 @@ model RxwRouteSnapshot {
 
   @@index([icaoHex, flight, observedAtMs], map: "rxw_route_icao_flight_time_idx")
   @@index([observedAtMs], map: "rxw_route_observed_idx")
+  @@map("RxwRouteSnapshot")
 }
