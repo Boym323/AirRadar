@@ -34,3 +34,19 @@ jobs:
           node-version: 22
       - name: Inspect existing production counters (no external provider requests)
         run: node scripts/integration-health-report.mjs
+      - name: Run bounded read-only integration audit
+        run: |
+          mkdir -p "$RUNNER_TEMP/airradar-audit"
+          node scripts/integration-audit.mjs \
+            --mode readonly \
+            --json "$RUNNER_TEMP/airradar-audit/report.json" \
+            --markdown "$RUNNER_TEMP/airradar-audit/report.md"
+      - name: Upload sanitized audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-audit-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/airradar-audit/report.json
+            ${{ runner.temp }}/airradar-audit/report.md
+          if-no-files-found: warn
