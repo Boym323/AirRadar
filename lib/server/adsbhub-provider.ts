@@ -17,6 +17,13 @@ type Track = {
 };
 type SocketFactory = (options: { host: string; port: number }) => net.Socket;
 
+// This is the hot SBS merge loop: do not allocate an identical field list
+// for every decoded message. A provider can receive thousands per second.
+const SBS_MERGE_FIELDS: readonly (keyof Aircraft)[] = [
+  "callsign", "altitude", "baroAltitude", "lat", "lon", "groundSpeed",
+  "track", "verticalRate", "baroRate", "squawk", "onGround",
+];
+
 /** Bounded, arrival-time-driven consumer for the generic ADSBHub SBS/30003 feed. */
 export class AdsbHubProvider implements NetworkAircraftProvider {
   readonly name = "adsbhub";
@@ -153,10 +160,10 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
   private merge(incoming: Aircraft, receivedAt: number): void {
     const existing = this.tracks.get(incoming.icaoHex);
     const hasPosition = incoming.lat !== null && incoming.lon !== null;
-    const fields: (keyof Aircraft)[] = ["callsign", "altitude", "baroAltitude", "lat", "lon", "groundSpeed", "track", "verticalRate", "baroRate", "squawk", "onGround"];
+
     const next: Aircraft = existing ? { ...existing.aircraft } : { ...incoming };
     const freshness = existing?.fields ?? {};
-    for (const field of fields) {
+    for (const field of SBS_MERGE_FIELDS) {
       const value = incoming[field];
       if (value !== null && value !== undefined && (!freshness[field] || receivedAt >= freshness[field]!)) {
         (next as unknown as Record<string, unknown>)[field] = value;

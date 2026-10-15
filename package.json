@@ -71,6 +71,7 @@
     "benchmark:rust-crc": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-rust-crc.ts",
     "benchmark:rust-beast": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-rust-beast.ts",
     "benchmark:route-telemetry": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-route-telemetry.ts",
+    "benchmark:bounded-enrichment": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-bounded-enrichment.ts",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
     "intelligence:corpus": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-v1-corpus.ts",
     "predictive:calibration": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-intelligence-v1-calibration.ts",
