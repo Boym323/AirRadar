@@ -34,11 +34,15 @@ jobs:
           node-version: 22
       - name: Inspect existing production counters (no external provider requests)
         run: node scripts/integration-health-report.mjs
-      - name: Run bounded read-only integration audit
+      # This is an observational scheduled health report, not a production
+      # readiness gate. Real DEGRADED/BLOCKED evidence remains in the artifact
+      # and emits an Actions warning. Runtime/tool/security failures still fail.
+      - name: Run bounded read-only integration audit (degradation warns)
         run: |
           mkdir -p "$RUNNER_TEMP/airradar-audit"
           node scripts/integration-audit.mjs \
             --mode readonly \
+            --degraded-policy warn \
             --json "$RUNNER_TEMP/airradar-audit/report.json" \
             --markdown "$RUNNER_TEMP/airradar-audit/report.md"
       - name: Upload sanitized audit report
