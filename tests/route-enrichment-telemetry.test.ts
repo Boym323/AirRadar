@@ -14,8 +14,6 @@ describe("route enrichment telemetry", () => {
     metrics.record("dbMiss", 1);
     metrics.record("ramHit", 2);
     metrics.record("adsbdbLookup");
-    metrics.record("adsblolBatch");
-    metrics.record("adsblolLookup", 5);
     metrics.recordDbLatency(32);
     metrics.setValidEntries(27);
     now += HOUR;
@@ -26,8 +24,6 @@ describe("route enrichment telemetry", () => {
     expect(result.estimatedSavedLookups).toBe(5);
     expect(result.validEntries).toBe(27);
     expect(result.databaseAverageLatencyMs).toBe(32);
-    expect(result.totals.adsblolBatch).toBe(1);
-    expect(result.totals.adsblolLookup).toBe(5);
     expect(result.buckets.at(-2)?.dbHit).toBe(3);
     expect(result.buckets.at(-1)?.dbWrite).toBe(2);
     now += 24 * HOUR;

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS "public"."routeEnrichmentCache" (
   "routeJson" text NOT NULL,
   "storedAtMs" bigint NOT NULL,
   "expiresAtMs" bigint NOT NULL,
-  CONSTRAINT route_enrichment_cache_source CHECK ("source" IN ('adsbdb', 'adsblol-routeset')),
+  CONSTRAINT route_enrichment_cache_source CHECK ("source" IN ('adsbdb')),
   CONSTRAINT route_enrichment_cache_key CHECK ("cacheKey" ~ '^flight-route:[A-F0-9~]{6,7}:[A-Z0-9]{2,10}:[0-9]{4}-[0-9]{2}-[0-9]{2}$'),
   CONSTRAINT route_enrichment_cache_payload_size CHECK (length("routeJson") <= 8192),
   CONSTRAINT route_enrichment_cache_ttl CHECK ("expiresAtMs" > "storedAtMs")

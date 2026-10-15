@@ -2,7 +2,7 @@
 
 ## Co je potvrzeno (read-only audit)
 - `airradar.service` se během aktivního T5.7C měření opakovaně restartovala. Z auditní zprávy nelze bez systemd/cgroup detailu prokázat, zda šlo o OOM, watchdog, deploy nebo externí restart.
-- ADSBDB má stav `UPSTREAM_UNAVAILABLE` a má fungovat fail-soft přes tar1090, PostgreSQL a ADSB.lol route fallbacky.
+- ADSBDB má stav `UPSTREAM_UNAVAILABLE` a má fungovat fail-soft přes tar1090 a PostgreSQL; ADSB.lol routeset fallback byl následně odstraněn.
 - ADSBDB persistent cache měla po nedávném restartu necheckpointované mutace. Výchozí hodinový interval checkpointu znamená, že samotné `dirty=true` před termínem není selhání.
 - Navigation Integrity odmítá mnoho neúplných či zastaralých dat; chybí oddělení legitimně nezpůsobilých letadel od problémů časování.
 

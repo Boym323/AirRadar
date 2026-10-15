@@ -130,10 +130,8 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
   it("limits route-enrichment metrics to administrator system status", () => {
     const telemetry = new RouteEnrichmentTelemetry(null, () => checkedAt.getTime());
     telemetry.record("dbHit", 5);
-    telemetry.record("adsblolBatch", 2);
     const full = build({ routeEnrichment: telemetry.getSnapshot() });
     expect(full.routeEnrichment?.totals.dbHit).toBe(5);
-    expect(full.routeEnrichment?.totals.adsblolBatch).toBe(2);
     const publicStatus = toPublicSystemStatus(full);
     expect(publicStatus.routeEnrichment).toBeUndefined();
     expect(JSON.stringify(publicStatus)).not.toContain('"routeEnrichment"');

@@ -79,7 +79,6 @@ const PROVIDERS = [
   ["readsb", "Local readsb JSON / Beast receiver"],
   ["adsbhub", "ADSBHub SBS/30003 network coverage"],
   ["adsblol-live", "ADSB.lol live coverage"],
-  ["adsblol-routeset", "ADSB.lol routeset"],
   ["ogn-aprs", "OGN APRS-IS"],
   ["ogn-ddb", "OGN DDB"],
   ["ogn-softrf", "SoftRF DDB snapshot"],
@@ -181,16 +180,6 @@ function providerChecks({ health, integrations, runtime, mode }) {
     evidence: readsbHealthy ? "Read-only health endpoint reports a live local source." : "No live local-source health evidence was available.",
   });
 
-  const routeset = integrations?.routeProviders?.routeset;
-  const routeStatus = summarizeRouteStatus(routeset);
-  checks.push({
-    id: "adsblol-routeset",
-    area: "provider",
-    status: routeStatus.status,
-    evidence: routeStatus.evidence,
-    metrics: routeStatus.metrics,
-  });
-
   const db = integrations?.routeProviders?.postgres;
   const routeDbErrorCount = safeInteger(integrations?.route?.dbError) ?? 0;
   const routeDbBypassCount = safeInteger(integrations?.route?.dbBypassed) ?? 0;
@@ -249,25 +238,6 @@ function providerChecks({ health, integrations, runtime, mode }) {
   return checks;
 }
 
-function summarizeRouteStatus(routeset) {
-  if (!routeset || typeof routeset !== "object") return { status: "NOT VERIFIED", evidence: "Routeset counters were not available." };
-  const metrics = {
-    enabled: routeset.enabled === true,
-    requests: safeInteger(routeset.requests),
-    success: safeInteger(routeset.success),
-    failed: safeInteger(routeset.failed),
-    skippedBlocked: safeInteger(routeset.skippedBlocked),
-    lastHttpStatus: safeInteger(routeset.lastHttpStatus),
-    blockedUntilAt: safeTimestamp(routeset.blockedUntilAt),
-  };
-  const blockedUntil = Date.parse(metrics.blockedUntilAt ?? "");
-  if (!metrics.enabled) return { status: "DISABLED", evidence: "Routeset is disabled by configuration.", metrics };
-  if (Number.isFinite(blockedUntil) && blockedUntil > Date.now()) return { status: "BLOCKED", evidence: "Provider refusal cooldown is active; no new probe was attempted.", metrics };
-  if (!metrics.requests) return { status: "NOT VERIFIED", evidence: "Routeset is enabled but has no observed request in the current process window.", metrics };
-  if (metrics.failed && !metrics.success) return { status: "DEGRADED", evidence: "Observed routeset requests failed without a successful request in the process window.", metrics };
-  return { status: "VERIFIED HEALTHY", evidence: "Observed routeset counters include successful requests and no active refusal cooldown.", metrics };
-}
-
 function projectHealth(value) {
   if (!value || typeof value !== "object") return null;
   return {
@@ -318,7 +288,6 @@ function projectIntegrations(value) {
   if (!value || typeof value !== "object") return null;
   return {
     routeProviders: value.routeProviders && {
-      routeset: projectRouteset(value.routeProviders.routeset),
       postgres: projectPostgres(value.routeProviders.postgres),
     },
     route: value.route && {
@@ -330,20 +299,6 @@ function projectIntegrations(value) {
       last24Hours: projectWindow(value.databaseLatency.last24Hours),
     },
     routeCacheLatency: projectWindow(value.routeCacheLatency),
-  };
-}
-
-function projectRouteset(value) {
-  if (!value || typeof value !== "object") return null;
-  return {
-    enabled: value.enabled === true,
-    requests: safeInteger(value.requests),
-    success: safeInteger(value.success),
-    failed: safeInteger(value.failed),
-    skippedBlocked: safeInteger(value.skippedBlocked),
-    lastHttpStatus: safeInteger(value.lastHttpStatus),
-    blockedUntilAt: safeTimestamp(value.blockedUntilAt),
-    reasons: Object.fromEntries(["http", "timeout", "network", "invalid_response", "other"].map((key) => [key, safeInteger(value.reasons?.[key]) ?? 0])),
   };
 }
 

@@ -234,7 +234,7 @@ export class EnrichmentService {
 
   /** Providers safe for continuous live-snapshot enrichment. */
   get hasProviders(): boolean {
-    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightRouteFallback);
+    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute);
   }
 
   get hasInitialMetadataProvider(): boolean {
@@ -321,7 +321,7 @@ export class EnrichmentService {
   needsEnrichment(aircraft: Aircraft, existing: AircraftEnrichment | undefined): boolean {
     return Boolean(
       (this.providers.aircraftMetadata && !existing?.metadata)
-      || (aircraft.callsign && (this.providers.flightRoute || this.providers.flightRouteFallback) && !existing?.route),
+      || (aircraft.callsign && this.providers.flightRoute && !existing?.route),
     );
   }
 
@@ -347,7 +347,7 @@ export class EnrichmentService {
     return Object.keys(enrichment).length ? enrichment : null;
   }
 
-  /** Read-through: RAM -> PostgreSQL -> ADSBDB -> ADSB.lol, without paid providers. */
+  /** Read-through: RAM -> PostgreSQL -> ADSBDB, without paid providers. */
   private async resolveFreeRoute(aircraft: Aircraft, observedAt: Date): Promise<FlightRoute | null> {
     if (!aircraft.callsign) return null;
     const requestStarted = Date.now();
@@ -399,19 +399,6 @@ export class EnrichmentService {
         })
       : null;
     if (primary?.origin && primary.destination && primary.originAirport && primary.destinationAirport && routeMatchesAircraftPosition(aircraft, primary)) return this.rememberVerifiedRoute(key, primary);
-    const fallback = this.providers.flightRouteFallback;
-    if (!fallback || aircraft.lat === null || aircraft.lon === null) return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
-    let resolved: FlightRoute | null = null;
-    try {
-      resolved = await this.cache.get(
-        "routeset:" + key,
-        () => this.routeLimiter(() => fallback.getRoute(callsign, observedAt, { lat: aircraft.lat, lon: aircraft.lon })),
-        { ttlMs: ENRICHMENT_TTLS.routeMs, negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs, cacheLoaderErrors: false },
-      );
-    } catch {
-      // Route service failures must not block live traffic or poison negative cache.
-    }
-    if (resolved?.origin && resolved.destination && resolved.originAirport && resolved.destinationAirport && routeMatchesAircraftPosition(aircraft, resolved)) return this.rememberVerifiedRoute(key, resolved);
     return primary && routeMatchesAircraftPosition(aircraft, primary) ? primary : null;
   }
 

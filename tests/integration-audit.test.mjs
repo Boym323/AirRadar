@@ -41,11 +41,6 @@ const fixture = {
   integrations: {
     route: { dbError: 0, dbBypassed: 2076 },
     routeProviders: {
-      routeset: {
-        enabled: true, requests: 0, success: 0, failed: 0, skippedBlocked: 104,
-        blockedUntilAt: "2099-10-15T20:37:09.101Z", lastHttpStatus: 403,
-        secret: "SECRET-ROUTE-PAYLOAD",
-      },
       postgres: { bypassConcurrency: 108, timeouts: 0, queryFailures: 0, connectionFailures: 0 },
     },
     databaseLatency: { lastHour: { status: "measured", sampleCount: 26, p95Ms: 1000, p99Ms: 4994 } },
@@ -76,15 +71,13 @@ describe("integration audit", () => {
     expect(report.safety).toMatchObject({ activeProviderRequests: false, databaseWrites: false, rawAircraftPositions: false, secrets: false });
   });
 
-  it("redacts raw payloads and treats route-cache contention and refusal cooldown as non-healthy", async () => {
+  it("redacts raw payloads and treats route-cache contention as non-healthy", async () => {
     const path = join(privateTempDir(), "fixture.json");
     writeFileSync(path, JSON.stringify(fixture), { flag: "wx", mode: 0o600 });
     const report = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path });
-      expect(report.checks.find((check) => check.id === "adsblol-routeset")).toMatchObject({ status: "BLOCKED" });
       expect(report.checks.find((check) => check.id === "route-cache")).toMatchObject({ status: "DEGRADED" });
       expect(report.checks.find((check) => check.id === "event-loop")).toMatchObject({ status: "DEGRADED" });
       expect(JSON.stringify(report)).not.toContain("SECRET-ICAO");
-      expect(JSON.stringify(report)).not.toContain("SECRET-ROUTE-PAYLOAD");
       expect(renderMarkdown(report)).not.toContain("SECRET-ICAO");
       const previousPath = `${path}.previous`;
       writeFileSync(previousPath, JSON.stringify({ generatedAt: "2026-10-15T14:00:00.000Z", summary: { statusCounts: { "NOT VERIFIED": 1 } } }), { flag: "wx", mode: 0o600 });
@@ -186,7 +179,6 @@ describe("Integration Health observational warning policy", () => {
     expect(result.stdout).not.toContain("SECRET-ROUTE-PAYLOAD");
     const report = JSON.parse(readPrivateOutput(jsonPath));
     expect(report.verdict).toBe("DEGRADED");
-    expect(report.checks.find((check) => check.id === "adsblol-routeset").status).toBe("BLOCKED");
     expect(report.checks.find((check) => check.id === "route-cache").status).toBe("DEGRADED");
     expect(readPrivateOutput(mdPath)).toContain("Verdict: **DEGRADED**");
 

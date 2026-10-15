@@ -1,7 +1,6 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getRxwHubService } from "@/lib/server/rxw-hub-service";
 import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
-import { getAdsbLolRoutesetRuntimeDiagnostics } from "@/lib/server/adsblol-route-provider";
 import { getRouteDbReasonDiagnostics } from "@/lib/server/route-postgres-cache";
 import { getRuntimeTelemetryHistory } from "@/lib/server/runtime-telemetry";
 import { databaseLatencySummary } from "@/lib/server/database-latency-statistics";
@@ -17,7 +16,6 @@ export function getIntegrationDiagnostics() {
     databaseLatency: databaseLatencySummary(getRuntimeTelemetryHistory().samples),
     routeCacheLatency: getRouteEnrichmentTelemetry().getDbLatencyDistribution(),
     routeProviders: {
-      routeset: getAdsbLolRoutesetRuntimeDiagnostics(),
       postgres: getRouteDbReasonDiagnostics(),
     },
     route: {

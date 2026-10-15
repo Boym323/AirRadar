@@ -12,8 +12,6 @@ describe("Route Enrichment system dashboard", () => {
     telemetry.record("dbHit", 2);
     telemetry.record("dbMiss", 1);
     telemetry.record("adsbdbLookup");
-    telemetry.record("adsblolBatch");
-    telemetry.record("adsblolLookup", 3);
     telemetry.setValidEntries(14);
     const status = telemetry.getSnapshot();
     const cs = renderToStaticMarkup(<RouteEnrichmentPanel metrics={status} dictionary={getTranslations("cs")} />);

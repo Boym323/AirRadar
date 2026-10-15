@@ -39,7 +39,7 @@ function routeDbReason(): DbRouteDiagnostics {
 }
 
 const KEY = /^flight-route:[A-F0-9~]{6,7}:([A-Z0-9]{2,10}):\d{4}-\d{2}-\d{2}$/;
-const SOURCES = new Set(["adsbdb", "adsblol-routeset"]);
+const SOURCES = new Set(["adsbdb"]);
 
 function validAirport(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;

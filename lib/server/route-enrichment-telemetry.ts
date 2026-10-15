@@ -5,7 +5,7 @@ import path from "node:path";
 /** Observations of free-route lookups only. Never counts FlightAware requests. */
 export const ROUTE_METRIC_KEYS = [
   "ramHit", "dbHit", "dbMiss", "dbWrite", "dbError", "dbBypassed",
-  "adsbdbLookup", "adsblolBatch", "adsblolLookup", "adsblolError",
+  "adsbdbLookup",
   "dbLatencySamples", "dbLatencyTotalMs",
 ] as const;
 export const ROUTE_PHASE_KEYS = [

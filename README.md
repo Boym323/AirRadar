@@ -285,8 +285,7 @@ polling. Configure them in the server-only `.env`; never use
 | Capability | Configuration | Default |
 | --- | --- | --- |
 | ADSBDB metadata/routes | `ADSBDB_ENABLED=true` | Disabled |
-| ADSB.lol routeset fallback | `ADSBLOL_ROUTE_ENABLED=true` | Disabled; batched POST, only if ADSBDB route is missing or implausible |
-| Persistent verified-route cache | `ROUTE_DB_CACHE_ENABLED=true` | Disabled until the additive SQL table is installed; RAM → PostgreSQL → ADSBDB → ADSB.lol |
+| Persistent verified-route cache | `ROUTE_DB_CACHE_ENABLED=true` | Disabled until the additive SQL table is installed; RAM → PostgreSQL → ADSBDB |
 | RXW Hub ACARS metadata and optional H1/FPN waypoints | `RXW_HUB_ENABLED=true`, optional `RXW_FPN_ENABLED=true` | Both disabled; requires RXW operator authorization and no local ACARS decoder |
 | SondeHub radiosonde map and live MQTT | `SONDEHUB_ENABLED=true`, optional `SONDEHUB_MQTT_ENABLED=true` | Disabled; external REST/MQTT live smoke required |
 | ČHMÚ Echo Top HGHT map | `CHMI_ECHOTOP_ENABLED=true` | Disabled; requires validated HDF5 conversion and Python dependencies |

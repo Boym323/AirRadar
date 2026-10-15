@@ -10,7 +10,7 @@ const AUXILIARY_NAMES = [
 ];
 const ROUTE_METRIC_NAMES = [
   "ramHit", "dbHit", "dbMiss", "dbWrite", "dbError", "dbBypassed",
-  "adsbdbLookup", "adsblolBatch", "adsblolLookup", "adsblolError",
+  "adsbdbLookup",
   "dbLatencySamples", "dbLatencyTotalMs",
 ];
 const ROUTE_PHASE_NAMES = [

@@ -24,12 +24,6 @@ interface Data {
     p50Ms: number | null; p95Ms: number | null; p99Ms: number | null;
   };
   routeProviders: {
-    routeset: {
-      enabled: boolean; requests: number; success: number; failed: number;
-      lastFailureAt: string | null; lastHttpStatus: number | null; nextAllowedAt: string | null;
-      blockedUntilAt: string | null; skippedBlocked: number;
-      reasons: { http: number; timeout: number; network: number; invalid_response: number; other: number };
-    };
     postgres: {
       timeouts: number; queryFailures: number; connectionFailures: number;
       bypassBackoff: number; bypassConcurrency: number; bypassUnconfigured: number;
@@ -116,16 +110,6 @@ export function SystemIntegrationDiagnostics({ locale }: { locale: string }) {
       </dl></section>
       <section className="system-integration-group routes"><h3>{cs ? "Trasy a databázová cache" : "Routes and database cache"}</h3><dl className="system-fields">
       <div className="system-field"><dt>Route DB {cs ? "zásahy / chyby / přemostění" : "hits / errors / bypass"}</dt><dd>{fmt(data.route.dbHit)} / {fmt(data.route.dbError)} / {fmt(data.route.dbBypassed)}</dd></div>
-      <div className="system-field"><dt>ADSB.lol Routes · {cs ? "stav" : "status"}</dt><dd>{data.routeProviders.routeset.enabled ? (cs ? "Zapnuto" : "Enabled") : (cs ? "Vypnuto" : "Disabled")} · {fmt(data.routeProviders.routeset.success)} / {fmt(data.routeProviders.routeset.requests)} {cs ? "úspěšných dávek od startu" : "successful batches since startup"}</dd></div>
-      <div className="system-field"><dt>ADSB.lol Routes · {cs ? "příčiny chyb" : "failure causes"}</dt><dd>{cs ? "HTTP" : "HTTP"} {fmt(data.routeProviders.routeset.reasons.http)}{data.routeProviders.routeset.lastHttpStatus ? " (" + data.routeProviders.routeset.lastHttpStatus + ")" : ""} · timeout {fmt(data.routeProviders.routeset.reasons.timeout)} · {cs ? "síť" : "network"} {fmt(data.routeProviders.routeset.reasons.network)} · {cs ? "formát" : "format"} {fmt(data.routeProviders.routeset.reasons.invalid_response)} · {cs ? "jiné" : "other"} {fmt(data.routeProviders.routeset.reasons.other)}</dd></div>
-      <div className="system-field"><dt>ADSB.lol Routes · {cs ? "poslední chyba" : "last failure"}</dt><dd>{time(data.routeProviders.routeset.lastFailureAt)} · {cs ? "další pokus" : "retry"} {time(data.routeProviders.routeset.nextAllowedAt)}</dd></div>
-      {data.routeProviders.routeset.blockedUntilAt && new Date(data.routeProviders.routeset.blockedUntilAt).getTime() > Date.now() &&
-        <div className="system-field"><dt>{cs ? "ADSB.lol Routes · přístup odmítnut" : "ADSB.lol Routes · upstream access refused"}</dt><dd>
-          {cs ? "Poskytovatel vrací HTTP 401/403. Další dotazy jsou dočasně pozastaveny; lokální cache a další zdroje fungují dál." :
-            "Upstream returned HTTP 401/403. Requests are temporarily suspended; local cache and other route sources stay available."}
-          {" · "}{cs ? "Nový pokus" : "Next probe"} {time(data.routeProviders.routeset.blockedUntilAt)}
-          {" · "}{cs ? "ušetřené dotazy" : "skipped requests"} {fmt(data.routeProviders.routeset.skippedBlocked)}
-        </dd></div>}
       <div className="system-field"><dt>PostgreSQL · {cs ? "příčiny chyb" : "failure causes"}</dt><dd>timeout {fmt(data.routeProviders.postgres.timeouts)} · {cs ? "dotaz" : "query"} {fmt(data.routeProviders.postgres.queryFailures)} · {cs ? "spojení" : "connection"} {fmt(data.routeProviders.postgres.connectionFailures)}</dd></div>
       <div className="system-field"><dt>PostgreSQL · {cs ? "obejití: cooldown / limit / nenastaveno" : "bypass: cooldown / capacity / unavailable"}</dt><dd>{fmt(data.routeProviders.postgres.bypassBackoff)} / {fmt(data.routeProviders.postgres.bypassConcurrency)} / {fmt(data.routeProviders.postgres.bypassUnconfigured)}</dd></div>
       <div className="system-field"><dt>Route cache · DB-call elapsed P50/P95/P99</dt><dd>{data.routeCacheLatency.sampleCount > 0

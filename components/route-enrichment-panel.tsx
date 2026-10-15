@@ -23,7 +23,7 @@ function HourBar({ bucket, maximum, locale, labels }: {
 }) {
   const ram = bucket.ramHit;
   const db = bucket.dbHit;
-  const external = bucket.adsbdbLookup + bucket.adsblolLookup;
+  const external = bucket.adsbdbLookup;
   const label = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
     .format(new Date(bucket.hour));
   const scale = (value: number) => value === 0 ? "0%" : Math.max(1, (value / maximum) * 100).toFixed(2) + "%";
@@ -45,8 +45,8 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
   const avg = metrics.databaseAverageLatencyMs === null
     ? labels.notAvailable
     : formatNumber(metrics.databaseAverageLatencyMs, 1, dictionary.locale) + " " + labels.latencyUnit;
-  const totalSamples = metrics.buckets.reduce((sum, b) => sum + b.ramHit + b.dbHit + b.adsbdbLookup + b.adsblolLookup, 0);
-  const maximum = Math.max(1, ...metrics.buckets.map(b => b.ramHit + b.dbHit + b.adsbdbLookup + b.adsblolLookup));
+  const totalSamples = metrics.buckets.reduce((sum, b) => sum + b.ramHit + b.dbHit + b.adsbdbLookup, 0);
+  const maximum = Math.max(1, ...metrics.buckets.map(b => b.ramHit + b.dbHit + b.adsbdbLookup));
   const phase = (key: keyof RouteEnrichmentSnapshot["phases"], label: string) => {
     const value = metrics.phases[key];
     if (!value.measured) return <Metric label={label} value={labels.notMeasured} />;
@@ -63,7 +63,6 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
       <span className={styles.mode}>{labels.cacheStatus}: {metrics.enabled ? labels.active : labels.inactive}</span>
     </div>
 
-    {t.adsblolBatch >= 3 && t.adsblolError >= t.adsblolBatch && <p className={styles.warning} role="status">{dictionary.locale.startsWith("cs") ? `Za posledních 24 hodin selhalo všech ${f(t.adsblolError)} zaznamenaných dávek tras ADSB.lol. To není stav celého síťového ADS-B příjmu; příčinu určí diagnostika integrací.` : `All ${f(t.adsblolError)} recorded ADSB.lol route batches failed in the last 24 hours. This does not imply a live ADS-B traffic outage.`}</p>}
     <div className={styles.metricGroups}>
       <section><h3>{dictionary.locale.startsWith("cs") ? "Paměťová cache" : "Memory cache"}</h3><dl className={styles.metrics}>
         <Metric label={labels.ramHits} value={f(t.ramHit)} />
@@ -81,9 +80,6 @@ export function RouteEnrichmentPanel({ metrics, dictionary }: { metrics: RouteEn
       </dl></section>
       <section><h3>{dictionary.locale.startsWith("cs") ? "Externí dotazy" : "External lookups"}</h3><dl className={styles.metrics}>
       <Metric label={labels.adsbdbLookups} value={f(t.adsbdbLookup)} />
-      <Metric label={labels.adsblolBatches} value={f(t.adsblolBatch)} />
-      <Metric label={labels.adsblolLookups} value={f(t.adsblolLookup)} />
-      <Metric label={labels.adsblolErrors} value={f(t.adsblolError)} />
       </dl></section>
       <section><h3>{dictionary.locale.startsWith("cs") ? "Ukládání metrik" : "Telemetry persistence"}</h3><dl className={styles.metrics}>
         <Metric label={labels.diskPersistence} value={metrics.telemetry.diskEnabled ? labels.diskOn : labels.diskOff} />

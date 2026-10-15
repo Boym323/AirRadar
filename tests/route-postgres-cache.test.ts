@@ -53,17 +53,14 @@ describe("Route Cache V2 read-through", () => {
     const stored = route("adsbdb");
     const store = fakeStore(async () => stored);
     const primary = vi.fn(async () => null);
-    const fallback = vi.fn(async () => null);
     const service = new EnrichmentService({
       flightRoute: { name: "adsbdb", getRoute: primary },
-      flightRouteFallback: { name: "adsblol-routeset", getRoute: fallback },
     }, undefined, undefined, store);
     expect((await service.enrich(aircraft(), at))?.route).toEqual(stored);
     expect((await service.enrich(aircraft(), at))?.route).toEqual(stored);
     expect(store.get).toHaveBeenCalledOnce();
     expect(store.get).toHaveBeenCalledWith(key);
     expect(primary).not.toHaveBeenCalled();
-    expect(fallback).not.toHaveBeenCalled();
     expect(store.put).not.toHaveBeenCalled();
   });
 
@@ -74,17 +71,6 @@ describe("Route Cache V2 read-through", () => {
     await service.enrich(aircraft(), at);
     expect(store.put).toHaveBeenCalledWith(key, route(), ENRICHMENT_TTLS.routeMs);
     expect(primary).toHaveBeenCalledOnce();
-  });
-
-  it("writes the validated ADSB.lol fallback when primary is unavailable", async () => {
-    const store = fakeStore();
-    const fallback = vi.fn(async () => route("adsblol-routeset"));
-    const service = new EnrichmentService({
-      flightRoute: { name: "adsbdb", getRoute: async () => null },
-      flightRouteFallback: { name: "adsblol-routeset", getRoute: fallback },
-    }, undefined, undefined, store);
-    expect((await service.enrich(aircraft(), at))?.route?.source).toBe("adsblol-routeset");
-    expect(store.put).toHaveBeenCalledWith(key, route("adsblol-routeset"), ENRICHMENT_TTLS.routeMs);
   });
 
   it("ignores a stored route outside the current geographic corridor", async () => {

@@ -207,7 +207,7 @@ zapíše aktuální RAM přes centrální shutdown coordinator; hard crash nebo
 SIGKILL může ztratit až jeden interval znovu načitatelného enrichmentu.
 
 Route Cache V2 je volitelná sdílená pozitivní PostgreSQL cache
-(`ROUTE_DB_CACHE_ENABLED=true`): RAM → PostgreSQL → ADSBDB → dávkované ADSB.lol.
+(`ROUTE_DB_CACHE_ENABLED=true`): RAM → PostgreSQL → ADSBDB.
 Záznamy jsou svázané s ICAO hex, callsignem a UTC datem, expirují po šesti
 hodinách a při použití znovu procházejí geografickou validací. Chybějící
 nebo pomalá DB nikdy nesmí zastavit lokální polling. Samostatná doplňková

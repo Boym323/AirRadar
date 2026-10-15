@@ -284,7 +284,7 @@ entries and in-flight requests are never persisted.
 
 Route Cache V2 is an independently opt-in shared PostgreSQL **positive**
 read-through cache (`ROUTE_DB_CACHE_ENABLED=true`). Valid local-aircraft routes
-are served in order RAM → PostgreSQL → ADSBDB → batched ADSB.lol. Entries
+are served in order RAM → PostgreSQL → ADSBDB. Entries
 are identified by ICAO hex, callsign and UTC date and expire after six hours;
 all returned data is revalidated against the observed position. A missing or
 slow cache database never stops the local poller. This supplementary table
@@ -319,13 +319,8 @@ available metadata/route context and never invokes the paid FlightAware plan
 provider. The dedicated `/aircraft/[hex]` page renders free route and history context
 without automatically calling FlightAware. A deliberate **Load flight details**
 action fetches `/api/aircraft/[hex]?mode=flightaware` (paid, cached and budget
-limited); `mode=full` is also free of paid calls. The optional independent
-`ADSBLOL_ROUTE_ENABLED` provider sends bounded/coalesced batched POSTs to
-ADSB.lol `/api/0/routeset` only when the ADSBDB route is absent/incomplete or
-fails the local route-position check. Provider `plausible` and the existing
-100 km corridor validation both apply, with separate 6-hour/10-minute
-positive/negative caches. Route context needed by the map remains in the
-compact live snapshot.
+limited); `mode=full` is also free of paid calls. Route context needed by the
+map remains in the compact live snapshot.
 `coverage=local|extended` is accepted by the live aircraft, selected-aircraft,
 and SSE endpoints. The default is `local`; `extended` includes validated,
 fresh ADSB.lol observations and publishes provider status, source provenance,

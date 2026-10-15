@@ -12,7 +12,6 @@ describe("System status audit UX", () => {
     expect(page.indexOf('<SystemSection id="system-reception"')).toBeLessThan(page.indexOf('<SystemSection id="system-data"'));
     expect(page.indexOf('<SystemSection id="system-data"')).toBeLessThan(page.indexOf('<SystemSection id="system-runtime"'));
     expect(page).toContain('Základní dostupnost služeb');
-    expect(page).toContain('neúspěšné dávky za 24 hodin');
   });
   it("refresh button also refreshes the integration and runtime panels", () => {
     expect(page).toContain("setRefreshKey((k) => k + 1)");
@@ -36,7 +35,6 @@ describe("System status audit UX", () => {
     expect(routes).toContain("metricGroups");
     expect(routes).toContain("Paměťová cache");
     expect(routes).toContain("Externí dotazy");
-    expect(routes).toContain("Za posledních 24 hodin selhalo všech");
     expect(routes).not.toContain('timeZone: "UTC"');
     expect(styles).toContain(".system-page .system-integrations-diagnostics .system-fields");
   });

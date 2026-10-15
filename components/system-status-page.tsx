@@ -130,16 +130,14 @@ function SystemAttention({ data, dictionary, streamConnected }: {
     .filter((service) => service.status === "degraded" || service.status === "offline");
   // This is a 24h historical warning, NOT evidence of a currently failing feed.
   const t = data.routeEnrichment?.totals;
-  const failingRoutes = !!t && t.adsblolBatch >= 3 && t.adsblolError >= t.adsblolBatch;
   const failingDbCache = !!t && t.dbError >= 10;
-  if (!issues.length && !failingRoutes && !failingDbCache) return null;
+  if (!issues.length && !failingDbCache) return null;
   return <section className="system-attention" aria-label={dictionary.system.attentionTitle}>
     <div className="system-attention-copy">
       <strong>{dictionary.system.attentionTitle}</strong>
       <p>{dictionary.system.attentionDescription}</p>
     </div>
     <ul>
-      {failingRoutes && <li><a href="#system-data">{dictionary.locale.startsWith("cs") ? "ADSB.lol trasy: neúspěšné dávky za 24 hodin" : "ADSB.lol routes: failed batches over 24 hours"}</a><span>{formatNumber(t!.adsblolError, 0, dictionary.locale)} / {formatNumber(t!.adsblolBatch, 0, dictionary.locale)}</span></li>}
       {failingDbCache && <li><a href="#system-data">{dictionary.locale.startsWith("cs") ? "Cache tras: chyby DB za 24 hodin" : "Route cache: DB errors over 24 hours"}</a><span>{formatNumber(t!.dbError, 0, dictionary.locale)}</span></li>}
       {issues.map((issue) => <li key={issue.label}>
         <span>{issue.label}</span>
