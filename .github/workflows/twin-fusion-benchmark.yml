@@ -1,0 +1,66 @@
+name: Operational Twin & Track Fusion benchmarks
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/twin-fusion-benchmark.yml'
+      - 'scripts/benchmark-twin-fusion.ts'
+      - 'scripts/benchmark-operational-twin-t57.ts'
+      - 'tests/benchmark-twin-fusion.test.ts'
+      - 'lib/operational-twin/**'
+      - 'lib/track-fusion/**'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Smoke (fast) or extended stress matrix'
+        type: choice
+        options: [smoke, extended]
+        default: smoke
+        required: true
+  # Weekly runs execute from main only AFTER this workflow is merged.
+  schedule:
+    - cron: '35 3 * * 0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: twin-fusion-benchmark-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Benchmark and semantic parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      AIRRADAR_PERF_PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
+      AIRRADAR_PERF_OUTPUT_DIR: .benchmarks/twin-fusion
+      # Synthetic fixtures only: no provider probes, DB/production secrets.
+      AIRRADAR_ATC_RESOLUTION_ENABLED: 'false'
+      AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Generate Prisma contract for imported server modules
+        run: npm run prisma:generate
+      - name: Deterministic harness regressions
+        run: npm run test:targeted -- tests/benchmark-twin-fusion.test.ts tests/track-fusion-shadow.test.ts tests/operational-twin-t57-replay.test.ts
+      - name: Twin and fusion measured scenarios
+        run: npm run benchmark:twin-fusion
+      - name: Publish benchmark summary
+        if: success()
+        run: cat .benchmarks/twin-fusion/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve per-run JSON and Markdown history
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: twin-fusion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .benchmarks/twin-fusion/
+          if-no-files-found: warn
+          retention-days: 90
