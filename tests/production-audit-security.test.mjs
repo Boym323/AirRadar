@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, constants, fstatSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writePrivateAuditReport } from "../scripts/private-audit-report.mjs";
@@ -15,18 +15,31 @@ afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
 
+// Permission metadata and content must come from the same opened inode.
+// Avoid a stat(path) -> read(path) TOCTOU sequence in the regression test.
+function readPrivateAuditFile(path) {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const content = readFileSync(fd, "utf8");
+    const file = fstatSync(fd);
+    expect(file.isFile()).toBe(true);
+    expect(file.mode & 0o777).toBe(0o600);
+    return content;
+  } finally {
+    closeSync(fd);
+  }
+}
+
 describe("private production audit output", () => {
   it("writes only new private bounded files with matched JSON/Markdown content", async () => {
     const path = join(root(), "audit", "t55-report.json");
     const md = "# Report\nOnly aggregates";
     expect(await writePrivateAuditReport(path, { schemaVersion: 1, count: 42 }, md))
       .toBe(path.slice(0, -5) + ".md");
-    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({ schemaVersion: 1, count: 42 });
-    expect(readFileSync(path.slice(0, -5) + ".md", "utf8")).toBe(md + "\n");
-    expect(statSync(path).mode & 0o777).toBe(0o600);
-    expect(statSync(path.slice(0, -5) + ".md").mode & 0o777).toBe(0o600);
+    expect(JSON.parse(readPrivateAuditFile(path))).toEqual({ schemaVersion: 1, count: 42 });
+    expect(readPrivateAuditFile(path.slice(0, -5) + ".md")).toBe(md + "\n");
     await expect(writePrivateAuditReport(path, {}, "replacement")).rejects.toThrow();
-    expect(JSON.parse(readFileSync(path, "utf8")).count).toBe(42);
+    expect(JSON.parse(readPrivateAuditFile(path)).count).toBe(42);
   });
 
   it("does not overwrite an existing Markdown target or leave a partial JSON report", async () => {
