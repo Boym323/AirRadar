@@ -15,11 +15,12 @@ describe.skipIf(!native)("Operational Twin Rust waypoint numeric parity", () => 
         points[j + 1] = lon + (rand() - 0.5) * 4;
       }
       if (batch % 10 === 0) points[0] = Number.NaN;
-      expect(waypointWindowMatches(points, lat, lon, true)).toEqual(waypointWindowMatches(points, lat, lon, false));
+      expect([...waypointWindowMatches(points, lat, lon, true)])
+        .toEqual([...waypointWindowMatches(points, lat, lon, false)]);
     }
   });
   it("preserves empty and invalid input handling", () => {
-    expect(waypointWindowMatches(new Float64Array(), 50, 14, true)).toEqual(new Uint8Array());
+    expect([...waypointWindowMatches(new Float64Array(), 50, 14, true)]).toEqual([]);
     expect(() => waypointWindowMatches(new Float64Array(3), 50, 14, true)).toThrow(RangeError);
   });
 });
