@@ -1038,6 +1038,9 @@ class AtcTruthCache {
   private evictions = 0;
   private expirations = 0;
   private lastCleanupAt = Number.NEGATIVE_INFINITY;
+  /** LRU order follows access time unless a clock rollback was observed. */
+  private latestAccessAt = Number.NEGATIVE_INFINITY;
+  private accessTimesMonotonic = true;
 
   constructor(
     private readonly enabled = true,
@@ -1055,6 +1058,8 @@ class AtcTruthCache {
       return computeSectorIdsAtPoint(point, dataset);
     }
 
+    if (now < this.latestAccessAt) this.accessTimesMonotonic = false;
+    else this.latestAccessAt = now;
     const datasetId = this.datasetId(dataset);
     // Cache by membership-relevant coordinates and altitude, not timestamps.
     // Separate aircraft with the same timestamp but different positions no
@@ -1111,6 +1116,8 @@ class AtcTruthCache {
     this.evictions = 0;
     this.expirations = 0;
     this.lastCleanupAt = Number.NEGATIVE_INFINITY;
+    this.latestAccessAt = Number.NEGATIVE_INFINITY;
+    this.accessTimesMonotonic = true;
   }
 
   private datasetId(dataset: PreparedAtcContextDataset): number {
@@ -1123,7 +1130,13 @@ class AtcTruthCache {
 
   private removeExpired(now: number): void {
     for (const [key, entry] of this.entries) {
-      if (now - entry.lastUsedAt <= ATC_CACHE_TTL_MS) continue;
+      if (now - entry.lastUsedAt <= ATC_CACHE_TTL_MS) {
+        // Hits move an entry to the newest end of the Map. With monotonic
+        // access times, everything following a live entry is also live.
+        // After a clock rollback, conservatively retain the full scan.
+        if (this.accessTimesMonotonic) break;
+        continue;
+      }
       this.entries.delete(key);
       this.expirations += 1;
       forensicsGlobal.increment("atcCacheExpirations");
