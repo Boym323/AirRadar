@@ -1,3 +1,5 @@
+import { getNativeBeastEngine, type NativeBeastParser } from "./native-acceleration";
+
 export type BeastFrameType = 0x31 | 0x32 | 0x33;
 
 export interface BeastFrame {
@@ -15,13 +17,27 @@ const FRAME_LENGTHS: Record<BeastFrameType, number> = { 0x31: 11, 0x32: 16, 0x33
 /** Incremental, bounded Beast binary protocol parser. */
 export class BeastParser {
   private buffer = Buffer.alloc(0);
+  private readonly native: NativeBeastParser | null;
   readonly maxBufferedBytes: number;
 
-  constructor(maxBufferedBytes = 64 * 1024) {
+  constructor(maxBufferedBytes = 64 * 1024, options: { native?: boolean } = {}) {
     this.maxBufferedBytes = maxBufferedBytes;
+    const binding = options.native === false ? null : getNativeBeastEngine();
+    this.native = binding ? new binding.NativeBeastParser(maxBufferedBytes) : null;
   }
 
   push(chunk: Uint8Array): BeastFrame[] {
+    if (this.native) {
+      const bytes = Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+      return this.native.push(bytes).map((frame) => ({
+        type: frame.frameType as BeastFrameType,
+        timestamp: frame.timestamp,
+        signal: frame.signal,
+        payload: frame.payload,
+      }));
+    }
     if (chunk.byteLength) this.buffer = Buffer.concat([this.buffer, Buffer.from(chunk)]);
     const frames: BeastFrame[] = [];
     while (this.buffer.length) {
@@ -62,5 +78,5 @@ export class BeastParser {
     return frames;
   }
 
-  get bufferedBytes(): number { return this.buffer.length; }
+  get bufferedBytes(): number { return this.native?.bufferedBytes ?? this.buffer.length; }
 }

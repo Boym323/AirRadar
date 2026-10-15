@@ -1,3 +1,4 @@
+import { getNativeBeastEngine } from "./native-acceleration";
 import type { Aircraft, AircraftOperationalStatus, AircraftTargetState, ReceiverPosition } from "@/lib/aircraft/types";
 import type { BeastFrame } from "./beast-parser";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
@@ -147,7 +148,10 @@ function modeSBits(value: bigint, start: number, length: number, totalBits = 56)
   return Number((value >> shift) & mask);
 }
 const MODE_S_CRC_POLYNOMIAL = 0xfff409n;
+// Resolve once: no module lookup or environment read per ADS-B message.
+const nativeCrc = getNativeBeastEngine()?.modeSCrc ?? null;
 function modeSCrc(payload: Buffer): number {
+  if (nativeCrc && (payload.length === 7 || payload.length === 14)) return nativeCrc(payload);
   let value = modeSValue(payload);
   for (let bit = payload.length * 8 - 1; bit >= 24; bit -= 1) {
     if ((value >> BigInt(bit)) & 1n) value ^= MODE_S_CRC_POLYNOMIAL << BigInt(bit - 24);
