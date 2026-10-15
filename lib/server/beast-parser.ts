@@ -1,3 +1,5 @@
+import { getNativeBeastEngine, type NativeBeastParser } from "./native-acceleration";
+
 export type BeastFrameType = 0x31 | 0x32 | 0x33;
 
 export interface BeastFrame {
@@ -5,6 +7,14 @@ export interface BeastFrame {
   timestamp: Buffer;
   signal: number;
   payload: Buffer;
+}
+
+// Private provenance for CRC computed while the Rust parser de-escaped the
+// payload. Weak references prevent retaining old frames in memory.
+const nativeFrameCrc = new WeakMap<BeastFrame, number>();
+
+export function trustedModeSCrcForFrame(frame: BeastFrame): number | null {
+  return nativeFrameCrc.get(frame) ?? null;
 }
 
 const ESCAPE = 0x1a;
@@ -15,13 +25,56 @@ const FRAME_LENGTHS: Record<BeastFrameType, number> = { 0x31: 11, 0x32: 16, 0x33
 /** Incremental, bounded Beast binary protocol parser. */
 export class BeastParser {
   private buffer = Buffer.alloc(0);
+  private readonly native: NativeBeastParser | null;
+  private readonly precomputeCrc: boolean;
   readonly maxBufferedBytes: number;
 
-  constructor(maxBufferedBytes = 64 * 1024) {
+  constructor(maxBufferedBytes = 64 * 1024, options: { native?: boolean; precomputeCrc?: boolean } = {}) {
     this.maxBufferedBytes = maxBufferedBytes;
+    const binding = options.native === false || process.env.AIRRADAR_NATIVE_BEAST_PARSER === "0"
+      ? null : getNativeBeastEngine();
+    this.native = binding ? new binding.NativeBeastParser(maxBufferedBytes) : null;
+    // Preserve the independent existing AIRRADAR_NATIVE_BEAST_CRC=0 kill switch.
+    // Inline CRC's end-to-end median was not faster than standalone N-API
+    // CRC in the matched ingest benchmark. Keep the experiment opt-in.
+    const inlineCrcRequested = options.precomputeCrc === true
+      || (options.precomputeCrc !== false
+        && process.env.AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED === "1");
+    this.precomputeCrc = this.native !== null && inlineCrcRequested
+      && process.env.AIRRADAR_NATIVE_BEAST_CRC !== "0"
+      && process.env.AIRRADAR_NATIVE_BEAST_CRC_PRECOMPUTED !== "0";
   }
 
   push(chunk: Uint8Array): BeastFrame[] {
+    if (this.native) {
+      const bytes = Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+      const packed = this.precomputeCrc
+        ? this.native.pushPackedWithCrc(bytes)
+        : this.native.pushPacked(bytes);
+      const frames: BeastFrame[] = [];
+      for (let offset = 0; offset < packed.length;) {
+        const type = packed[offset]! as BeastFrameType;
+        const payloadLength = type === 0x31 ? 2 : type === 0x32 ? 7 : 14;
+        const size = 8 + payloadLength + (this.precomputeCrc ? 4 : 0);
+        if (offset + size > packed.length || (type !== 0x31 && type !== 0x32 && type !== 0x33)) {
+          throw new Error("Native BEAST decoder returned an invalid frame");
+        }
+        const frame: BeastFrame = {
+          type,
+          timestamp: packed.subarray(offset + 1, offset + 7),
+          signal: packed[offset + 7]!,
+          payload: packed.subarray(offset + 8, offset + 8 + payloadLength),
+        };
+        if (this.precomputeCrc) {
+          nativeFrameCrc.set(frame, packed.readUInt32BE(offset + 8 + payloadLength));
+        }
+        frames.push(frame);
+        offset += size;
+      }
+      return frames;
+    }
     if (chunk.byteLength) this.buffer = Buffer.concat([this.buffer, Buffer.from(chunk)]);
     const frames: BeastFrame[] = [];
     while (this.buffer.length) {
@@ -62,5 +115,5 @@ export class BeastParser {
     return frames;
   }
 
-  get bufferedBytes(): number { return this.buffer.length; }
+  get bufferedBytes(): number { return this.native?.bufferedBytes ?? this.buffer.length; }
 }

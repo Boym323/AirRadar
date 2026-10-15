@@ -1,0 +1,18 @@
+[package]
+name = "airradar-native"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+napi = { version = "2.16", default-features = false, features = ["napi8", "dyn-symbols"] }
+napi-derive = "2.16"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
