@@ -153,3 +153,16 @@ version, resource limits, environment and runner. This benchmark also
 does not replay a full `AircraftStateService` pipeline, production sector
 geometry, raw receiver frames or actual incoming event/expiry patterns.
 No benchmark measurements or release acceptance are claimed until run.
+
+
+### Bounded synthetic pending replenishment
+
+A single initial capture would expire after the bounded spatial window and
+leave the rest of a 60-minute stress matrix mostly idle. The benchmark
+therefore replenishes its original pending population every **10 simulated
+minutes**, reusing the same aircraft population but assigning new capture
+times. This is a synthetic fixed-pressure *stress* regime, explicitly **not**
+the observed T57 1.333 captures/minute. For the <=24 pending representative
+case, outcomes are distributed across up to nine aircraft to approximate the
+observed T57 distribution. Population is bounded by the real 6,000-pending
+capacity; each run still reports its measured final pending count.

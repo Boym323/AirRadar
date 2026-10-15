@@ -64,7 +64,7 @@ function makeAircraft(index: number): Aircraft {
 function makeSituation(icaoHex: string, eventIndex: number, capturedAt: number): OperationalTwinSituation {
   const isAtc = eventIndex % 5 === 0;
   const sectorId = eventIndex % 10 === 0 ? "S0" : "S1";
-  const at = OBSERVE_START + 2 * 60_000 + (eventIndex % 120) * 1_000;
+  const at = Math.max(OBSERVE_START, capturedAt) + 2 * 60_000 + (eventIndex % 120) * 1_000;
   const event = {
     type: isAtc ? "ATC_SECTOR_ENTRY" : "WAYPOINT",
     id: isAtc ? `sector:${sectorId}:${icaoHex}:${eventIndex}` : `waypoint:W${eventIndex}`,
@@ -115,15 +115,20 @@ export async function runT57Scenario(scenario: T57Scenario, mode: Mode): Promise
   const observed = new Map(aircraft.map((plane) => [plane.icaoHex, plane] as const));
   // Use two ATC semantic identities per aircraft at most, so a collision
   // cannot silently change the requested pending population.
+  const pendingAircraftCount = scenario.pending <= 24
+    ? Math.min(9, scenario.aircraft) : scenario.aircraft;
+  const capturePopulation = (at: number): void => {
   for (let index = 0; index < scenario.pending; index += 1) {
-    const aircraftIndex = index % scenario.aircraft;
-    const perAircraftIndex = Math.floor(index / scenario.aircraft);
+    const aircraftIndex = index % pendingAircraftCount;
+    const perAircraftIndex = Math.floor(index / pendingAircraftCount);
     const eventIndex = perAircraftIndex < 2
       ? perAircraftIndex * 5 + (aircraftIndex % 2) * 5
       : index * 10 + 1;
-    validator.capture(makeSituation(hex(aircraftIndex), eventIndex, EPOCH),
-      { ...CONTEXT, atcDataset: dataset }, EPOCH);
+    validator.capture(makeSituation(hex(aircraftIndex), eventIndex, at),
+      { ...CONTEXT, atcDataset: dataset }, at);
   }
+  };
+  capturePopulation(EPOCH);
   const initializedPending = validator.report(new Date(EPOCH)).pending;
   if (initializedPending !== scenario.pending) {
     histogram.disable();
@@ -135,6 +140,13 @@ export async function runT57Scenario(scenario: T57Scenario, mode: Mode): Promise
   try {
     for (let cycle = 0; cycle < cycles; cycle += 1) {
       const now = OBSERVE_START + cycle * scenario.intervalSeconds * 1000;
+      // The original capture ages out after its bounded spatial window.
+      // Replenish every 10 simulated minutes to preserve bounded sustained
+      // pending pressure in the opt-in one-hour matrix. This is synthetic
+      // stress traffic, not the 1.333/min production capture rate.
+      if (cycle > 0 && (cycle * scenario.intervalSeconds) % 600 === 0) {
+        capturePopulation(now);
+      }
       for (let i = 0; i < aircraft.length; i += 1) {
         const old = aircraft[i]!;
         // Two-thirds keep the exact trail identity; one-third add a fix.
