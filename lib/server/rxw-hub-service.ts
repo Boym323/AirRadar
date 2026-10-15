@@ -1,5 +1,5 @@
 import { io, type Socket } from "socket.io-client";
-import type { RxwHubConnectionState, RxwHubPublicSnapshot } from "@/lib/aircraft/rxw-communications";
+import type { RxwHubConnectionState, RxwHubPublicSnapshot, RxwCommunication, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 import { RxwHubMessageStore } from "@/lib/server/rxw-hub-store";
 import { logger } from "@/lib/server/logger";
 import { getRxwRouteHistoryWriter, isRxwRouteHistoryEnabled } from "@/lib/server/rxw-route-history";
@@ -64,7 +64,7 @@ export class RxwHubService {
   private ingest(item: unknown): void {
     this.receivedItems++;
     const persist = isRxwRouteHistoryEnabled()
-      ? (message: import("@/lib/aircraft/rxw-communications").RxwCommunication, plan: import("@/lib/aircraft/rxw-communications").RxwWaypointPlan | null) => {
+      ? (message: RxwCommunication, plan: RxwWaypointPlan | null) => {
         getRxwRouteHistoryWriter().enqueue(message, plan);
       }
       : undefined;

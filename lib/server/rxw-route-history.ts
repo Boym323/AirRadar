@@ -7,7 +7,11 @@ export const RXW_HISTORY_BATCH_SIZE = 32;
 export const RXW_HISTORY_RESULT_LIMIT = 30;
 const MAX_WAYPOINT_BYTES = 8192;
 const DAY_MS = 86_400_000;
-const RETRY_MS = 60_000;
+const INITIAL_RETRY_MS = 5_000;
+const MAX_RETRY_MS = 300_000;
+const SEMANTIC_BUCKET_MS = 600_000;
+const RECENT_ID_LIMIT = 4096;
+const PRUNE_INTERVAL_MS = 6 * 60 * 60_000;
 
 /** Parsed route evidence, NOT an observed ADS-B track or verified active flight plan. */
 export interface RxwHistoricalRoute {
@@ -53,7 +57,9 @@ function validWaypoint(value: unknown): value is RxwWaypoint {
         && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180));
 }
 
-/** Only exact ICAO24 + explicit flight. UID is hashed, never retained verbatim. */
+/** Deduplicate identical reports from one station in ten-minute UTC buckets.
+ * A changed route/ETA/waypoint produces a new historical observation.
+ * No raw upstream UID is included in the stored fingerprint. */
 export function buildRxwRouteSnapshot(message: RxwCommunication, plan: RxwWaypointPlan | null): PersistedRow | null {
   const flight = plan?.flight ?? message.reportedRoute?.flight;
   const kind: RxwHistoricalRoute["kind"] = plan ? "FPN" : "AIRPORT_PAIR";
@@ -75,7 +81,12 @@ export function buildRxwRouteSnapshot(message: RxwCommunication, plan: RxwWaypoi
   const waypointsJson = JSON.stringify(points);
   if (waypointsJson.length > MAX_WAYPOINT_BYTES) return null;
   return {
-    id: createHash("sha256").update(message.stationId + "\0" + message.uid + "\0" + kind).digest("hex"),
+    id: createHash("sha256").update(JSON.stringify([
+      message.icaoHex, flight, kind, origin, destination,
+      plan ? null : message.reportedRoute?.etaUtc ?? null,
+      message.stationId, message.protocol, waypointsJson,
+      Math.floor(observedAtMs / SEMANTIC_BUCKET_MS),
+    ])).digest("hex"),
     icaoHex: message.icaoHex, flight, kind, origin, destination,
     etaUtc: plan ? null : message.reportedRoute?.etaUtc ?? null,
     stationId: message.stationId, protocol: message.protocol,
@@ -119,44 +130,87 @@ export function decodeRxwRouteSnapshot(value: unknown): RxwHistoricalRoute | nul
   };
 }
 
-/** Single-lane, bounded, optional DB writer. Never blocks RXW Socket.IO intake. */
+/** Optional single-lane writer: O(1) dedup, bounded retry, no ingest awaits. */
 export class RxwRouteHistoryWriter {
-  private readonly queue: PersistedRow[] = [];
+  private readonly queue = new Map<string, PersistedRow>();
+  private readonly inFlight = new Set<string>();
+  private readonly recent = new Map<string, true>();
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private pruneTimer: ReturnType<typeof setTimeout> | null = null;
   private writing = false;
   private retryAfter = 0;
+  private failuresInRow = 0;
   private lastPrune = 0;
-  private readonly counters = { accepted: 0, written: 0, dropped: 0, failures: 0 };
-  diagnostics() { return { ...this.counters, pending: this.queue.length, writing: this.writing }; }
+  private readonly counters = {
+    accepted: 0, written: 0, deduplicated: 0, dropped: 0,
+    failures: 0, pruneRuns: 0, pruneFailures: 0,
+  };
+
+  diagnostics() {
+    return { ...this.counters, pending: this.queue.size, inFlight: this.inFlight.size,
+      writing: this.writing, retryAfterAt: this.retryAfter > Date.now()
+        ? new Date(this.retryAfter).toISOString() : null };
+  }
 
   enqueue(message: RxwCommunication, plan: RxwWaypointPlan | null): void {
     if (!isRxwRouteHistoryEnabled()) return;
     const row = buildRxwRouteSnapshot(message, plan);
     if (!row) return;
-    if (this.queue.length >= RXW_HISTORY_QUEUE_LIMIT) { this.counters.dropped++; return; }
-    this.queue.push(row);
+    if (this.recent.has(row.id) || this.queue.has(row.id) || this.inFlight.has(row.id)) {
+      this.counters.deduplicated++;
+      return;
+    }
+    // Includes in-flight rows: memory remains bounded during a stalled DB call.
+    if (this.queue.size + this.inFlight.size >= RXW_HISTORY_QUEUE_LIMIT) {
+      this.counters.dropped++;
+      return;
+    }
+    this.queue.set(row.id, row);
     this.counters.accepted++;
     this.schedule();
   }
 
+  private rememberCommitted(rows: readonly PersistedRow[]): void {
+    for (const row of rows) {
+      this.recent.delete(row.id);
+      this.recent.set(row.id, true);
+    }
+    while (this.recent.size > RECENT_ID_LIMIT) {
+      const oldest = this.recent.keys().next().value;
+      if (oldest === undefined) break;
+      this.recent.delete(oldest);
+    }
+  }
+
   private schedule(): void {
-    if (this.timer || this.writing || !this.queue.length) return;
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      void this.flush();
-    }, Math.max(250, this.retryAfter - Date.now()));
+    if (this.timer || this.writing || !this.queue.size) return;
+    const delay = Math.max(this.queue.size >= RXW_HISTORY_BATCH_SIZE ? 10 : 250, this.retryAfter - Date.now());
+    this.timer = setTimeout(() => { this.timer = null; void this.flush(); }, delay);
     this.timer.unref?.();
   }
 
   async flush(): Promise<void> {
-    if (this.writing || Date.now() < this.retryAfter) { this.schedule(); return; }
-    if (!this.queue.length) return;
+    if (this.writing) return;
+    if (!isRxwRouteHistoryEnabled()) {
+      this.counters.dropped += this.queue.size;
+      this.queue.clear();
+      return;
+    }
+    if (Date.now() < this.retryAfter) { this.schedule(); return; }
+    if (!this.queue.size) return;
+
     this.writing = true;
-    const rows = this.queue.splice(0, RXW_HISTORY_BATCH_SIZE);
+    const rows: PersistedRow[] = [];
+    for (const [id, row] of this.queue) {
+      this.queue.delete(id);
+      this.inFlight.add(id);
+      rows.push(row);
+      if (rows.length >= RXW_HISTORY_BATCH_SIZE) break;
+    }
     try {
       const db = getPrisma();
       if (!db) throw new Error("db_unavailable");
-      // jsonb_to_recordset binds one bounded parameter; no dynamic SQL or raw text.
+      // One bounded parameter and statement for the entire batch.
       const payload = JSON.stringify(rows);
       await db.runtime().execute(db.raw.sql`
         INSERT INTO "public"."RxwRouteSnapshot"
@@ -173,25 +227,55 @@ export class RxwRouteHistoryWriter {
         )
         ON CONFLICT ("id") DO NOTHING
       `.affectedCount().build());
+      // Acknowledged records; a cross-restart conflict may be a DB no-op.
       this.counters.written += rows.length;
-      const now = Date.now();
-      if (now - this.lastPrune >= 6 * 60 * 60_000) {
-        this.lastPrune = now;
-        try {
-          await db.runtime().execute(db.raw.sql`
-            DELETE FROM "public"."RxwRouteSnapshot" WHERE "id" IN (
-              SELECT "id" FROM "public"."RxwRouteSnapshot"
-              WHERE "observedAtMs" < ${BigInt(now - rxwRouteRetentionDays() * DAY_MS)}
-              ORDER BY "observedAtMs" LIMIT 2000
-            )
-          `.affectedCount().build());
-        } catch { /* housekeeping must not affect writes or radar */ }
-      }
+      this.rememberCommitted(rows);
+      this.failuresInRow = 0;
+      this.retryAfter = 0;
     } catch {
-      // No sensitive payload, query text, identifiers or raw upstream errors in logs.
+      // Preserve failed rows first, then newer entries; never log sensitive data.
       this.counters.failures++;
-      this.counters.dropped += rows.length;
-      this.retryAfter = Date.now() + RETRY_MS;
+      this.failuresInRow = Math.min(8, this.failuresInRow + 1);
+      this.retryAfter = Date.now() + Math.min(MAX_RETRY_MS, INITIAL_RETRY_MS * 2 ** (this.failuresInRow - 1));
+      const merged = new Map<string, PersistedRow>();
+      for (const row of rows) merged.set(row.id, row);
+      for (const [id, row] of this.queue) merged.set(id, row);
+      this.queue.clear();
+      for (const [id, row] of merged) this.queue.set(id, row);
+    } finally {
+      for (const row of rows) this.inFlight.delete(row.id);
+      this.writing = false;
+      this.schedule();
+      if (!this.failuresInRow && !this.queue.size) this.schedulePrune();
+    }
+  }
+
+  /** Retention maintenance is deferred until the ingestion write lane is idle. */
+  private schedulePrune(): void {
+    if (this.pruneTimer || this.writing || this.queue.size
+      || Date.now() - this.lastPrune < PRUNE_INTERVAL_MS) return;
+    this.pruneTimer = setTimeout(() => { this.pruneTimer = null; void this.pruneIdle(); }, 2000);
+    this.pruneTimer.unref?.();
+  }
+
+  private async pruneIdle(): Promise<void> {
+    if (this.writing || this.queue.size || !isRxwRouteHistoryEnabled()
+      || Date.now() - this.lastPrune < PRUNE_INTERVAL_MS) return;
+    this.writing = true;
+    this.lastPrune = Date.now();
+    try {
+      const db = getPrisma();
+      if (!db) return;
+      await db.runtime().execute(db.raw.sql`
+        DELETE FROM "public"."RxwRouteSnapshot" WHERE "id" IN (
+          SELECT "id" FROM "public"."RxwRouteSnapshot"
+          WHERE "observedAtMs" < ${BigInt(Date.now() - rxwRouteRetentionDays() * DAY_MS)}
+          ORDER BY "observedAtMs" LIMIT 2000
+        )
+      `.affectedCount().build());
+      this.counters.pruneRuns++;
+    } catch {
+      this.counters.pruneFailures++;
     } finally {
       this.writing = false;
       this.schedule();
@@ -222,25 +306,29 @@ export async function listHistoricalRxwRoutes(flight: FlightWindow): Promise<Rxw
   try {
     const db = getPrisma();
     if (!db) return [];
+    // Typed indexed columns avoid a JSON builder on PostgreSQL and JSON.parse in Node.
     const rows = await db.runtime().query(db.raw.sql`
-      SELECT json_build_object(
-        'id', "id", 'icaoHex', "icaoHex", 'flight', "flight",
-        'kind', "kind", 'origin', "origin", 'destination', "destination",
-        'etaUtc', "etaUtc", 'stationId', "stationId",
-        'protocol', "protocol", 'observedAtMs', "observedAtMs"::text,
-        'source', "source", 'waypointsJson', "waypointsJson",
-        'positionedCount', "positionedCount"
-      )::text AS "payload"
+      SELECT "id", "icaoHex", "flight", "kind", "origin", "destination",
+        "etaUtc", "stationId", "protocol", "observedAtMs"::text AS "observedAtMs",
+        "source", "waypointsJson", "positionedCount"
       FROM "public"."RxwRouteSnapshot"
       WHERE "icaoHex" = ${flight.icaoHex} AND "flight" = ${flight.callsign}
         AND "observedAtMs" >= ${from} AND "observedAtMs" <= ${to}
         AND "observedAtMs" >= ${cutoff}
       ORDER BY "observedAtMs" DESC LIMIT ${RXW_HISTORY_RESULT_LIMIT}
-    `.returnsRow({ payload: "pg/text@1" }).build());
-    return rows.flatMap(row => {
-      try { const decoded = decodeRxwRouteSnapshot(JSON.parse(row.payload)); return decoded ? [decoded] : []; }
-      catch { return []; }
-    });
+    `.returnsRow({
+      id: "pg/text@1", icaoHex: "pg/text@1", flight: "pg/text@1",
+      kind: "pg/text@1", origin: "pg/text@1", destination: "pg/text@1",
+      etaUtc: "pg/text@1", stationId: "pg/text@1", protocol: "pg/text@1",
+      observedAtMs: "pg/text@1", source: "pg/text@1",
+      waypointsJson: "pg/text@1", positionedCount: "pg/int4@1",
+    }).build());
+    const decoded: RxwHistoricalRoute[] = [];
+    for (const row of rows) {
+      const route = decodeRxwRouteSnapshot(row);
+      if (route) decoded.push(route);
+    }
+    return decoded;
   } catch {
     // Missing migration / PostgreSQL outage is isolated from Flight Story.
     return [];

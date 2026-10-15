@@ -783,16 +783,22 @@ staging database, review the migration, and apply in a controlled production
 change only after verifying permission from the RXW Hub operator for archival
 and public re-display. Never retain message bodies, CPDLC text, raw UID,
 receiver locations or decrypted content. Persistent rows contain hashed
-source-message IDs, explicit ICAO24 + flight identity, UTC reception time,
+semantic report IDs, explicit ICAO24 + flight identity, UTC reception time,
 source/station/protocol and allowlisted airport/waypoint fields only.
 
 One query on `/flights/:id` looks up at most 30 matching observations, keyed
 by exact ICAO24 + callsign inside a bounded flight-instance time window. The
 page labels reported FPN as **not the flown ADS-B track** and draws only
 adjacent explicitly positioned waypoints. Missing schema/DB is fail-soft. The
-writer has a 256-entry queue, 32-row batches, single active DB write, and a
-retry cooldown; overflows/failures drop optional history rather than delaying
-live radar. Rows expire after 30 days by default (1–90 configurable) and are
+writer has a total 256-row queue/in-flight bound, 32-row batches and one
+active database operation. Identical reports from the same station and flight
+are coalesced into ten-minute UTC buckets by semantic SHA-256; route changes
+remain distinct. A bounded 4,096-entry recent-ID cache avoids repeated SQL;
+PostgreSQL's unique key covers restarts. Failed batches return to the front
+of the bounded queue with exponential retry (5 seconds to 5 minutes), rather
+than disappearing. Only new arrivals beyond capacity are dropped. Retention
+pruning is delayed until the queue is idle and never overlaps foreground
+writes. Historical reads select typed indexed columns without JSON roundtrips. Rows expire after 30 days by default (1–90 configurable) and are
 pruned in bounded 2,000-row batches. They cannot reconstruct messages from
 before the feature was enabled. `RXW_ROUTE_HISTORY_ENABLED=false` is the
 rollback switch; the additive table may remain safely unused.
