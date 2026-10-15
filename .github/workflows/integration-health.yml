@@ -35,12 +35,34 @@ jobs:
       - name: Inspect existing production counters (no external provider requests)
         run: node scripts/integration-health-report.mjs
       - name: Run bounded read-only integration audit
+        id: audit
         run: |
           mkdir -p "$RUNNER_TEMP/airradar-audit"
+          # Audit CLI contract: 0 = healthy/limited, 2 = observed degradation,
+          # other exit codes = execution failure. Preserve degradation as a
+          # visible warning without failing GitHub Actions for an expected
+          # provider cooldown or a degraded (but observed) production status.
+          audit_status=0
           node scripts/integration-audit.mjs \
             --mode readonly \
             --json "$RUNNER_TEMP/airradar-audit/report.json" \
-            --markdown "$RUNNER_TEMP/airradar-audit/report.md"
+            --markdown "$RUNNER_TEMP/airradar-audit/report.md" || audit_status=$?
+          echo "exit_code=$audit_status" >> "$GITHUB_OUTPUT"
+          case "$audit_status" in
+            0)
+              echo "Read-only integration audit completed." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            2)
+              echo "::warning title=Integration audit DEGRADED::Production sources or runtime metrics are degraded. Review the sanitized audit artifact and summary."
+              echo "Read-only integration audit: **DEGRADED** (provider/runtime warning; not an execution failure)." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "::error title=Integration audit execution error::Audit did not complete successfully (exit code $audit_status)."
+              exit "$audit_status"
+              ;;
+          esac
+          # Renderer output is aggregate-only, sanitized and size-bounded.
+          cat "$RUNNER_TEMP/airradar-audit/report.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload sanitized audit report
         if: always()
         uses: actions/upload-artifact@v7
