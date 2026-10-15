@@ -76,12 +76,12 @@ export function summarizeIntegrationHealth(data) {
 
 /** GitHub Actions step-summary content contains NO remote-derived fields. */
 export const INTEGRATION_HEALTH_STEP_SUMMARY =
-  "## AirRadar route health (observational)\\n\\n" +
+  "## AirRadar route health (observational)\n\n" +
   "Aggregated production route-health counters and current status are available " +
   "in the **Inspect existing production counters** step logs " +
-  "(look for the `[integration-health]` JSON line).\\n\\n" +
+  "(look for the `[integration-health]` JSON line).\n\n" +
   "Only allowlisted numeric metrics and fixed state labels are logged. " +
-  "No ADSB.lol traffic/route API calls were made.\\n";
+  "No ADSB.lol traffic/route API calls were made.\n";
 
 /**
  * The HTTP diagnostics response must never reach a filesystem sink.
