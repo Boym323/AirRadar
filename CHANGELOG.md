@@ -17,35 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.469] - 2026-10-15
-
-Changes since v1.0.468.
-
-**Features touched:** Aircraft & Flight Detail, Track Fusion Shadow.
-
-### Added
-
-- Persist and replay parsed ACARS/VDL2 route evidence (#927) (b3ee6ac8)
-
-### Performance
-
-- Bound large metadata batches and fix event-loop audit evidence (#926) (c3866074)
-
-### Maintenance
-
-- Sync generated repository metadata (#930) (f012b3fe)
-- GitHub benchmark suite pro Operational Twin a Track Fusion (#929) (ac36909b)
-
-<details>
-<summary>Technical commits</summary>
-
-- perf(enrichment): bound large metadata batches and fix event-loop audit evidence (#926) (c3866074)
-- chore(metadata): sync generated repository metadata (#930) (f012b3fe)
-- feat: persist and replay parsed ACARS/VDL2 route evidence (#927) (b3ee6ac8)
-- test(perf): GitHub benchmark suite pro Operational Twin a Track Fusion (#929) (ac36909b)
-
-</details>
-
 ## [1.0.468] - 2026-10-15
 
 Changes since v1.0.467.
@@ -65,6 +36,7 @@ Changes since v1.0.467.
 - perf(native): Rust BEAST parser (packed N-API) a Mode-S CRC – experiment (#925) (bdc78cf8)
 
 </details>
+
 ## [1.0.467] - 2026-10-15
 
 Changes since v1.0.466.
@@ -86,6 +58,7 @@ Changes since v1.0.466.
 - perf(network): measure unique source contribution and eliminate per-overlap allocations (#923) (108f7bf8)
 
 </details>
+
 ## [1.0.466] - 2026-10-15
 
 Changes since v1.0.465.
@@ -105,6 +78,7 @@ Changes since v1.0.465.
 - refactor: remove ADSB.lol routeset integration and related tests (de364cde)
 
 </details>
+
 ## [1.0.465] - 2026-10-15
 
 Changes since v1.0.464.
@@ -124,6 +98,7 @@ Changes since v1.0.464.
 - perf(ci): reuse exact-tree PR validation and avoid redundant release gates (#919) (b222069b)
 
 </details>
+
 ## [1.0.464] - 2026-10-15
 
 Changes since v1.0.463.
@@ -143,6 +118,7 @@ Changes since v1.0.463.
 - perf: bound enrichment telemetry and stale fallback retention (#917) (8cad3141)
 
 </details>
+
 ## [1.0.463] - 2026-10-15
 
 Changes since v1.0.462.
@@ -162,6 +138,7 @@ Changes since v1.0.462.
 - fix(audit): preserve degraded warnings and publish Integration Health summary (#915) (b8ade514)
 
 </details>
+
 ## [1.0.462] - 2026-10-15
 
 Changes since v1.0.461.
@@ -195,6 +172,7 @@ Changes since v1.0.461.
 - feat(audit): add bounded integration health audit (#912) (3c730c76)
 
 </details>
+
 ## [1.0.461] - 2026-10-15
 
 Changes since v1.0.460.
