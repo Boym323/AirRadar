@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.461] - 2026-10-15
+
+Changes since v1.0.460.
+
+### Fixed
+
+- Avoid HTTP-to-file flow in Integration Health summary (CodeQL #50) (#909) (6a13d797)
+- Identify AirRadar to ADSB.lol upstream (#821) (#905) (1eb3f6e7)
+
+### Maintenance
+
+- Sync generated repository metadata (#907) (ed2dde9f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#907) (ed2dde9f)
+- fix(security): avoid HTTP-to-file flow in Integration Health summary (CodeQL #50) (#909) (6a13d797)
+- fix(routeset): identify AirRadar to ADSB.lol upstream (#821) (#905) (1eb3f6e7)
+
+</details>
 ## [1.0.460] - 2026-10-15
 
 Changes since v1.0.459.
