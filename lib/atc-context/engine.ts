@@ -285,6 +285,32 @@ function routeMatch(routeId: string, countryCode: string | null, sourceReference
   return { routeId, segmentId: segment.id, from: segment.fromName, to: segment.toName, distanceNm: Number(distance.toFixed(2)), alignmentDifferenceDeg: alignment === null ? null : Number(alignment.toFixed(1)), confidence, countryCode, sourceReference };
 }
 
+/**
+ * Current-sector membership only: the full ATC context would additionally
+ * compute routes, nearest ATS points and projected/ahead sectors. This path
+ * intentionally shares the full-context polygon and vertical predicates.
+ */
+export function getCurrentAtcSectorIds(
+  input: AtcContextInput,
+  prepared: PreparedAtcContextDataset,
+): ReadonlySet<string> {
+  const ids = new Set<string>();
+  if (!validPosition(input.lat, input.lon)) return ids;
+  const point: [number, number] = [input.lon, input.lat];
+  for (const index of queryGrid(prepared.atcGrid, point)) {
+    const entry = prepared.airspaces[index];
+    if (!entry) continue;
+    const sector = entry.sector;
+    const horizontal = entry.boxes.some((box, polygonIndex) => {
+      const polygon = sector.polygons[polygonIndex];
+      return Boolean(polygon) && bboxContains(box, point)
+        && pointInPolygon(point, [polygon as unknown as [number, number][]]) !== null;
+    });
+    if (horizontal && verticalMatch(sector, input).match !== "false") ids.add(sector.id);
+  }
+  return ids;
+}
+
 export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDataset | PreparedAtcContextDataset, now = new Date(), diagnostics?: AtcContextLookupDiagnostics): AtcContextResult {
   const prepared = "prepared" in dataset && dataset.prepared ? dataset : prepareAtcContextDataset(dataset);
   const computedAt = now.toISOString();

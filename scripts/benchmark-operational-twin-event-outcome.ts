@@ -7,6 +7,7 @@ const NOW = Date.parse("2026-10-13T12:00:00.000Z");
 const AIRCRAFT_COUNT = 60;
 const TRAIL_POINTS = 120;
 const REFRESH_CYCLES = 10;
+const trails = new Map<string, Aircraft["trail"]>();
 function makeDataset(prefix: string) {
   return prepareAtcContextDataset({
   sectors: ["S0", "S1", "S2"].map((id) => ({
@@ -33,16 +34,29 @@ function situation(icaoHex: string, index: number, refreshed = false): Operation
 }
 
 function aircraft(icaoHex: string, cycle: number): Aircraft {
-  const trail = Array.from({ length: TRAIL_POINTS + (cycle >= 5 ? 1 : 0) }, (_, index) => ({
-    recordedAt: new Date(NOW + index * 1_000).toISOString(), lat: 49, lon: 18.5,
-    altitude: 30000, track: 90, groundSpeed: 420,
-  })).slice(-TRAIL_POINTS);
+  let trail = trails.get(icaoHex);
+  if (!trail) {
+    trail = Array.from({ length: TRAIL_POINTS }, (_, index) => ({
+      recordedAt: new Date(NOW + index * 1_000).toISOString(), lat: 49, lon: 18.5,
+      altitude: 30000, track: 90, groundSpeed: 420,
+    }));
+    trails.set(icaoHex, trail);
+  } else if (cycle === 5) {
+    trail = [...trail.slice(1), {
+      recordedAt: new Date(NOW + TRAIL_POINTS * 1_000).toISOString(), lat: 49, lon: 18.5,
+      altitude: 30000, track: 90, groundSpeed: 420,
+    }];
+    trails.set(icaoHex, trail);
+  } else if (cycle === 7) {
+    trail = trail.map((point, index) => index === 20 ? { ...point, altitude: (point.altitude ?? 0) + 100 } : point);
+    trails.set(icaoHex, trail);
+  }
   return {
     icaoHex, callsign: null, registration: null, aircraftType: null, aircraftDescription: null,
     lat: 49, lon: 18.5, altitude: 30000, baroAltitude: 30000, geomAltitude: null,
     groundSpeed: 420, track: 90, verticalRate: 0, baroRate: 0, geomRate: null,
     squawk: null, category: null, emergency: null, rssi: null, messages: 1,
-    seenSeconds: 0, seenPosSeconds: 0, lastSeen: new Date(NOW + (cycle >= 5 ? 120_000 : 119_000)).toISOString(),
+    seenSeconds: 0, seenPosSeconds: cycle, lastSeen: new Date(NOW + cycle * 1_000).toISOString(),
     source: "ADS-B", origin: "local", sourceType: null, onGround: false, distanceKm: null, bearing: null, trail,
   };
 }
@@ -59,8 +73,9 @@ function percentile(values: readonly number[], fraction: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1)] ?? 0;
 }
 
-function run(enableAtcTruthCache: boolean) {
-  const validator = new OperationalTwinEventOutcomeValidator({ enableAtcTruthCache });
+function run(enableIncrementalTruthEvaluation: boolean) {
+  trails.clear();
+  const validator = new OperationalTwinEventOutcomeValidator({ enableAtcTruthCache: true, enableIncrementalTruthEvaluation });
   for (let index = 0; index < AIRCRAFT_COUNT; index += 1) {
     const icaoHex = (0xabc000 + index).toString(16).toUpperCase();
     validator.capture(situation(icaoHex, index), { atcDataset: dataset, sigmets: null, destination: null }, NOW);
@@ -87,7 +102,7 @@ function run(enableAtcTruthCache: boolean) {
     : { hits: 0, misses: 0, evictions: 0, expirations: 0, size: 0, maxEntries: 0, ttlMs: 0 };
   const warm = durations.slice(1);
   return {
-    cache: enableAtcTruthCache ? "pr-optimized" : "pr-no-cache",
+    algorithm: enableIncrementalTruthEvaluation ? "incremental" : "full-scan-reference",
     workload: { aircraft: AIRCRAFT_COUNT, trailPoints: TRAIL_POINTS, pendingPerAircraft: 3, refreshCycles: REFRESH_CYCLES },
     computeAtcContextCalls: stats.misses, cacheHits: stats.hits, cacheMisses: stats.misses,
     cacheHitRate: stats.hits + stats.misses ? stats.hits / (stats.hits + stats.misses) : 0,
@@ -103,7 +118,12 @@ function run(enableAtcTruthCache: boolean) {
 
 const before = run(false);
 const after = run(true);
+const semanticReport = (report: ReturnType<OperationalTwinEventOutcomeValidator["report"]>) => {
+  const { performance: operationStats, ...semantic } = report;
+  void operationStats;
+  return semantic;
+};
 console.log(JSON.stringify({
-  version: "operational-twin-performance-v2", reproducibility: { node: process.version, now: new Date(NOW).toISOString() },
-  before, after, reportsMatch: JSON.stringify(before.report) === JSON.stringify(after.report),
+  version: "operational-twin-performance-v3", reproducibility: { node: process.version, now: new Date(NOW).toISOString() },
+  reference: before, optimized: after, reportsMatch: JSON.stringify(semanticReport(before.report)) === JSON.stringify(semanticReport(after.report)),
 }, null, 2));

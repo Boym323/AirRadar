@@ -46,8 +46,10 @@ type RuntimeHealthState = {
   lastPostMajorGc?: PostMajorGcMemory | null;
   lastCpuUsage: NodeJS.CpuUsage | null;
   lastCpuAtNs: bigint | null;
+  lastWindowGcCount: number;
+  lastWindowGcPauseMs: number;
   windowTimer: ReturnType<typeof setInterval> | null;
-  eventLoopWindows: Array<{ from: string; to: string; p95Ms: number; p99Ms: number; maxMs: number }>;
+  eventLoopWindows: Array<{ from: string; to: string; p95Ms: number; p99Ms: number; maxMs: number; gcCount: number; gcPauseMs: number }>;
 };
 
 // Next standalone builds can evaluate instrumentation and route modules in
@@ -67,6 +69,8 @@ const state = processGlobal.__airRadarRuntimeHealthObservation ??= {
   lastPostMajorGc: null,
   lastCpuUsage: null,
   lastCpuAtNs: null,
+  lastWindowGcCount: 0,
+  lastWindowGcPauseMs: 0,
   windowTimer: null,
   eventLoopWindows: [],
 };
@@ -80,7 +84,11 @@ function captureEventLoopWindow(): void {
     p95Ms: Number((state.loop.percentile(95) / 1e6).toFixed(3)),
     p99Ms: Number((state.loop.percentile(99) / 1e6).toFixed(3)),
     maxMs: Number((state.loop.max / 1e6).toFixed(3)),
+    gcCount: Math.max(0, state.gcCount - state.lastWindowGcCount),
+    gcPauseMs: Number(Math.max(0, state.gcPauseMs - state.lastWindowGcPauseMs).toFixed(3)),
   });
+  state.lastWindowGcCount = state.gcCount;
+  state.lastWindowGcPauseMs = state.gcPauseMs;
   if (state.eventLoopWindows.length > MAX_EVENT_LOOP_WINDOWS) state.eventLoopWindows.shift();
   state.loop.reset();
 }
@@ -155,6 +163,8 @@ export function stopRuntimeHealthObservation(): void {
   if (state.windowTimer) clearInterval(state.windowTimer);
   state.windowTimer = null;
   state.eventLoopWindows = [];
+  state.lastWindowGcCount = 0;
+  state.lastWindowGcPauseMs = 0;
   state.gc = [];
   state.gcCount = 0;
   state.gcPauseMs = 0;

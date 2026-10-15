@@ -15,9 +15,9 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/sync-maplibre-worker.mjs",
+    "prebuild": "node scripts/assert-build-isolation.mjs && node scripts/sync-maplibre-worker.mjs",
     "build": "NODE_ENV=production node scripts/version.mjs write-build-metadata && prisma contract emit && next build",
-    "build:prepared": "NODE_ENV=production node scripts/version.mjs write-build-metadata && next build",
+    "build:prepared": "node scripts/assert-build-isolation.mjs && NODE_ENV=production node scripts/version.mjs write-build-metadata && next build",
     "start": "next start",
     "lint": "eslint . --cache --cache-location .cache/eslint/",
     "typecheck": "prisma contract emit && next typegen && tsc --noEmit",
@@ -51,7 +51,6 @@
     "atc:sync:at": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-sync-at.ts",
     "atc:status:at": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-at.ts",
     "benchmark:atc": "ATC_BENCHMARK_NON_PRODUCTION=true JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-lookup.ts",
-    "benchmark:atc:preparation": "ATC_BENCHMARK_NON_PRODUCTION=true JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-preparation.ts",
     "ats:sync:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-cz.ts",
     "ats:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-cz.ts",
     "ats:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-sk.ts",
@@ -66,6 +65,8 @@
     "benchmark:radar": "node scripts/radar-performance-baseline.mjs",
     "benchmark:runtime": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-live-performance.ts",
     "benchmark:twin-event-outcome": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-operational-twin-event-outcome.ts",
+    "benchmark:twin-forensics": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-operational-twin-forensics.ts",
+    "benchmark:twin-aged-state": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-operational-twin-aged-state.ts",
     "benchmark:radar:soak": "RADAR_PERF_SOAK=1 RADAR_PERF_SCENARIOS=1600,3000,5000 RADAR_PERF_MEASURE_MS=90000 node scripts/radar-performance-baseline.mjs",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
     "intelligence:corpus": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-v1-corpus.ts",
@@ -94,7 +95,9 @@
     "features:check": "node scripts/features-registry.mjs check",
     "docs:check": "node scripts/docs-localization.mjs",
     "visual:check": "node scripts/visual-system-audit.mjs",
-    "icons:audit": "node scripts/aircraft-icon-audit.mjs"
+    "icons:audit": "node scripts/aircraft-icon-audit.mjs",
+    "benchmark:twin-t57": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-operational-twin-t57.ts",
+    "benchmark:atc:preparation": "ATC_BENCHMARK_NON_PRODUCTION=true JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-preparation.ts"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.9",

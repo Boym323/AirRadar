@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
+import { realpathSync } from "node:fs";
 
-const nextConfig: NextConfig = {
+const nextConfig = (phase: string): NextConfig => {
+  if (phase === "phase-production-build" && realpathSync(process.cwd()) === "/var/www/airradar") {
+    const isolatedDist = process.env.NEXT_DIST_DIR;
+    if (process.env.AIRRADAR_RELEASE_BUILD !== "1" ||
+        !/^\.next-release-[1-9]\d*$/.test(isolatedDist ?? "")) {
+      throw new Error("production_checkout_build_forbidden");
+    }
+  }
+  return {
   // Produce a traced runtime bundle so validated CI artifacts can run without
   // coupling the server process to the full development dependency tree.
   output: "standalone",
@@ -36,5 +45,6 @@ const nextConfig: NextConfig = {
       ],
     }];
   },
+  };
 };
 export default nextConfig;

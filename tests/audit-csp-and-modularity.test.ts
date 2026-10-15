@@ -15,7 +15,7 @@ describe("audit modularity and CSP hardening", () => {
   });
 
   it("denies inline HTML event handler attributes while Next bootstrap remains supported", async () => {
-    const configured = await nextConfig.headers?.();
+    const configured = await nextConfig("phase-development-server").headers?.();
     const policy = configured?.find(route => route.source === "/(.*)")
       ?.headers.find(header => header.key === "Content-Security-Policy")?.value ?? "";
     expect(policy).toContain("script-src-attr 'none'");

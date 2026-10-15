@@ -17,6 +17,107 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.455] - 2026-10-15
+
+Changes since v1.0.454.
+
+### Performance
+
+- V4.6 reduce repeated truth work (#885) (e9a9b835)
+
+### Maintenance
+
+- Sync generated repository metadata (#887) (e7a3bb33)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#887) (e7a3bb33)
+- perf(twin): V4.6 reduce repeated truth work (#885) (e9a9b835)
+
+</details>
+## [1.0.454] - 2026-10-15
+
+Changes since v1.0.453.
+
+### Performance
+
+- Add V4.6.2 operational twin forensics (#886) (ca25f52b)
+
+### Maintenance
+
+- Sync generated repository metadata (#884) (5b1e972f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#884) (5b1e972f)
+- perf(diagnostics): add V4.6.2 operational twin forensics (#886) (ca25f52b)
+
+</details>
+## [1.0.453] - 2026-10-14
+
+Changes since v1.0.452.
+
+**Features touched:** System Observability.
+
+### Performance
+
+- Recover aged Operational Twin truth validation (#883) (e8260a6a)
+
+### Maintenance
+
+- Sync generated repository metadata (#882) (f530e5ab)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#882) (f530e5ab)
+- perf(runtime): recover aged Operational Twin truth validation (#883) (e8260a6a)
+
+</details>
+## [1.0.452] - 2026-10-14
+
+Changes since v1.0.451.
+
+**Features touched:** System Observability.
+
+### Performance
+
+- Recover nearest-airport event-loop hotspot (#881) (8ea6082f)
+
+### Maintenance
+
+- Sync generated repository metadata (#880) (c74203b9)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#880) (c74203b9)
+- perf(runtime): recover nearest-airport event-loop hotspot (#881) (8ea6082f)
+
+</details>
+## [1.0.451] - 2026-10-14
+
+Changes since v1.0.450.
+
+**Features touched:** System Observability.
+
+### Fixed
+
+- Isolate production build identity and guard active Next runtime (ed561c9f)
+
+### Maintenance
+
+- Sync generated repository metadata (#877) (11c0bc95)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#877) (11c0bc95)
+- fix(runtime): isolate production build identity and guard active Next runtime (ed561c9f)
+
+</details>
 ## [1.0.450] - 2026-10-14
 
 Changes since v1.0.449.

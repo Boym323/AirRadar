@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import appPackage from "../../package.json" with { type: "json" };
 
 export interface BuildMetadata {
@@ -80,11 +80,36 @@ let cachedMetadata: BuildMetadata | undefined;
 
 export function getBuildMetadata(): BuildMetadata {
   if (cachedMetadata) return cachedMetadata;
+
+  // Set by scripts/start-production.mjs when importing an isolated standalone
+  // runtime. It is intentionally independent of process.cwd() and Git HEAD.
+  const artifactPath = process.env.AIRRADAR_ARTIFACT_METADATA_PATH?.trim();
+  if (artifactPath) {
+    if (!isAbsolute(artifactPath)) throw new Error("artifact_metadata_path_not_absolute");
+    let parsed: BuildMetadata | null = null;
+    try {
+      parsed = parseBuildMetadata(JSON.parse(readFileSync(artifactPath, "utf8")));
+    } catch {
+      // No fallback: an absent/invalid artifact identity must never be reported
+      // as the root checkout's version on a production endpoint.
+      throw new Error("artifact_build_metadata_invalid");
+    }
+    if (!parsed || (process.env.NODE_ENV === "production" &&
+        !["production", "release-candidate"].includes(parsed.channel))) {
+      throw new Error("artifact_build_metadata_invalid");
+    }
+    cachedMetadata = parsed;
+    return cachedMetadata;
+  }
+
   let metadata: BuildMetadata | null = null;
   try {
     metadata = parseBuildMetadata(JSON.parse(readFileSync(BUILD_METADATA_PATH, "utf8")));
   } catch {
     metadata = null;
+  }
+  if (process.env.NODE_ENV === "production" && !metadata) {
+    throw new Error("production_build_metadata_missing_or_invalid");
   }
   cachedMetadata = metadata ?? fallbackMetadata();
   return cachedMetadata;
