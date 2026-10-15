@@ -15,6 +15,8 @@ type PhaseCounters = {
   sampledWallMs: number;
   maxWallMs: number;
   maxCpuMs: number;
+  longOperationCount: number;
+  longOperationMaxWallMs: number;
   samples: number[];
   cpuSamples: number[];
 };
@@ -22,9 +24,28 @@ type PhaseCounters = {
 const SAMPLE_EVERY = 256;
 const MAX_LATENCY_SAMPLES = 128;
 const MAX_WINDOWS = 30;
+const LONG_OPERATION_THRESHOLD_MS = 1_000;
+const LONG_OPERATION_PHASES = ["pendingTraversal", "truthStateDiff", "expiryHeap", "capacityEviction", "cleanup"] as const;
+
+type ForensicsOptions = {
+  enabled?: boolean;
+  monotonicNow?: () => number;
+  cpuUsage?: (previous?: NodeJS.CpuUsage) => NodeJS.CpuUsage;
+};
+type PhaseRecord = Record<OperationalTwinForensicPhase, PhaseCounters>;
+type ForensicsWindow = {
+  startMs: number;
+  from: string;
+  phases: PhaseRecord;
+  counters: Record<string, number>;
+};
 
 function emptyPhase(): PhaseCounters {
-  return { calls: 0, sampledCalls: 0, sampledCpuMs: 0, sampledWallMs: 0, maxWallMs: 0, maxCpuMs: 0, samples: [], cpuSamples: [] };
+  return { calls: 0, sampledCalls: 0, sampledCpuMs: 0, sampledWallMs: 0, maxWallMs: 0, maxCpuMs: 0,
+    longOperationCount: 0, longOperationMaxWallMs: 0, samples: [], cpuSamples: [] };
+}
+function emptyPhaseRecord(): PhaseRecord {
+  return Object.fromEntries(OPERATIONAL_TWIN_FORENSIC_PHASES.map((name) => [name, emptyPhase()])) as PhaseRecord;
 }
 
 function percentile(values: readonly number[], p: number): number | null {
@@ -36,33 +57,54 @@ function percentile(values: readonly number[], p: number): number | null {
 /** Process local, opt-in, bounded diagnostics. No aircraft values enter this store. */
 export class OperationalTwinForensics {
   readonly enabled: boolean;
-  private readonly phases = new Map<OperationalTwinForensicPhase, PhaseCounters>(
-    OPERATIONAL_TWIN_FORENSIC_PHASES.map((name) => [name, emptyPhase()]),
-  );
-  private readonly windows: Array<{ from: string; phases: Map<OperationalTwinForensicPhase, PhaseCounters>; counters: Record<string, number> }> = [];
+  private readonly monotonicNow: () => number;
+  private readonly cpuUsage: (previous?: NodeJS.CpuUsage) => NodeJS.CpuUsage;
+  private readonly phases: PhaseRecord = emptyPhaseRecord();
+  private readonly windows: ForensicsWindow[] = [];
+  private activeWindow: ForensicsWindow | null = null;
   private scalarCursor = 0;
 
-  constructor(enabled = process.env.AIRRADAR_OPERATIONAL_TWIN_FORENSICS_ENABLED?.trim().toLowerCase() === "true") {
-    this.enabled = enabled;
+  constructor(options: ForensicsOptions = {}) {
+    this.enabled = options.enabled ?? process.env.AIRRADAR_OPERATIONAL_TWIN_FORENSICS_ENABLED?.trim().toLowerCase() === "true";
+    this.monotonicNow = options.monotonicNow ?? (() => performance.now());
+    this.cpuUsage = options.cpuUsage ?? ((previous) => process.cpuUsage(previous));
   }
 
-  measure<T>(name: OperationalTwinForensicPhase, operation: () => T): T {
+  measure<T>(name: OperationalTwinForensicPhase, operation: () => T, options: { detectLongOperation?: boolean } = {}): T {
     if (!this.enabled) return operation();
-    const lifetime = this.phases.get(name)!;
+    const lifetime = this.phases[name];
     lifetime.calls += 1;
-    if (lifetime.calls % SAMPLE_EVERY !== 0) return operation();
-    const current = this.currentWindow().phases.get(name)!;
+    const ownsWindow = this.activeWindow === null;
+    const activeWindow = this.activeWindow ?? this.currentWindow();
+    if (ownsWindow) this.activeWindow = activeWindow;
+    const current = activeWindow.phases[name];
     current.calls += 1;
-    const wallStarted = performance.now();
-    const cpuStarted = process.cpuUsage();
+    const sampled = lifetime.calls % SAMPLE_EVERY === 0;
+    const detectLongOperation = options.detectLongOperation === true;
+    if (!sampled && !detectLongOperation) {
+      try {
+        return operation();
+      } finally {
+        if (ownsWindow) this.activeWindow = null;
+      }
+    }
+    const wallStarted = this.monotonicNow();
+    const cpuStarted = sampled ? this.cpuUsage() : null;
     try {
       return operation();
     } finally {
-      const wallMs = Math.max(0, performance.now() - wallStarted);
-      const cpu = process.cpuUsage(cpuStarted);
-      const cpuMs = Math.max(0, (cpu.user + cpu.system) / 1_000);
-      this.record(lifetime, wallMs, cpuMs);
-      this.record(current, wallMs, cpuMs);
+      const wallMs = Math.max(0, this.monotonicNow() - wallStarted);
+      if (detectLongOperation && wallMs >= LONG_OPERATION_THRESHOLD_MS) {
+        this.recordLongOperation(lifetime, wallMs);
+        this.recordLongOperation(current, wallMs);
+      }
+      if (sampled && cpuStarted) {
+        const cpu = this.cpuUsage(cpuStarted);
+        const cpuMs = Math.max(0, (cpu.user + cpu.system) / 1_000);
+        this.record(lifetime, wallMs, cpuMs);
+        this.record(current, wallMs, cpuMs);
+      }
+      if (ownsWindow) this.activeWindow = null;
     }
   }
 
@@ -89,34 +131,32 @@ export class OperationalTwinForensics {
     | "pendingCapacityEvictions" | "atcCacheEvictions" | "atcCacheExpirations"): void {
     if (!this.enabled) return;
     this.counters[name] += 1;
-    this.currentWindow().counters[name] += 1;
+    (this.activeWindow ?? this.currentWindow()).counters[name] += 1;
   }
 
   cache(hit: boolean): void {
     if (!this.enabled) return;
     this.counters.cacheHits += hit ? 1 : 0;
     this.counters.cacheMisses += hit ? 0 : 1;
-    const window = this.currentWindow();
+    const window = this.activeWindow ?? this.currentWindow();
     window.counters.cacheHits += hit ? 1 : 0;
     window.counters.cacheMisses += hit ? 0 : 1;
   }
 
   getBoundedSampleCount(): number {
-    return [...this.phases.values()].reduce((sum, phase) => sum + phase.samples.length + phase.cpuSamples.length, 0)
+    return Object.values(this.phases).reduce((sum, phase) => sum + phase.samples.length + phase.cpuSamples.length, 0)
       + this.windows.reduce((windowSum, window) => windowSum
-        + [...window.phases.values()].reduce((sum, phase) => sum + phase.samples.length + phase.cpuSamples.length, 0), 0);
+        + Object.values(window.phases).reduce((sum, phase) => sum + phase.samples.length + phase.cpuSamples.length, 0), 0);
   }
 
   report() {
     if (!this.enabled) return { enabled: false as const };
-    const summarize = (phases: Map<OperationalTwinForensicPhase, PhaseCounters>, windowed = false) =>
+    const summarize = (phases: PhaseRecord) =>
       Object.fromEntries(OPERATIONAL_TWIN_FORENSIC_PHASES.map((name) => {
-        const item = phases.get(name)!;
+        const item = phases[name];
         const samples = item.samples;
         return [name, {
-          calls: windowed ? null : item.calls,
-          estimatedCalls: windowed ? item.calls * SAMPLE_EVERY : null,
-          sampledPhaseCalls: windowed ? item.calls : null,
+          calls: item.calls,
           sampledCalls: item.sampledCalls,
           sampledCpuMs: Number(item.sampledCpuMs.toFixed(3)),
           sampledWallMs: Number(item.sampledWallMs.toFixed(3)),
@@ -130,13 +170,17 @@ export class OperationalTwinForensics {
           sampleCpuP95Ms: percentile(item.cpuSamples, 0.95),
           sampleCpuP99Ms: percentile(item.cpuSamples, 0.99),
           sampleCpuMaxMs: item.maxCpuMs || null,
+          longOperationCount: item.longOperationCount,
+          longOperationMaxWallMs: item.longOperationMaxWallMs || null,
         }];
       }));
     return {
       enabled: true as const,
-      sampling: { every: SAMPLE_EVERY, cpuLatencyReservoirPerPhase: MAX_LATENCY_SAMPLES, wallLatencyReservoirPerPhase: MAX_LATENCY_SAMPLES, percentileMinimumSamples: 20 },
+      sampling: { every: SAMPLE_EVERY, longOperationThresholdMs: LONG_OPERATION_THRESHOLD_MS,
+        longOperationPhases: LONG_OPERATION_PHASES,
+        cpuLatencyReservoirPerPhase: MAX_LATENCY_SAMPLES, wallLatencyReservoirPerPhase: MAX_LATENCY_SAMPLES, percentileMinimumSamples: 20 },
       phases: summarize(this.phases),
-      windows: this.windows.map((window) => ({ from: window.from, to: new Date(Date.parse(window.from) + 60_000).toISOString(), phases: summarize(window.phases, true), counters: { ...window.counters } })),
+      windows: this.windows.map((window) => ({ from: window.from, to: new Date(Date.parse(window.from) + 60_000).toISOString(), phases: summarize(window.phases), counters: { ...window.counters } })),
       snapshotInvocationIntervalMs: scalarReport(this.scalars.snapshotInvocationIntervalMs),
       pendingPopulation: scalarReport(this.scalars.pendingPopulation),
       pendingAircraftPopulation: scalarReport(this.scalars.pendingAircraftPopulation),
@@ -146,7 +190,7 @@ export class OperationalTwinForensics {
         ? this.counters.cacheHits / (this.counters.cacheHits + this.counters.cacheMisses) : null,
       ratesPerMinute: Object.fromEntries(["captures", "expirations", "truthInvalidations", "actualTruthResolutions", "pendingCapacityEvictions", "atcCacheEvictions", "atcCacheExpirations", "cacheHits", "cacheMisses"]
         .map((name) => [name, this.windows.length ? Number((this.windows.reduce((sum, window) => sum + (window.counters[name] ?? 0), 0) / this.windows.length).toFixed(3)) : null])),
-      attribution: "sampled synchronous scopes; nested phase CPU is inclusive and must not be summed",
+      attribution: "CPU and latency totals are estimated from sampled synchronous scopes using exact call and sample counts; nested phase timings are inclusive. Long wall operations at or above the configured threshold are counted on every invocation.",
     };
   }
 
@@ -164,13 +208,14 @@ export class OperationalTwinForensics {
     else samples[this.scalarCursor++ % MAX_LATENCY_SAMPLES] = value;
   }
 
-  private currentWindow() {
+  private currentWindow(): ForensicsWindow {
     const start = Math.floor(Date.now() / 60_000) * 60_000;
     let window = this.windows[this.windows.length - 1];
-    if (!window || Date.parse(window.from) !== start) {
+    if (!window || window.startMs !== start) {
       window = {
+        startMs: start,
         from: new Date(start).toISOString(),
-        phases: new Map(OPERATIONAL_TWIN_FORENSIC_PHASES.map((name) => [name, emptyPhase()])),
+        phases: emptyPhaseRecord(),
         counters: { captures: 0, expirations: 0, truthInvalidations: 0, actualTruthResolutions: 0, pendingCapacityEvictions: 0, atcCacheEvictions: 0, atcCacheExpirations: 0, cacheHits: 0, cacheMisses: 0 },
       };
       this.windows.push(window);
@@ -189,6 +234,11 @@ export class OperationalTwinForensics {
     else target.samples[(target.sampledCalls - 1) % MAX_LATENCY_SAMPLES] = wallMs;
     if (target.cpuSamples.length < MAX_LATENCY_SAMPLES) target.cpuSamples.push(cpuMs);
     else target.cpuSamples[(target.sampledCalls - 1) % MAX_LATENCY_SAMPLES] = cpuMs;
+  }
+
+  private recordLongOperation(target: PhaseCounters, wallMs: number): void {
+    target.longOperationCount += 1;
+    target.longOperationMaxWallMs = Math.max(target.longOperationMaxWallMs, wallMs);
   }
 }
 

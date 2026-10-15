@@ -1270,38 +1270,38 @@ export class OperationalTwinEventOutcomeValidator {
             truthState = previousState;
           } else {
             const points = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
-            const changedIndexes = new Set<number>();
-            const correctionIndexes = new Set<number>();
-            const previousByAt = new Map<number, string>();
-            const previousContents = new Set<string>();
-            if (previousState) {
-              for (const previousPoint of previousState.points) {
-                previousByAt.set(previousPoint.at, atcInputFingerprint(previousPoint));
-                previousContents.add(atcInputFingerprint(previousPoint));
-              }
-              for (const [index, point] of points.entries()) {
-                const fingerprint = atcInputFingerprint(point);
-                const previousFingerprint = previousByAt.get(point.at);
-                if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
-                if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
-                  && (previousFingerprint !== undefined && previousFingerprint !== fingerprint
-                    || previousFingerprint === undefined && !previousContents.has(fingerprint))) {
-                  correctionIndexes.add(index);
-                }
-              }
-            } else {
-              points.forEach((_, index) => changedIndexes.add(index));
-            }
             truthState = forensicsGlobal.measure("truthStateDiff", () => {
+              const changedIndexes = new Set<number>();
+              const correctionIndexes = new Set<number>();
+              const previousByAt = new Map<number, string>();
+              const previousContents = new Set<string>();
+              if (previousState) {
+                for (const previousPoint of previousState.points) {
+                  previousByAt.set(previousPoint.at, atcInputFingerprint(previousPoint));
+                  previousContents.add(atcInputFingerprint(previousPoint));
+                }
+                for (const [index, point] of points.entries()) {
+                  const fingerprint = atcInputFingerprint(point);
+                  const previousFingerprint = previousByAt.get(point.at);
+                  if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
+                  if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
+                    && (previousFingerprint !== undefined && previousFingerprint !== fingerprint
+                      || previousFingerprint === undefined && !previousContents.has(fingerprint))) {
+                    correctionIndexes.add(index);
+                  }
+                }
+              } else {
+                points.forEach((_, index) => changedIndexes.add(index));
+              }
               forensicsGlobal.increment("truthInvalidations");
               return {
-              inputFingerprint,
-              points,
-              version: (previousState?.version ?? 0) + 1,
-              changedIndexes,
-              correctionIndexes,
+                inputFingerprint,
+                points,
+                version: (previousState?.version ?? 0) + 1,
+                changedIndexes,
+                correctionIndexes,
               };
-            });
+            }, { detectLongOperation: true });
             this.truthStates.set(icaoHex, truthState);
             this.performance.truthPointBuilds += 1;
             this.performance.truthPointsBuilt += points.length;
@@ -1364,7 +1364,7 @@ export class OperationalTwinEventOutcomeValidator {
       }
       });
     }
-    });
+    }, { detectLongOperation: true });
     this.expire(now);
     this.cleanup(now);
     if (forensicsGlobal.enabled) {
@@ -1590,7 +1590,7 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private expire(now: number): void {
-    forensicsGlobal.measure("expiryHeap", () => this.expireCore(now));
+    forensicsGlobal.measure("expiryHeap", () => this.expireCore(now), { detectLongOperation: true });
   }
 
   private expireCore(now: number): void {
@@ -1728,7 +1728,7 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private enforceCapacity(): void {
-    forensicsGlobal.measure("capacityEviction", () => this.enforceCapacityCore());
+    forensicsGlobal.measure("capacityEviction", () => this.enforceCapacityCore(), { detectLongOperation: true });
   }
 
   private enforceCapacityCore(): void {
@@ -1761,7 +1761,7 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private cleanup(now: number): void {
-    forensicsGlobal.measure("cleanup", () => this.cleanupCore(now));
+    forensicsGlobal.measure("cleanup", () => this.cleanupCore(now), { detectLongOperation: true });
   }
 
   private cleanupCore(now: number): void {

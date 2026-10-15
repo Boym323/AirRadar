@@ -25,6 +25,10 @@ const TWIN_PHASE_NAMES = [
   "pendingTruthEvaluation", "spatialTruthMatches", "atcContextComputation",
   "atcCacheOperations", "expiryHeap", "capacityEviction", "cleanup",
 ];
+// These scopes are disjoint within the measured flow: pendingTraversal owns
+// all of its truth/ATC descendants; the remaining scopes run outside it.
+const TWIN_NON_OVERLAPPING_CPU_PHASES = ["pendingTraversal", "expiryHeap", "capacityEviction", "cleanup"];
+const TWIN_LONG_OPERATION_PHASES = ["pendingTraversal", "truthStateDiff", "expiryHeap", "capacityEviction", "cleanup"];
 const safe = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null;
 const stamp = (x) => typeof x === "string" && Number.isFinite(Date.parse(x)) ? x : null;
 const rounded = (x) => x === null ? null : Number(x.toFixed(3));
@@ -45,14 +49,15 @@ function retentionMember(value) {
 function twinForensics(value) {
   if (!value || value.enabled !== true) return { enabled: false };
   const phase = (item) => ({
-    calls: safe(item?.calls), estimatedCalls: safe(item?.estimatedCalls),
-    sampledPhaseCalls: safe(item?.sampledPhaseCalls), sampledCalls: safe(item?.sampledCalls),
+    calls: safe(item?.calls), sampledCalls: safe(item?.sampledCalls ?? item?.sampledPhaseCalls),
     sampledCpuMs: safe(item?.sampledCpuMs), sampledWallMs: safe(item?.sampledWallMs),
     estimatedCpuMs: safe(item?.estimatedCpuMs), estimatedWallMs: safe(item?.estimatedWallMs),
     p50Ms: safe(item?.sampleP50Ms), p95Ms: safe(item?.sampleP95Ms),
     p99Ms: safe(item?.sampleP99Ms), maxMs: safe(item?.sampleMaxMs),
     cpuP50Ms: safe(item?.sampleCpuP50Ms), cpuP95Ms: safe(item?.sampleCpuP95Ms),
     cpuP99Ms: safe(item?.sampleCpuP99Ms), cpuMaxMs: safe(item?.sampleCpuMaxMs),
+    longOperationCount: safe(item?.longOperationCount),
+    longOperationMaxWallMs: safe(item?.longOperationMaxWallMs),
   });
   const projectWindow = (window) => {
     const from = stamp(window?.from), to = stamp(window?.to);
@@ -68,6 +73,8 @@ function twinForensics(value) {
     enabled: true,
     sampling: {
       every: safe(value.sampling?.every),
+      longOperationThresholdMs: safe(value.sampling?.longOperationThresholdMs),
+      longOperationPhases: TWIN_LONG_OPERATION_PHASES,
       cpuLatencyReservoirPerPhase: safe(value.sampling?.cpuLatencyReservoirPerPhase),
       wallLatencyReservoirPerPhase: safe(value.sampling?.wallLatencyReservoirPerPhase),
     },
@@ -83,7 +90,7 @@ function twinForensics(value) {
     cacheHitRate: safe(value.cacheHitRate),
     ratesPerMinute: Object.fromEntries(["captures", "expirations", "truthInvalidations", "actualTruthResolutions", "pendingCapacityEvictions", "atcCacheEvictions", "atcCacheExpirations", "cacheHits", "cacheMisses"]
       .map((name) => [name, safe(value.ratesPerMinute?.[name])])),
-    attribution: "sampled synchronous scopes; nested phase CPU is inclusive",
+    attribution: "sampled synchronous scopes; nested phase timings are inclusive",
   };
 }
 
@@ -113,7 +120,7 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
   // There is no runtime.diagnostics wrapper in the admin API response.
   const retention = system?.retentionAttribution;
   const process = system?.autocommitOperationAttribution;
-  if (status?.detailLevel !== "admin" || ![2, 3].includes(metrics?.schemaVersion) ||
+  if (status?.detailLevel !== "admin" || ![2, 3, 4].includes(metrics?.schemaVersion) ||
       metrics?.scope !== "process-local" || runtime?.status !== "enabled" ||
       retention?.scope !== "process-local" ||
       !status.application?.commit || !Number.isSafeInteger(process?.processId) ||
@@ -343,11 +350,25 @@ export function analyzeT57Soak(records) {
     const match = matchingLoopWindow(window), cpuMs = cpuOf(window);
     return match?.overlap > 0 && safe(cpuMs) !== null ? [[match.loop.maxMs, cpuMs]] : [];
   });
+  const nonOverlappingTwinCpu = (window) => {
+    let total = 0;
+    let measured = false;
+    for (const name of TWIN_NON_OVERLAPPING_CPU_PHASES) {
+      const phase = window.phases?.[name];
+      const calls = safe(phase?.calls ?? phase?.estimatedCalls ?? phase?.sampledPhaseCalls);
+      const cpuMs = safe(phase?.estimatedCpuMs);
+      if (calls === null || (calls > 0 && cpuMs === null)) return null;
+      if (cpuMs !== null) {
+        measured = true;
+        total += cpuMs;
+      }
+    }
+    return measured ? total : null;
+  };
   const stallCorrelations = Object.fromEntries([
     ...["snapshot.operationalTwin", "twin.eventOutcome.local", "history.persist", "network.metadata"].map((name) =>
       [name, pearson(pairedWindowCpu(pathWindowsByName.get(name) ?? new Map(), (window) => window.cpuMs))]),
-    ["operationalTwin.detailedPhases", pearson(pairedWindowCpu(twinWindowsByTo, (window) =>
-      TWIN_PHASE_NAMES.reduce((sum, name) => sum + (window.phases?.[name]?.estimatedCpuMs ?? 0), 0)))],
+    ["operationalTwin.nonOverlappingTopLevelPhases", pearson(pairedWindowCpu(twinWindowsByTo, nonOverlappingTwinCpu))],
     ["gc.pause", pearson(loopWindows.flatMap((window) => safe(window.gcPauseMs) === null ? [] : [[window.maxMs, window.gcPauseMs]]))],
     ["cgroup.cpuThrottledUsecDelta", (() => {
       const ordered = [...steady].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
@@ -373,8 +394,21 @@ export function analyzeT57Soak(records) {
     });
     const longPhases = TWIN_PHASE_NAMES.flatMap((name) => matches.flatMap((window) => {
       const phase = window.phases?.[name];
-      return safe(phase?.cpuMaxMs) !== null && phase.cpuMaxMs >= stallThresholdMs
-        ? [{ phase: name, sampledCpuMaxMs: phase.cpuMaxMs, sampledWallMaxMs: phase.maxMs, windowTo: window.to }] : [];
+      const sampledCpuBlock = safe(phase?.cpuMaxMs) !== null && phase.cpuMaxMs >= stallThresholdMs;
+      const detectedLongWallBlock = safe(phase?.longOperationMaxWallMs) !== null
+        && phase.longOperationMaxWallMs >= stallThresholdMs;
+      return sampledCpuBlock || detectedLongWallBlock ? [{
+        phase: name,
+        evidence: [
+          ...(sampledCpuBlock ? ["sampled_process_cpu"] : []),
+          ...(detectedLongWallBlock ? ["all_call_long_wall_detection"] : []),
+        ],
+        sampledCpuMaxMs: safe(phase?.cpuMaxMs),
+        sampledWallMaxMs: safe(phase?.maxMs),
+        longOperationCount: safe(phase?.longOperationCount),
+        longOperationMaxWallMs: safe(phase?.longOperationMaxWallMs),
+        windowTo: window.to,
+      }] : [];
     }));
     if (longPhases.length) confirmedSynchronousBlockers.push({ eventLoopWindow: loop, phases: longPhases });
     else unattributedStalls.push(loop);
@@ -414,10 +448,11 @@ export function analyzeT57Soak(records) {
     enabled: twinSamples.length > 0,
     windows: twinWindows.length,
     phases: Object.fromEntries(TWIN_PHASE_NAMES.map((name) => {
-      const items = twinWindows.map((window) => window.phases?.[name]).filter((item) => item && safe(item.sampledPhaseCalls) !== null);
+      const items = twinWindows.map((window) => window.phases?.[name]).filter((item) => item &&
+        safe(item.sampledCalls ?? item.sampledPhaseCalls) !== null);
       return [name, {
-        sampledPhaseCalls: items.reduce((sum, item) => sum + item.sampledPhaseCalls, 0),
-        estimatedCalls: items.reduce((sum, item) => sum + (item.estimatedCalls ?? 0), 0),
+        calls: items.reduce((sum, item) => sum + (item.calls ?? item.estimatedCalls ?? 0), 0),
+        sampledCalls: items.reduce((sum, item) => sum + (item.sampledCalls ?? item.sampledPhaseCalls ?? 0), 0),
         estimatedCpuMs: rounded(items.reduce((sum, item) => sum + (item.estimatedCpuMs ?? 0), 0)),
         estimatedWallMs: rounded(items.reduce((sum, item) => sum + (item.estimatedWallMs ?? 0), 0)),
         p95Ms: series(items, (item) => item.p95Ms)?.p95 ?? null,

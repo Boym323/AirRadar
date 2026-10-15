@@ -51,7 +51,7 @@ export async function GET(request: Request): Promise<Response> {
   const runtime = getRuntimeHealthObservation();
   const operationalTwinForensics = getOperationalTwinForensicsReport();
   return Response.json({
-    schemaVersion: 3, scope: "process-local", phases, hotPaths, validatorPaths, operationalTwinForensics,
+    schemaVersion: 4, scope: "process-local", phases, hotPaths, validatorPaths, operationalTwinForensics,
     runtime: {
       status: runtime.status,
       v8HeapSpaces: runtime.v8HeapSpaces,

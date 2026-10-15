@@ -96,7 +96,7 @@ function records(count = 61) {
 describe("T5.7C 24-hour read-only soak", () => {
   it("projects allowlisted diagnostics without raw IDs or private data", () => {
     const { status, metrics } = raw(1);
-    metrics.schemaVersion = 3;
+    metrics.schemaVersion = 4;
     metrics.operationalTwinForensics = {
       enabled: true,
       phases: { truthPoints: { calls: 100, sampledCalls: 10, sampledCpuMs: 4, sampledWallMs: 5,
@@ -242,6 +242,54 @@ describe("T5.7C 24-hour read-only soak", () => {
     }
     const result = analyzeT57Soak(stream);
     expect(result.hotPathsByWindowCpuMs.filter((p) => p.name.startsWith("twin."))).toHaveLength(5);
+  });
+
+  it("correlates non-overlapping Twin CPU once and detects rare unsampled long operations", () => {
+    const stream = records(61);
+    const phaseNames = [
+      "truthInputFingerprint", "truthPoints", "truthStateDiff", "pendingTraversal",
+      "pendingTruthEvaluation", "spatialTruthMatches", "atcContextComputation",
+      "atcCacheOperations", "expiryHeap", "capacityEviction", "cleanup",
+    ];
+    for (let index = 0; index < 61; index += 1) {
+      const row = stream[index + 1].value;
+      const from = at(index - 1), to = at(index);
+      row.eventLoopWindows[0].from = from;
+      row.eventLoopWindows[0].to = to;
+      row.eventLoopWindows[0].maxMs = index === 25 ? 14_000 : index + 1;
+      const phases = Object.fromEntries(phaseNames.map((name) => [name, {
+        calls: 1, sampledCalls: 1,
+        estimatedCpuMs: name === "pendingTraversal" ? index + 1
+          : name === "pendingTruthEvaluation" ? 61 - index : 0,
+        estimatedWallMs: 0, sampleP95Ms: null, sampleP99Ms: null, sampleMaxMs: null,
+        sampleCpuP95Ms: null, sampleCpuP99Ms: null, sampleCpuMaxMs: null,
+        longOperationCount: 0, longOperationMaxWallMs: null,
+      }]));
+      if (index === 25) {
+        phases.truthStateDiff = {
+          ...phases.truthStateDiff, calls: 1, sampledCalls: 0, estimatedCpuMs: null,
+          longOperationCount: 1, longOperationMaxWallMs: 1_400,
+        };
+      }
+      row.operationalTwinForensics = {
+        enabled: true,
+        windows: [{ from, to, phases, counters: {} }],
+        phases,
+      };
+    }
+
+    const result = analyzeT57Soak(stream);
+    expect(result.stallCorrelations["operationalTwin.nonOverlappingTopLevelPhases"]).toMatchObject({
+      samples: 61, r: 1,
+    });
+    expect(result.stallAttribution.confirmedSynchronousBlockers).toContainEqual(expect.objectContaining({
+      phases: expect.arrayContaining([expect.objectContaining({
+        phase: "truthStateDiff",
+        evidence: ["all_call_long_wall_detection"],
+        longOperationMaxWallMs: 1_400,
+      })]),
+    }));
+    expect(result.stallAttribution.unattributedStalls).toHaveLength(0);
   });
 
   it("reports limit breaches as failures without changing live retention", () => {
