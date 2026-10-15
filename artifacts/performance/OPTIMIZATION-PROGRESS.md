@@ -6,8 +6,8 @@
 - Production SHA: `e8282c48` documented by the 2026-10-15 technical audit; not independently re-read in this turn
 - Active branch: `perf/bounded-enrichment-telemetry`
 - Last validated SHA: `47a577ad040e8eeecebc834ecb1a35d00b11856a` locally
-- CI status: PR #917 checks queued (CI run 38769850361, CodeQL run 38769850413)
-- CodeQL Security status: branch CodeQL queued; latest documented application CodeQL passed
+- CI status: PR #917 has `release-preview`; full CI rerun pending after the evidence update
+- CodeQL Security status: branch run 38769891329 in progress; latest documented application CodeQL passed
 
 ## Completed
 - Area: Runtime telemetry CPU hot path and enrichment memory retention.
@@ -41,7 +41,6 @@
 
 ## Pull Requests
 - PR #917 — bounded enrichment telemetry and stale-fallback retention — draft/open — head `102b25e9` when opened — CI and CodeQL queued.
-- Existing open PR: #916 metadata sync; unrelated.
 - Existing open PR: #916 metadata sync; unrelated.
 
 ## Next Actions
