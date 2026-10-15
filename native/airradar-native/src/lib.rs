@@ -25,9 +25,11 @@ impl Parser {
         Self { pending: Vec::new(), max_buffered_bytes }
     }
 
-    fn push(&mut self, chunk: &[u8]) -> Vec<Frame> {
+    fn push_packed(&mut self, chunk: &[u8]) -> Vec<u8> {
         self.pending.extend_from_slice(chunk);
-        let mut frames = Vec::new();
+        // Packed frames: type (1) + timestamp (6) + signal (1) + payload (2/7/14).
+        // Cross N-API exactly once per socket chunk, not once per aircraft frame.
+        let mut output = Vec::new();
         let mut cursor = 0_usize;
         let len = self.pending.len();
 
@@ -80,14 +82,8 @@ impl Parser {
                 cursor = start;
                 break;
             }
-            let mut timestamp = [0_u8; 6];
-            timestamp.copy_from_slice(&decoded[..6]);
-            frames.push(Frame {
-                frame_type,
-                timestamp,
-                signal: decoded[6],
-                payload: decoded[7..decoded_len].to_vec(),
-            });
+            output.push(frame_type);
+            output.extend_from_slice(&decoded[..decoded_len]);
             cursor = source;
         }
 
@@ -100,6 +96,27 @@ impl Parser {
         if self.pending.len() > self.max_buffered_bytes {
             let drop = self.pending.len() - self.max_buffered_bytes;
             self.pending.drain(..drop);
+        }
+        output
+    }
+
+    #[cfg(test)]
+    fn push(&mut self, chunk: &[u8]) -> Vec<Frame> {
+        let packed = self.push_packed(chunk);
+        let mut frames = Vec::new();
+        let mut index = 0;
+        while index < packed.len() {
+            let frame_type = packed[index];
+            let payload_len = match frame_type { 0x31 => 2, 0x32 => 7, _ => 14 };
+            let mut timestamp = [0_u8; 6];
+            timestamp.copy_from_slice(&packed[index + 1..index + 7]);
+            frames.push(Frame {
+                frame_type,
+                timestamp,
+                signal: packed[index + 7],
+                payload: packed[index + 8..index + 8 + payload_len].to_vec(),
+            });
+            index += 8 + payload_len;
         }
         frames
     }
@@ -123,14 +140,6 @@ fn crc24(data: &[u8]) -> u32 {
     (bits & 0xff_ffff) as u32
 }
 
-#[napi(object)]
-pub struct NativeParsedFrame {
-    pub frame_type: u32,
-    pub timestamp: Buffer,
-    pub signal: u32,
-    pub payload: Buffer,
-}
-
 #[napi(js_name = "NativeBeastParser")]
 pub struct NativeBeastParser {
     parser: Parser,
@@ -146,17 +155,8 @@ impl NativeBeastParser {
     }
 
     #[napi]
-    pub fn push(&mut self, chunk: Buffer) -> Vec<NativeParsedFrame> {
-        self.parser
-            .push(&chunk)
-            .into_iter()
-            .map(|frame| NativeParsedFrame {
-                frame_type: u32::from(frame.frame_type),
-                timestamp: Buffer::from(frame.timestamp.to_vec()),
-                signal: u32::from(frame.signal),
-                payload: Buffer::from(frame.payload),
-            })
-            .collect()
+    pub fn push_packed(&mut self, chunk: Buffer) -> Buffer {
+        Buffer::from(self.parser.push_packed(&chunk))
     }
 
     #[napi(getter)]

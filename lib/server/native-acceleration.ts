@@ -6,15 +6,8 @@
 import { createRequire } from "node:module";
 import { isAbsolute } from "node:path";
 
-export interface NativeBeastFrame {
-  frameType: number;
-  timestamp: Buffer;
-  signal: number;
-  payload: Buffer;
-}
-
 export interface NativeBeastParser {
-  push(chunk: Buffer): NativeBeastFrame[];
+  pushPacked(chunk: Buffer): Buffer;
   readonly bufferedBytes: number;
 }
 
@@ -37,7 +30,9 @@ export function getNativeBeastEngine(): NativeBeastBindings | null {
   try {
     // Dynamic absolute path avoids a required .node import in Next standalone.
     const loaded = createRequire(import.meta.url)(filename) as Partial<NativeBeastBindings>;
-    if (typeof loaded.NativeBeastParser !== "function" || typeof loaded.modeSCrc !== "function") {
+    if (typeof loaded.NativeBeastParser !== "function"
+      || typeof loaded.NativeBeastParser.prototype?.pushPacked !== "function"
+      || typeof loaded.modeSCrc !== "function") {
       throw new Error("Incompatible native addon ABI");
     }
     cached = loaded as NativeBeastBindings;

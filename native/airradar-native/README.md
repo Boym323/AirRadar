@@ -15,7 +15,9 @@ Set `AIRRADAR_NATIVE_BEAST=1` and `AIRRADAR_NATIVE_ADDON_PATH=/absolute/path/air
 for the opted-in process. Never use a binary built for another OS/architecture.
 
 The addon is loaded once, validates exported symbols, and falls back to
-TypeScript when missing. Both frame batches and CRC cross the native boundary;
+TypeScript when missing. A whole chunk returns one compact packed Buffer (one N-API return, zero-copy
+Buffer.subarray views in TypeScript), not an N-API object per frame.
+Both frame batches and CRC cross the native boundary;
 there are no per-byte N-API calls. All mutable decoder/aircraft state remains
 owned by Node. The Rust parser retains at most `maxBufferedBytes` of an
 incomplete frame between chunk calls. Rust output is copied into owned Node

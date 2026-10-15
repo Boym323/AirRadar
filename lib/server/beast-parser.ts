@@ -31,12 +31,20 @@ export class BeastParser {
       const bytes = Buffer.isBuffer(chunk)
         ? chunk
         : Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
-      return this.native.push(bytes).map((frame) => ({
-        type: frame.frameType as BeastFrameType,
-        timestamp: frame.timestamp,
-        signal: frame.signal,
-        payload: frame.payload,
-      }));
+      const packed = this.native.pushPacked(bytes);
+      const frames: BeastFrame[] = [];
+      for (let offset = 0; offset < packed.length;) {
+        const type = packed[offset]! as BeastFrameType;
+        const payloadLength = type === 0x31 ? 2 : type === 0x32 ? 7 : 14;
+        frames.push({
+          type,
+          timestamp: packed.subarray(offset + 1, offset + 7),
+          signal: packed[offset + 7]!,
+          payload: packed.subarray(offset + 8, offset + 8 + payloadLength),
+        });
+        offset += 8 + payloadLength;
+      }
+      return frames;
     }
     if (chunk.byteLength) this.buffer = Buffer.concat([this.buffer, Buffer.from(chunk)]);
     const frames: BeastFrame[] = [];
