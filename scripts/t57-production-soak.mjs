@@ -205,6 +205,7 @@ async function preflight() {
     commit: observation.identity.commit,
     // Deliberately exclude cookie, token, PID, process store ID and raw payload.
     requiredSources: ["admin-system-status", "runtime-performance", "retention-attribution"],
+    operationalTwinForensicsEnabled: observation.sample.operationalTwinForensics?.enabled === true,
     reportCreated: false,
   };
 }
