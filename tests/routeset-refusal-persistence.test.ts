@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -45,6 +45,16 @@ describe("ADSB.lol 403 refusal cooldown persists across deployments", () => {
     writeFileSync(file, "x".repeat(1024));
     expect(readRoutesetRefusalCooldown()).toBeNull();
     expect(saveRoutesetRefusalCooldown(new Date(Date.now() + 7 * 60 * 60_000).toISOString())).toBe(false);
+  });
+
+  it("refuses symlinked cooldown files and does not follow unrelated paths", () => {
+    const file = stateFile();
+    const actual = join(file + ".actual");
+    const until = new Date(Date.now() + 60 * 60_000).toISOString();
+    writeFileSync(actual, JSON.stringify({ version: 1, blockedUntilAt: until }));
+    symlinkSync(actual, file);
+    expect(readRoutesetRefusalCooldown()).toBeNull();
+    expect(JSON.parse(readFileSync(actual, "utf8")).blockedUntilAt).toBe(until);
   });
 
   it("does not request an HTTP-forbidden provider again after in-process state resets", async () => {
