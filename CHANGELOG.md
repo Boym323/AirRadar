@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.460] - 2026-10-15
+
+Changes since v1.0.459.
+
+**Features touched:** Navigation Integrity, Statistics & Recaps.
+
+### Performance
+
+- Incremental bounded trails with no-copy stale updates (#899) (f3db8656)
+- Linearize candidate evidence and reuse integrity cell statistics (#902) (eb03cdfe)
+
+### Maintenance
+
+- Sync generated repository metadata (#901) (0dfd4075)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(network): incremental bounded trails with no-copy stale updates (#899) (f3db8656)
+- chore(metadata): sync generated repository metadata (#901) (0dfd4075)
+- perf(navigation): linearize candidate evidence and reuse integrity cell statistics (#902) (eb03cdfe)
+
+</details>
 ## [1.0.459] - 2026-10-15
 
 Changes since v1.0.458.
