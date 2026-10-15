@@ -20,6 +20,8 @@ describe("T5.6D isolated SSE V2 fanout", () => {
     });
     expect(result.wireBytesPerRun).toBeGreaterThan(0);
     expect(result.cpuMsMedian).toBeGreaterThanOrEqual(0);
+    expect(result.baselineCpuMsMedian).toBeGreaterThanOrEqual(0);
+    expect(result.baselineWallMsMedian).toBeGreaterThanOrEqual(0);
   });
 
   it("models an entirely disconnected baseline without synthetic network events", () => {
