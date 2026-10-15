@@ -47,6 +47,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Generate Prisma contract for imported server modules
+        run: npm run prisma:generate
       - name: Deterministic harness regressions
         run: npm run test:targeted -- tests/benchmark-twin-fusion.test.ts tests/track-fusion-shadow.test.ts tests/operational-twin-t57-replay.test.ts
       - name: Twin and fusion measured scenarios
