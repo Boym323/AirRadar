@@ -98,3 +98,16 @@ test("isolated ATC context and Operational Twin evaluation use radar-targeted UI
   assert.equal(planReleaseGates(["lib/atc-context/engine.ts", "components/airport-map.tsx"]).browser, "full");
   assert.equal(planReleaseGates([".github/workflows/ci.yml"]).browser, "full");
 });
+
+// Strictly allowlisted non-runtime evidence must not expand backend gates.
+test("performance audit artifacts do not force full browser regression", () => {
+  const plan = planReleaseGates([
+    "lib/server/route-enrichment-telemetry.ts",
+    "artifacts/performance/OPTIMIZATION-PROGRESS.md",
+    "artifacts/performance/route-telemetry-benchmark.json",
+  ]);
+  assert.equal(plan.browser, "fast");
+  assert.equal(plan.performance, "fast");
+  assert.equal(planReleaseGates(["artifacts/performance/unreviewed-benchmark.json"]).browser, "full");
+  assert.equal(planReleaseGates(["lib/server/enrichment-cache.ts", "package.json"]).browser, "full");
+});

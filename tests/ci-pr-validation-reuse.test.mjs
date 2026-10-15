@@ -8,12 +8,12 @@ const treeSha = "c".repeat(40);
 const repo = "Boym323/AirRadar";
 const pr = {
   number: 900, merged_at: "2026-10-13T20:10:00Z", merge_commit_sha: mainSha,
-  base: { ref: "main" }, head: { repo: { full_name: repo }, sha: headSha },
+  base: { ref: "main" }, head: { repo: { full_name: repo }, sha: headSha, ref: "perf/preview-reuse" },
   labels: [{ name: "release-preview" }], changed_files: 1,
 };
 const ciRun = {
   id: 55, name: "CI", path: ".github/workflows/ci.yml",
-  head_sha: headSha, head_repository: { full_name: repo }, event: "pull_request",
+  head_sha: headSha, head_branch: "perf/preview-reuse", head_repository: { full_name: repo }, event: "pull_request",
   conclusion: "success", status: "completed", updated_at: "2026-10-13T20:09:00Z",
   pull_requests: [{ number: 900, head: { sha: headSha }, base: { ref: "main" } }],
 };
@@ -63,4 +63,33 @@ test("incomplete scope and missing job evidence fail closed", () => {
   assert.equal(evaluate({ jobsByRun: new Map() }).reusable, false);
   assert.equal(evaluate({ prs: [{ ...pr, changed_files: 101 }] }).reusable, false);
   assert.equal(evaluate({ jobsByRun: new Map([[55, required]]) }).reusable, false);
+});
+
+test("GitHub-pruned pull_requests arrays can reuse the exact merged PR #917 tree", () => {
+  // Real GitHub PR #917: the completed CI and CodeQL runs return
+  // pull_requests: [] although branch, SHA, source repo and tree match.
+  const runs = [ciRun, codeql].map((run) => ({ ...run, pull_requests: [] }));
+  assert.equal(evaluate({ runs }).reusable, true);
+});
+
+test("empty PR associations require authenticated branch, SHA and repository", () => {
+  const unlinked = { ...ciRun, pull_requests: [] };
+  const cases = [
+    { ...unlinked, head_branch: "perf/other" },
+    { ...unlinked, head_sha: "f".repeat(40) },
+    { ...unlinked, head_repository: { full_name: "fork/AirRadar" } },
+    { ...unlinked, event: "push" },
+    { ...unlinked, status: "in_progress" },
+    { ...unlinked, pull_requests: undefined },
+    { ...unlinked, pull_requests: [{ number: 901, head: { sha: headSha }, base: { ref: "main" } }] },
+  ];
+  for (const run of cases) {
+    assert.equal(evaluate({ runs: [run, codeql] }).reusable, false, JSON.stringify(run));
+  }
+  assert.equal(evaluate({ runs: [unlinked, { ...codeql, pull_requests: [],
+    head_repository: { full_name: "fork/AirRadar" } }] }).reusable, false);
+  assert.equal(evaluate({ runs: [unlinked, { ...codeql, pull_requests: [],
+    head_branch: "perf/wrong-branch" }] }).reusable, false);
+  assert.equal(evaluate({ prs: [{ ...pr, head: { ...pr.head, ref: undefined } }],
+    runs: [unlinked, { ...codeql, pull_requests: [] }] }).reusable, false);
 });

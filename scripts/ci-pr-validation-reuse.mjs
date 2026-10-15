@@ -15,6 +15,20 @@ const SHA = /^[0-9a-f]{40}$/;
 const GUARDED_PATH = /^(?:\.github\/workflows\/|scripts\/(?:ci-|test-changed\.|production-gates\.|release-scope\.|version\.|prepare-standalone\.)|tests\/ci-)/;
 const REQUIRED_JOBS = ["Release scope", "Release validation", "Release tests and typecheck", "Release performance regression"];
 
+// GitHub may return pull_requests: [] for completed PR runs after branch
+// deletion or a squash merge. The exact PR head SHA, source branch and
+// repository still uniquely bind the run to the merged PR in this case.
+// A populated but inconsistent PR association must NEVER use that fallback.
+function authenticatedPreviewRun(run, pr, repository, name, path) {
+  if (run?.event !== "pull_request" || run?.name !== name || run?.path !== path
+    || run.status !== "completed" || run.conclusion !== "success"
+    || run.head_sha !== pr.head.sha || run.head_branch !== pr.head.ref
+    || run.head_repository?.full_name !== repository
+    || !Array.isArray(run.pull_requests)) return false;
+  return run.pull_requests.length === 0 || run.pull_requests.some((ref) =>
+    ref.number === pr.number && ref.head?.sha === pr.head.sha && ref.base?.ref === "main");
+}
+
 export function assessPreviewReuse({ repository, sha, prs, mainCommit, prCommit, changedFiles, runs, jobsByRun }) {
   if (!SHA.test(sha || "") || !repository) return { reusable: false, reason: "invalid identity" };
   const matching = prs.filter((pr) => pr.merged_at && pr.merge_commit_sha === sha
@@ -31,16 +45,10 @@ export function assessPreviewReuse({ repository, sha, prs, mainCommit, prCommit,
     return { reusable: false, reason: "incomplete or sensitive PR scope" };
   }
   const matchingRuns = runs
-    .filter((run) => run.conclusion === "success" && run.status === "completed"
-      && run.event === "pull_request" && run.name === "CI" && run.path === ".github/workflows/ci.yml"
-      && run.head_sha === pr.head.sha && run.head_repository?.full_name === repository
-      && run.pull_requests?.some((ref) => ref.number === pr.number
-        && ref.head?.sha === pr.head.sha && ref.base?.ref === "main"))
+    .filter((run) => authenticatedPreviewRun(run, pr, repository, "CI", ".github/workflows/ci.yml"))
     .sort((a, b) => Date.parse(b.updated_at || b.created_at) - Date.parse(a.updated_at || a.created_at));
-  const codeqlPassed = runs.some((run) => run.conclusion === "success" && run.status === "completed"
-    && run.event === "pull_request" && run.name === "CodeQL"
-    && run.path === ".github/workflows/codeql.yml" && run.head_sha === pr.head.sha
-    && run.pull_requests?.some((ref) => ref.number === pr.number && ref.head?.sha === pr.head.sha));
+  const codeqlPassed = runs.some((run) =>
+    authenticatedPreviewRun(run, pr, repository, "CodeQL", ".github/workflows/codeql.yml"));
   if (!codeqlPassed) return { reusable: false, reason: "CodeQL not green for exact PR head" };
   for (const run of matchingRuns) {
     const jobs = jobsByRun.get(run.id);
@@ -77,7 +85,9 @@ async function verify({ repository, sha, token }) {
     return { reusable: false, reason: "not a unique safe PR merge" };
   }
   const pr = await api(`/pulls/${preliminary[0].number}`);
-  if (!pr.head?.sha || !SHA.test(pr.head.sha)) return { reusable: false, reason: "missing PR head" };
+  if (!pr.head?.sha || !SHA.test(pr.head.sha) || !pr.head.ref) {
+    return { reusable: false, reason: "missing PR head identity" };
+  }
   const [mainCommit, prCommit, changedFiles, workflows] = await Promise.all([
     api(`/git/commits/${sha}`),
     api(`/git/commits/${pr.head.sha}`),
@@ -85,9 +95,8 @@ async function verify({ repository, sha, token }) {
     api(`/actions/runs?event=pull_request&head_sha=${pr.head.sha}&per_page=100`),
   ]);
   const runs = workflows.workflow_runs ?? [];
-  const matching = runs.filter((run) => run.event === "pull_request" && run.conclusion === "success"
-    && run.head_sha === pr.head.sha && run.name === "CI" && run.path === ".github/workflows/ci.yml"
-    && run.pull_requests?.some((ref) => ref.number === pr.number)).slice(0, 6);
+  const matching = runs.filter((run) =>
+    authenticatedPreviewRun(run, pr, repository, "CI", ".github/workflows/ci.yml")).slice(0, 6);
   const jobsByRun = new Map();
   await Promise.all(matching.map(async (run) => {
     const result = await api(`/actions/runs/${run.id}/jobs?per_page=100`);
