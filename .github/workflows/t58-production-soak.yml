@@ -3,7 +3,7 @@ name: T58 Production Soak
 on:
   workflow_dispatch:
 
-run-name: T58 read-only production soak #${{ github.run_number }}
+run-name: "T58 read-only production soak #${{ github.run_number }}"
 
 # One T58 at a time. A new dispatch must not interrupt an existing hour.
 concurrency:
@@ -129,7 +129,8 @@ jobs:
           node scripts/t58-report.mjs verify "$RUNNER_TEMP/t58-upload/soak.summary.json"
           archive_branch="audit/t58-history"
           stamp="$(date -u +%Y/%m/%d)"
-          relative="reports/t58/$stamp/run-$GITHUB_RUN_ID-attempt-$GITHUB_RUN_ATTEMPT"
+          short_relative="$stamp/run-$GITHUB_RUN_ID-attempt-$GITHUB_RUN_ATTEMPT"
+          relative="reports/t58/$short_relative"
           # Branch writes do not trigger production main release pipelines.
           if git ls-remote --exit-code --heads origin "refs/heads/$archive_branch" >/dev/null 2>&1; then
             git fetch origin "refs/heads/$archive_branch"
@@ -152,7 +153,7 @@ jobs:
           now="$(date -u '+%Y-%m-%d %H:%M UTC')"
           printf '| %s | [#%s](https://github.com/%s/actions/runs/%s) | %s | %s | [summary](%s/summary.md) · [comparison](%s/comparison.md) · [JSON](%s/summary.json) |\n' \
             "$now" "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$version" "$verdict" \
-            "$relative" "$relative" "$relative" >> "$index"
+            "$short_relative" "$short_relative" "$short_relative" >> "$index"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$relative" "$index"
