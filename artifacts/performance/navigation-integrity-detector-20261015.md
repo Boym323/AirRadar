@@ -18,9 +18,12 @@ evaluation; it does not claim to have identified or eliminated the long stall.
 
 ## Changes
 
-- One classification/indexing pass builds affected and normal cell groups.
-  Previously each connected candidate re-scanned every observation for
-  nearby normal aircraft (`O(groups * observations)`).
+- The first pass builds only affected cell groups; **normal-only traffic
+  returns immediately**, with no extra index allocations.
+- If any affected cell exists, a bounded second pass indexes normal context
+  only for relevant cells, reused across all candidate groups. Previously
+  each connected candidate re-scanned every observation for nearby normal
+  aircraft (`O(groups * observations)`).
 - Each candidate computes independent-aircraft membership, local/network
   presence, frequency counts, classification severity, low-integrity share
   and min/max timestamps in a single pass rather than repeating several
@@ -53,7 +56,7 @@ reference is not used at runtime and does not change production logic.
 
 `scripts/benchmark-navigation-integrity-candidates.ts` compares
 the current detector against the pre-optimization oracle using deterministic
-1,200-observation dense and fragmented inputs with strict byte-for-byte
+1,200-observation normal-only, dense and fragmented inputs with strict byte-for-byte
 serialized output parity. It reports paired CPU and wall-clock medians;
 **no performance threshold or speedup claim** is made without executed
 measurements. Run off production:
