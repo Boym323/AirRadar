@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { analyzeT57Soak, newT57Windows, projectT57SoakSample } from "../scripts/t57-soak-analysis.mjs";
 import { verifyT57ExpectedCommit } from "../scripts/t57-production-soak.mjs";
+import { classifyT57Failure } from "../scripts/t57-production-soak.mjs";
 
 const MiB = 1024 * 1024;
 const epoch = Date.parse("2026-10-10T09:00:00Z");
@@ -12,6 +13,17 @@ describe("T5.7C preflight commit identity", () => {
     expect(() => verifyT57ExpectedCommit(sha, sha)).not.toThrow();
     expect(() => verifyT57ExpectedCommit(sha, "fb61c491")).not.toThrow();
     expect(() => verifyT57ExpectedCommit(sha, "0dd31137")).toThrow("unexpected_production_commit");
+  });
+});
+
+describe("T5.7C sanitized sample failure categories", () => {
+  it("classifies common poll failures without retaining messages", () => {
+    expect(classifyT57Failure(new Error("Diagnostic request /api/system/status HTTP 401"))).toBe("authentication_failure");
+    const timeout = new Error("The operation was aborted");
+    timeout.name = "TimeoutError";
+    expect(classifyT57Failure(timeout)).toBe("http_timeout");
+    expect(classifyT57Failure(new TypeError("fetch failed"))).toBe("network_failure");
+    expect(classifyT57Failure(new Error("t57_required_diagnostic_missing"))).toBe("response_validation_failure");
   });
 });
 
@@ -84,11 +96,24 @@ function records(count = 61) {
 describe("T5.7C 24-hour read-only soak", () => {
   it("projects allowlisted diagnostics without raw IDs or private data", () => {
     const { status, metrics } = raw(1);
+    metrics.schemaVersion = 3;
+    metrics.operationalTwinForensics = {
+      enabled: true,
+      phases: { truthPoints: { calls: 100, sampledCalls: 10, sampledCpuMs: 4, sampledWallMs: 5,
+        estimatedCpuMs: 40, estimatedWallMs: 50, sampleP50Ms: 0.5, sampleP95Ms: 1, sampleP99Ms: 1.2, sampleMaxMs: 2 } },
+      windows: [{ from: at(0), to: at(1), phases: { truthPoints: { calls: 10, sampledCalls: 1,
+        estimatedCpuMs: 5, estimatedWallMs: 6, sampleP95Ms: 1, sampleP99Ms: 1.2, sampleMaxMs: 2 } },
+        counters: { captures: 1, privateIcao: "SHOULD_NOT_LEAK" } }],
+      counters: { captures: 1, privateIcao: "SHOULD_NOT_LEAK" },
+      privateAircraftData: "SHOULD_NOT_LEAK",
+    };
     const result = projectT57SoakSample(status, metrics, at(1));
     expect(result.identity.storeId).toBe("PRIVATE_STORE");
     expect(result.sample.retention.aircraft.local.count).toBe(20);
     expect(result.sample.hotPaths).toHaveLength(1);
     expect(result.sample.eventLoopWindows[0].p99Ms).toBe(150);
+    expect(result.sample.operationalTwinForensics.enabled).toBe(true);
+    expect(result.sample.operationalTwinForensics.phases.truthPoints.calls).toBe(100);
     expect(JSON.stringify(result.sample)).not.toContain("SHOULD_NOT_LEAK");
     expect(JSON.stringify(result.sample)).not.toContain("PRIVATE_STORE");
     expect(JSON.stringify(result.sample)).not.toContain("1234");

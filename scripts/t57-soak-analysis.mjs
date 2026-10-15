@@ -20,6 +20,11 @@ const ROUTE_PHASE_NAMES = [
   "dbMaintenanceCount", "dbMaintenancePrune",
   "dbLateSettlement", "callerTimeoutOvershoot",
 ];
+const TWIN_PHASE_NAMES = [
+  "truthInputFingerprint", "truthPoints", "truthStateDiff", "pendingTraversal",
+  "pendingTruthEvaluation", "spatialTruthMatches", "atcContextComputation",
+  "atcCacheOperations", "expiryHeap", "capacityEviction", "cleanup",
+];
 const safe = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null;
 const stamp = (x) => typeof x === "string" && Number.isFinite(Date.parse(x)) ? x : null;
 const rounded = (x) => x === null ? null : Number(x.toFixed(3));
@@ -37,6 +42,51 @@ function retentionMember(value) {
   };
 }
 
+function twinForensics(value) {
+  if (!value || value.enabled !== true) return { enabled: false };
+  const phase = (item) => ({
+    calls: safe(item?.calls), estimatedCalls: safe(item?.estimatedCalls),
+    sampledPhaseCalls: safe(item?.sampledPhaseCalls), sampledCalls: safe(item?.sampledCalls),
+    sampledCpuMs: safe(item?.sampledCpuMs), sampledWallMs: safe(item?.sampledWallMs),
+    estimatedCpuMs: safe(item?.estimatedCpuMs), estimatedWallMs: safe(item?.estimatedWallMs),
+    p50Ms: safe(item?.sampleP50Ms), p95Ms: safe(item?.sampleP95Ms),
+    p99Ms: safe(item?.sampleP99Ms), maxMs: safe(item?.sampleMaxMs),
+    cpuP50Ms: safe(item?.sampleCpuP50Ms), cpuP95Ms: safe(item?.sampleCpuP95Ms),
+    cpuP99Ms: safe(item?.sampleCpuP99Ms), cpuMaxMs: safe(item?.sampleCpuMaxMs),
+  });
+  const projectWindow = (window) => {
+    const from = stamp(window?.from), to = stamp(window?.to);
+    if (!from || !to || !window?.phases) return null;
+    return {
+      from, to,
+      phases: Object.fromEntries(TWIN_PHASE_NAMES.map((name) => [name, phase(window.phases[name])])),
+      counters: Object.fromEntries(["captures", "expirations", "truthInvalidations", "actualTruthResolutions", "pendingCapacityEvictions", "atcCacheEvictions", "atcCacheExpirations", "cacheHits", "cacheMisses"]
+        .map((name) => [name, safe(window.counters?.[name])])),
+    };
+  };
+  return {
+    enabled: true,
+    sampling: {
+      every: safe(value.sampling?.every),
+      cpuLatencyReservoirPerPhase: safe(value.sampling?.cpuLatencyReservoirPerPhase),
+      wallLatencyReservoirPerPhase: safe(value.sampling?.wallLatencyReservoirPerPhase),
+    },
+    phases: Object.fromEntries(TWIN_PHASE_NAMES.map((name) => [name, phase(value.phases?.[name])])),
+    windows: Array.isArray(value.windows) ? value.windows.slice(-30).map(projectWindow).filter(Boolean) : [],
+    snapshotInvocationIntervalMs: value.snapshotInvocationIntervalMs ?? null,
+    pendingPopulation: value.pendingPopulation ?? null,
+    pendingAircraftPopulation: value.pendingAircraftPopulation ?? null,
+    pendingPerAircraftDistribution: Object.fromEntries(["one", "two", "threeToFour", "fiveToEight", "overEight"]
+      .map((name) => [name, safe(value.pendingPerAircraftDistribution?.[name])])),
+    counters: Object.fromEntries(["captures", "expirations", "truthInvalidations", "actualTruthResolutions", "pendingCapacityEvictions", "atcCacheEvictions", "atcCacheExpirations", "cacheHits", "cacheMisses"]
+      .map((name) => [name, safe(value.counters?.[name])])),
+    cacheHitRate: safe(value.cacheHitRate),
+    ratesPerMinute: Object.fromEntries(["captures", "expirations", "truthInvalidations", "actualTruthResolutions", "pendingCapacityEvictions", "atcCacheEvictions", "atcCacheExpirations", "cacheHits", "cacheMisses"]
+      .map((name) => [name, safe(value.ratesPerMinute?.[name])])),
+    attribution: "sampled synchronous scopes; nested phase CPU is inclusive",
+  };
+}
+
 function windows(items, type) {
   if (!Array.isArray(items)) return [];
   return items.slice(-15).flatMap((x) => {
@@ -46,6 +96,7 @@ function windows(items, type) {
       const p95Ms = safe(x.p95Ms), p99Ms = safe(x.p99Ms), maxMs = safe(x.maxMs);
       return p95Ms === null || p99Ms === null || maxMs === null ? [] : [{
         from, to, p95Ms, p99Ms, maxMs,
+        gcCount: safe(x.gcCount), gcPauseMs: safe(x.gcPauseMs),
       }];
     }
     const calls = safe(x.calls), cpuMs = safe(x.cpuMs), waitMs = safe(x.waitMs);
@@ -62,7 +113,7 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
   // There is no runtime.diagnostics wrapper in the admin API response.
   const retention = system?.retentionAttribution;
   const process = system?.autocommitOperationAttribution;
-  if (status?.detailLevel !== "admin" || metrics?.schemaVersion !== 2 ||
+  if (status?.detailLevel !== "admin" || ![2, 3].includes(metrics?.schemaVersion) ||
       metrics?.scope !== "process-local" || runtime?.status !== "enabled" ||
       retention?.scope !== "process-local" ||
       !status.application?.commit || !Number.isSafeInteger(process?.processId) ||
@@ -153,6 +204,9 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       externalBytes: safe(runtime.externalBytes),
       oldSpaceBytes: safe(oldSpace?.usedBytes),
       cpuPercent: safe(runtime.cpuIntervalPercent),
+      cgroupCpuQuotaCores: safe(system.cgroupCpuQuotaCores),
+      cgroupCpuNrThrottled: safe(system.cgroupCpuNrThrottled),
+      cgroupCpuThrottledUsec: safe(system.cgroupCpuThrottledUsec),
       majorGcCount: safe(runtime.majorGcCount),
       postMajorGc: gc && safe(gc.observedAtMs) !== null ? {
         observedAtMs: safe(gc.observedAtMs), heapUsedBytes: safe(gc.heapUsedBytes),
@@ -167,7 +221,8 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
         auxiliaryMaps, snapshotCacheEntries: safe(retention.snapshotCacheEntries),
         listeners: safe(retention.listeners),
       },
-      eventLoopWindows: windows(runtime.eventLoopLagWindows, "loop"),
+    eventLoopWindows: windows(runtime.eventLoopLagWindows, "loop"),
+    operationalTwinForensics: twinForensics(metrics?.operationalTwinForensics),
       hotPaths,
       routeCache,
       health: {
@@ -211,6 +266,17 @@ function routeCounterDelta(first, last, name) {
   return safe(a) === null || safe(b) === null || b < a ? null : b - a;
 }
 
+function pearson(pairs) {
+  if (pairs.length < 3) return { samples: pairs.length, r: null };
+  const xs = pairs.map(([x]) => x), ys = pairs.map(([, y]) => y);
+  const mx = xs.reduce((sum, x) => sum + x, 0) / xs.length;
+  const my = ys.reduce((sum, y) => sum + y, 0) / ys.length;
+  const covariance = pairs.reduce((sum, [x, y]) => sum + (x - mx) * (y - my), 0);
+  const sx = Math.sqrt(xs.reduce((sum, x) => sum + (x - mx) ** 2, 0));
+  const sy = Math.sqrt(ys.reduce((sum, y) => sum + (y - my) ** 2, 0));
+  return { samples: pairs.length, r: sx > 0 && sy > 0 ? rounded(covariance / (sx * sy)) : null };
+}
+
 export function analyzeT57Soak(records) {
   if (!Array.isArray(records) || !records.length || records[0]?.type !== "header") {
     throw new Error("invalid_t57_report");
@@ -221,7 +287,15 @@ export function analyzeT57Soak(records) {
     throw new Error("invalid_t57_header");
   }
   const rows = records.filter((r) => r.type === "sample").map((r) => r.value);
-  const missing = records.filter((r) => r.type === "unavailable").length;
+  const unavailable = records.filter((r) => r.type === "unavailable");
+  const missing = unavailable.length;
+  const allowedFailureCategories = ["http_timeout", "authentication_failure", "response_validation_failure",
+    "network_failure", "http_failure", "unclassified_legacy"];
+  const failureCategories = Object.fromEntries(allowedFailureCategories.map((category) => [category, 0]));
+  for (const record of unavailable) {
+    const category = allowedFailureCategories.includes(record.category) ? record.category : "unclassified_legacy";
+    failureCategories[category] += 1;
+  }
   const first = rows[0], last = rows.at(-1);
   const segmentIds = new Set(rows.map((r) => r.segment));
   const steady = first ? rows.filter((r) => Date.parse(r.at) >=
@@ -240,6 +314,80 @@ export function analyzeT57Soak(records) {
     ? null : rounded((gcBaselines.at(-1)[key] - gcBaselines[0][key]) / MiB);
   const loopWindows = [...new Map(steady.flatMap((r) => r.eventLoopWindows ?? [])
     .map((w) => [w.to, w])).values()];
+  const twinSamples = steady.map((row) => row.operationalTwinForensics).filter((item) => item?.enabled);
+  const twinWindows = [...new Map(twinSamples.flatMap((item) => item.windows ?? [])
+    .map((window) => [window.to, window])).values()];
+  const delayedPollingMisses = unavailable.filter((record) => record.pollDelayCategory === "delayed_polling");
+  const eventLoopSchedulingDelayCorrelatedMisses = delayedPollingMisses.filter((record) => {
+    const atMs = Date.parse(record.at);
+    return loopWindows.some((window) => Date.parse(window.from) <= atMs && Date.parse(window.to) >= atMs
+      && window.maxMs >= 1_000);
+  });
+  const pathWindowsByName = new Map();
+  const twinWindowsByTo = new Map();
+  for (const row of steady) {
+    for (const path of row.hotPaths ?? []) {
+      let windowsByTo = pathWindowsByName.get(path.name);
+      if (!windowsByTo) pathWindowsByName.set(path.name, windowsByTo = new Map());
+      for (const window of path.windows ?? []) windowsByTo.set(window.to, window);
+    }
+    for (const window of row.operationalTwinForensics?.windows ?? []) twinWindowsByTo.set(window.to, window);
+  }
+  const matchingLoopWindow = (window) => {
+    const from = Date.parse(window.from), to = Date.parse(window.to);
+    return loopWindows.map((loop) => ({ loop, overlap: Math.max(0,
+      Math.min(to, Date.parse(loop.to)) - Math.max(from, Date.parse(loop.from))) }))
+      .sort((a, b) => b.overlap - a.overlap)[0];
+  };
+  const pairedWindowCpu = (windowsByTo, cpuOf) => [...windowsByTo.values()].flatMap((window) => {
+    const match = matchingLoopWindow(window), cpuMs = cpuOf(window);
+    return match?.overlap > 0 && safe(cpuMs) !== null ? [[match.loop.maxMs, cpuMs]] : [];
+  });
+  const stallCorrelations = Object.fromEntries([
+    ...["snapshot.operationalTwin", "twin.eventOutcome.local", "history.persist", "network.metadata"].map((name) =>
+      [name, pearson(pairedWindowCpu(pathWindowsByName.get(name) ?? new Map(), (window) => window.cpuMs))]),
+    ["operationalTwin.detailedPhases", pearson(pairedWindowCpu(twinWindowsByTo, (window) =>
+      TWIN_PHASE_NAMES.reduce((sum, name) => sum + (window.phases?.[name]?.estimatedCpuMs ?? 0), 0)))],
+    ["gc.pause", pearson(loopWindows.flatMap((window) => safe(window.gcPauseMs) === null ? [] : [[window.maxMs, window.gcPauseMs]]))],
+    ["cgroup.cpuThrottledUsecDelta", (() => {
+      const ordered = [...steady].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+      const pairs = [];
+      for (let index = 1; index < ordered.length; index += 1) {
+        const before = safe(ordered[index - 1].cgroupCpuThrottledUsec);
+        const after = safe(ordered[index].cgroupCpuThrottledUsec);
+        if (before === null || after === null || after < before) continue;
+        const end = Date.parse(ordered[index].at);
+        const loop = loopWindows.find((window) => Date.parse(window.to) <= end && Date.parse(window.to) > Date.parse(ordered[index - 1].at));
+        if (loop) pairs.push([loop.maxMs, after - before]);
+      }
+      return pearson(pairs);
+    })()],
+  ]);
+  const stallThresholdMs = 1_000;
+  const confirmedSynchronousBlockers = [];
+  const unattributedStalls = [];
+  for (const loop of loopWindows.filter((window) => window.maxMs >= stallThresholdMs)) {
+    const matches = twinWindows.filter((window) => {
+      const overlap = Math.min(Date.parse(loop.to), Date.parse(window.to)) - Math.max(Date.parse(loop.from), Date.parse(window.from));
+      return overlap > 0;
+    });
+    const longPhases = TWIN_PHASE_NAMES.flatMap((name) => matches.flatMap((window) => {
+      const phase = window.phases?.[name];
+      return safe(phase?.cpuMaxMs) !== null && phase.cpuMaxMs >= stallThresholdMs
+        ? [{ phase: name, sampledCpuMaxMs: phase.cpuMaxMs, sampledWallMaxMs: phase.maxMs, windowTo: window.to }] : [];
+    }));
+    if (longPhases.length) confirmedSynchronousBlockers.push({ eventLoopWindow: loop, phases: longPhases });
+    else unattributedStalls.push(loop);
+  }
+  const strongCorrelations = Object.entries(stallCorrelations).flatMap(([name, value]) =>
+    value.samples >= 10 && value.r !== null && value.r >= 0.7 ? [{ signal: name, ...value }] : []);
+  const stallAttribution = {
+    thresholdMs: stallThresholdMs,
+    confirmedSynchronousBlockers,
+    strongCorrelations,
+    unattributedStalls,
+    interpretation: "A sampled synchronous phase with process CPU over the threshold confirms substantial synchronous CPU in an overlapping window; correlation alone does not assign a stall to a phase.",
+  };
   const paths = new Map();
   for (const row of steady) {
     for (const path of row.hotPaths ?? []) {
@@ -262,6 +410,35 @@ export function analyzeT57Soak(records) {
       p99MsMax: series(samples, (v) => v.p99Ms)?.max ?? null,
     };
   }).sort((a, b) => b.cpuMs - a.cpuMs);
+  const operationalTwinForensics = {
+    enabled: twinSamples.length > 0,
+    windows: twinWindows.length,
+    phases: Object.fromEntries(TWIN_PHASE_NAMES.map((name) => {
+      const items = twinWindows.map((window) => window.phases?.[name]).filter((item) => item && safe(item.sampledPhaseCalls) !== null);
+      return [name, {
+        sampledPhaseCalls: items.reduce((sum, item) => sum + item.sampledPhaseCalls, 0),
+        estimatedCalls: items.reduce((sum, item) => sum + (item.estimatedCalls ?? 0), 0),
+        estimatedCpuMs: rounded(items.reduce((sum, item) => sum + (item.estimatedCpuMs ?? 0), 0)),
+        estimatedWallMs: rounded(items.reduce((sum, item) => sum + (item.estimatedWallMs ?? 0), 0)),
+        p95Ms: series(items, (item) => item.p95Ms)?.p95 ?? null,
+        p99Ms: series(items, (item) => item.p99Ms)?.p99 ?? null,
+        maxMs: series(items, (item) => item.maxMs)?.max ?? null,
+        cpuP95Ms: series(items, (item) => item.cpuP95Ms)?.p95 ?? null,
+        cpuP99Ms: series(items, (item) => item.cpuP99Ms)?.p99 ?? null,
+        cpuMaxMs: series(items, (item) => item.cpuMaxMs)?.max ?? null,
+      }];
+    })),
+    cacheHitRate: series(twinSamples, (item) => item.cacheHitRate)?.p50 ?? null,
+    ratesPerMinute: Object.fromEntries(["captures", "expirations", "truthInvalidations", "actualTruthResolutions", "pendingCapacityEvictions", "atcCacheEvictions", "atcCacheExpirations", "cacheHits", "cacheMisses"]
+      .map((name) => [name, series(twinSamples, (item) => item.ratesPerMinute?.[name])?.p50 ?? null])),
+    pendingPopulation: {
+      p50: series(twinSamples, (item) => item.pendingPopulation?.p50)?.p50 ?? null,
+      p95: series(twinSamples, (item) => item.pendingPopulation?.p95)?.p95 ?? null,
+      max: series(twinSamples, (item) => item.pendingPopulation?.max)?.max ?? null,
+    },
+    pendingPerAircraftDistribution: Object.fromEntries(["one", "two", "threeToFour", "fiveToEight", "overEight"]
+      .map((name) => [name, twinSamples.reduce((sum, item) => sum + (item.pendingPerAircraftDistribution?.[name] ?? 0), 0)])),
+  };
   // Keep the five independently measured Twin validators even if they are
   // not top-12 by inclusive CPU; do not double-count nested parent scopes.
   const selected = pathResults.slice(0, 12);
@@ -301,7 +478,12 @@ export function analyzeT57Soak(records) {
   return {
     verdict, stableProcessAndCommit: stable,
     segments: segmentIds.size,
-    samples: rows.length, missing,
+    samples: rows.length, missing, failureCategories,
+    pollingFailureContext: {
+      delayedPollingMisses: delayedPollingMisses.length,
+      eventLoopSchedulingDelayCorrelatedMisses: eventLoopSchedulingDelayCorrelatedMisses.length,
+      interpretation: "Correlation with a completed service event-loop window is not proof that scheduling delay caused a failed sample.",
+    },
     expected, durationSeconds: rounded(span),
     commit: first?.commit ?? null, version: first?.version ?? null,
     steadyStateSamples: steady.length,
@@ -317,9 +499,13 @@ export function analyzeT57Soak(records) {
       oldSpace: gcTrend("oldSpaceUsedBytes"),
     },
     cpuPercent: series(steady, (r) => r.cpuPercent),
+    pollDelayMs: series(rows, (r) => safe(r.pollDelayMs)),
+    delayedPollingSamples: rows.filter((r) => r.pollDelayCategory === "delayed_polling").length,
     eventLoopWindowP99Ms: series(loopWindows, (r) => r.p99Ms),
     eventLoopWindowMaxMs: series(loopWindows, (r) => r.maxMs),
     eventLoopWindows: loopWindows.length,
+    stallCorrelations,
+    stallAttribution,
     load: {
       aircraft: series(steady, (r) => r.aircraftCount),
       sseClients: series(steady, (r) => r.activeSseClients),
@@ -366,6 +552,7 @@ export function analyzeT57Soak(records) {
       sqlLatencyMeasurement: "db_call_elapsed; server-side SQL latency NOT MEASURED",
     },
     hotPathsByWindowCpuMs: selected,
+    operationalTwinForensics,
     caveats: [
       "Continuous clean windows and two major GC observations are required for evidence.",
       "A restart, changed commit, or insufficient coverage yields INSUFFICIENT_EVIDENCE.",

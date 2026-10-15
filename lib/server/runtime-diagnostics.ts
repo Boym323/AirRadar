@@ -32,6 +32,9 @@ export interface RuntimeDiagnostics {
   recentV2DeltaAverageBytes: number | null;
   cgroupMemoryCurrentBytes: number | null;
   cgroupMemoryMaxBytes: number | null;
+  cgroupCpuQuotaCores?: number | null;
+  cgroupCpuNrThrottled?: number | null;
+  cgroupCpuThrottledUsec?: number | null;
   aircraftCount: number | null;
   localTrailAircraftCount: number | null;
   networkTrailAircraftCount: number | null;
@@ -61,7 +64,7 @@ function nonNegative(value: number): number {
   return Number.isFinite(value) && value >= 0 ? Math.trunc(value) : 0;
 }
 
-type CgroupMemoryFile = "memory.current" | "memory.max";
+type CgroupMemoryFile = "memory.current" | "memory.max" | "cpu.max" | "cpu.stat";
 
 function cgroupValue(paths: string[]): number | null {
   for (const path of paths) {
@@ -126,12 +129,48 @@ export function cgroupFileCandidates(file: CgroupMemoryFile, cgroupText = proces
     const relativePath = safeCgroupPath(rawPath ?? "");
     if (!relativePath) continue;
     if (hierarchy === "0") candidates.push(`/sys/fs/cgroup${relativePath}/${file}`);
-    if (controllers?.split(",").includes("memory")) candidates.push(`/sys/fs/cgroup/memory${relativePath}/${file}`);
+    const controllerSet = controllers?.split(",") ?? [];
+    if (controllerSet.includes("memory") && file.startsWith("memory.")) candidates.push(`/sys/fs/cgroup/memory${relativePath}/${file}`);
+    if (controllerSet.includes("cpu") && file.startsWith("cpu.")) candidates.push(`/sys/fs/cgroup/cpu${relativePath}/${file}`);
   }
   // Keep the conventional mount points as a compatibility fallback for
   // containers and older cgroup-v1 hosts where /proc/self/cgroup is hidden.
-  candidates.push(`/sys/fs/cgroup/${file}`, `/sys/fs/cgroup/memory/${file === "memory.current" ? "memory.usage_in_bytes" : "memory.limit_in_bytes"}`);
+  candidates.push(`/sys/fs/cgroup/${file}`);
+  if (file === "memory.current" || file === "memory.max") {
+    candidates.push(`/sys/fs/cgroup/memory/${file === "memory.current" ? "memory.usage_in_bytes" : "memory.limit_in_bytes"}`);
+  }
   return [...new Set(candidates)];
+}
+
+function cgroupTextValue(file: "cpu.max" | "cpu.stat"): string | null {
+  for (const candidate of cgroupFileCandidates(file)) {
+    try {
+      return readFileSync(candidate, "utf8").slice(0, 4096);
+    } catch {
+      // cgroup CPU controllers may be unavailable or hidden.
+    }
+  }
+  return null;
+}
+
+function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
+  const quotaText = cgroupTextValue("cpu.max")?.trim().split(/\s+/) ?? [];
+  const quota = quotaText[0] === "max" ? null : Number(quotaText[0]);
+  const period = Number(quotaText[1]);
+  const quotaCores = quota !== null && Number.isFinite(quota) && quota >= 0 && Number.isFinite(period) && period > 0
+    ? quota / period : null;
+  const stat = cgroupTextValue("cpu.stat") ?? "";
+  const statValue = (name: string) => {
+    const match = stat.match(new RegExp(`^${name}\\s+(\\d+)$`, "m"));
+    return match ? Number(match[1]) : null;
+  };
+  const nrThrottled = statValue("nr_throttled");
+  const throttledUsec = statValue("throttled_usec");
+  return {
+    cgroupCpuQuotaCores: quotaCores,
+    cgroupCpuNrThrottled: Number.isSafeInteger(nrThrottled) && nrThrottled! >= 0 ? nrThrottled : null,
+    cgroupCpuThrottledUsec: Number.isSafeInteger(throttledUsec) && throttledUsec! >= 0 ? throttledUsec : null,
+  };
 }
 
 export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}): RuntimeDiagnostics {
@@ -161,6 +200,7 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     recentV2DeltaAverageBytes: sse.recentDeltaAverageBytes,
     cgroupMemoryCurrentBytes: cgroupValue(cgroupFileCandidates("memory.current")),
     cgroupMemoryMaxBytes: cgroupValue(cgroupFileCandidates("memory.max")),
+    ...cpuCgroupDiagnostics(),
     aircraftCount: null,
     localTrailAircraftCount: null,
     networkTrailAircraftCount: null,

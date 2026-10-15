@@ -7,6 +7,7 @@ import type { LandingTerminalEvidenceV1 } from "@/lib/intelligence/terminal-evid
 import { haversineDistanceKm } from "@/lib/geo";
 import { pointInSigmetGeometry } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetSnapshot } from "@/lib/weather/types";
+import { OperationalTwinForensics } from "./forensics";
 import type {
   OperationalTwinEvent,
   OperationalTwinEventType,
@@ -935,7 +936,7 @@ function computeSectorIdsAtPoint(
   point: TruthPoint,
   dataset: PreparedAtcContextDataset,
 ): ReadonlySet<string> {
-  const context = computeAtcContext({
+  const compute = () => computeAtcContext({
     lat: point.lat,
     lon: point.lon,
     altitude: point.altitudeFt,
@@ -948,10 +949,33 @@ function computeSectorIdsAtPoint(
     timestamp: new Date(point.at).toISOString(),
     onGround: point.onGround,
   }, dataset, new Date(point.at));
+  const context = forensicsGlobal.measure("atcContextComputation", compute);
   return new Set(context.currentAirspaces.map((airspace) => airspace.id));
 }
 
+// Shared diagnostic timer is process-local. Its data is aggregate-only and
+// collection remains disabled unless the explicit operator switch is true.
+const forensicsGlobalState = globalThis as typeof globalThis & {
+  __airRadarOperationalTwinForensics?: OperationalTwinForensics;
+};
+const forensicsGlobal = forensicsGlobalState.__airRadarOperationalTwinForensics ??=
+  new OperationalTwinForensics();
+
+export function getOperationalTwinForensicsReport() {
+  return forensicsGlobal.report();
+}
+
 function spatialTruthMatches(
+  pending: PendingEventOutcome,
+  aircraft: Aircraft,
+  point: TruthPoint,
+  atcTruthCache: AtcTruthCache,
+  now: number,
+): boolean {
+  return forensicsGlobal.measure("spatialTruthMatches", () => spatialTruthMatchesCore(pending, aircraft, point, atcTruthCache, now));
+}
+
+function spatialTruthMatchesCore(
   pending: PendingEventOutcome,
   aircraft: Aircraft,
   point: TruthPoint,
@@ -998,8 +1022,13 @@ class AtcTruthCache {
   ) {}
 
   idsAtPoint(_icaoHex: string, point: TruthPoint, dataset: PreparedAtcContextDataset, now = Date.now()): ReadonlySet<string> {
+    return forensicsGlobal.measure("atcCacheOperations", () => this.idsAtPointCore(point, dataset, now));
+  }
+
+  private idsAtPointCore(point: TruthPoint, dataset: PreparedAtcContextDataset, now: number): ReadonlySet<string> {
     if (!this.enabled) {
       this.misses += 1;
+      forensicsGlobal.cache(false);
       return computeSectorIdsAtPoint(point, dataset);
     }
 
@@ -1011,6 +1040,7 @@ class AtcTruthCache {
     const fingerprint = atcInputFingerprint(point);
     const cached = this.entries.get(key);
     if (cached && cached.dataset === dataset && cached.fingerprint === fingerprint) {
+      forensicsGlobal.cache(true);
       cached.lastUsedAt = now;
       this.entries.delete(key);
       this.entries.set(key, cached);
@@ -1019,6 +1049,7 @@ class AtcTruthCache {
     }
 
     this.misses += 1;
+    forensicsGlobal.cache(false);
     const entry: AtcTruthCacheEntry = {
       dataset,
       observedAt: point.at,
@@ -1071,6 +1102,7 @@ class AtcTruthCache {
       if (now - entry.lastUsedAt <= ATC_CACHE_TTL_MS) continue;
       this.entries.delete(key);
       this.expirations += 1;
+      forensicsGlobal.increment("atcCacheExpirations");
     }
   }
 
@@ -1080,6 +1112,7 @@ class AtcTruthCache {
       if (oldest === undefined) break;
       this.entries.delete(oldest);
       this.evictions += 1;
+      forensicsGlobal.increment("atcCacheEvictions");
     }
   }
 }
@@ -1115,6 +1148,7 @@ export class OperationalTwinEventOutcomeValidator {
   private duplicateCaptureSkips = 0;
   private capacityEvictions = 0;
   private performance = emptyPerformance();
+  private lastObserveLocalAt: number | null = null;
 
   constructor(options: OperationalTwinEventOutcomeValidatorOptions = {}) {
     this.atcTruthCache = new AtcTruthCache(options.enableAtcTruthCache ?? true, options.atcTruthCacheMaxEntries ?? ATC_CACHE_MAX_ENTRIES);
@@ -1173,6 +1207,7 @@ export class OperationalTwinEventOutcomeValidator {
         checkedStaticTruthContent: new Set(),
       };
       this.pending.set(id, sample);
+      forensicsGlobal.increment("captures");
       if (this.enableExpiryQueue) pushExpiryEntry(this.pendingExpiryQueue, { id, expiresAt: sample.expiresAt });
       pushCaptureEntry(this.pendingCaptureQueue, { id, capturedAt: sample.capturedAt, sequence: sample.captureSequence });
       let aircraftPending = this.pendingByAircraft.get(sample.icaoHex);
@@ -1192,21 +1227,25 @@ export class OperationalTwinEventOutcomeValidator {
 
   observeLocal(local: ReadonlyMap<string, Aircraft>, now = Date.now()): void {
     if (!Number.isFinite(now)) return;
+    if (this.lastObserveLocalAt !== null) forensicsGlobal.recordSnapshotInterval(Math.max(0, now - this.lastObserveLocalAt));
+    this.lastObserveLocalAt = now;
     this.performance.observeCalls += 1;
-    this.atcTruthCache.beginObservation(now);
+    forensicsGlobal.measure("atcCacheOperations", () => this.atcTruthCache.beginObservation(now));
+    forensicsGlobal.measure("pendingTraversal", () => {
     for (const [icaoHex, aircraft] of local) {
       const pendingIds = this.pendingByAircraft.get(icaoHex);
       if (!pendingIds || pendingIds.size === 0) continue;
       this.performance.aircraftWithPending += 1;
       let fullScanPoints: TruthPoint[] | null = null;
       let truthState: TruthTrailState | null = null;
+      forensicsGlobal.measure("pendingTruthEvaluation", () => {
       for (const id of pendingIds) {
         this.performance.pendingEntriesScanned += 1;
         const pending = this.pending.get(id);
         if (!pending || pending.descriptor.kind === "ARRIVAL_ETA" || pending.descriptor.kind === "RUNWAY_EXPECTATION") continue;
         if (!this.enableIncrementalTruthEvaluation) {
           if (fullScanPoints === null) {
-            fullScanPoints = truthPoints(aircraft);
+            fullScanPoints = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
             this.performance.truthPointBuilds += 1;
             this.performance.truthPointsBuilt += fullScanPoints.length;
           }
@@ -1225,12 +1264,12 @@ export class OperationalTwinEventOutcomeValidator {
           continue;
         }
         if (truthState === null) {
-          const inputFingerprint = truthInputFingerprint(aircraft);
+          const inputFingerprint = forensicsGlobal.measure("truthInputFingerprint", () => truthInputFingerprint(aircraft));
           const previousState = this.truthStates.get(icaoHex);
           if (previousState?.inputFingerprint === inputFingerprint) {
             truthState = previousState;
           } else {
-            const points = truthPoints(aircraft);
+            const points = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
             const changedIndexes = new Set<number>();
             const correctionIndexes = new Set<number>();
             const previousByAt = new Map<number, string>();
@@ -1253,13 +1292,16 @@ export class OperationalTwinEventOutcomeValidator {
             } else {
               points.forEach((_, index) => changedIndexes.add(index));
             }
-            truthState = {
+            truthState = forensicsGlobal.measure("truthStateDiff", () => {
+              forensicsGlobal.increment("truthInvalidations");
+              return {
               inputFingerprint,
               points,
               version: (previousState?.version ?? 0) + 1,
               changedIndexes,
               correctionIndexes,
-            };
+              };
+            });
             this.truthStates.set(icaoHex, truthState);
             this.performance.truthPointBuilds += 1;
             this.performance.truthPointsBuilt += points.length;
@@ -1320,9 +1362,15 @@ export class OperationalTwinEventOutcomeValidator {
         }
         this.performance.evaluatedTruthPoints += evaluatedPoints;
       }
+      });
     }
+    });
     this.expire(now);
     this.cleanup(now);
+    if (forensicsGlobal.enabled) {
+      forensicsGlobal.recordPopulation(this.pending.size, this.pendingByAircraft.size,
+        [...this.pendingByAircraft.values()].map((ids) => ids.size));
+    }
   }
 
   observeIntelligence(events: readonly FlightIntelligenceEvent[], now = Date.now()): void {
@@ -1532,6 +1580,7 @@ export class OperationalTwinEventOutcomeValidator {
     this.duplicateCaptureSkips = 0;
     this.capacityEvictions = 0;
     this.performance = emptyPerformance();
+    this.lastObserveLocalAt = null;
     this.atcTruthCache.clear();
   }
 
@@ -1541,6 +1590,10 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private expire(now: number): void {
+    forensicsGlobal.measure("expiryHeap", () => this.expireCore(now));
+  }
+
+  private expireCore(now: number): void {
     if (!this.enableExpiryQueue) {
       for (const pending of [...this.pending.values()]) {
         this.performance.expiryEntriesScanned += 1;
@@ -1580,6 +1633,7 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private resolveObserved(pending: PendingEventOutcome, observedAt: number): void {
+    forensicsGlobal.increment("actualTruthResolutions");
     const timingErrorSeconds = (observedAt - pending.predictedAt) / 1000;
     this.recordWindTimingObserved(pending, observedAt);
     this.recordResolution(pending, "observed", timingErrorSeconds);
@@ -1590,6 +1644,7 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private resolveExpiredNoTruth(pending: PendingEventOutcome): void {
+    forensicsGlobal.increment("expirations");
     this.recordResolution(pending, "expiredNoTruth", null);
   }
 
@@ -1673,6 +1728,10 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private enforceCapacity(): void {
+    forensicsGlobal.measure("capacityEviction", () => this.enforceCapacityCore());
+  }
+
+  private enforceCapacityCore(): void {
     while (this.pending.size > MAX_PENDING) {
       const entry = popCaptureEntry(this.pendingCaptureQueue);
       if (!entry) break;
@@ -1680,6 +1739,7 @@ export class OperationalTwinEventOutcomeValidator {
       if (!oldest || oldest.capturedAt !== entry.capturedAt) continue;
       this.removePending(oldest.id);
       this.capacityEvictions += 1;
+      forensicsGlobal.increment("pendingCapacityEvictions");
     }
     const staleLimit = Math.max(1_024, this.pending.size * 2 + 32);
     if (this.pendingCaptureQueue.length > staleLimit) {
@@ -1701,6 +1761,10 @@ export class OperationalTwinEventOutcomeValidator {
   }
 
   private cleanup(now: number): void {
+    forensicsGlobal.measure("cleanup", () => this.cleanupCore(now));
+  }
+
+  private cleanupCore(now: number): void {
     const cutoff = now - WINDOW_MS - 60 * 60_000;
     this.buckets = this.buckets
       .filter((bucket) => bucket.startMs + BUCKET_MS > cutoff)

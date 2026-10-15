@@ -29,6 +29,17 @@ function durationSetting(name, fallback, min, max) {
   return n;
 }
 
+export function classifyT57Failure(error) {
+  const message = error instanceof Error ? error.message : "";
+  const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
+  if (/authorization_missing|session_login|HTTP (401|403)/i.test(message)) return "authentication_failure";
+  if (name === "TimeoutError" || name === "AbortError" || /timeout/i.test(message)) return "http_timeout";
+  if (/^t57_(admin|auxiliary|required|invalid|too_many|empty|report)/.test(message)) return "response_validation_failure";
+  if (/Diagnostic request .* HTTP \d+/i.test(message)) return "http_failure";
+  if (name === "TypeError" || /fetch failed|network/i.test(message)) return "network_failure";
+  return "response_validation_failure";
+}
+
 function trustedBase() {
   const uri = new URL(process.env.T57_BASE_URL ?? "https://airradar.pomykal.cz");
   const prod = uri.protocol === "https:" && uri.hostname === "airradar.pomykal.cz" &&
@@ -51,6 +62,8 @@ function markdown(report) {
     "",
     "- Commit/version: " + fmt(report.commit) + " / " + fmt(report.version),
     "- Valid / unavailable / planned samples: " + report.samples + " / " + report.missing + " / " + report.expected,
+    "- Sanitized unavailable-sample categories: " + JSON.stringify(report.failureCategories),
+    "- Polling-delay context: " + JSON.stringify(report.pollingFailureContext),
     "- Process segments: " + report.segments + "; stable: " + report.stableProcessAndCommit,
     "- Duration: " + fmt(report.durationSeconds) + " seconds",
     "- Distinct major GC observations: " + report.majorGcBaselines,
@@ -108,6 +121,10 @@ function markdown(report) {
     ...report.hotPathsByWindowCpuMs.map((p) => "| " + p.name + " | " + p.windows +
       " | " + p.calls + " | " + fmt(p.cpuMs) + " | " + fmt(p.waitMs) +
       " | " + fmt(p.p99MsMax) + " |"),
+    "",
+    "## Event-loop stall correlations (descriptive only)",
+    "",
+    JSON.stringify(report.stallCorrelations),
     "",
     "## Limitations",
     "",
@@ -236,6 +253,7 @@ async function run() {
       const delay = started + i * intervalSeconds * 1000 - performance.now();
       if (delay > 0) await new Promise((done) => setTimeout(done, delay));
       if (stopped) break;
+      const pollDelayMs = Math.max(0, performance.now() - (started + i * intervalSeconds * 1000));
       try {
         if (Date.now() - authenticatedAt > SESSION_REFRESH_MS) {
           cookie = await establishSession(base, token);
@@ -249,7 +267,12 @@ async function run() {
           cursors.clear();
         }
         previousIdentity = identity;
-        const sample = newT57Windows({ ...observation.sample, segment }, cursors);
+        const sample = newT57Windows({ ...observation.sample, segment,
+          pollDelayMs: Math.round(pollDelayMs),
+          pollingDelayCategory: pollDelayMs > Math.max(5_000, intervalSeconds * 250)
+            ? "delayed_polling" : null,
+          failureCategory: null,
+        }, cursors);
         await write({ type: "sample", value: sample });
         written++; checkpointValid++;
         const elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
@@ -265,11 +288,13 @@ async function run() {
           while (nextCheckpoint <= elapsedSeconds) nextCheckpoint += 3600;
           checkpointValid = 0; checkpointUnavailable = 0;
         }
-      } catch {
+      } catch (error) {
         if (i === 0) throw new Error("initial_t57_sample_unavailable");
         failures++;
         checkpointUnavailable++;
-        await write({ type: "unavailable", at: new Date().toISOString() });
+        await write({ type: "unavailable", at: new Date().toISOString(), category: classifyT57Failure(error),
+          pollDelayMs: Math.round(pollDelayMs),
+          pollDelayCategory: pollDelayMs > Math.max(5_000, intervalSeconds * 250) ? "delayed_polling" : null });
         // The 8-hour admin cookie may expire or be invalidated; reauthenticate
         // on the next poll without writing credentials or error details.
         authenticatedAt = 0;

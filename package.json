@@ -65,6 +65,7 @@
     "benchmark:radar": "node scripts/radar-performance-baseline.mjs",
     "benchmark:runtime": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-live-performance.ts",
     "benchmark:twin-event-outcome": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-operational-twin-event-outcome.ts",
+    "benchmark:twin-forensics": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-operational-twin-forensics.ts",
     "benchmark:twin-aged-state": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-operational-twin-aged-state.ts",
     "benchmark:radar:soak": "RADAR_PERF_SOAK=1 RADAR_PERF_SCENARIOS=1600,3000,5000 RADAR_PERF_MEASURE_MS=90000 node scripts/radar-performance-baseline.mjs",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
