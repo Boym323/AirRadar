@@ -64,7 +64,7 @@ describe.skipIf(!enabled)("Rust batched CRC and stateful BEAST decode", () => {
       }
       // seenSeconds is derived from the wall clock inside snapshot(), so
       // compare its deterministic aircraft fields without timing jitter.
-      const aircraft = decoder.snapshot(timestamp + 1).map((item) => ({ ...item, seenSeconds: 0 }));
+      const aircraft = decoder.snapshot(timestamp + 1).map((item) => ({ ...item, seenSeconds: 0, seenPosSeconds: null }));
       snapshots.push({ outcomes, aircraft, diagnostics: decoder.getDiagnostics() });
     }
     expect(snapshots[1]).toEqual(snapshots[0]);
