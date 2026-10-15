@@ -35,3 +35,6 @@ artifacts/visual-system-audit.json
 artifacts/visual-smoke/
 artifacts/aircraft-icon-audit.json
 artifacts/predictive-validation-prospective-v2.*
+
+# Local deterministic performance reports (GitHub Actions uploads them instead)
+/.benchmarks/
