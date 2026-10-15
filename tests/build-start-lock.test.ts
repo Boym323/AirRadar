@@ -93,12 +93,14 @@ describe("production build/start lock", () => {
     expect(release).toContain('PREPARED_BUILD_ROOT="/tmp/airradar-ci-production-build"');
   });
 
-  it("snapshots tracked Next source files only around the local production build", async () => {
+  it("snapshots tracked Next source files around typegen and the local production build", async () => {
     const release = await readFile(new URL("../deploy/release.sh", import.meta.url), "utf8");
     const steps = release.slice(release.indexOf("run_release_steps()"), release.indexOf("run_quality_gates()"));
 
     expect(steps.indexOf("run_quality_gates")).toBeGreaterThanOrEqual(0);
-    expect(steps.indexOf("snapshot_build_source_files")).toBeGreaterThan(steps.indexOf("run_quality_gates"));
+    expect(steps.indexOf("snapshot_build_source_files")).toBeLessThan(steps.indexOf("run_quality_gates"));
+    expect(steps.indexOf("restore_build_source_files")).toBeGreaterThan(steps.indexOf("run_quality_gates"));
+    expect(release).toContain('NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" AIRRADAR_RELEASE_BUILD=1 npm run typecheck &');
     expect(steps.indexOf("snapshot_build_source_files")).toBeLessThan(steps.indexOf("npm run build"));
     expect(steps).toContain("validate_and_stage_prepared_build");
   });
