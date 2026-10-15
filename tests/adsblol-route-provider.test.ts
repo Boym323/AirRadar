@@ -57,6 +57,12 @@ describe("ADSB.lol routeset batch provider", () => {
       const body = JSON.parse(String(init?.body)) as { planes: Array<{ callsign: string; lat: number; lng: number }> };
       expect(body.planes).toHaveLength(2);
       expect(body.planes[0]).toEqual({ callsign: "UAE139", lat: 49.2, lng: 17.7 });
+      expect(init?.method).toBe("POST");
+      expect(init?.headers).toEqual(expect.objectContaining({
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": "AirRadar/1.0 (+https://github.com/Boym323/AirRadar/issues)",
+      }));
       return new Response(JSON.stringify(body.planes.map((plane) => row(plane.callsign))), { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);
