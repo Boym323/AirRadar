@@ -1,0 +1,34 @@
+[
+  {
+    "id": "schema.rxwRouteSnapshot.case_alignment",
+    "label": "Verify RXW route history table name alignment",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "RxwRouteSnapshot"
+      }
+    },
+    "precheck": [
+      {
+        "description": "Verify the existing RXW route history table uses the mapped production name",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RxwRouteSnapshot\""
+        ]
+      }
+    ],
+    "execute": [],
+    "postcheck": [
+      {
+        "description": "Verify the mapped RXW route history table remains present",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RxwRouteSnapshot\""
+        ]
+      }
+    ]
+  }
+]
