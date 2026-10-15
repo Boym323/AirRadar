@@ -74,6 +74,24 @@ export function summarizeIntegrationHealth(data) {
   };
 }
 
+/** GitHub Actions step-summary content contains NO remote-derived fields. */
+export const INTEGRATION_HEALTH_STEP_SUMMARY =
+  "## AirRadar route health (observational)\\n\\n" +
+  "Aggregated production route-health counters and current status are available " +
+  "in the **Inspect existing production counters** step logs " +
+  "(look for the `[integration-health]` JSON line).\\n\\n" +
+  "Only allowlisted numeric metrics and fixed state labels are logged. " +
+  "No ADSB.lol traffic/route API calls were made.\\n";
+
+/**
+ * The HTTP diagnostics response must never reach a filesystem sink.
+ * GITHUB_STEP_SUMMARY is an Actions-runner-controlled destination, and the
+ * payload is intentionally static. Operational metrics remain in stdout.
+ */
+export function writeIntegrationHealthStepSummary(destination) {
+  appendFileSync(destination, INTEGRATION_HEALTH_STEP_SUMMARY);
+}
+
 async function main() {
   const url = process.env.AIRRADAR_INTEGRATION_DIAGNOSTICS_URL
     ?? "https://airradar.pomykal.cz/api/system/integrations";
@@ -90,13 +108,7 @@ async function main() {
   const safe = JSON.stringify(summary);
   console.log("[integration-health] " + safe);
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-      `## AirRadar route health (observational)\n\n` +
-      `Status: **${summary.status}**; requests: ${summary.routeset.requests}, success: ${summary.routeset.success}, failed: ${summary.routeset.failed}, last HTTP: ${summary.routeset.lastHttpStatus ?? "n/a"}.\n\n` +
-      `Reason counters: ${JSON.stringify(summary.routeset.reasons)}.\n\n` +
-      `Route cache diagnostics: ${JSON.stringify(summary.routeCache)}.\n\n` +
-      `DB health query P50/P95/P99: ${JSON.stringify(summary.runtimeDbLatency)}.\n\n` +
-      `No ADSB.lol traffic/route API calls were made. Counters are process-local except where otherwise noted.\n`);
+    writeIntegrationHealthStepSummary(process.env.GITHUB_STEP_SUMMARY);
   }
   if (summary.status === "DEGRADED" || summary.status === "BLOCKED") {
     console.warn("[integration-health] ADSB.lol routeset is currently failing; radar and local cache may still work");
