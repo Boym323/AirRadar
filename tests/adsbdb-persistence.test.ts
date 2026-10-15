@@ -218,8 +218,9 @@ describe("persistent ADSBDB cache", () => {
 
   it("bounds stale-fallback log deduplication independently of persistence size", async () => {
     let now = Date.parse("2026-09-12T12:00:00.000Z");
+    const file = await cacheFile();
     const persistence = new AdsbDbPersistence({
-      cacheFile: "/tmp/airradar-test-adsbdb-cache.json", metadataTtlMs: 24 * 60 * 60_000, routeTtlMs: 6 * 60 * 60_000,
+      cacheFile: file, metadataTtlMs: 24 * 60 * 60_000, routeTtlMs: 6 * 60 * 60_000,
       metadataMaxStaleMs: 7 * 24 * 60 * 60_000, routeMaxStaleMs: 24 * 60 * 60_000,
       metadataMaxEntries: 5_000, routeMaxEntries: 2, checkpointIntervalMs: 0, now: () => now,
     });
