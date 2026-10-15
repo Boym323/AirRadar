@@ -51,3 +51,7 @@ A/B attribution without changing feed contracts.
 
 Run `npm run benchmark:rust-crc` under the same opt-in environment to compare
 10,000 deterministic Mode-S CRC messages using the BigInt and N-API paths.
+
+After an abnormally large input chunk, the parser also shrinks retained Vec
+capacity when it exceeds twice the configured buffer limit (with a 64 KiB
+floor); ordinary small socket chunks remain allocation-reuse friendly.

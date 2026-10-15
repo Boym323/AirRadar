@@ -97,6 +97,15 @@ impl Parser {
             let drop = self.pending.len() - self.max_buffered_bytes;
             self.pending.drain(..drop);
         }
+        // A single abnormal chunk must not reserve megabytes indefinitely.
+        // Shrink only after an oversized allocation; routine socket chunks
+        // reuse their existing capacity without per-frame allocator churn.
+        if self.pending.capacity()
+            > self.max_buffered_bytes.saturating_mul(2).max(64 * 1024)
+        {
+            self.pending
+                .shrink_to(self.max_buffered_bytes.max(self.pending.len()).max(4096));
+        }
         output
     }
 
@@ -221,6 +230,7 @@ mod tests {
         let mut parser = Parser::new(32);
         assert!(parser.push(&vec![0x55; 1_000_000]).is_empty());
         assert!(parser.pending.len() <= 32);
+        assert!(parser.pending.capacity() <= 128 * 1024);
         assert_eq!(parser.push(&encode(0x33, &[1; 14])).len(), 1);
     }
 
