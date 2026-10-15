@@ -762,7 +762,12 @@ run_release_steps() {
   if (( AUTOMATED == 1 )); then
     log "Automated release: reusing CI validation for ${NEW_SHA}; skipping duplicate quality suite"
   else
+    # `next typegen` uses Next's production-build config phase. Keep it in
+    # the same isolated distDir as the release build, and restore the tracked
+    # declarations it may rewrite before proceeding to the actual build.
+    snapshot_build_source_files
     run_quality_gates
+    restore_build_source_files || die "Could not restore source files modified by type generation."
   fi
 
   if [[ -n "${PREPARED_BUILD_ROOT}" ]]; then
@@ -808,7 +813,7 @@ run_quality_gates() {
   log "Running lint, typecheck, and tests in parallel"
   npm run lint &
   lint_pid=$!
-  npm run typecheck &
+  NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" AIRRADAR_RELEASE_BUILD=1 npm run typecheck &
   typecheck_pid=$!
   npm test -- --pool=threads &
   tests_pid=$!
