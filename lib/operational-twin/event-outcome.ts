@@ -1,6 +1,6 @@
 import type { Aircraft } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
-import { computeAtcContext } from "@/lib/atc-context/engine";
+import { getCurrentAtcSectorIds } from "@/lib/atc-context/engine";
 import type { PreparedAtcContextDataset } from "@/lib/atc-context/types";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { LandingTerminalEvidenceV1 } from "@/lib/intelligence/terminal-evidence";
@@ -946,7 +946,10 @@ function computeSectorIdsAtPoint(
   point: TruthPoint,
   dataset: PreparedAtcContextDataset,
 ): ReadonlySet<string> {
-  const compute = () => computeAtcContext({
+  // ATC truth needs only CURRENT memberships, not ATS routes or forward
+  // projections. Keep the diagnostic phase name for schema compatibility:
+  // its scope is now cheaper sector-only matching, not full ATC context.
+  return forensicsGlobal.measure("atcContextComputation", () => getCurrentAtcSectorIds({
     lat: point.lat,
     lon: point.lon,
     altitude: point.altitudeFt,
@@ -958,9 +961,7 @@ function computeSectorIdsAtPoint(
     verticalRate: point.verticalRateFpm,
     timestamp: new Date(point.at).toISOString(),
     onGround: point.onGround,
-  }, dataset, new Date(point.at));
-  const context = forensicsGlobal.measure("atcContextComputation", compute);
-  return new Set(context.currentAirspaces.map((airspace) => airspace.id));
+  }, dataset));
 }
 
 // Shared diagnostic timer is process-local. Its data is aggregate-only and

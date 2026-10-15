@@ -62,3 +62,32 @@ now include canonical truth fingerprinting, immutable trail reuse, incremental
 pending evaluation with dirty captures, and no redundant unchanged-truth ATC
 checks. Production-equivalent benchmark, complete 60-minute matrix, and
 stable P99/max acceptance remain outstanding. PR stays draft; no deployment.
+
+
+## V4.6.3 ATC current-truth fast path — production validation pending
+
+The ongoing T57 on `1.0.454 / ca25f52b` reported many long
+`pendingTraversal` invocations and sampled, expensive ATC context calls.
+This supports investigating ATC membership as a hot path, but does not prove
+ATC caused every observed event-loop stall.
+
+The ATC_SECTOR_ENTRY truth check previously computed complete
+`computeAtcContext()` despite consuming only `currentAirspaces[].id`.
+That full function also computes nearest ATS routes, navigation points,
+next sector projections, and ahead sectors. The new
+`getCurrentAtcSectorIds()` uses the prepared bbox/grid candidate index and
+the same exact-polygon and vertical-match predicates as the reference. It
+produces only current-sector IDs. Tests compare both implementations for
+boundary positions, invalid coordinates, different altitude references,
+ground aircraft and absent altitude.
+
+The existing V4.6.2 `atcContextComputation` metric name is preserved for
+schema compatibility, but measures sector-only truth computation after this
+commit; its per-call latency is **not** directly comparable with the old
+full-context work without this change in semantics being noted.
+
+No production deployment, ATC configuration change, or measurement
+interruption was performed. Production-equivalent replay, large-geometry
+regression, tail latency and acceptance remain outstanding. PR stays draft.
+PR #878 separately addresses asynchronous dataset preparation and cache
+freshness; merging both later requires resolving changes in ATC engine code.

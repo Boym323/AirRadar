@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Aircraft } from "@/lib/aircraft/types";
-import { computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
+import { computeAtcContext, getCurrentAtcSectorIds, prepareAtcContextDataset } from "@/lib/atc-context/engine";
 import type { SectorPolygon } from "@/lib/atc/types";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import {
@@ -293,6 +293,42 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(validator.report(new Date(predictedAt + 21_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(1);
   });
 
+  it("matches full ATC current-sector truth for boundaries, vertical bands and invalid fixes", () => {
+    const sector = testAtcDataset().sectors[0]!;
+    const dataset = prepareAtcContextDataset({
+      sectors: [
+        sector,
+        { ...sector, id: "HIGH", name: "High airspace", lowerAltitudeFt: 35000, upperAltitudeFt: 45000,
+          lowerAltitudeReference: "FL", upperAltitudeReference: "FL" },
+        { ...sector, id: "AGL", name: "AGL airspace", lowerAltitudeFt: 30000, upperAltitudeFt: 35000,
+          lowerAltitudeReference: "AGL", upperAltitudeReference: "AGL" },
+      ],
+      routeDocuments: [],
+    });
+    const basic = {
+      lat: 49, lon: 17.5, altitude: 30000, baroAltitude: 30000, geomAltitude: 30000,
+      altitudeSource: "baro" as const, track: 90, groundSpeed: 420, verticalRate: 0,
+      timestamp: new Date(baseNow).toISOString(), onGround: false,
+    };
+    const variants = [
+      basic,
+      { ...basic, lon: 17.4 }, // polygon boundary
+      { ...basic, lon: 17.6 },
+      { ...basic, lon: 18.5 },
+      { ...basic, altitude: 40000, baroAltitude: 40000, geomAltitude: 40000 },
+      { ...basic, altitude: null, baroAltitude: null, geomAltitude: null },
+      { ...basic, baroAltitude: null, geomAltitude: null, altitudeSource: "none" as const },
+      { ...basic, track: null, groundSpeed: null, onGround: true },
+      { ...basic, lat: 0, lon: 0 },
+      { ...basic, lon: Number.NaN },
+    ];
+    for (const input of variants) {
+      const reference = computeAtcContext(input, dataset, new Date(baseNow));
+      const referenceIds = new Set(reference.currentAirspaces.map((airspace) => airspace.id));
+      expect(getCurrentAtcSectorIds(input, dataset)).toEqual(referenceIds);
+    }
+  });
+
   it("shares one ATC truth lookup across sector predictions for the same point", () => {
     const dataset = prepareAtcContextDataset({
       sectors: ["A", "B"].map((id) => ({
@@ -326,7 +362,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     validator.observeLocal(new Map([[truth.icaoHex, truth]]), predictedAt + 21_000);
 
     expect(validator.report(new Date(predictedAt + 21_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(2);
-    expect(computeAtcContext).toHaveBeenCalledTimes(1);
+    expect(computeAtcContext).not.toHaveBeenCalled();
   });
 
   it("does not repeat ATC truth lookup across unchanged snapshots and newly allocated Aircraft objects", () => {
@@ -341,7 +377,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     validator.observeLocal(new Map([[first.icaoHex, first]]), baseNow + 60_000);
     const second = { ...first, trail: [...first.trail] };
     validator.observeLocal(new Map([[second.icaoHex, second]]), baseNow + 120_000);
-    expect(computeAtcContext).toHaveBeenCalledTimes(1);
+    expect(computeAtcContext).not.toHaveBeenCalled();
     expect(validator.getAtcCacheStats()).toMatchObject({ hits: 0, misses: 1, size: 1 });
     expect(validator.report(new Date(baseNow + 120_000)).performance.pendingEntriesWithoutNewTruth).toBe(1);
   });
@@ -545,7 +581,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     const eastTruth = { ...aircraft(baseNow, 49, 18.5), icaoHex: "EAST01" };
     vi.mocked(computeAtcContext).mockClear();
     validator.observeLocal(new Map([["ABC123", westTruth], ["EAST01", eastTruth]]), baseNow + 60_000);
-    expect(computeAtcContext).toHaveBeenCalledTimes(1);
+    expect(computeAtcContext).not.toHaveBeenCalled();
     expect(validator.getAtcCacheStats()).toMatchObject({ hits: 1, misses: 1 });
   });
 
@@ -559,7 +595,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     vi.mocked(computeAtcContext).mockClear();
     validator.observeLocal(new Map([[wrong.icaoHex, wrong]]), baseNow + 60_000);
     validator.observeLocal(new Map([[corrected.icaoHex, corrected]]), baseNow + 120_000);
-    expect(computeAtcContext).toHaveBeenCalledTimes(2);
+    expect(computeAtcContext).not.toHaveBeenCalled();
     expect(validator.report(new Date(baseNow + 120_000)).byType.ATC_SECTOR_ENTRY.observed).toBe(1);
   });
 
@@ -577,7 +613,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     const secondTruth = { ...aircraft(baseNow, 49, 17.5), icaoHex: "SECOND1" };
     vi.mocked(computeAtcContext).mockClear();
     validator.observeLocal(new Map([["ABC123", firstTruth], ["SECOND1", secondTruth]]), baseNow + 60_000);
-    expect(computeAtcContext).toHaveBeenCalledTimes(2);
+    expect(computeAtcContext).not.toHaveBeenCalled();
     expect(validator.getAtcCacheStats().hits).toBe(0);
   });
 
@@ -691,7 +727,7 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
 
     const report = validator.report(new Date(predictedAt + 21_000));
     expect(report.byType.ATC_SECTOR_ENTRY.observed).toBe(2);
-    expect(computeAtcContext).toHaveBeenCalledTimes(2);
+    expect(computeAtcContext).not.toHaveBeenCalled();
   });
 
   it("validates a predicted SIGMET intersection against captured geometry and LOCAL truth", () => {
