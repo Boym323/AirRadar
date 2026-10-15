@@ -29,7 +29,7 @@ const cases = [
   "8d485020994409940838175b284f",
 ].map((hex) => encoded(Buffer.from(hex, "hex")));
 const input = Buffer.concat(Array.from({ length: 10_000 }, (_, i) => cases[i % cases.length]!));
-const chunks = [];
+const chunks: Buffer[] = [];
 for (let i = 0; i < input.length; i += 4096) chunks.push(input.subarray(i, i + 4096));
 
 function sample(mode: Mode) {
