@@ -77,3 +77,15 @@ end-to-end-ish 10,000-frame synthetic comparison of the existing JS framing,
 Rust framing with per-message CRC, and Rust framing with inline batched CRC.
 No database, production stream, SSE, Operational Twin or provider orchestration
 is changed. This phase does not touch PR #926's bounded enrichment scheduler.
+
+### Exact CRC implementation and benchmark boundaries
+
+The `crc24` engine now uses a compile-time 256-entry Mode-S polynomial
+lookup table. The checksum is exactly equivalent to the previous bitwise
+remainder **including DF4/5/20/21 ICAO address-parity syndromes**; a Rust
+unit test compares 30,000 generated 7/14-byte messages to the independent
+u128 long-division implementation.
+
+`benchmark-rust-beast.ts` deliberately disables inline CRC to compare
+parser-only costs. `benchmark-beast-ingest.ts` includes three separate
+parser+stateful-decoder modes for a fairer end-to-end-ish comparison.

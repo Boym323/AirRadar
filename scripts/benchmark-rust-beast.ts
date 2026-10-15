@@ -35,7 +35,9 @@ const chunks: Buffer[] = [];
 for (let i = 0; i < wire.length; i += 4096) chunks.push(wire.subarray(i, i + 4096));
 
 function sample(native: boolean) {
-  const parser = new BeastParser(64 * 1024, { native });
+  // Isolate framing performance; native inline CRC is compared separately
+  // against CRC + stateful decoding in benchmark-beast-ingest.ts.
+  const parser = new BeastParser(64 * 1024, { native, precomputeCrc: false });
   const beforeCpu = process.cpuUsage();
   const start = performance.now();
   let count = 0;
