@@ -65,6 +65,7 @@ import type { OperationalAttentionSummary } from "@/lib/operational-twin/operati
 import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 import { getMemoryRetentionDiagnostics, type MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
+import { mapBounded, mapSettledBounded } from "@/lib/server/bounded-batch";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -153,6 +154,8 @@ function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">):
 
 const OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS = 60_000;
 const ATC_RESOLUTION_BATCH_SIZE = 12;
+// Bounded tasks on top of the providers' own stricter HTTP/DB concurrency limits.
+const ENRICHMENT_WORKER_LIMIT = 24;
 const ATC_SHADOW_PREDICTION_CONCURRENCY = 2;
 const ATC_SHADOW_PREDICTION_MAX_PENDING = 512;
 type AtcShadowPredictionWork = {
@@ -895,10 +898,10 @@ export class AircraftStateService {
     });
     if (candidates.length === 0) return aircraft;
 
-    const results = await Promise.all(candidates.map(async (item) => ({
+    const results = await mapBounded(candidates, ENRICHMENT_WORKER_LIMIT, async (item) => ({
       icaoHex: item.icaoHex,
       metadata: await this.enrichment.getInitialAircraftMetadata(item.icaoHex),
-    })));
+    }));
     const metadataByHex = new Map(results
       .filter((result) => result.metadata !== null)
       .map((result) => [result.icaoHex, result.metadata!]));
@@ -1614,10 +1617,11 @@ export class AircraftStateService {
       const current = this.aircraft.get(item.icaoHex);
       return this.enrichment.needsEnrichment(item, current?.enrichment);
     });
-    const results = await Promise.allSettled(candidates.map(async (item) => ({
+    const observedAt = new Date(snapshot.fetchedAt);
+    const results = await mapSettledBounded(candidates, ENRICHMENT_WORKER_LIMIT, async (item) => ({
       item,
-      enrichment: await this.enrichment.enrich(item, new Date(snapshot.fetchedAt)),
-    })));
+      enrichment: await this.enrichment.enrich(item, observedAt),
+    }));
     if (this.shuttingDown) return;
     let changed = false;
     for (const result of results) {
