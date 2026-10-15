@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, constants, fstatSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomBytes } from "node:crypto";
 
@@ -21,8 +21,20 @@ export function readRoutesetRefusalCooldown(now = Date.now()): string | null {
   const file = stateFile();
   if (!file) return null;
   try {
-    if (statSync(file).size > MAX_STATE_BYTES) return null;
-    const value: unknown = JSON.parse(readFileSync(file, "utf8"));
+    // Open once: stat(path) followed by read(path) was a TOCTOU window.
+    // O_NOFOLLOW also rejects symlinked state files instead of following
+    // another process's replacement into an unrelated file.
+    const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    let contents: string;
+    try {
+      const info = fstatSync(fd);
+      if (!info.isFile() || info.size > MAX_STATE_BYTES || info.size === 0) return null;
+      contents = readFileSync(fd, "utf8");
+    } finally {
+      closeSync(fd);
+    }
+    if (Buffer.byteLength(contents, "utf8") > MAX_STATE_BYTES) return null;
+    const value: unknown = JSON.parse(contents);
     if (!value || typeof value !== "object"
       || (value as { version?: unknown }).version !== 1) return null;
     const raw = (value as { blockedUntilAt?: unknown }).blockedUntilAt;
