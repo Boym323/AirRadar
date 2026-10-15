@@ -38,6 +38,16 @@ nepřistupuje k databázi pro zápis a nemění nastavení produkce.**
   **sám nezapíná** a bez ní se záměrně nespustí. Případná změna vyžaduje
   samostatně schválený release; žádný automatický restart.
 
+## Sběr a porovnání
+
+Workflow používá následující čtecí sběrač a existující analytický skript:
+
+```sh
+T57_SECONDS=3600 T57_INTERVAL_SECONDS=60 T57_WARMUP_SECONDS=600 \\
+  T57_EXPECTED_COMMIT=<overeny_produkci_commit> \\
+  node scripts/t57-production-soak.mjs
+```
+
 ## Co se změří
 
 Používá se stejný `scripts/t57-production-soak.mjs` a analyzátor jako při
@@ -48,11 +58,11 @@ výpadky vzorků se nezamlčují.
 
 ## Výsledky a historie
 
-1. [GitHub Actions](https://github.com/Boym323/AirRadar/actions/workflows/t58-production-soak.yml)
+- [GitHub Actions](https://github.com/Boym323/AirRadar/actions/workflows/t58-production-soak.yml)
    ukáže průběh a závěrečné porovnání s T57.
-2. Každý běh poskytne artefakt s `soak.summary.json`,
+- Každý běh poskytne artefakt s `soak.summary.json`,
    `soak.summary.md` a `comparison.md`; GitHub jej uchovává 90 dnů.
-3. Po vytvoření kompletního reportu se anonymizovaný výstup uloží trvale do
+- Po vytvoření kompletního reportu se anonymizovaný výstup uloží trvale do
    samostatné větve
    [`audit/t58-history`](https://github.com/Boym323/AirRadar/tree/audit/t58-history/reports/t58).
    V adresáři `reports/t58/` vznikne `INDEX.md` s odkazy na jednotlivé
@@ -76,3 +86,16 @@ ATC cache, RSS a počet letadel/čekajících predikcí. Zohledňuje, že jde o
 **pozorovací porovnání různých provozních hodin**, nikoliv identickou zátěž.
 `PASS_WITH_LIMITATIONS` znamená dostatečnou úplnost dat, nikoliv záruku
 zrychlení. Automatické pravidelné spouštění není součástí tohoto řešení.
+
+## Referenční metriky T57
+
+| Ukazatel | T57 |
+| --- | ---: |
+| CPU P50 / P95 | 41,782 % / 59,258 % |
+| Event-loop p99 P95 minutových oken | 396,624 ms |
+| Nejdelší blokace event loopu | 5 662,310 ms |
+| `twin.eventOutcome.local` | 439 837,391 ms CPU / 842 volání |
+| RSS P50 | 939,445 MiB |
+| ATC truth cache hit rate | 36,5 % |
+| Lokální letadla P50 | 78 |
+| Čekající predikce P50 | 15 |
