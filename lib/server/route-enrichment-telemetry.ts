@@ -139,6 +139,7 @@ export class RouteEnrichmentTelemetry {
   private readonly phaseCounts = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
   private readonly phaseErrors = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
   private readonly phaseTimeouts = Object.fromEntries(ROUTE_PHASE_KEYS.map(key => [key, 0])) as Record<RoutePhaseKey, number>;
+  private lastRecordPruneAt: number | null = null;
   private sqlDiagnostics = {
     active: 0, activeWrites: 0, maxActive: 0, rejected: 0,
     probeAttempts: 0, probeFailures: 0, failureStreak: 0, halfOpenProbe: false,
@@ -174,10 +175,19 @@ export class RouteEnrichmentTelemetry {
     for (const hour of this.hours.keys()) if (Date.parse(hour) < oldestHour) this.hours.delete(hour);
   }
 
+  private pruneForRecord(now: number): void {
+    // Recording is on the enrichment hot path. The rolling map is hourly, so
+    // pruning it for every counter repeats bounded work without changing
+    // retention semantics.
+    if (this.lastRecordPruneAt !== null && now >= this.lastRecordPruneAt && now - this.lastRecordPruneAt < HOUR_MS) return;
+    this.prune(now);
+    this.lastRecordPruneAt = now;
+  }
+
   record(key: RouteMetricKey, count = 1): void {
     if (!Number.isFinite(count) || count <= 0) return;
     const now = this.clock();
-    this.prune(now);
+    this.pruneForRecord(now);
     const hour = hourAt(now);
     let bucket = this.hours.get(hour);
     if (!bucket) { bucket = createBucket(hour); this.hours.set(hour, bucket); }

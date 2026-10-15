@@ -25,6 +25,17 @@ function fakeStore(get: RouteCacheStore["get"] = async () => null) {
 }
 
 describe("Route Cache V2 read-through", () => {
+  it("preserves the rolling telemetry window while avoiding per-event pruning", () => {
+    let now = at.getTime();
+    const telemetry = new RouteEnrichmentTelemetry(null, () => now);
+    for (let i = 0; i < 2_000; i += 1) telemetry.record("ramHit");
+    expect(telemetry.getSnapshot().totals.ramHit).toBe(2_000);
+
+    now += 24 * 60 * 60_000;
+    telemetry.record("ramHit");
+    expect(telemetry.getSnapshot().totals.ramHit).toBe(1);
+  });
+
   it("keeps phase distributions bounded and distinguishes unmeasured phases", () => {
     const telemetry = new RouteEnrichmentTelemetry(null, () => at.getTime());
     for (let i = 0; i < 2_000; i++) telemetry.recordPhase("postgresCacheRequest", i, i % 7 === 0 ? "timeout" : "ok");
