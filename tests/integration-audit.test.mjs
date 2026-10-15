@@ -1,5 +1,31 @@
-import { describe, expect, it } from "vitest";
-import { renderMarkdown, runAudit } from "../scripts/integration-audit.mjs";
+import { afterEach, describe, expect, it } from "vitest";
+import { closeSync, constants, fstatSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { renderMarkdown, runAudit, writeAuditOutputs } from "../scripts/integration-audit.mjs";
+
+const tempDirectories = [];
+function privateTempDir() {
+  const directory = mkdtempSync(join(tmpdir(), "airradar-audit-"));
+  tempDirectories.push(directory);
+  return directory;
+}
+afterEach(() => {
+  for (const directory of tempDirectories.splice(0)) {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+// Verify the bytes and mode of the same opened inode (no stat(path)/read(path) race).
+function readPrivateOutput(path) {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    expect(fstatSync(fd).mode & 0o777).toBe(0o600);
+    return readFileSync(fd, "utf8");
+  } finally {
+    closeSync(fd);
+  }
+}
 
 const fixture = {
   health: {
@@ -50,10 +76,9 @@ describe("integration audit", () => {
   });
 
   it("redacts raw payloads and treats route-cache contention and refusal cooldown as non-healthy", async () => {
-    const path = "/tmp/airradar-integration-audit-fixture.json";
-    const { writeFileSync, unlinkSync } = await import("node:fs");
-    writeFileSync(path, JSON.stringify(fixture));
-    try {
+    const path = join(privateTempDir(), "fixture.json");
+    writeFileSync(path, JSON.stringify(fixture), { flag: "wx", mode: 0o600 });
+    {
       const report = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path });
       expect(report.checks.find((check) => check.id === "adsblol-routeset")).toMatchObject({ status: "BLOCKED" });
       expect(report.checks.find((check) => check.id === "route-cache")).toMatchObject({ status: "DEGRADED" });
@@ -62,12 +87,59 @@ describe("integration audit", () => {
       expect(JSON.stringify(report)).not.toContain("SECRET-ROUTE-PAYLOAD");
       expect(renderMarkdown(report)).not.toContain("SECRET-ICAO");
       const previousPath = `${path}.previous`;
-      writeFileSync(previousPath, JSON.stringify({ generatedAt: "2026-10-15T14:00:00.000Z", summary: { statusCounts: { "NOT VERIFIED": 1 } } }));
+      writeFileSync(previousPath, JSON.stringify({ generatedAt: "2026-10-15T14:00:00.000Z", summary: { statusCounts: { "NOT VERIFIED": 1 } } }), { flag: "wx", mode: 0o600 });
       const compared = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path, previousPath });
       expect(compared.comparison.status).toBe("COMPARED");
-      unlinkSync(previousPath);
-    } finally {
-      unlinkSync(path);
     }
+  });
+
+  it("creates bounded JSON and Markdown reports privately without overwriting existing files", async () => {
+    const dir = privateTempDir();
+    const jsonPath = join(dir, "report.json");
+    const markdownPath = join(dir, "report.md");
+    const report = await runAudit({ mode: "offline" });
+    const markdown = renderMarkdown(report);
+    await writeAuditOutputs({ report, markdown, jsonPath, markdownPath });
+    expect(JSON.parse(readPrivateOutput(jsonPath)).verdict).toBe("PASS_WITH_LIMITATIONS");
+    expect(readPrivateOutput(markdownPath)).toBe(markdown);
+    await expect(writeAuditOutputs({ report, markdown: "replacement", jsonPath, markdownPath }))
+      .rejects.toMatchObject({ code: "EEXIST" });
+    expect(readPrivateOutput(markdownPath)).toBe(markdown);
+
+    const symlink = join(dir, "symlink.md");
+    symlinkSync(markdownPath, symlink);
+    await expect(writeAuditOutputs({ report, markdown: "overwrite", markdownPath: symlink }))
+      .rejects.toMatchObject({ code: "EEXIST" });
+    expect(readPrivateOutput(markdownPath)).toBe(markdown);
+    await expect(writeAuditOutputs({ report, markdown, jsonPath, markdownPath: jsonPath }))
+      .rejects.toThrow("audit_output_paths_must_differ");
+  });
+
+  it("rejects symlinked or oversized input files and handles missing baselines safely", async () => {
+    const dir = privateTempDir();
+    const fixturePath = join(dir, "fixture.json");
+    const linkPath = join(dir, "fixture-link.json");
+    writeFileSync(fixturePath, JSON.stringify(fixture), { flag: "wx", mode: 0o600 });
+    symlinkSync(fixturePath, linkPath);
+    await expect(runAudit({ mode: "offline", fixturePath: linkPath })).rejects.toMatchObject({ code: "ELOOP" });
+    await expect(runAudit({ mode: "offline", fixturePath, previousPath: linkPath }))
+      .rejects.toMatchObject({ code: "ELOOP" });
+    const noBaseline = await runAudit({ mode: "offline", fixturePath, previousPath: join(dir, "missing.json") });
+    expect(noBaseline.comparison.status).toBe("NO_BASELINE");
+
+    const hugePath = join(dir, "huge.json");
+    writeFileSync(hugePath, "x".repeat(2 * 1024 * 1024 + 1), { flag: "wx", mode: 0o600 });
+    await expect(runAudit({ mode: "offline", fixturePath: hugePath })).rejects.toThrow("invalid_audit_input_file");
+  });
+
+  it("enforces output limits and refuses unsafe output paths", async () => {
+    const dir = privateTempDir();
+    await expect(writeAuditOutputs({
+      report: { ok: true }, markdown: "x".repeat(130_000),
+      jsonPath: join(dir, "too-large.json"), markdownPath: join(dir, "too-large.md"),
+    })).rejects.toThrow("audit_output_too_large");
+    await expect(writeAuditOutputs({
+      report: {}, markdown: "", markdownPath: "bad\\0path.md",
+    })).rejects.toThrow("invalid_audit_output_path");
   });
 });
