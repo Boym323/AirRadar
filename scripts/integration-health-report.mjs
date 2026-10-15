@@ -80,7 +80,7 @@ export const INTEGRATION_HEALTH_STEP_SUMMARY =
   "Aggregated production route-health counters and current status are available " +
   "in the **Inspect existing production counters** step logs " +
   "(look for the `[integration-health]` JSON line).\n\n" +
-  "Only allowlisted numeric metrics and fixed state labels are logged. " +
+  "Only allowlisted aggregate counters, fixed state labels and normalized timestamps are logged. " +
   "No ADSB.lol traffic/route API calls were made.\n";
 
 /**
