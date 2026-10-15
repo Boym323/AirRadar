@@ -40,12 +40,15 @@ function baseline(trail: readonly TrailPoint[], incoming: TrailPoint | null, cut
 function run(optimized: boolean): { wallMs: number; cpuMs: number; bytes: number; checksum: string } {
   const trails = Array.from({ length: AIRCRAFT }, (_, aircraft) =>
     Array.from({ length: TRAIL_POINTS }, (_, index) => point(aircraft, index)));
-  const original = optimized ? appendBoundedNetworkTrailPoint : baseline;
+  const update = (trail: readonly TrailPoint[], incoming: TrailPoint | null, cutoff: number) =>
+    optimized
+      ? appendBoundedNetworkTrailPoint(trail, incoming, cutoff, MAX_POINTS)
+      : baseline(trail, incoming, cutoff);
   // Initialize the per-array weak cache without mixing cold initial import
   // costs into the steady-state measurement (the first call is a fallback).
   if (optimized) {
     for (let aircraft = 0; aircraft < AIRCRAFT; aircraft += 1) {
-      trails[aircraft] = original(trails[aircraft]!, null, BASE_MS - 1, MAX_POINTS);
+      trails[aircraft] = update(trails[aircraft]!, null, BASE_MS - 1);
     }
   }
   const cpuStart = process.cpuUsage();
@@ -59,7 +62,7 @@ function run(optimized: boolean): { wallMs: number; cpuMs: number; bytes: number
       const incoming = frame % 17 === 0 ? point(aircraft, second)
         : frame % 13 === 0 ? null
           : point(aircraft, second - (frame % 17));
-      trails[aircraft] = original(trails[aircraft]!, incoming, cutoff, MAX_POINTS);
+      trails[aircraft] = update(trails[aircraft]!, incoming, cutoff);
     }
   }
   const wallMs = performance.now() - start;
