@@ -113,7 +113,8 @@ export class JsonNotificationPreferencesStore implements NotificationPreferences
         flightIntelligence: persistedMode(snapshot.values.flightIntelligence),
         predictive: persistedMode(snapshot.values.predictive),
       },
-      updatedAt: new Date().toISOString(),
+      updatedAt: snapshot.updatedAt && Number.isFinite(Date.parse(snapshot.updatedAt))
+        ? new Date(snapshot.updatedAt).toISOString() : new Date().toISOString(),
     };
     let fd: number | null = null;
     try {
