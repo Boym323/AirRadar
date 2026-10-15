@@ -34,7 +34,18 @@ per changed truth version. The pending **matching work itself remains O(P*T)**,
 so this is not a claim that the entire validator becomes O(T).
 The production win depends on live pending distribution and churn.
 
-## 2. Shared SSE wire frames
+## 2. Bounded ATC truth-cache TTL cleanup
+
+`AtcTruthCache` uses an LRU `Map` that moves every hit to the newest end.
+Previously its once-per-second TTL maintenance iterated **every** cache entry
+(up to 16,384) even after reaching the first non-expired record. With
+monotonic access timestamps, all later entries are also fresh: stop there.
+Record any backwards access timestamp and fall back to the original complete
+scan for the rest of that cache lifetime. Reset clears the fallback state.
+Eviction order, TTL, cache answers and maximum size remain unchanged. The
+reduced maintenance work is workload-dependent; no CPU percentage is claimed.
+
+## 3. Shared SSE wire frames
 
 The service already shares public snapshot identities and V2 changed-array
 identities between subscribers. Previous framing still performed
