@@ -78,8 +78,7 @@ describe("integration audit", () => {
   it("redacts raw payloads and treats route-cache contention and refusal cooldown as non-healthy", async () => {
     const path = join(privateTempDir(), "fixture.json");
     writeFileSync(path, JSON.stringify(fixture), { flag: "wx", mode: 0o600 });
-    {
-      const report = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path });
+    const report = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path });
       expect(report.checks.find((check) => check.id === "adsblol-routeset")).toMatchObject({ status: "BLOCKED" });
       expect(report.checks.find((check) => check.id === "route-cache")).toMatchObject({ status: "DEGRADED" });
       expect(report.checks.find((check) => check.id === "event-loop")).toMatchObject({ status: "DEGRADED" });
@@ -90,7 +89,6 @@ describe("integration audit", () => {
       writeFileSync(previousPath, JSON.stringify({ generatedAt: "2026-10-15T14:00:00.000Z", summary: { statusCounts: { "NOT VERIFIED": 1 } } }), { flag: "wx", mode: 0o600 });
       const compared = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path, previousPath });
       expect(compared.comparison.status).toBe("COMPARED");
-    }
   });
 
   it("creates bounded JSON and Markdown reports privately without overwriting existing files", async () => {
@@ -139,7 +137,7 @@ describe("integration audit", () => {
       jsonPath: join(dir, "too-large.json"), markdownPath: join(dir, "too-large.md"),
     })).rejects.toThrow("audit_output_too_large");
     await expect(writeAuditOutputs({
-      report: {}, markdown: "", markdownPath: "bad\\0path.md",
+      report: {}, markdown: "", markdownPath: `bad${String.fromCharCode(0)}path.md`,
     })).rejects.toThrow("invalid_audit_output_path");
   });
 });
