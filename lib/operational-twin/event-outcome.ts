@@ -108,6 +108,8 @@ interface TruthTrailState {
   sourceTrail: Aircraft["trail"];
   currentPositionFingerprint: string;
   points: TruthPoint[];
+  /** Content identities reused across pending checks and truth-state diffs. */
+  pointFingerprints: readonly string[];
   version: number;
   /** Current points whose timestamp/fingerprint was not unchanged. */
   changedIndexes: ReadonlySet<number>;
@@ -1331,7 +1333,7 @@ export class OperationalTwinEventOutcomeValidator {
         let evaluatedPoints = 0;
         for (let index = 0; index < points.length; index += 1) {
           const point = points[index]!;
-          const content = staticTruth ? atcInputFingerprint(point) : null;
+          const content = staticTruth ? truthState.pointFingerprints[index]! : null;
           const afterCursor = previousLastEvaluatedAt === null || point.at > previousLastEvaluatedAt;
           const changedBeforeCursor = truthState.correctionIndexes.has(index)
             || (temporalTruth && truthState.changedIndexes.has(index));
@@ -1390,18 +1392,21 @@ export class OperationalTwinEventOutcomeValidator {
 
     const points = forensicsGlobal.measure("truthPoints", () => truthPoints(aircraft));
     const state = forensicsGlobal.measure("truthStateDiff", (): TruthTrailState => {
+    // Compute each truth identity once per changed trail, not once per pending
+    // prediction. The values are immutable for this truth-state version.
+    const pointFingerprints = points.map(atcInputFingerprint);
     const changedIndexes = new Set<number>();
     const correctionIndexes = new Set<number>();
     const previousByAt = new Map<number, string>();
     const previousContents = new Set<string>();
     if (previousState) {
-      for (const previousPoint of previousState.points) {
-        const fingerprint = atcInputFingerprint(previousPoint);
+      for (const [index, previousPoint] of previousState.points.entries()) {
+        const fingerprint = previousState.pointFingerprints[index]!;
         previousByAt.set(previousPoint.at, fingerprint);
         previousContents.add(fingerprint);
       }
       for (const [index, point] of points.entries()) {
-        const fingerprint = atcInputFingerprint(point);
+        const fingerprint = pointFingerprints[index]!;
         const previousFingerprint = previousByAt.get(point.at);
         if (previousFingerprint === undefined || previousFingerprint !== fingerprint) changedIndexes.add(index);
         if (point.at <= (previousState.points.at(-1)?.at ?? Number.NEGATIVE_INFINITY)
@@ -1418,6 +1423,7 @@ export class OperationalTwinEventOutcomeValidator {
       sourceTrail: aircraft.trail,
       currentPositionFingerprint,
       points,
+      pointFingerprints,
       version: (previousState?.version ?? 0) + 1,
       changedIndexes,
       correctionIndexes,
