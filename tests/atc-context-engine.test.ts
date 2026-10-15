@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { atcContextDatasetIdentity, computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
+import { atcContextDatasetIdentity, atcContextDatasetIdentityAsync, computeAtcContext, prepareAtcContextDataset } from "@/lib/atc-context/engine";
 import { pointInPolygon } from "@/lib/atc-context/geometry";
 import type { AtcContextDataset } from "@/lib/atc-context/types";
 import type { AtcSector } from "@/lib/atc/types";
@@ -62,6 +62,12 @@ describe("ATC Context Engine", () => {
     expect(moved.lastVerifiedAt).toBe(original.lastVerifiedAt);
     expect(moved.sourceReference).toBe(original.sourceReference);
     expect(atcContextDatasetIdentity([original], [])).not.toBe(atcContextDatasetIdentity([moved], []));
+  });
+
+  it("keeps async identity sensitive to geometry-only imports", async () => {
+    const original = sector({ id: "123", lastVerifiedAt: "2026-01-01T00:00:00.000Z" });
+    const moved = sector({ id: "123", lastVerifiedAt: "2026-01-01T00:00:00.000Z", polygons: [[[14.1, 49], [15.1, 49], [15.1, 50], [14.1, 50], [14.1, 49]]] });
+    await expect(atcContextDatasetIdentityAsync([original], [])).resolves.not.toBe(await atcContextDatasetIdentityAsync([moved], []));
   });
 
   it("predicts a stable next sector with distance and ETA", () => {

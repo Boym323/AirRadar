@@ -252,6 +252,14 @@ Toto jsou kontrakty chování a bezpečnosti pro změny aktuálního systému.
 - ATC assignment je pravděpodobný kandidát založený na poloze letadla,
   porovnatelné výšce a času pozorování. Nikdy netvrdí skutečně naladěnou
   frekvenci letadla.
+- Assignment index obsahuje pouze sektory; ATS route a point indexy patří jen
+  do context/prediction cesty. Příprava musí být omezená a předávat řízení
+  event loopu, s jednou přípravou pro každou generaci a atomickým publikováním
+  kompletního neměnného indexu.
+- Snapshoty ATC vlastněné providerem jsou neměnná process-owned data. Veřejné
+  odpovědi zůstávají defensive clone/projekce. Invalidace zvyšuje generační
+  token; starší in-flight příprava nesmí po novém importu nebo snapshotu
+  publikovat svůj výsledek.
 - Shody bodu na hranici jsou explicitní. AGL limity nelze porovnat s MSL
   výškou letadla bez terénních dat, takže altitude confidence přejde na
   `unknown`; nesmí se tiše prezentovat jako odpovídající výška.

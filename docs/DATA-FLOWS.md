@@ -470,6 +470,14 @@ probable assignment. Relevant-frequency summaries aggregate already-resolved
 assignments by frequency/service/callsign and include confidence counts. No
 path reports the aircraft's actual tuned frequency.
 
+Assignment and prediction use separate preparation paths. Assignment builds
+only the sector bbox/grid index from an immutable provider snapshot; it does
+not build ATS route or point indexes. Context prediction builds the richer
+dataset asynchronously in bounded `setImmediate()` chunks. Both paths use
+single-flight initialization, generation-checked atomic publication, and
+defensive public projections. A geometry change invalidates the identity even
+when sector ID and timestamps are unchanged.
+
 ## Auxiliary flows
 
 - `ADSBDB` metadata is keyed by aircraft hex. ADSBDB route data is keyed by

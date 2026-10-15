@@ -5,11 +5,47 @@ export type PolygonRings = LonLat[][];
 const NM_PER_KM = 1 / 1.852;
 
 export function bbox(rings: PolygonRings): [number, number, number, number] {
-  const points = rings.flat();
-  return [Math.min(...points.map((p) => p[0])), Math.min(...points.map((p) => p[1])), Math.max(...points.map((p) => p[0])), Math.max(...points.map((p) => p[1]))];
+  // Keep this allocation-free. ATC imports contain a few large rings and the
+  // old flat/map/spread pipeline briefly materialised several copies of every
+  // vertex during dataset preparation.
+  let minLon = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLon = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+  for (const ring of rings) {
+    for (const point of ring) {
+      minLon = Math.min(minLon, point[0]);
+      minLat = Math.min(minLat, point[1]);
+      maxLon = Math.max(maxLon, point[0]);
+      maxLat = Math.max(maxLat, point[1]);
+    }
+  }
+  return [minLon, minLat, maxLon, maxLat];
 }
 export function bboxContains(box: [number, number, number, number], point: LonLat): boolean {
   return point[0] >= box[0] && point[0] <= box[2] && point[1] >= box[1] && point[1] <= box[3];
+}
+export async function bboxAsync(rings: PolygonRings): Promise<[number, number, number, number]> {
+  let minLon = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLon = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+  let processed = 0;
+  let sliceStarted = performance.now();
+  for (const ring of rings) {
+    for (const point of ring) {
+      minLon = Math.min(minLon, point[0]);
+      minLat = Math.min(minLat, point[1]);
+      maxLon = Math.max(maxLon, point[0]);
+      maxLat = Math.max(maxLat, point[1]);
+      processed += 1;
+      if ((processed & 255) === 0 && performance.now() - sliceStarted >= 6) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        sliceStarted = performance.now();
+      }
+    }
+  }
+  return [minLon, minLat, maxLon, maxLat];
 }
 function onSegment(p: LonLat, a: LonLat, b: LonLat): boolean {
   const cross = (p[1] - a[1]) * (b[0] - a[0]) - (p[0] - a[0]) * (b[1] - a[1]);

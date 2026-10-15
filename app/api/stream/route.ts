@@ -3,14 +3,11 @@ import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
 import { acquireSseClient, recordSsePayload, recordCoalescedAircraftSnapshot, type SseProtocol } from "@/lib/server/sse-capacity";
 import { parseCoverage } from "@/lib/server/coverage";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
+import { encodeAircraftSseFrame } from "@/lib/server/sse-wire";
 import { getRateLimitClientKey } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-function event(name: string, payload: unknown): string {
-  return `event: ${name}\ndata: ${JSON.stringify(payload)}\n\n`;
-}
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -54,9 +51,7 @@ export async function GET(request: Request): Promise<Response> {
         if (closed) return;
         const publicSnapshot = toPublicLiveStateSnapshot(snapshot);
         const nextEvent = deltaEncoder?.next(publicSnapshot);
-        const eventName = nextEvent?.event ?? "snapshot";
-        const payload = nextEvent?.payload ?? publicSnapshot;
-        const chunk = encoder.encode(event(eventName, payload));
+        const chunk = encodeAircraftSseFrame(publicSnapshot, nextEvent ?? null);
         if ((controller.desiredSize ?? 0) > 0) {
           try {
             controller.enqueue(chunk);

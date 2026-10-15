@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AircraftView, PublicStateSnapshot } from "@/lib/aircraft/types";
 import { applySseV2Event, shouldRebuildSseV2Order, SSE_V2_PROTOCOL } from "@/lib/aircraft/sse-v2";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
+import { encodeAircraftSseFrame } from "@/lib/server/sse-wire";
 import { acquireSseClient, getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
 
 function aircraft(index: number, overrides: Partial<AircraftView> = {}): AircraftView {
@@ -81,6 +82,65 @@ function sseBytes(eventName: string, payload: unknown): number {
 }
 
 describe("SSE Delta V2", () => {
+  it("shares wire bytes across legacy and aligned V2 clients without changing wire JSON", () => {
+    const initial = snapshot([aircraft(1), aircraft(2)]);
+    const changed = snapshot([aircraft(1, { altitude: 21_000 }), aircraft(2)]);
+    const decoder = new TextDecoder();
+    const legacyA = encodeAircraftSseFrame(initial, null);
+    const legacyB = encodeAircraftSseFrame(initial, null);
+    expect(legacyB).toBe(legacyA);
+    expect(decoder.decode(legacyA)).toBe(`event: snapshot\ndata: ${JSON.stringify(initial)}\n\n`);
+    expect(encodeAircraftSseFrame(changed, null)).not.toBe(legacyA);
+
+    const first = new SseDeltaEncoder();
+    const second = new SseDeltaEncoder();
+    const initialA = first.next(initial);
+    const initialB = second.next(initial);
+    expect(encodeAircraftSseFrame(initial, initialB)).toBe(encodeAircraftSseFrame(initial, initialA));
+    const deltaA = first.next(changed);
+    const deltaB = second.next(changed);
+    expect(deltaA.event).toBe("delta");
+    expect(deltaB.event).toBe("delta");
+    const encodedA = encodeAircraftSseFrame(changed, deltaA);
+    const encodedB = encodeAircraftSseFrame(changed, deltaB);
+    expect(encodedB).toBe(encodedA);
+    expect(decoder.decode(encodedA)).toBe(`event: delta\ndata: ${JSON.stringify(deltaA.payload)}\n\n`);
+    expect(encodedA).not.toBe(legacyA);
+  });
+
+  it("isolates different V2 sequences and evicts old wire-frame variants", () => {
+    const initial = snapshot([aircraft(1)]);
+    const changed = snapshot([aircraft(1, { groundSpeed: 451 })]);
+    const first = new SseDeltaEncoder();
+    first.next(initial);
+    const common = first.next(changed);
+    if (common.event !== "delta") throw new Error("expected delta");
+    const firstBytes = encodeAircraftSseFrame(changed, common);
+    const decoder = new TextDecoder();
+
+    // A client which skipped some frames can share the same transition but
+    // must never receive another client's sequence number.
+    const delayed = new SseDeltaEncoder();
+    delayed.next(initial);
+    delayed.next(initial);
+    const delayedDelta = delayed.next(changed);
+    if (delayedDelta.event !== "delta") throw new Error("expected delta");
+    const delayedBytes = encodeAircraftSseFrame(changed, delayedDelta);
+    expect(delayedBytes).not.toBe(firstBytes);
+    expect(decoder.decode(delayedBytes)).toContain('"sequence":"3"');
+    expect(decoder.decode(firstBytes)).toContain('"sequence":"2"');
+
+    for (let sequence = 4; sequence <= 12; sequence += 1) {
+      const variant = { ...common, payload: { ...common.payload, sequence: String(sequence) } };
+      const bytes = encodeAircraftSseFrame(changed, variant);
+      expect(decoder.decode(bytes)).toContain(`"sequence":"${sequence}"`);
+    }
+    // The bounded per-transition cache no longer retains sequence 2.
+    const regenerated = encodeAircraftSseFrame(changed, common);
+    expect(regenerated).not.toBe(firstBytes);
+    expect(decoder.decode(regenerated)).toBe(decoder.decode(firstBytes));
+  });
+
   it("rejects delta before initialization without consuming sequence one", () => {
     const initial = snapshot([aircraft(1)]);
     const encoder = new SseDeltaEncoder();

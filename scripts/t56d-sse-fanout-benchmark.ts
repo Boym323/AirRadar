@@ -13,6 +13,7 @@ import { pathToFileURL } from "node:url";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
+import { encodeAircraftSseFrame } from "@/lib/server/sse-wire";
 import type { Aircraft, PublicStateSnapshot, StateSnapshot } from "@/lib/aircraft/types";
 
 const receiver = { lat: 50, lon: 14, name: "Synthetic fixture" };
@@ -80,20 +81,23 @@ export function syntheticSseFrames(count: number, changeRatio = 0.02, frames = F
 
 type Sample = { wallMs: number; cpuMs: number; bytes: number; events: number; changed: number };
 
-function onePass(snapshots: readonly PublicStateSnapshot[], clients: number): Sample {
+function onePass(snapshots: readonly PublicStateSnapshot[], clients: number, sharedWire: boolean): Sample {
   const encoders = Array.from({ length: clients }, () => new SseDeltaEncoder());
   // Exclude initial snapshots: the steady-state delta fanout is the subject.
   for (const encoder of encoders) encoder.next(snapshots[0]!);
   let bytes = 0, events = 0, changed = 0;
+  const utf8 = new TextEncoder();
   const cpu = process.cpuUsage();
   const started = performance.now();
   for (const snapshot of snapshots.slice(1)) {
     for (const encoder of encoders) {
       const output = encoder.next(snapshot);
       if (output.event !== "delta") throw new Error("unexpected_sse_event");
-      // Equivalent payload framing/JSON/UTF-8 bytes to /api/stream.
-      const frame = `event: ${output.event}\ndata: ${JSON.stringify(output.payload)}\n\n`;
-      bytes += Buffer.byteLength(frame, "utf8");
+      // Compare the previous per-client JSON/UTF-8 path with the shared
+      // production encoder. The payload, wire bytes and ordering must match.
+      bytes += sharedWire
+        ? encodeAircraftSseFrame(snapshot, output).byteLength
+        : utf8.encode(`event: ${output.event}\ndata: ${JSON.stringify(output.payload)}\n\n`).byteLength;
       events++;
       changed += output.payload.changed.length;
     }
@@ -116,26 +120,34 @@ export function runT56dSseScenario(count: number, clients: number, changeRatio =
   }
   const snapshots = syntheticSseFrames(count, changeRatio, frames);
   const expectedChanged = Math.max(1, Math.floor(count * changeRatio)) * clients * frames;
-  onePass(snapshots, clients); // warmup
-  const samples = Array.from({ length: repeats }, () => onePass(snapshots, clients));
-  if (samples.some((sample) =>
-    sample.events !== clients * frames || sample.changed !== expectedChanged)) {
+  onePass(snapshots, clients, false); // matched steady-state warmup
+  onePass(snapshots, clients, true);
+  const samples = Array.from({ length: repeats }, () => ({
+    baseline: onePass(snapshots, clients, false),
+    optimized: onePass(snapshots, clients, true),
+  }));
+  if (samples.some(({ baseline, optimized }) =>
+    baseline.events !== clients * frames || optimized.events !== baseline.events
+    || baseline.changed !== expectedChanged || optimized.changed !== baseline.changed
+    || optimized.bytes !== baseline.bytes)) {
     throw new Error("sse_fanout_parity_failed");
   }
   return {
     aircraft: count, clients, frames, changeRatio, repeats,
     deltaEvents: clients * frames,
     changedAircraftOccurrences: expectedChanged,
-    wireBytesPerRun: samples[0]!.bytes,
-    wallMsMedian: median(samples.map((s) => s.wallMs)),
-    cpuMsMedian: median(samples.map((s) => s.cpuMs)),
+    wireBytesPerRun: samples[0]!.baseline.bytes,
+    baselineWallMsMedian: median(samples.map((s) => s.baseline.wallMs)),
+    baselineCpuMsMedian: median(samples.map((s) => s.baseline.cpuMs)),
+    wallMsMedian: median(samples.map((s) => s.optimized.wallMs)),
+    cpuMsMedian: median(samples.map((s) => s.optimized.cpuMs)),
   };
 }
 
 async function main() {
   const report = {
-    schemaVersion: 1,
-    scenario: "synthetic-sse-v2-delta-fanout",
+    schemaVersion: 2,
+    scenario: "synthetic-sse-v2-delta-fanout-matched-wire",
     node: process.version,
     mode: "offline-dev-only",
     results: [100, 1000, 5000].flatMap((count) =>
@@ -146,7 +158,8 @@ async function main() {
     warnings: [
       "Observational timing only: repeat on matched hardware and Node build.",
       "No TCP, proxy, ReadableStream backpressure, heartbeat, real receiver or DB activity is emulated.",
-      "Shared fingerprint caches can warm during repeated runs; this models steady-state behavior only.",
+      "Both arms share warm immutable snapshots and fingerprint caches; optimized wire frames also warm across clients.",
+      "Timing is report-only: compare median CPU/wall, not a guaranteed production speedup.",
       "Do not infer production CPU improvements or memory leaks from these synthetic results.",
     ],
   };

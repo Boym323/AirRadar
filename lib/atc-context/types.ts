@@ -74,6 +74,23 @@ export interface AtcContextResult {
 
 export interface AtcContextDataset { sectors: AtcSector[]; routeDocuments: CzAtsRouteDocument[]; }
 
+/**
+ * The assignment lane only needs sector geometry and its bbox grid. Keeping
+ * this separate from the context dataset prevents ATS route/point indexes
+ * from being built for every ordinary assignment cold start.
+ */
+export interface PreparedAtcSectorDataset {
+  readonly sectors: ReadonlyArray<AtcSector>;
+  readonly airspaces: ReadonlyArray<{
+    sector: AtcSector;
+    boxes: ReadonlyArray<[number, number, number, number]>;
+    order: number;
+  }>;
+  readonly atcGrid: ReadonlyMap<string, ReadonlyArray<number>>;
+  readonly builtAt: string;
+  readonly prepared: true;
+}
+
 export interface AtcContextLookupDiagnostics {
   atcBboxCandidates: number;
   atcExactPolygonTests: number;

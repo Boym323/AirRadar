@@ -12,6 +12,7 @@ import {
   type NormalizedAtcImport,
 } from "./import-format";
 import { invalidateAtcDataCache } from "@/lib/server/atc-data";
+import { invalidateAtcContextDatasetCache } from "@/lib/atc-context/engine";
 
 export type AtcDatabase = ReturnType<typeof postgres<Contract>>;
 
@@ -135,6 +136,7 @@ export async function writeAtcImport(
   // getStoredAtcData also prevents an in-flight pre-import read from being
   // published after this point.
   invalidateAtcDataCache();
+  invalidateAtcContextDatasetCache();
 }
 
 export async function runAtcImport(dataset: NormalizedAtcImport, options: { dryRun: boolean; database?: AtcDatabase | null }): Promise<AtcImportPlan> {
