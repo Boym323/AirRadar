@@ -431,6 +431,40 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(secondReport.performance.pendingEntriesWithoutNewTruth).toBe(1);
   });
 
+  it("scans only the pending time window while matching the historical full scan", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const context = { atcDataset: null, sigmets: null, destination: null };
+    const events = [event("WAYPOINT", 5, {
+      id: "waypoint:WINDOWED-TRUTH", title: "WINDOWED-TRUTH", lat: 49, lon: 17.5,
+    })];
+    const optimized = new OperationalTwinEventOutcomeValidator();
+    const reference = new OperationalTwinEventOutcomeValidator({ enableIncrementalTruthEvaluation: false });
+    optimized.capture(situation(events), context);
+    reference.capture(situation(events), context);
+
+    const plane = aircraft(predictedAt, 49, 18.5);
+    plane.lat = null;
+    plane.lon = null;
+    plane.trail = Array.from({ length: 120 }, (_, index) => ({
+      recordedAt: new Date(predictedAt - (119 - index) * 60_000).toISOString(),
+      lat: 49, lon: index === 119 ? 17.5 : 18.5,
+      altitude: 30_000, track: 90, groundSpeed: 420,
+    }));
+    const local = new Map([[plane.icaoHex, plane]]);
+    optimized.observeLocal(local, predictedAt);
+    reference.observeLocal(local, predictedAt);
+
+    const left = optimized.report(new Date(predictedAt));
+    const right = reference.report(new Date(predictedAt));
+    expect(left.overall).toEqual(right.overall);
+    expect(left.byType.WAYPOINT).toEqual(right.byType.WAYPOINT);
+    expect(left.overall.observed).toBe(1);
+    // The full-scan reference deliberately visits out-of-window history,
+    // whereas the incremental path can bisect the sorted truth timestamps.
+    expect(left.performance.evaluatedTruthPoints).toBeLessThan(right.performance.evaluatedTruthPoints);
+    expect(left.performance.evaluatedTruthPoints).toBeLessThan(20);
+  });
+
   it("reuses canonical point identities for many pending events and rechecks corrected older truth", () => {
     const predictedAt = baseNow + 5 * 60_000;
     const events = [17.5, 17.6, 17.7, 17.8].map((lon, index) =>
