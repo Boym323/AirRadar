@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { closeSync, constants, fstatSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -89,6 +91,42 @@ describe("integration audit", () => {
       writeFileSync(previousPath, JSON.stringify({ generatedAt: "2026-10-15T14:00:00.000Z", summary: { statusCounts: { "NOT VERIFIED": 1 } } }), { flag: "wx", mode: 0o600 });
       const compared = await runAudit({ root: process.cwd(), mode: "offline", fixturePath: path, previousPath });
       expect(compared.comparison.status).toBe("COMPARED");
+  });
+
+  it("preserves exit code 2 for observed provider degradation while writing sanitized artifacts", () => {
+    const dir = privateTempDir();
+    const fixturePath = join(dir, "degraded.json");
+    const jsonPath = join(dir, "result.json");
+    const markdownPath = join(dir, "result.md");
+    writeFileSync(fixturePath, JSON.stringify(fixture), { flag: "wx", mode: 0o600 });
+    const result = spawnSync(process.execPath, [
+      fileURLToPath(new URL("../scripts/integration-audit.mjs", import.meta.url)),
+      "--mode", "offline",
+      "--fixture", fixturePath,
+      "--json", jsonPath,
+      "--markdown", markdownPath,
+    ], { encoding: "utf8", timeout: 15_000 });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(2);
+    expect(JSON.parse(readPrivateOutput(jsonPath)).verdict).toBe("DEGRADED");
+    expect(readPrivateOutput(markdownPath)).toContain("DEGRADED");
+    expect(result.stdout).not.toContain("SECRET-ICAO");
+    expect(result.stdout).not.toContain("SECRET-ROUTE-PAYLOAD");
+  });
+
+  it("keeps degraded health as a warning in CI without hiding execution failures", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/integration-health.yml", import.meta.url), "utf8");
+    const auditStep = workflow.split("      - name: Run bounded read-only integration audit\n")[1]
+      ?.split("      - name: Upload sanitized audit report")[0];
+    expect(auditStep).toBeDefined();
+    expect(auditStep).toContain("|| audit_status=$?");
+    expect(auditStep).toContain('case "$audit_status" in');
+    expect(auditStep).toContain("2)");
+    expect(auditStep).toContain("::warning title=Integration audit DEGRADED::");
+    expect(auditStep).toContain('exit "$audit_status"');
+    expect(auditStep).toContain('echo "exit_code=$audit_status" >> "$GITHUB_OUTPUT"');
+    expect(auditStep).not.toContain("continue-on-error");
+    expect(workflow).toContain("if: always()");
   });
 
   it("creates bounded JSON and Markdown reports privately without overwriting existing files", async () => {
