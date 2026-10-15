@@ -20,7 +20,8 @@ const REQUIRED_JOBS = ["Release scope", "Release validation", "Release tests and
 // repository still uniquely bind the run to the merged PR in this case.
 // A populated but inconsistent PR association must NEVER use that fallback.
 function authenticatedPreviewRun(run, pr, repository, name, path) {
-  if (run?.event !== "pull_request" || run?.name !== name || run?.path !== path
+  if (!pr.head?.ref || typeof run?.head_branch !== "string"
+    || run.event !== "pull_request" || run.name !== name || run.path !== path
     || run.status !== "completed" || run.conclusion !== "success"
     || run.head_sha !== pr.head.sha || run.head_branch !== pr.head.ref
     || run.head_repository?.full_name !== repository
