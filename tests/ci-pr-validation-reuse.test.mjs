@@ -92,4 +92,10 @@ test("empty PR associations require authenticated branch, SHA and repository", (
     head_branch: "perf/wrong-branch" }] }).reusable, false);
   assert.equal(evaluate({ prs: [{ ...pr, head: { ...pr.head, ref: undefined } }],
     runs: [unlinked, { ...codeql, pull_requests: [] }] }).reusable, false);
+  assert.equal(evaluate({ prs: [{ ...pr, head: { ...pr.head, ref: undefined } }],
+    runs: [{ ...unlinked, head_branch: undefined },
+      { ...codeql, head_branch: undefined, pull_requests: [] }] }).reusable, false);
+  assert.equal(evaluate({ runs: [unlinked, { ...codeql, pull_requests: [
+    { number: 901, head: { sha: headSha }, base: { ref: "main" } },
+  ] }] }).reusable, false);
 });
