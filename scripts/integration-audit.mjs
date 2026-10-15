@@ -68,6 +68,10 @@ export async function writeAuditOutputs({ report, markdown, jsonPath = null, mar
     throw new Error("audit_output_paths_must_differ");
   }
   const json = jsonPath ? JSON.stringify(report, null, 2) + "\n" : null;
+  // Validate both outputs before creating either file so oversized Markdown
+  // cannot leave behind a partial JSON-only audit.
+  if (json && Buffer.byteLength(json, "utf8") > MAX_JSON_REPORT_BYTES) throw new Error("audit_output_too_large");
+  if (markdownPath && Buffer.byteLength(markdown, "utf8") > MAX_MARKDOWN_REPORT_BYTES) throw new Error("audit_output_too_large");
   if (jsonPath) await writeAuditFile(jsonPath, json, MAX_JSON_REPORT_BYTES);
   if (markdownPath) await writeAuditFile(markdownPath, markdown, MAX_MARKDOWN_REPORT_BYTES);
 }
