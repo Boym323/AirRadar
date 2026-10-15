@@ -12,7 +12,6 @@ const AIRCRAFT_COUNTS = (process.env.RADAR_TWIN_BENCH_COUNTS
   .map((value) => Number(value.trim()))
   .filter((value) => Number.isInteger(value) && value > 0) ?? [70, 100, 250, 500]);
 const COMPARE_BASELINE = process.env.RADAR_TWIN_BENCH_COMPARE === "1";
-const PROFILE_PHASES = process.env.RADAR_TWIN_BENCH_PROFILE === "1";
 
 function percentile(values: readonly number[], fraction: number): number {
   const sorted = [...values].sort((left, right) => left - right);
@@ -118,10 +117,7 @@ function snapshot(count: number, observedAt: number): ReadonlyMap<string, Aircra
 function run(count: number, aged: boolean, optimized: boolean) {
   const validator = new OperationalTwinEventOutcomeValidator({
     enableIncrementalTruthEvaluation: optimized,
-    // V4.5 already uses the indexed expiry queue; keep it identical in both
-    // the e8260a6a reference and the V4.6 candidate.
-    enableExpiryQueue: true,
-    profilePhases: PROFILE_PHASES,
+    enableExpiryQueue: optimized,
   });
   const dataset = datasetFor("");
   const observeDurations: number[] = [];
@@ -182,6 +178,6 @@ const results = variants.flatMap((optimized) => AIRCRAFT_COUNTS.flatMap((count) 
 ]));
 console.log(JSON.stringify({
   version: "operational-twin-aged-state-v1",
-  configuration: { trailPoints: TRAIL_POINTS, agingCycles: AGING_CYCLES, measureCycles: MEASURE_CYCLES, atcResolution: "OFF", atcShadowPrediction: "OFF", compareBaseline: COMPARE_BASELINE, profilePhases: PROFILE_PHASES },
+  configuration: { trailPoints: TRAIL_POINTS, agingCycles: AGING_CYCLES, measureCycles: MEASURE_CYCLES, atcResolution: "OFF", atcShadowPrediction: "OFF", compareBaseline: COMPARE_BASELINE },
   results,
 }, null, 2));

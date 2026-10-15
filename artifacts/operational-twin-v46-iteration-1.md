@@ -51,3 +51,14 @@ Differential semantic reports matched. The 10-sample P95/P99/max is noisy and re
 This iteration does not yet meet the V4.6 release verdict. The matched benchmark does not cover the full 1s/3s/10s × 50/70/100/250 aircraft × 1k/3k/6k pending matrix, 60 minutes, realistic prediction recovery/expiry, or pending-event end-to-end `AircraftStateService` load. Per-operation wall time for truth parsing/diff, cache cleanup, heap work, and allocations/GC is not yet sampled. No stable production-equivalent tail-latency reduction has been demonstrated.
 
 **Verdict: V4.6 BLOCKED — ROOT CAUSE NOT RESOLVED.**
+
+
+## Integration onto V4.6.2 main (2026-10-15)
+
+The previous PR-only phase profiler and allocation estimates have been removed
+as duplicated functionality. The shared, bounded V4.6.2 forensic instrumentation
+from main remains active in its original opt-in form. The algorithmic changes
+now include canonical truth fingerprinting, immutable trail reuse, incremental
+pending evaluation with dirty captures, and no redundant unchanged-truth ATC
+checks. Production-equivalent benchmark, complete 60-minute matrix, and
+stable P99/max acceptance remain outstanding. PR stays draft; no deployment.
