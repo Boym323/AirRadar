@@ -63,12 +63,12 @@ export function assessPreviewReuse({ repository, sha, prs, mainCommit, prCommit,
   return { reusable: false, reason: "no complete green preview for exact PR head" };
 }
 
-async function verify({ repository, sha, token }) {
+export async function verify({ repository, sha, token, fetchImpl = fetch }) {
   if (!SHA.test(sha || "") || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository || "") || !token) {
     return { reusable: false, reason: "no trusted GitHub identity" };
   }
   const api = async (path) => {
-    const response = await fetch(`https://api.github.com/repos/${repository}${path}`, {
+    const response = await fetchImpl(`https://api.github.com/repos/${repository}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
