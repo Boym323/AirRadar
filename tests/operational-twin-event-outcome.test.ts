@@ -229,6 +229,29 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
     expect(report.decision).toBe("WAIT");
   });
 
+  it("keeps opt-in phase profiling bounded and identity-free", () => {
+    const validator = new OperationalTwinEventOutcomeValidator({ profilePhases: true });
+    validator.capture(situation([
+      event("WAYPOINT", 5, { id: "waypoint:VLM:profile", title: "VLM", lat: 49, lon: 17.5 }),
+    ]), { atcDataset: null, sigmets: null, destination: null });
+    const truth = aircraft(baseNow + 60_000, 49, 17.5);
+    const local = new Map([[truth.icaoHex, truth]]);
+    for (let index = 0; index < 140; index += 1) {
+      validator.observeLocal(local, baseNow + 60_000 + index * 1_000);
+    }
+
+    const performance = validator.report(new Date(baseNow + 200_000)).performance;
+    expect(performance.phases.truthInputFingerprint.count).toBeGreaterThan(0);
+    expect(performance.phases.truthPoints.count).toBeGreaterThan(0);
+    expect(performance.phases.pendingByAircraftTraversal.count).toBe(140);
+    const phaseInternals = validator as unknown as {
+      phaseTimings: Record<string, { samplesMs: number[] }>;
+    };
+    expect(phaseInternals.phaseTimings.pendingByAircraftTraversal.samplesMs).toHaveLength(128);
+    expect(performance.estimatedObjectAllocations).toBeGreaterThan(0);
+    expect(JSON.stringify(performance)).not.toMatch(/ABC123|icaoHex|callsign|registration|lat|lon/i);
+  });
+
   it("keeps the local-truth index bounded when pending outcomes outlive observations", () => {
     const validator = new OperationalTwinEventOutcomeValidator();
     for (let index = 0; index < 200; index += 1) {
