@@ -17,6 +17,61 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.469] - 2026-10-15
+
+Changes since v1.0.468.
+
+**Features touched:** Aircraft & Flight Detail, Track Fusion Shadow.
+
+### Added
+
+- Persist and replay parsed ACARS/VDL2 route evidence (#927) (b3ee6ac8)
+- Normalize RXW route history timestamp precision (8bff7e65)
+
+### Changed
+
+- Implement code changes to enhance functionality and improve performance (835968b7)
+- Refactor code structure for improved readability and maintainability (6e73e94e)
+
+### Fixed
+
+- Update paths for next release types in tsconfig and next-env (067c2569)
+- Stabilize mobile radar traffic drawer production smoke (#932) (c5539b03)
+
+### Performance
+
+- Bound large metadata batches and fix event-loop audit evidence (#926) (c3866074)
+
+### Documentation
+
+- Update changelog for v1.0.469 (d60d2ae2)
+- Update changelog for v1.0.469 (5f46b570)
+
+### Maintenance
+
+- Sync generated repository metadata (#930) (f012b3fe)
+- GitHub benchmark suite pro Operational Twin a Track Fusion (#929) (ac36909b)
+- Sync generated repository metadata (#931) (36ffa7bd)
+- Sync generated repository metadata (#933) (ce956c98)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(enrichment): bound large metadata batches and fix event-loop audit evidence (#926) (c3866074)
+- chore(metadata): sync generated repository metadata (#930) (f012b3fe)
+- feat: persist and replay parsed ACARS/VDL2 route evidence (#927) (b3ee6ac8)
+- test(perf): GitHub benchmark suite pro Operational Twin a Track Fusion (#929) (ac36909b)
+- docs: update changelog for v1.0.469 (d60d2ae2)
+- chore(metadata): sync generated repository metadata (#931) (36ffa7bd)
+- Implement code changes to enhance functionality and improve performance (835968b7)
+- Refactor code structure for improved readability and maintainability (6e73e94e)
+- feat(migration): normalize RXW route history timestamp precision (8bff7e65)
+- docs: update changelog for v1.0.469 (5f46b570)
+- chore(metadata): sync generated repository metadata (#933) (ce956c98)
+- fix: update paths for next release types in tsconfig and next-env (067c2569)
+- fix(ci): stabilize mobile radar traffic drawer production smoke (#932) (c5539b03)
+
+</details>
 ## [1.0.468] - 2026-10-15
 
 Changes since v1.0.467.
