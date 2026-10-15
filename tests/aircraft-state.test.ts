@@ -49,6 +49,37 @@ describe("aircraft state service", () => {
     return { sector, confidence: "inside" };
   }
 
+  it("resolves the network trail limit per snapshot and preserves live config changes", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("NETWORK_TRAIL_MAX_POINTS", "1");
+    const base = new Date("2026-10-15T12:00:00.000Z");
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    services.push(service);
+    const internal = service as unknown as {
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+    };
+    function publish(second: number): void {
+      const at = new Date(base.getTime() + second * 1_000);
+      vi.setSystemTime(at);
+      const normalized = normalizeAircraft({
+        hex: "ABC123", flight: "NETWORK123", lat: 50.1 + second * 0.0001,
+        lon: 14.1, seen: 0, seen_pos: 0,
+      }, receiver, at);
+      if (!normalized) throw new Error("missing normalized aircraft");
+      internal.applyNetworkSnapshot({
+        aircraft: [{ ...normalized, origin: "adsblol" }],
+        fetchedAt: at.toISOString(), provider: "network-test",
+      });
+    }
+    publish(0);
+    publish(1);
+    expect(service.getAircraft("ABC123", "extended")?.trail).toHaveLength(1);
+    vi.stubEnv("NETWORK_TRAIL_MAX_POINTS", "3");
+    publish(2);
+    expect(service.getAircraft("ABC123", "extended")?.trail).toHaveLength(2);
+  });
+
   it("keeps trails in server memory but omits them from live wire snapshots", async () => {
     const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
     services.push(service);
