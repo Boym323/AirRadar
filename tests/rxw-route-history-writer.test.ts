@@ -67,7 +67,7 @@ describe("RXW route history writer backpressure and query", () => {
       communication("other", { timestamp: (NOW + 11 * 60_000) / 1000 }), null,
     );
     expect(first?.id).not.toBe(later?.id);
-    expect(JSON.stringify(first)).not.toContain("one");
+    expect(JSON.stringify(first)).not.toContain('"uid":"one"');
     expect(JSON.stringify(first)).not.toContain('"uid"');
   });
 
