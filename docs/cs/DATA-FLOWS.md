@@ -741,3 +741,38 @@ existující process-local Navigation Integrity working set
 
 V tomto toku nevzniká další HTTP fetch, DB query, polling loop, SSE,
 detector run ani persistence krok.
+
+
+## Historie tras ACARS / VDL2 (volitelná)
+
+Adaptér RXW Hub zpracovává strukturované údaje z jednotlivých přijatých zpráv.
+Po zapnutí `RXW_HUB_ENABLED=true` a `RXW_ROUTE_HISTORY_ENABLED=true` se
+úplná dvojice letišť se známým letem nebo plán H1/FPN zařadí do omezené
+jednovláknové fronty pro PostgreSQL. Waypointy navíc vyžadují
+`RXW_FPN_ENABLED=true`. Příjem dat nikdy nečeká na databázi.
+
+SQL `deploy/sql/rxw-route-history-v1.sql` aplikujte nejprve do testovací
+databáze. Před uchováváním a veřejným zobrazováním archivních dat ověřte
+souhlas provozovatele RXW Hubu. Neukládejte texty ACARS/CPDLC, původní UID,
+přesná umístění přijímačů ani nerozšifrovaný obsah. Ukládají se jen
+hashované identifikátory shodných hlášení, ICAO24, identifikace letu, čas UTC, původ
+informace a povolené údaje o letištích či bodech.
+
+Na detailu historického letu `/flights/:id` se načte maximálně 30 záznamů,
+shodných v ICAO24, volacím znaku a omezeném časovém okně. Nahlášený FPN
+**není skutečná ADS-B stopa**; mapa spojuje jen sousední body s výslovnými
+souřadnicemi. Výpadek databáze neovlivní radar. Fronta včetně rozpracované dávky má nejvýše 256 položek, dávka 32,
+současně běží jen jedna databázová operace. Identická hlášení stejné stanice
+a letu v desetiminutovém UTC intervalu se slučují podle obsahového SHA-256,
+změněná trasa zůstane samostatná. Omezená paměťová deduplikace 4 096
+úspěšných ID šetří SQL operace; unikátní databázový klíč funguje i po restartu.
+Při chybě se dávka vrací na začátek fronty a opakuje po 5 sekundách až
+5 minutách (exponenciální prodleva); zahazují se jen nové záznamy nad limitem.
+Při řádném ukončení se příjem RXW nejprve zastaví a před uzavřením
+databáze se v rámci stávajícího časového rozpočtu vyprázdní čekající dávky.
+Mazání starých záznamů probíhá při prázdné frontě, bez překryvu s běžnými
+zápisy; historické dotazy používají indexované sloupce bez převodu přes JSON.
+Retence je standardně 30 dnů
+(nastavit lze 1 až 90); prořezávání po nejvýše 2 000 řádcích. Starší zprávy
+z doby před zapnutím funkce nelze zpětně obnovit. Vypnutí přepínače
+`RXW_ROUTE_HISTORY_ENABLED` funkci deaktivuje bez nutnosti mazat tabulku.

@@ -1,7 +1,8 @@
 import { io, type Socket } from "socket.io-client";
-import type { RxwHubConnectionState, RxwHubPublicSnapshot } from "@/lib/aircraft/rxw-communications";
+import type { RxwHubConnectionState, RxwHubPublicSnapshot, RxwCommunication, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 import { RxwHubMessageStore } from "@/lib/server/rxw-hub-store";
 import { logger } from "@/lib/server/logger";
+import { getRxwRouteHistoryWriter, isRxwRouteHistoryEnabled } from "@/lib/server/rxw-route-history";
 
 const RXW_DEFAULT_URL = "https://hub.rxw.cz";
 const RXW_MAX_BATCH_ITEMS = 100;
@@ -44,6 +45,8 @@ export class RxwHubService {
       enabled: isRxwHubEnabled(),
       fpnEnabled: isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true",
       connection: this.connection,
+      routeHistoryEnabled: isRxwRouteHistoryEnabled(),
+      routeHistory: getRxwRouteHistoryWriter().diagnostics(),
       connectCount: this.connectCount,
       disconnectCount: this.disconnectCount,
       connectionErrors: this.connectionErrors,
@@ -58,9 +61,15 @@ export class RxwHubService {
     };
   }
 
+  // Allocate the callback only once rather than once per received message.
+  private readonly archiveRoute = (message: RxwCommunication, plan: RxwWaypointPlan | null): void => {
+    getRxwRouteHistoryWriter().enqueue(message, plan);
+  };
+
   private ingest(item: unknown): void {
     this.receivedItems++;
-    if (this.store.ingest(item)) this.lastReceivedAt = new Date().toISOString();
+    const persist = isRxwRouteHistoryEnabled() ? this.archiveRoute : undefined;
+    if (this.store.ingest(item, Date.now(), persist)) this.lastReceivedAt = new Date().toISOString();
   }
 
   start(): void {

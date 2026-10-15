@@ -137,7 +137,10 @@ export class RxwHubMessageStore {
   private fpnRejected = 0;
   private lastAcceptedAt: string | null = null;
 
-  ingest(input: unknown, now = Date.now()): boolean {
+  ingest(
+    input: unknown, now = Date.now(),
+    onRoute?: (message: RxwCommunication, plan: RxwWaypointPlan | null) => void,
+  ): boolean {
     const message = normalizeRxwCommunication(input, now);
     if (!message) { this.rejectedInvalid++; return false; }
     const key = message.stationId + ":" + message.uid;
@@ -163,6 +166,7 @@ export class RxwHubMessageStore {
     }
     // Transiently decode only allowlisted H1/FPN format; the body never reaches
     // the public aircraft model, in-memory message cache, database or logs.
+    let persistablePlan: RxwWaypointPlan | null = null;
     if (process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true") {
       const raw = input !== null && typeof input === "object" && !Array.isArray(input)
         ? input as Record<string, unknown> : null;
@@ -172,6 +176,14 @@ export class RxwHubMessageStore {
         if (parsed) {
           this.fpnAccepted++;
           const seenAt = Date.parse(message.timestamp);
+          // Preserve the parsed snapshot independently of whether it replaces
+          // the currently selected live plan (out-of-order hub batch).
+          if (parsed.status === "planned" && seenAt <= now) {
+            persistablePlan = {
+              ...parsed, icaoHex: message.icaoHex, observedAt: message.timestamp,
+              stationId: message.stationId, source: "rxw-acarshub", confidence: "reported",
+            };
+          }
           const previousPlan = this.waypointPlans.get(message.icaoHex);
           if (!previousPlan || Date.parse(previousPlan.observedAt) <= seenAt) {
             if (parsed.status === "inactive") {
@@ -200,6 +212,11 @@ export class RxwHubMessageStore {
     }
     this.accepted += 1;
     this.lastAcceptedAt = new Date(now).toISOString();
+    // This callback performs only bounded in-memory enqueueing; no DB await
+    // is allowed on the Socket.IO ingest path. Never forward raw input.
+    if (onRoute && (persistablePlan || message.reportedRoute?.flight)) {
+      onRoute(message, persistablePlan);
+    }
     return true;
   }
 

@@ -5,6 +5,7 @@ import { FlightDetailPage } from "@/components/flight-detail";
 import { AirRadarPageShell } from "@/components/airradar-shell";
 import { getFlightStory, HistoryDatabaseUnavailableError } from "@/lib/server/flight-story";
 import { t } from "@/lib/i18n";
+import { listHistoricalRxwRoutes } from "@/lib/server/rxw-route-history";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,8 @@ export default async function FlightPage({ params, searchParams }: { params: Pro
     const first = detail.positions[0] ? Date.parse(detail.positions[0].recordedAt) : Date.parse(detail.flight.startTime);
     const last = detail.positions.at(-1) ? Date.parse(detail.positions.at(-1)!.recordedAt) : Date.parse(detail.flight.endTime ?? detail.flight.lastSeenAt);
     const initialAt = Number.isFinite(parsedAt) && Number.isFinite(first) && Number.isFinite(last) ? Math.max(first, Math.min(last, parsedAt)) : null;
-    return <AirRadarPageShell><FlightDetailPage detail={detail} initialAt={initialAt} /></AirRadarPageShell>;
+    const rxwRoutes = await listHistoricalRxwRoutes(detail.flight);
+    return <AirRadarPageShell><FlightDetailPage detail={detail} initialAt={initialAt} rxwRoutes={rxwRoutes} /></AirRadarPageShell>;
   } catch (error) {
     if (!(error instanceof HistoryDatabaseUnavailableError)) throw error;
     return <AirRadarPageShell><main className="flight-page">

@@ -6,6 +6,7 @@ import { stopRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { getRxwHubService } from "@/lib/server/rxw-hub-service";
+import { getRxwRouteHistoryWriter } from "@/lib/server/rxw-route-history";
 
 export const SHUTDOWN_BUDGET_MS = 10_000;
 export type ShutdownState = "RUNNING" | "SHUTTING_DOWN" | "COMPLETE";
@@ -115,7 +116,12 @@ export function getShutdownCoordinator() {
     stopMapContext: () => defaultMapContextArchiveService.stop(),
     stopTelemetry: stopRuntimeTelemetry,
     stopAlertDelivery: () => getAlertDeliveryWorker().stop(),
-    stopRxw: async () => { getRxwHubService().stop(); },
+    stopRxw: async () => {
+      getRxwHubService().stop();
+      // RXW intake is stopped; drain optional route evidence before closing
+      // the shared DB connection under the coordinator's 10-second budget.
+      await getRxwRouteHistoryWriter().drainForShutdown();
+    },
     closeStatistics: () => getAircraftStateService().closeStatistics(),
     closeProvider: () => getAircraftStateService().closeProvider(),
     flushWeather: () => defaultAviationWeatherProvider.flushPersistence("graceful"),
