@@ -11,6 +11,9 @@ import { readRoutesetRefusalCooldown, saveRoutesetRefusalCooldown, clearRouteset
 
 /** Independent of the ADSB.lol traffic provider; route lookups are opt-in. */
 const ROUTESET_URL = "https://api.adsb.lol/api/0/routeset";
+// Identify the application and provide a public contact channel to the upstream operator.
+// This is not an authorization grant; 401/403 refusal cooldown remains unchanged.
+const ROUTESET_USER_AGENT = "AirRadar/1.0 (+https://github.com/Boym323/AirRadar/issues)";
 const MAX_BATCH_SIZE = 20;
 const MAX_PENDING = 200;
 const FLUSH_DELAY_MS = 200;
@@ -204,7 +207,7 @@ export class AdsbLolRouteProvider implements FlightRouteProvider {
         method: "POST",
         cache: "no-store",
         signal: controller.signal,
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": ROUTESET_USER_AGENT },
         body: JSON.stringify({ planes: batch.map((lookup) => ({
           callsign: lookup.callsign,
           lat: lookup.latitude,
