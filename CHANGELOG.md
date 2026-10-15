@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.467] - 2026-10-15
+
+Changes since v1.0.466.
+
+### Performance
+
+- Independent live providers, bounded polling and utility audit (#920) (2a61092d)
+- Measure unique source contribution and eliminate per-overlap allocations (#923) (108f7bf8)
+
+### Maintenance
+
+- Sync generated repository metadata (#922) (1414cb03)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(integrations): independent live providers, bounded polling and utility audit (#920) (2a61092d)
+- chore(metadata): sync generated repository metadata (#922) (1414cb03)
+- perf(network): measure unique source contribution and eliminate per-overlap allocations (#923) (108f7bf8)
+
+</details>
 ## [1.0.466] - 2026-10-15
 
 Changes since v1.0.465.
