@@ -235,7 +235,7 @@ export async function runT57Benchmark() {
       const fast = pair.find((item) => item.mode === "incremental")!;
       runs.push({ scenario, fullScan: { ...full, semantic: undefined },
         incremental: { ...fast, semantic: undefined }, semanticMatch: true });
-      process.stderr.write(`T57 benchmark: ${count} aircraft / ${pending} pending / ${interval}s / repetition ${repeat + 1}: semantic PASS\\n`);
+      process.stderr.write(`T57 benchmark: ${count} aircraft / ${pending} pending / ${interval}s / repetition ${repeat + 1}: semantic PASS\n`);
     }
   }
   return {
@@ -249,7 +249,7 @@ export async function runT57Benchmark() {
     runs,
   };
 }
-if (process.argv[1]?.endsWith("benchmark-operational-twin-t57.ts")) {
-  runT57Benchmark().then((result) => process.stdout.write(JSON.stringify(result, null, 2) + "\\n"))
-    .catch((error) => { process.stderr.write(String(error) + "\\n"); process.exitCode = 1; });
+if (process.argv.slice(1).some((arg) => arg.endsWith("benchmark-operational-twin-t57.ts"))) {
+  runT57Benchmark().then((result) => process.stdout.write(JSON.stringify(result, null, 2) + "\n"))
+    .catch((error) => { process.stderr.write(String(error) + "\n"); process.exitCode = 1; });
 }
