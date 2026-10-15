@@ -5,9 +5,9 @@
 - Main SHA: `8f0655dec240ab5382ccd45ac48adb642c8666eb`
 - Production SHA: `e8282c48` documented by the 2026-10-15 technical audit; not independently re-read in this turn
 - Active branch: `perf/bounded-enrichment-telemetry`
-- Last validated SHA: `1a51b647286114135a9d7cf85c5533d322169893`
-- CI status: release-preview CI run 38771497987 success (build, tests/typecheck, production/browser, performance); deploy skipped
-- CodeQL Security status: run 38771498189 success; no alert findings were reported by the workflow
+- Last independently CI-validated application SHA: `5d1032c420a822d6c1cbd269c3b6896e985ace35` (CI green, Security check high alert); security fix commit `0b6a2e115e9fd68edc4ec89cd8f23ecc3372fc3a` under validation
+- CI status: release-preview #38772310081 passed on `5d1032c4`; follow-up CI #38773873447 pending after security test fix; no deployment
+- CodeQL Security status: separate check on `5d1032c4` FAILED with 1 new high alert despite successful analysis workflow #38772310304; verification pending for fix commit. Do not infer security PASS from workflow alone
 
 ## Completed
 - Area: Runtime telemetry CPU hot path and enrichment memory retention.
@@ -21,8 +21,8 @@
 - Current problem: no additional confirmed code issue in this branch; production DB/CPU/memory causality remains unverified.
 - Confirmed cause: see completed item above.
 - Files changed: `lib/server/route-enrichment-telemetry.ts`, `lib/server/enrichment-cache.ts`, tests, benchmark, and evidence.
-- Last verified state: commit `1a51b647`; local and PR validation complete; no production changes.
-- Next step: review PR #917; no merge/deploy/release performed.
+- Last verified state: security check on `5d1032c4` failed. Replaced a fixed /tmp ADSBDB test-cache path with the existing private `mkdtemp` fixture via `cacheFile()` on `0b6a2e11`. Recheck stand-alone CodeQL Security on newest PR SHA before merge; no production changes.
+- Next step: validate new CI and the distinct GitHub CodeQL Security check. Investigate its exact annotation if the check is still red. No merge/deploy/release performed.
 
 ## Blocked
 - Production PostgreSQL execution time, pool acquisition, lock waits, RSS trend, and event-loop causality remain unverified from repository/public evidence. No production load test, DB write, config change, restart, or release is authorized.
@@ -40,10 +40,10 @@
 - Keep the optimization process-local and bounded; logging dedupe is best-effort and must not affect route results.
 
 ## Pull Requests
-- PR #917 — bounded enrichment telemetry and stale-fallback retention — draft/open — current validated head `1a51b647` — CI and CodeQL success.
+- PR #917 — bounded enrichment telemetry and stale-fallback retention — draft/open; latest security test fix `0b6a2e11` pending CI and separate CodeQL Security; predecessor `5d1032c4` failed Security high check.
 - Existing open PR: #916 metadata sync; unrelated.
 
 ## Next Actions
-1. Review PR #917 and decide whether to request merge.
+1. Obtain green standalone CodeQL Security check with no new alerts on the exact final PR SHA; preserve full CI gates.
 2. Keep production read-only; do not merge, deploy, or release without explicit approval.
-3. Recheck branch ancestry against current `main` before any future update.
+3. Recheck branch ancestry against current `main` before any future update; only then request merge review.
