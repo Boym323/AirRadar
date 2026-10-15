@@ -144,6 +144,21 @@ describe("integration audit", () => {
 });
 
 describe("Integration Health observational warning policy", () => {
+  it("publishes a sanitized Markdown summary only after a successful observational audit", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/integration-health.yml", import.meta.url), "utf8");
+    const step = workflow.split("      - name: Run bounded read-only integration audit (degradation warns)\\n")[1]
+      ?.split("      - name: Upload sanitized audit report")[0];
+    expect(step).toBeDefined();
+    expect(step).toContain("--degraded-policy warn");
+    expect(step).toContain('echo "## Integration audit" >> "$GITHUB_STEP_SUMMARY"');
+    const appendSummary = 'cat -- "$RUNNER_TEMP/airradar-audit/report.md" >> "$GITHUB_STEP_SUMMARY"';
+    expect(step).toContain(appendSummary);
+    expect(step.indexOf("--degraded-policy warn")).toBeLessThan(step.indexOf(appendSummary));
+    expect(step).not.toContain("|| true");
+    expect(step).not.toContain("continue-on-error");
+    expect(workflow).toContain("if: always()");
+  });
+
   it("keeps strict readiness failure while allowing observational reporting", () => {
     expect(auditExitCode("DEGRADED")).toBe(2);
     expect(auditExitCode("DEGRADED", "fail")).toBe(2);
