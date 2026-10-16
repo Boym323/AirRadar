@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.481] - 2026-10-16
+
+Changes since v1.0.480.
+
+### Fixed
+
+- Tolerate pre-enabled evidence and classify canary preflight [t58-stall-canary] (#954) (99963a34)
+
+### Maintenance
+
+- Sync generated repository metadata (#953) (97942222)
+- Update release script permissions to executable (208bf3e7)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#953) (97942222)
+- fix(t58): tolerate pre-enabled evidence and classify canary preflight [t58-stall-canary] (#954) (99963a34)
+- chore(release): update release script permissions to executable (208bf3e7)
+
+</details>
 ## [1.0.480] - 2026-10-16
 
 Changes since v1.0.479.
