@@ -5,6 +5,17 @@ export function classifyCpuSpikeFailure(error) {
   const message = error instanceof Error ? error.message : "";
   const name = error && typeof error === "object" ? String(error.name ?? "") : "";
   if (message === "t58_spike_deployed_process_changed") return "identity_changed";
+  // Only the transport module produces these fixed error labels. They never
+  // include response body, raw URLs, cookies, headers, IPs or tokens.
+  const endpointFailure = /^t58_spike_(status|runtime)_http_(401|403|408|429|500|502|503|504|other)$/.exec(message);
+  if (endpointFailure) {
+    if (endpointFailure[2] === "401" || endpointFailure[2] === "403")
+      return "authentication_failure";
+    return endpointFailure[1] + "_http_" + endpointFailure[2];
+  }
+  if (/^t58_spike_(status|runtime)_invalid_response$/.test(message))
+    return "telemetry_unavailable";
+
   if (/t58_spike_(authorization_missing|authentication_failure)/.test(message) ||
       /HTTP (401|403)\b|login refused|session cookie/i.test(message)) return "authentication_failure";
   if (name === "TimeoutError" || name === "AbortError" || /\btimeout\b|timed out/i.test(message))
@@ -23,14 +34,14 @@ const fatalCategories = new Set(["identity_changed", "authentication_failure", "
  * The initial process identity NEVER enters persisted state.
  */
 export async function collectCpuSpikeSamples({
-  poll, checkpoint, slots, intervalMs = 5_000,
+  poll, checkpoint, slots, intervalMs = 10_000,
   now = () => performance.now(),
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   maxConsecutiveFailures = 3,
 }) {
   if (typeof poll !== "function" || typeof checkpoint !== "function" ||
       !Number.isSafeInteger(slots) || slots < 1 || slots > 120 ||
-      !Number.isSafeInteger(intervalMs) || intervalMs < 500 || intervalMs > 5_000 ||
+      !Number.isSafeInteger(intervalMs) || intervalMs < 500 || intervalMs > 12_000 ||
       !Number.isSafeInteger(maxConsecutiveFailures) || maxConsecutiveFailures < 1 ||
       maxConsecutiveFailures > 5) throw Error("t58_spike_invalid_schedule");
 
