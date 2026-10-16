@@ -1,0 +1,72 @@
+name: T58 CPU Spike Diagnosis
+run-name: 'T58 read-only CPU/cgroup/GC ${{ github.event.inputs.duration || ''tests'' }}'
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/t58-cpu-spike-diagnosis.yml'
+      - 'scripts/t58-cpu-spikes.mjs'
+      - 'tests/t58-cpu-spikes.test.mjs'
+      - 'docs/performance/t58-cpu-spikes.md'
+      - 'docs/cs/performance/t58-cpu-spikes.md'
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Read-only production sampling duration'
+        type: choice
+        options: ['120', '600']
+        default: '120'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: airradar-t58-cpu-spike-diagnosis
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Check privacy, boundaries, and analysis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: node --test tests/t58-cpu-spikes.test.mjs
+      - run: node --check scripts/t58-cpu-spikes.mjs
+
+  observe:
+    name: Collect read-only CPU/cgroup/GC evidence
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration }}
+      T58_SPIKE_OUTPUT_DIR: ${{ runner.temp }}/t58-cpu-spikes
+      WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Read-only bounded sampling
+        run: node scripts/t58-cpu-spikes.mjs
+      - name: Publish aggregate Markdown
+        if: success()
+        run: cat "$T58_SPIKE_OUTPUT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload allowlisted aggregate reports only
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: t58-cpu-spikes-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t58-cpu-spikes/summary.json
+            ${{ runner.temp }}/t58-cpu-spikes/summary.md
+          if-no-files-found: error
+          retention-days: 30
