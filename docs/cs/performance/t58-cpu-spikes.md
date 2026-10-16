@@ -19,7 +19,7 @@ ne o flamegraph skutečných JavaScript funkcí.
 ## Spuštění na GitHubu po začlenění do main
 
 **Actions → T58 CPU Spike Diagnosis → Run workflow → main**.
-Vyberte 120 nebo 600 sekund. Workflow každých pět sekund pouze čte
+Vyberte 120 nebo 600 sekund. Workflow každých deset sekund pouze čte
 stávající agregované diagnostiky ze dvou administrátorských HTTPS
 endpointů a případně se autentizuje existujícím tajným klíčem T58.
 
@@ -81,3 +81,22 @@ Příčinu starého selhání #38851649335 nelze z dostupného logu zpětně
 prokázat, protože dřívější sběrač uváděl jen obecnou chybu.
 Nový sběrač umí bezpečně rozlišit odmítnutí přístupu, HTTP chybu,
 timeout, síťový výpadek, chybějící telemetrii a změnu procesu.
+
+## Důvod chyby a rozpočet rate limiteru
+
+Endpointy `systemStatus` a `runtimeTelemetry` mají veřejný limit
+**12 požadavků za 60 sekund na klienta a endpoint**. Původní
+dotazování po 5 sekundách dosáhlo přesně této hodnoty, takže nemělo
+rezervu pro jiné požadavky se stejnou proxy identitou. To mohlo vést
+k HTTP 429. Běh #38862436325 vykázal 11 obecných HTTP chyb,
+ale stavové kódy se neukládaly, takže **není prokázáno**, že
+všech 11 bylo 429.
+
+Nový interval je **10 sekund** (6 dotazů za minutu na endpoint),
+tedy 50% rezerva bez obcházení zabezpečení či zvyšování veřejných
+limitů. Report zaznamená bezpečné kategorie, například
+`status_http_429`, `runtime_http_429` a `status_http_503`,
+ale nikdy těla odpovědí, cookies, IP adresy, tokeny ani celé URL.
+Chyby 401/403 zůstávají fatální. Chybějící vzorky stále znamenají
+PARTIAL; chybějící cgroup údaje nejsou automaticky nulové a při
+úplném běhu jsou označeny PASS_WITH_LIMITATIONS.

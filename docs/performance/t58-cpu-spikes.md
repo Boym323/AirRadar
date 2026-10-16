@@ -18,7 +18,7 @@ stack-trace CPU profiles.
 ## Run on GitHub (after merge to main)
 
 **Actions → T58 CPU Spike Diagnosis → Run workflow → main**, duration
-120 seconds or 600 seconds. Read-only HTTPS GETs every 5 seconds via
+120 seconds or 600 seconds. Read-only HTTPS GETs every 10 seconds via
 `/api/system/status` and `/api/system/runtime-performance`, with the
 existing authenticated T58 session secret where necessary. Preflight
 requires an administrative view, runtime health observation and deployed
@@ -41,7 +41,7 @@ Per-interval analysis:
   timeline nor a full process scheduling profile.
 - Existing allowlisted named hot-path CPU counter deltas. Nested time values
   overlap and MUST NOT be summed. Missing hot paths are unknown.
-- Rolling event-loop P99 and traffic count for context. A 5-second sample
+- Rolling event-loop P99 and traffic count for context. A 10-second sample
   cannot prove the cause of an individual event-loop stall.
 
 The run uploads `summary.json` and `summary.md` for 30 days. No raw
@@ -87,3 +87,22 @@ The earlier #38851649335 failure was emitted only as
 so the exact original failure cannot be proven retrospectively. The new fixed
 failure taxonomy distinguishes authentication, HTTP status, timeout, network,
 telemetry schema, and process identity changes without exposing secrets.
+
+## Rate-limit budget and cause attribution
+
+Production `systemStatus` and `runtimeTelemetry` limit each public
+client to **12 requests per 60 seconds per endpoint**. The old 5-second
+cadence made 12 calls/minute to *each*, leaving no headroom for other
+traffic from the same reverse-proxy client identity. This could cause
+HTTP 429s. The previous run #38862436325 reported 11 generic HTTP
+failures without HTTP status; it is **not proven** that all 11 were 429.
+
+The sampler now polls **every 10 seconds** (6 calls/minute per
+endpoint), leaving 50% quota headroom without a privileged bypass
+or any change to production rate limits. The transport reports only
+allowlisted anonymous failure codes such as `status_http_429`,
+`runtime_http_429`, and `status_http_503`, never body text,
+cookies, IPs, tokens or raw URLs. HTTP 401/403 remains fatal.
+Sampling gaps remain gaps: a run with missing samples is PARTIAL,
+not PASS. A complete run with missing cgroup values is
+PASS_WITH_LIMITATIONS and must not claim zero throttling.
