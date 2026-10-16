@@ -17,6 +17,12 @@ interface NativeBeastBindings {
   modeSCrc(payload: Buffer): number;
 }
 
+export interface NativeAccelerationStatus {
+  rustActive: boolean;
+  parserBackend: "rust" | "typescript";
+  crcBackend: "rust" | "typescript";
+}
+
 let cached: NativeBeastBindings | null | undefined;
 
 export function getNativeBeastEngine(): NativeBeastBindings | null {
@@ -43,4 +49,15 @@ export function getNativeBeastEngine(): NativeBeastBindings | null {
     cached = null;
   }
   return cached;
+}
+
+/** Safe runtime evidence for diagnostics; never exposes the addon path. */
+export function getNativeAccelerationStatus(): NativeAccelerationStatus {
+  const binding = getNativeBeastEngine();
+  const rustActive = binding !== null;
+  return {
+    rustActive,
+    parserBackend: rustActive && process.env.AIRRADAR_NATIVE_BEAST_PARSER !== "0" ? "rust" : "typescript",
+    crcBackend: rustActive && process.env.AIRRADAR_NATIVE_BEAST_CRC !== "0" ? "rust" : "typescript",
+  };
 }

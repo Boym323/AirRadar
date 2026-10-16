@@ -17,6 +17,7 @@ import type { NavigationIntegrityDiagnostics } from "@/lib/navigation-integrity/
 import type { FlightPositionPersistenceShadowDiagnostics } from "@/lib/server/flight-position-persistence-shadow";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
+import type { NativeAccelerationStatus } from "@/lib/server/native-acceleration";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 export type AircraftWeatherStatus = "ok" | "no_data" | "degraded" | "unavailable";
@@ -36,6 +37,7 @@ export interface DiagnosticState {
 export interface SystemStatusResponse {
   status: SystemStatus;
   checkedAt: string;
+  nativeAcceleration: NativeAccelerationStatus;
   application: {
     status: SystemStatus;
     name: "AirRadar";

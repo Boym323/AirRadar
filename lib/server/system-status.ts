@@ -51,6 +51,7 @@ import type {
   SystemStatusServiceLike,
   AircraftWeatherStatus,
 } from "@/lib/server/system-status-contract";
+import { getNativeAccelerationStatus } from "@/lib/server/native-acceleration";
 export type {
   DiagnosticReasonCode,
   DiagnosticState,
@@ -697,6 +698,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   return {
     status: topLevelStatus,
     checkedAt: now.toISOString(),
+    nativeAcceleration: getNativeAccelerationStatus(),
     application,
     receiver: {
       status: receiverStatus,
