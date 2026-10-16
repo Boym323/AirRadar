@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.480] - 2026-10-16
+
+Changes since v1.0.479.
+
+### Fixed
+
+- Use approved release sudo entrypoint [t58-stall-canary] (#952) (2081b38d)
+
+### Maintenance
+
+- Sync generated repository metadata (#951) (e1520bfb)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#951) (e1520bfb)
+- fix(t58): use approved release sudo entrypoint [t58-stall-canary] (#952) (2081b38d)
+
+</details>
 ## [1.0.479] - 2026-10-16
 
 Changes since v1.0.478.
