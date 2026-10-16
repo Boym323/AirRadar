@@ -66,6 +66,23 @@ async function sessionCookie() {
   return login(BASE, token);
 }
 
+export function classifyStallEvidence(evidence, expectedState = "any") {
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
+    throw new Error("canary_evidence_field_missing");
+  }
+  if (!Number.isSafeInteger(evidence.totalStalls) || evidence.totalStalls < 0 ||
+      !Array.isArray(evidence.recentStalls)) {
+    throw new Error("canary_evidence_invalid_structure");
+  }
+  if (evidence.status !== "disabled" && evidence.status !== "enabled") {
+    throw new Error("canary_evidence_invalid_status");
+  }
+  if (expectedState !== "any" && evidence.status !== expectedState) {
+    throw new Error("canary_evidence_state_mismatch");
+  }
+  return evidence.status;
+}
+
 async function sample(cookie, sha, enabled) {
   const [version, status, metrics] = await Promise.all([
     fetchJson(BASE, "/api/version", null),
@@ -81,11 +98,9 @@ async function sample(cookie, sha, enabled) {
     throw new Error("canary_native_backend_unhealthy");
   }
   const evidence = metrics.stallEvidence;
-  if (!evidence || evidence.status !== (enabled ? "enabled" : "disabled") ||
-      !Number.isSafeInteger(evidence.totalStalls) || !Array.isArray(evidence.recentStalls)) {
-    throw new Error("canary_evidence_unavailable");
-  }
+  const evidenceStatus = classifyStallEvidence(evidence, enabled === null ? "any" : enabled ? "enabled" : "disabled");
   return {
+    evidenceStatus,
     totalStalls: evidence.totalStalls,
     recentStalls: evidence.recentStalls,
     cpuPercent: metrics.runtime?.cpuIntervalPercent ?? null,
@@ -101,8 +116,9 @@ async function main() {
   if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("canary_expected_commit_missing");
   const cookie = await sessionCookie();
   if (mode === "preflight") {
-    await sample(cookie, sha, false);
-    console.log("[t58-canary] Read-only preflight passed.");
+    const current = await sample(cookie, sha, null);
+    // Emit exactly one enum. Never reveal response bodies or session details.
+    console.log(current.evidenceStatus === "enabled" ? "CANARY_ALREADY_ENABLED" : "CANARY_DISABLED");
     return;
   }
   const results = [], started = Date.now();
