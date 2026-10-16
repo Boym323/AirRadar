@@ -32,7 +32,16 @@ trap 'exit 130' INT TERM HUP
 
 # Verify that the read-only production diagnostics and native Rust path are
 # healthy BEFORE any privileged canary command or restart.
-node scripts/t58-stall-canary.mjs preflight
+preflight_status="$(node scripts/t58-stall-canary.mjs preflight)"
+case "$preflight_status" in
+  CANARY_ALREADY_ENABLED)
+    echo "[t58-canary] Diagnostics already enabled; collecting without restart or changing the existing configuration."
+    node scripts/t58-stall-canary.mjs observe
+    exit 0
+    ;;
+  CANARY_DISABLED) ;;
+  *) echo "canary_invalid_preflight_result" >&2; exit 1 ;;
+esac
 sudo -n "$control" --t58-canary-probe
 activated=1
 sudo -n "$control" --t58-canary-start

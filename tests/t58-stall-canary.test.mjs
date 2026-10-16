@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { sanitizedStallEvent, summarizeCanarySamples } from "../scripts/t58-stall-canary.mjs";
+import { sanitizedStallEvent, summarizeCanarySamples, classifyStallEvidence } from "../scripts/t58-stall-canary.mjs";
 
 describe("T58 canary report sanitization", () => {
   it("keeps only bounded safe fields and drops payloads and identities", () => {
@@ -80,5 +80,18 @@ describe("privileged T58 canary control", () => {
     assert.match(root, /dropin=\/etc\/systemd\/system\/airradar\.service\.d\/zz-t58-stall-canary\.conf/);
     assert.doesNotMatch(root, /eval\s/);
     assert.doesNotMatch(root, /chmod 0777|NOPASSWD: ALL/);
+  });
+});
+
+describe("safe read-only evidence contract", () => {
+  it("accepts both already-on and default-off monitoring on preflight", () => {
+    assert.equal(classifyStallEvidence({status:"disabled",totalStalls:0,recentStalls:[]}), "disabled");
+    assert.equal(classifyStallEvidence({status:"enabled",totalStalls:5,recentStalls:[]}), "enabled");
+  });
+  it("fails closed with specific sanitized reasons", () => {
+    assert.throws(()=>classifyStallEvidence(undefined), /canary_evidence_field_missing/);
+    assert.throws(()=>classifyStallEvidence({status:"enabled"}), /canary_evidence_invalid_structure/);
+    assert.throws(()=>classifyStallEvidence({status:"unexpected",totalStalls:0,recentStalls:[]}), /canary_evidence_invalid_status/);
+    assert.throws(()=>classifyStallEvidence({status:"disabled",totalStalls:0,recentStalls:[]}, "enabled"), /canary_evidence_state_mismatch/);
   });
 });
