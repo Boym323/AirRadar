@@ -646,7 +646,17 @@ describe("aircraft state service", () => {
     expect(scan).toHaveBeenCalledTimes(1);
     expect(internal.sourcePreferences.get("ABC123")).toBe("network");
 
-    const stale = new Date(at.getTime() + 5_001);
+    // Stable membership cannot start or advance a failover: skip even the
+    // first complete map scan while preserving the received position.
+    const stable = new Date(at.getTime() + 1_000);
+    vi.setSystemTime(stable);
+    internal.applyNetworkSnapshot({
+      aircraft: [{ ...incoming, origin: "adsblol", lastSeen: stable.toISOString() }],
+      fetchedAt: stable.toISOString(), provider: "network",
+    });
+    expect(scan).toHaveBeenCalledTimes(1);
+
+    const stale = new Date(at.getTime() + 6_001);
     vi.setSystemTime(stale);
     internal.applyNetworkSnapshot({ aircraft: [], fetchedAt: stale.toISOString(), provider: "network" });
     expect(scan).toHaveBeenCalledTimes(2);
@@ -656,6 +666,9 @@ describe("aircraft state service", () => {
 
     const local = normalizeAircraft({ hex: "DEF456", flight: "LOCAL456", lat: 50, lon: 14 }, receiver, stale);
     if (!local) throw new Error("missing local");
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: stale.toISOString(), provider: "local" });
+    expect(scan).toHaveBeenCalledTimes(3);
+    // Same local membership and no pending handoff: also skip the local scan.
     internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: stale.toISOString(), provider: "local" });
     expect(scan).toHaveBeenCalledTimes(3);
   });
