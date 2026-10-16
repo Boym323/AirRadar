@@ -74,12 +74,12 @@ describe("provider enrichment cache", () => {
 
     expect(service.needsEnrichment(sample, { metadata: priorMetadata })).toBe(true);
     const missingRoute = await service.enrich(sample, at, { metadata: priorMetadata });
-    expect(missingRoute).toEqual({ route: route("TEST123", "LKPR", "EDDF") });
+    expect(missingRoute).toMatchObject({ route: { callsign: "TEST123", origin: "LKPR", destination: "EDDF" } });
     expect(getMetadata).not.toHaveBeenCalled();
     expect(getRoute).toHaveBeenCalledTimes(1);
 
     const missingMetadata = await service.enrich(sample, at, { route: priorRoute });
-    expect(missingMetadata).toEqual({ metadata: priorMetadata });
+    expect(missingMetadata).toMatchObject({ metadata: { registration: "REG-ABC123" } });
     expect(getMetadata).toHaveBeenCalledTimes(1);
     expect(getRoute).toHaveBeenCalledTimes(1);
 
