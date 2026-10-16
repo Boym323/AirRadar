@@ -17,6 +17,43 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.470] - 2026-10-16
+
+Changes since v1.0.469.
+
+### Fixed
+
+- Align Czech/English documentation fences and simplify workflow name (0c63fbf6)
+- Use repository-local aggregate report directory in job env (97ef608b)
+- Support cgroup-v1 CPU throttle counters and quota safely (6b5e1ec7)
+- Correct whitespace regex escaping in v1/v2 stat parser (68422af2)
+- Replace corrupted parser block with strict v1/v2 line parser (8b15ae75)
+
+### Performance
+
+- Add bounded read-only CPU/cgroup/GC spike attribution sampler (f1f95bb7)
+
+### Maintenance
+
+- Sync generated repository metadata (#934) (7140adcf)
+- Use actual newline escapes in v1/v2 cpu.stat fixtures (bdfdfffd)
+- Trigger one-time 10-minute read-only CPU diagnosis only when PR #935 merges (b7f79bee)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#934) (7140adcf)
+- perf(diagnostics): add bounded read-only CPU/cgroup/GC spike attribution sampler (f1f95bb7)
+- fix(ci): align Czech/English documentation fences and simplify workflow name (0c63fbf6)
+- fix(ci): use repository-local aggregate report directory in job env (97ef608b)
+- fix(diagnostics): support cgroup-v1 CPU throttle counters and quota safely (6b5e1ec7)
+- fix(cgroup): correct whitespace regex escaping in v1/v2 stat parser (68422af2)
+- fix(cgroup): replace corrupted parser block with strict v1/v2 line parser (8b15ae75)
+- test(cgroup): use actual newline escapes in v1/v2 cpu.stat fixtures (bdfdfffd)
+- ci(t58): trigger one-time 10-minute read-only CPU diagnosis only when PR #935 merges (b7f79bee)
+- Merge pull request #935 from Boym323/perf/t58-cpu-spike-attribution (8f09ed1d)
+
+</details>
 ## [1.0.469] - 2026-10-15
 
 Changes since v1.0.468.
