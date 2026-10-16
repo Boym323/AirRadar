@@ -17,6 +17,31 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.476] - 2026-10-16
+
+Changes since v1.0.475.
+
+### Added
+
+- Expose safe Rust backend diagnostics (46777877)
+
+### Changed
+
+- Add production TypeScript rollback (8bd73f68)
+
+### Maintenance
+
+- Sync generated repository metadata (#947) (4605b31d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#947) (4605b31d)
+- feat(native): expose safe Rust backend diagnostics (46777877)
+- ops(native): add production TypeScript rollback (8bd73f68)
+
+</details>
+
 ## [1.0.475] - 2026-10-16
 
 Changes since v1.0.474.
