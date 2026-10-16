@@ -8,6 +8,7 @@ import {
   normalizeAirportIcao,
 } from "@/lib/server/airport-resolver";
 import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
+import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 
 const prague: AirportDatabaseRow = {
   icao: "LKPR", iata: "PRG", name: "Database Prague", city: "Prague", country: "Czechia", latitude: 50.1008, longitude: 14.26,
@@ -161,6 +162,75 @@ describe("central airport resolver", () => {
     expect(route).toMatchObject({ origin: "LKTB", destination: "EDDF" });
     expect(route?.originAirport?.icaoCode).toBe("LKTB");
     expect(route?.destinationAirport?.icaoCode).toBe("EDDF");
+  });
+
+  it("resolves independent ADSBDB route airports concurrently without swapping their identities", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ response: { flightroute: {
+      callsign: "TEST789",
+      origin: { icao_code: "LKTB", iata_code: "BRQ", latitude: 49.15, longitude: 16.69 },
+      destination: { icao_code: "EDDF", iata_code: "FRA", latitude: 50.03, longitude: 8.56 },
+    } } }))));
+    const started: string[] = [];
+    const complete = new Map<string, (airport: Airport | null) => void>();
+    const resolver = {
+      resolve: vi.fn(({ icaoCode }: { icaoCode?: string | null }) => {
+        const code = icaoCode ?? "";
+        started.push(code);
+        return new Promise<Airport | null>((resolve) => { complete.set(code, resolve); });
+      }),
+    };
+    const provider = new AdsbDbProvider("https://example.test/v0", resolver);
+    const before = getRouteEnrichmentTelemetry().getPhaseDiagnostics();
+    const running = provider.getRoute("TEST789", new Date("2026-01-01T12:00:00Z"));
+    try {
+      // The old sequential implementation could not start the EDDF lookup
+      // before LKTB had settled. Both independent queries must start.
+      await vi.waitFor(() => expect(started).toEqual(["LKTB", "EDDF"]), { timeout: 1_000 });
+      // Completing destination first must not swap output identities.
+      complete.get("EDDF")?.({
+        icaoCode: "EDDF", iataCode: "FRA", name: "Frankfurt", city: null,
+        country: null, latitude: 50.03, longitude: 8.56,
+      });
+      complete.get("LKTB")?.({
+        icaoCode: "LKTB", iataCode: "BRQ", name: "Brno", city: null,
+        country: null, latitude: 49.15, longitude: 16.69,
+      });
+      await expect(running).resolves.toMatchObject({
+        callsign: "TEST789", origin: "LKTB", destination: "EDDF",
+        originAirport: { name: "Brno" }, destinationAirport: { name: "Frankfurt" },
+      });
+      expect(resolver.resolve).toHaveBeenCalledTimes(2);
+      const phases = getRouteEnrichmentTelemetry().getPhaseDiagnostics();
+      expect(phases.adsbdbRouteFetch.count).toBe(before.adsbdbRouteFetch.count + 1);
+      expect(phases.airportResolution.count).toBe(before.airportResolution.count + 1);
+    } finally {
+      // Avoid leaving a pending task if a concurrency assertion fails.
+      for (const finish of complete.values()) finish(null);
+    }
+  });
+
+  it("keeps provider airport codes when one of the parallel resolvers rejects", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ response: { flightroute: {
+      callsign: "TEST799",
+      origin: { icao_code: "LKTB", iata_code: "BRQ", latitude: 49.15, longitude: 16.69 },
+      destination: { icao_code: "EDDF", iata_code: "FRA", latitude: 50.03, longitude: 8.56 },
+    } } }))));
+    const resolver = {
+      resolve: vi.fn(async ({ icaoCode }: { icaoCode?: string | null }) => {
+        if (icaoCode === "EDDF") throw new Error("DB transient");
+        return {
+          icaoCode: "LKTB", iataCode: "BRQ", name: "Brno", city: null,
+          country: null, latitude: 49.15, longitude: 16.69,
+        };
+      }),
+    };
+    const provider = new AdsbDbProvider("https://example.test/v0", resolver);
+    const route = await provider.getRoute("TEST799", new Date("2026-01-01T12:00:00Z"));
+    expect(route).toMatchObject({
+      origin: "LKTB", destination: "EDDF", originAirport: { name: "Brno" },
+      destinationAirport: null,
+    });
+    expect(resolver.resolve).toHaveBeenCalledTimes(2);
   });
 
   it("does not manufacture an ICAO identity from an unresolved IATA-only provider object", async () => {

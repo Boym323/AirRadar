@@ -1,3 +1,5 @@
+import { performance } from "node:perf_hooks";
+import { getRouteEnrichmentTelemetry } from "@/lib/server/route-enrichment-telemetry";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import {
@@ -133,11 +135,14 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
 
   async getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null> {
     this.hasAttempted = true;
+    const fetchStarted = performance.now();
     let payload: AdsbDbResponse | null;
     try {
       payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/callsign/${encodeURIComponent(callsign.trim().toLowerCase())}`);
+      getRouteEnrichmentTelemetry().recordPhase("adsbdbRouteFetch", performance.now() - fetchStarted);
       this.recordSuccess();
     } catch (error) {
+      getRouteEnrichmentTelemetry().recordPhase("adsbdbRouteFetch", performance.now() - fetchStarted, "error");
       this.recordFailure();
       throw error;
     }
@@ -146,8 +151,16 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
     const route = response.flightroute;
     if (!route) return null;
     const airline = nested(route, "airline");
-    const origin = await airport(nested(route, "origin"), this.airportResolver);
-    const destination = await airport(nested(route, "destination"), this.airportResolver);
+    // Independent endpoints: waiting for the origin before starting the
+    // destination doubles DB/resolver wait on a cold route. The route limiter
+    // bounds concurrent flight lookups; Promise.all is limited to two airports
+    // per accepted route and preserves the origin/destination output order.
+    const airportStarted = performance.now();
+    const [origin, destination] = await Promise.all([
+      airport(nested(route, "origin"), this.airportResolver),
+      airport(nested(route, "destination"), this.airportResolver),
+    ]);
+    getRouteEnrichmentTelemetry().recordPhase("airportResolution", performance.now() - airportStarted);
     return {
       callsign: value(route, "callsign") ?? callsign.trim().toUpperCase(),
       airline: value(airline ?? undefined, "name"),
