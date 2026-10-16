@@ -60,6 +60,41 @@ describe("provider enrichment cache", () => {
     expect(routeCacheKey(" test123 ", date)).toBe("flight-route:TEST123:2026-01-02");
   });
 
+  it("fetches only missing metadata or same-callsign route and preserves prior fields", async () => {
+    const getMetadata = vi.fn(async (hex: string) => metadata(hex));
+    const getRoute = vi.fn(async (callsign: string) => route(callsign, "LKPR", "EDDF"));
+    const service = new EnrichmentService({
+      aircraftMetadata: { name: "metadata", getMetadata },
+      flightRoute: { name: "route", getRoute },
+    });
+    const sample = aircraft("ABC123", "TEST123");
+    const at = new Date("2026-10-16T09:00:00Z");
+    const priorMetadata = metadata("ABC123");
+    const priorRoute = route("TEST123", "EGLL", "LFPG");
+
+    expect(service.needsEnrichment(sample, { metadata: priorMetadata })).toBe(true);
+    const missingRoute = await service.enrich(sample, at, { metadata: priorMetadata });
+    expect(missingRoute).toEqual({ route: route("TEST123", "LKPR", "EDDF") });
+    expect(getMetadata).not.toHaveBeenCalled();
+    expect(getRoute).toHaveBeenCalledTimes(1);
+
+    const missingMetadata = await service.enrich(sample, at, { route: priorRoute });
+    expect(missingMetadata).toEqual({ metadata: priorMetadata });
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+    expect(getRoute).toHaveBeenCalledTimes(1);
+
+    expect(service.needsEnrichment(sample, { metadata: priorMetadata, route: priorRoute })).toBe(false);
+    expect(await service.enrich(sample, at, { metadata: priorMetadata, route: priorRoute })).toBeNull();
+
+    // The historical route is not suitable when the callsign changes.
+    const changed = aircraft("ABC123", "NEW123");
+    expect(service.needsEnrichment(changed, { metadata: priorMetadata, route: priorRoute })).toBe(true);
+    const refreshed = await service.enrich(changed, at, { metadata: priorMetadata, route: priorRoute });
+    expect(refreshed?.route?.callsign).toBe("NEW123");
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+    expect(getRoute).toHaveBeenCalledTimes(2);
+  });
+
   it("does not call ADSBDB again for repeated realtime snapshots", async () => {
     const aircraft = normalizeAircraft({ hex: "abc123", flight: "TEST123", lat: 50, lon: 14 }, { lat: 50, lon: 14, name: "Test" });
     if (!aircraft) throw new Error("test aircraft could not be normalized");

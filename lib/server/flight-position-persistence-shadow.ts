@@ -37,6 +37,8 @@ export class FlightPositionPersistenceShadow {
   private shadowFailures = 0;
   constructor(private readonly enabled = process.env.FLIGHT_POSITION_SHADOW_ENABLED?.trim().toLowerCase() === "true", private readonly context: FlightPositionPolicyContext = DEFAULT_FLIGHT_POSITION_POLICY_CONTEXT) {}
 
+  get isEnabled(): boolean { return this.enabled; }
+
   observe(input: { aircraftHex: string; candidate: FlightPositionCandidate; currentPersist: boolean; nowMs?: number }): void {
     if (!this.enabled) return;
     const now = input.nowMs ?? Date.now();
@@ -51,7 +53,21 @@ export class FlightPositionPersistenceShadow {
       if (decision.persist) this.states.set(input.aircraftHex, { sample: makeFlightPositionPolicySample(input.candidate), lastSeenAt: now });
       else if (state) state.lastSeenAt = now;
       this.maximumObservedEntries = Math.max(this.maximumObservedEntries, this.states.size);
-      while (this.states.size > MAX_STATES) { const oldest = [...this.states.entries()].sort((a, b) => a[1].lastSeenAt - b[1].lastSeenAt)[0]?.[0]; if (!oldest) break; this.states.delete(oldest); }
+      // Evictions are rare, but sorting the entire 10k-entry state for one
+      // eviction was O(N log N) with a large temporary array. A single scan
+      // keeps the same oldest-seen policy and stable insertion tie-break.
+      while (this.states.size > MAX_STATES) {
+        let oldest: string | null = null;
+        let oldestSeen = Number.POSITIVE_INFINITY;
+        for (const [hex, state] of this.states) {
+          if (state.lastSeenAt < oldestSeen) {
+            oldest = hex;
+            oldestSeen = state.lastSeenAt;
+          }
+        }
+        if (oldest === null) break;
+        this.states.delete(oldest);
+      }
       this.recordBucket(row, now);
     } catch { this.shadowFailures += 1; }
   }

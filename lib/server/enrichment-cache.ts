@@ -321,7 +321,7 @@ export class EnrichmentService {
   needsEnrichment(aircraft: Aircraft, existing: AircraftEnrichment | undefined): boolean {
     return Boolean(
       (this.providers.aircraftMetadata && !existing?.metadata)
-      || (aircraft.callsign && this.providers.flightRoute && !existing?.route),
+      || (aircraft.callsign && this.providers.flightRoute && (!existing?.route || existing.route.callsign !== aircraft.callsign)),
     );
   }
 
@@ -329,16 +329,27 @@ export class EnrichmentService {
    * Continuous enrichment intentionally excludes paid flight-plan providers.
    * FlightAware is invoked only through getFlightPlanOnDemand().
    */
-  async enrich(aircraft: Aircraft, observedAt: Date): Promise<AircraftEnrichment | null> {
+  async enrich(
+    aircraft: Aircraft,
+    observedAt: Date,
+    existing?: AircraftEnrichment,
+  ): Promise<AircraftEnrichment | null> {
     if (!this.hasProviders) return null;
+    // Continuous enrichment is a missing-field fill, not a forced refresh.
+    // Avoid re-opening the ADSBDB/route-cache lanes when the same observation
+    // already has that field. A route from a different callsign is NOT valid.
+    const missingMetadata = Boolean(this.providers.aircraftMetadata && !existing?.metadata);
+    const missingRoute = Boolean(aircraft.callsign && this.providers.flightRoute
+      && (!existing?.route || existing.route.callsign !== aircraft.callsign));
+    if (!missingMetadata && !missingRoute) return null;
     const [metadata, route] = await Promise.all([
-      this.providers.aircraftMetadata
+      missingMetadata
         ? this.getAdsbDbCached("metadata", metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
             ttlMs: ENRICHMENT_TTLS.metadataMs,
             negativeTtlMs: ENRICHMENT_TTLS.metadataNegativeMs,
           })
         : Promise.resolve(null),
-      aircraft.callsign ? this.resolveFreeRoute(aircraft, observedAt) : Promise.resolve(null),
+      missingRoute ? this.resolveFreeRoute(aircraft, observedAt) : Promise.resolve(null),
     ]);
 
     const enrichment: AircraftEnrichment = {};

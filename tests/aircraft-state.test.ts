@@ -164,6 +164,34 @@ describe("aircraft state service", () => {
       .toEqual(metadataAircraft.map(() => "/aircraft-icons-tar1090/A320.svg"));
   });
 
+  it("returns only metadata patches instead of rebuilding the full aircraft snapshot", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const first = normalizeAircraft({ hex: "ABC123", flight: "ONE123", lat: 50, lon: 14 }, receiver);
+    const second = normalizeAircraft({ hex: "DEF456", flight: "TWO456", lat: 50, lon: 14 }, receiver);
+    if (!first || !second) throw new Error("failed to normalize aircraft");
+    const getMetadata = vi.fn(async (hex: string) => hex === "DEF456" ? {
+      registration: "OK-DEF", registrationCountry: null, registrationCountryCode: null,
+      aircraftType: "A320", icaoTypeCode: "A320", aircraftDescription: null, operator: null,
+      manufacturer: null, source: "fixture", retrievedAt: new Date().toISOString(),
+    } : null);
+    const enrichment = new EnrichmentService({ initialAircraftMetadata: { name: "initial", getMetadata } });
+    const service = new AircraftStateService(new MockReadsbProvider(receiver), enrichment);
+    services.push(service);
+    const hydrate = (service as unknown as {
+      hydrateInitialIconMetadata: (aircraft: Aircraft[], existing: Map<string, Aircraft>) => Promise<Aircraft[]>;
+    }).hydrateInitialIconMetadata.bind(service);
+    const current = new Map([[first.icaoHex, { ...first, enrichment: { metadata: {
+      registration: "OK-ABC", registrationCountry: null, registrationCountryCode: null,
+      aircraftType: null, icaoTypeCode: null, aircraftDescription: null, operator: null,
+      manufacturer: null, source: "fixture", retrievedAt: new Date().toISOString(),
+    } } }]]);
+    const patches = await hydrate([first, second], current);
+    expect(patches).toHaveLength(1);
+    expect(patches[0]).toMatchObject({ icaoHex: "DEF456", enrichment: { metadata: { registration: "OK-DEF" } } });
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+    expect(getMetadata).toHaveBeenCalledWith("DEF456");
+  });
+
   it("coalesces in-flight local enrichment batches while continuing aircraft polls", async () => {
     const receiver = { lat: 50, lon: 14, name: "Test" };
     let releaseFirst!: (value: null) => void;

@@ -105,7 +105,7 @@ export function analyzeCpuSpikeSamples(samples) {
     const elapsedMs = Date.parse(next.at) - Date.parse(prev.at);
     if (!Number.isFinite(elapsedMs) || elapsedMs < 500)
       throw Error("t58_spike_invalid_sample_spacing");
-    // Lost polls must not be mislabeled as adjacent 5-second CPU/GC spikes.
+    // Lost polls must not be mislabeled as adjacent scheduled CPU/GC spikes.
     if (elapsedMs > SAMPLE_INTERVAL_MS * 2.5 || (Number.isSafeInteger(prev.slot) &&
         Number.isSafeInteger(next.slot) && next.slot !== prev.slot + 1)) {
       skippedIntervals++;
@@ -193,7 +193,7 @@ export function analyzeCpuSpikeSamples(samples) {
     limitations: [
       "read-only diagnostic snapshots; no actual JS stack CPU profile",
       "not controlled same-workload testing; depends on traffic and other processes",
-      "intra-5-second GC pause and event-loop stalls are not aligned at individual-event resolution",
+      "intra-sampling-interval GC pause and event-loop stalls are not aligned at individual-event resolution",
       "cgroup counters include all tasks sharing the process cgroup",
       "missing cgroup metrics are NOT zero; quota null can also mean unlimited",
       "hot path counters are inclusive/overlapping and not additive",
@@ -255,7 +255,7 @@ export function cpuSpikeMarkdown(report) {
     `**Attempted / planned / valid:** ${collection?.attemptedSamples ?? "N/A"} / ${collection?.plannedSamples ?? "N/A"} / ${collection?.validSamples ?? source.samples}`,
     `**Failure categories (counts):** ${JSON.stringify(collection?.failuresByCategory ?? {})}`,
     "", `Commit/version: \`${source.commit}\` / \`${source.version}\``,
-    `Valid samples: **${source.samples}** at 5-second intervals; aircraft P50: ${yes(source.aircraftP50)}`,
+    `Valid samples: **${source.samples}** at ${yes(source.samplingIntervalSeconds)}-second intervals; aircraft P50: ${yes(source.aircraftP50)}`,
     "", "## Observations", "",
     "| Metric | Value |", "|---|---:|",
     `| Process CPU P50 / P95 / max (% of one core) | ${yes(cpu?.p50Percent)} / ${yes(cpu?.p95Percent)} / ${yes(cpu?.maxPercent)} |`,
