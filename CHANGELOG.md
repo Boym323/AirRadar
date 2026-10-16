@@ -17,6 +17,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.471] - 2026-10-16
+
+Changes since v1.0.470.
+
+### Fixed
+
+- Preserve sanitized partial evidence with bounded retries and categorized failures (078bcf19)
+- Retry first baseline safely after transient HTTPS failure (258b68ce)
+
+### Maintenance
+
+- Sync generated repository metadata (#936) (07b7650d)
+- Cover transient failures, identity changes, partial artifacts and manual-only production workflow (f8525766)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#936) (07b7650d)
+- fix(t58): preserve sanitized partial evidence with bounded retries and categorized failures (078bcf19)
+- test(t58): cover transient failures, identity changes, partial artifacts and manual-only production workflow (f8525766)
+- fix(t58): retry first baseline safely after transient HTTPS failure (258b68ce)
+- Merge pull request #937 from Boym323/fix/t58-spike-fail-closed-checkpoints (60b7127c)
+
+</details>
 ## [1.0.470] - 2026-10-16
 
 Changes since v1.0.469.
