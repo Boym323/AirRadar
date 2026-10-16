@@ -27,7 +27,7 @@ commit/process ID continuity. Identity values are compared **in memory only**.
 The script never restarts the process, changes runtime flags, queries database
 directly, triggers a heap snapshot, invokes the Node inspector, or collects
 aircraft/flight identifiers or coordinates. It writes only approved aggregate
-numeric counters and public commit/version. Failure does not upload raw data.
+numeric counters and public commit/version. On any failure, the workflow uploads the last **sanitized partial checkpoint**, not raw HTTP data. It never marks partial or insufficient evidence as PASS.
 
 Per-interval analysis:
 
@@ -63,3 +63,27 @@ Smoke validation in PR:
 node --test tests/t58-cpu-spikes.test.mjs
 ```
 No merge, deploy, or production observation is performed by PR CI.
+
+## Resilient collection and evidence quality
+
+The first valid observation establishes an in-memory process identity. Later
+samples are written atomically as an allowlisted JSON/Markdown checkpoint
+after every observation. A single HTTP timeout/network error is counted and
+the next scheduled sample is attempted; no CPU, GC, or cgroup deltas are
+computed across missing polling slots. Repeated failures (three in a row),
+missing initial telemetry, authentication errors or changing deployed process
+identity stop the run. Those conditions become `PARTIAL` or
+`INSUFFICIENT_EVIDENCE`, **never a successful GitHub Actions job**.
+Counters and public version are stored; tokens, cookies, PID, diagnostic store
+IDs and raw exception messages are not.
+
+The GitHub upload and job summary run even if sampling exits nonzero,
+retaining the final atomic checkpoint for up to 30 days.
+Production sampling requires a **manual dispatch on main**. PR CI runs
+only synthetic/unit tests and does not touch production.
+
+The earlier #38851649335 failure was emitted only as
+`t58_spike_collection_failed`; the old runner concealed its specific error,
+so the exact original failure cannot be proven retrospectively. The new fixed
+failure taxonomy distinguishes authentication, HTTP status, timeout, network,
+telemetry schema, and process identity changes without exposing secrets.

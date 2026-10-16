@@ -3,10 +3,11 @@ run-name: T58 short CPU cgroup GC read-only
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/t58-cpu-spike-diagnosis.yml'
       - 'scripts/t58-cpu-spikes.mjs'
+      - 'scripts/t58-cpu-spike-collection.mjs'
       - 'tests/t58-cpu-spikes.test.mjs'
       - 'lib/server/runtime-diagnostics.ts'
       - 'tests/runtime-diagnostics.test.ts'
@@ -40,17 +41,17 @@ jobs:
           node-version: '22'
       - run: node --test tests/t58-cpu-spikes.test.mjs
       - run: node --check scripts/t58-cpu-spikes.mjs
+      - run: node --check scripts/t58-cpu-spike-collection.mjs
 
   observe:
     name: Collect read-only CPU/cgroup/GC evidence
-    # One-time authorized production test after PR #935 is merged.
-    # After that, only manual workflow_dispatch may collect production.
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.number == 935 && github.ref == 'refs/heads/main') }}
+    # Never read production from PR CI, pushes, or deployment hooks.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration || '600' }}
+      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration }}
       T58_SPIKE_OUTPUT_DIR: .benchmarks/t58-cpu-spikes
       WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
     steps:
@@ -62,16 +63,22 @@ jobs:
           node-version: '22'
       - name: Read-only bounded sampling
         run: node scripts/t58-cpu-spikes.mjs
-      - name: Publish aggregate Markdown
-        if: success()
-        run: cat "$T58_SPIKE_OUTPUT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload allowlisted aggregate reports only
-        if: success()
+      - name: Publish sanitized diagnostic outcome even after sampling failure
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -s "$T58_SPIKE_OUTPUT_DIR/summary.md" ]]; then
+            cat "$T58_SPIKE_OUTPUT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'No diagnostic checkpoint was produced (inspect setup steps).' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload allowlisted aggregate reports, including failed or partial runs
+        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: t58-cpu-spikes-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .benchmarks/t58-cpu-spikes/summary.json
             .benchmarks/t58-cpu-spikes/summary.md
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30

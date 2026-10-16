@@ -59,3 +59,113 @@ describe("T58 read-only spike correlation",()=>{
    assert.equal(sample.hotPaths["SECRET_ICAO_XYZ"],undefined);
  });
 });
+
+import { classifyCpuSpikeFailure, collectCpuSpikeSamples } from "../scripts/t58-cpu-spike-collection.mjs";
+import { buildCpuSpikeReport } from "../scripts/t58-cpu-spikes.mjs";
+
+describe("T58 resilient bounded production collection", () => {
+  function fixture({ slots = 8, failures = {}, changedIdentity = -1, post = null } = {}) {
+    let step = 0, clock = 0;
+    const checkpoints = [];
+    const poll = async () => {
+      const i = step++;
+      if (failures[i]) throw failures[i];
+      const value = raw(i);
+      if (i === changedIdentity) value.identity.storeId = "CHANGED_PRIVATE_STORE";
+      return value;
+    };
+    return {
+      checkpoints,
+      options: {
+        slots, intervalMs: 1_000,
+        now: () => clock,
+        sleep: async ms => { clock += ms; },
+        poll,
+        checkpoint: async state => {
+          checkpoints.push(JSON.parse(JSON.stringify(buildCpuSpikeReport(state))));
+          if (post) await post(state);
+        },
+      },
+    };
+  }
+
+  it("categorizes errors without preserving URLs, tokens, messages or stack", () => {
+    assert.equal(classifyCpuSpikeFailure(Object.assign(new Error("The operation was aborted due to timeout"),{name:"TimeoutError"})), "http_timeout");
+    assert.equal(classifyCpuSpikeFailure(new Error("Diagnostic request /api/system/status HTTP 503")), "http_failure");
+    assert.equal(classifyCpuSpikeFailure(new Error("Diagnostic request /api/system/status HTTP 401")), "authentication_failure");
+    assert.equal(classifyCpuSpikeFailure(Object.assign(new Error("fetch failed some-secret"),{name:"TypeError"})), "network_failure");
+    assert.equal(classifyCpuSpikeFailure(new Error("t58_spike_required_telemetry_unavailable")), "telemetry_unavailable");
+    assert.equal(classifyCpuSpikeFailure(new Error("secret token abc123")), "unexpected_error");
+  });
+
+  it("preserves completed samples through a transient timeout and excludes the gap", async () => {
+    const fixtureValue = fixture({ failures: { 3: Object.assign(new Error("private URL timeout"),{name:"TimeoutError"}) } });
+    const result = await collectCpuSpikeSamples(fixtureValue.options);
+    const report = buildCpuSpikeReport(result);
+    assert.equal(result.stopReason, "complete");
+    assert.equal(result.samples.length, 8);
+    assert.equal(report.collection.verdict, "PARTIAL");
+    assert.equal(report.collection.failuresByCategory.http_timeout, 1);
+    assert.equal(report.source.skippedIntervals, 1);
+    assert.equal(report.source.intervals, 6);
+    assert.equal(report.collection.failedSamples, 1);
+    assert.equal(fixtureValue.checkpoints.length, 10);
+    const encoded = JSON.stringify(fixtureValue.checkpoints);
+    assert.equal(encoded.includes("PRIVATE_STORE"), false);
+    assert.equal(encoded.includes("private URL"), false);
+    assert.equal(encoded.includes("t58_spike_required_telemetry_unavailable"), false);
+  });
+
+  it("stops after bounded consecutive timeouts and retains a PARTIAL report", async () => {
+    const fixtureValue = fixture({ failures: {
+      5: new Error("Diagnostic request /api/system/status HTTP 503"),
+      6: new Error("Diagnostic request /api/system/status HTTP 503"),
+      7: new Error("Diagnostic request /api/system/status HTTP 503"),
+    } });
+    const state = await collectCpuSpikeSamples(fixtureValue.options);
+    const report = buildCpuSpikeReport(state);
+    assert.equal(state.stopReason, "consecutive_failures");
+    assert.equal(state.attempts, 8);
+    assert.equal(report.collection.verdict, "PARTIAL");
+    assert.equal(report.collection.failuresByCategory.http_failure, 3);
+    assert.equal(report.collection.validSamples, 5);
+  });
+
+  it("fails closed on process identity change and never serializes the private store ID", async () => {
+    const f = fixture({ changedIdentity: 6 });
+    const state = await collectCpuSpikeSamples(f.options);
+    const report = buildCpuSpikeReport(state);
+    assert.equal(state.stopReason, "identity_changed");
+    assert.equal(report.collection.verdict, "INSUFFICIENT_EVIDENCE");
+    assert.equal(report.collection.failuresByCategory.identity_changed, 1);
+    assert.equal(JSON.stringify(report).includes("PRIVATE_STORE"), false);
+    assert.equal(JSON.stringify(report).includes("CHANGED_PRIVATE_STORE"), false);
+    assert.equal(f.checkpoints.at(-1).collection.stopReason, "identity_changed");
+  });
+
+  it("writes an insufficient-evidence checkpoint even if the first poll fails", async () => {
+    const f = fixture({ failures: {
+      0: new Error("t58_spike_required_telemetry_unavailable"),
+    } });
+    const state = await collectCpuSpikeSamples(f.options);
+    const report = buildCpuSpikeReport(state);
+    assert.equal(state.stopReason, "telemetry_unavailable");
+    assert.equal(report.collection.verdict, "INSUFFICIENT_EVIDENCE");
+    assert.equal(report.source.samples, 0);
+    assert.equal(report.cpu, null);
+    assert.match(cpuSpikeMarkdown(report), /INSUFFICIENT_EVIDENCE/);
+    assert.equal(f.checkpoints.length >= 1, true);
+  });
+
+  it("rejects unbounded schedule and skips CPU differences across missing polls", async () => {
+    const f = fixture({ slots: 121 });
+    await assert.rejects(collectCpuSpikeSamples(f.options), /invalid_schedule/);
+    const a = [raw(0).sample, {...raw(1).sample, slot: 1}, {...raw(4).sample, slot: 4},
+      {...raw(5).sample, slot: 5}, {...raw(6).sample, slot: 6},
+      {...raw(7).sample, slot: 7}, {...raw(8).sample, slot: 8}];
+    a[0].slot=0;
+    const report=analyzeCpuSpikeSamples(a);
+    assert.equal(report.source.skippedIntervals,1);
+    assert.equal(report.source.intervals,5);
+  });
+});

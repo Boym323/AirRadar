@@ -32,7 +32,7 @@ Nedochází k restartu, změně konfigurace, nasazení, databázovému
 zápisu, spuštění Node inspectoru, heap snapshotu ani práci s
 identitami nebo souřadnicemi letadel. Do GitHub Actions se nahrává
 pouze `summary.json` a `summary.md` s agregovanými hodnotami,
-retence 30 dní. Selhání sběru nezpřístupňuje původní odpovědi API.
+retence 30 dní. Při selhání sběru se ukládá poslední **anonymizovaný částečný souhrn** a bezpečná kategorie chyby, nikdy původní odpovědi API.
 
 ## Měřené hodnoty
 
@@ -58,3 +58,26 @@ node --test tests/t58-cpu-spikes.test.mjs
 ```
 
 CI na PR ověřuje algoritmy a ochranu dat, nikoliv produkční endpointy.
+
+## Odolnost vůči výpadkům a kvalita důkazů
+
+První validní vzorek pouze v paměti určí identitu produkčního procesu.
+Po každém pokusu se atomicky uloží anonymizované soubory JSON a Markdown.
+Jediný výpadek HTTPS neukončí celý běh; další plánovaný vzorek se zkusí
+znovu a rozdíly CPU, GC ani cgroup se nepřepočítávají přes vynechané
+intervaly. Tři chyby za sebou, chybějící vstupní telemetrie,
+nepovolený přístup nebo změna produkčního procesu sběr zastaví.
+
+Neúplná data mají verdikt `PARTIAL` nebo `INSUFFICIENT_EVIDENCE`,
+nikoli PASS. Log obsahuje jen předem určenou kategorii chyby.
+Žádné tokeny, cookies, PID, interní ID ani původní HTTP odpovědi
+se do reportů nezapisují.
+
+Artefakty se nahrají i při neúspěšném jobu a zůstanou dostupné 30 dní.
+Nový běh proti produkci vyžaduje **ruční spuštění z main**;
+CI na PR spouští pouze syntetické testy.
+
+Příčinu starého selhání #38851649335 nelze z dostupného logu zpětně
+prokázat, protože dřívější sběrač uváděl jen obecnou chybu.
+Nový sběrač umí bezpečně rozlišit odmítnutí přístupu, HTTP chybu,
+timeout, síťový výpadek, chybějící telemetrii a změnu procesu.
