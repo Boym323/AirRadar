@@ -165,7 +165,7 @@ export function parseCpuCgroupCounters(input: {
 }): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
   let cores: number | null = null;
   if (input.cpuMax !== null) {
-    const [quotaRaw, periodRaw] = input.cpuMax.trim().split(/\\s+/);
+    const [quotaRaw, periodRaw] = input.cpuMax.trim().split(/\s+/);
     const quota = Number(quotaRaw), period = Number(periodRaw);
     if (quotaRaw !== "max" && Number.isFinite(quota) && Number.isFinite(period) &&
         quota >= 0 && period > 0) cores = quota / period;
@@ -176,7 +176,26 @@ export function parseCpuCgroupCounters(input: {
       cores = quota / period;
   }
   const counter = (key: string): number | null => {
-    const match = input.cpuStat?.match(new RegExp(`^${key}\\\\s+(\\\\d+)$`, "m"));
+    const match = input.cpuStat?.match(new RegExp(`^${key}\\s+(\\d+)export function parseCpuCgroupCounters(input: {
+  cpuMax: string | null;
+  cpuStat: string | null;
+  legacyQuota: string | null;
+  legacyPeriod: string | null;
+}): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
+  let cores: number | null = null;
+  if (input.cpuMax !== null) {
+    const [quotaRaw, periodRaw] = input.cpuMax.trim().split(/\s+/);
+    const quota = Number(quotaRaw), period = Number(periodRaw);
+    if (quotaRaw !== "max" && Number.isFinite(quota) && Number.isFinite(period) &&
+        quota >= 0 && period > 0) cores = quota / period;
+  } else if (input.legacyQuota !== null && input.legacyPeriod !== null) {
+    const quota = Number(input.legacyQuota.trim()), period = Number(input.legacyPeriod.trim());
+    // cgroup v1 uses -1 for unlimited quota.
+    if (Number.isFinite(quota) && Number.isFinite(period) && quota >= 0 && period > 0)
+      cores = quota / period;
+  }
+  const counter = (key: string): number | null => {
+, "m"));
     if (!match) return null;
     const value = Number(match[1]);
     return Number.isSafeInteger(value) && value >= 0 ? value : null;
