@@ -23,19 +23,19 @@ describe("runtime memory diagnostics", () => {
 
   it("parses cgroup v2 quota and microsecond throttling counters", () => {
     expect(parseCpuCgroupCounters({
-      cpuMax: "150000 100000\\n",
-      cpuStat: "usage_usec 900000\\nnr_periods 100\\nnr_throttled 3\\nthrottled_usec 12345\\n",
+      cpuMax: "150000 100000\n",
+      cpuStat: "usage_usec 900000\nnr_periods 100\nnr_throttled 3\nthrottled_usec 12345\n",
       legacyQuota: null, legacyPeriod: null,
     })).toEqual({ cgroupCpuQuotaCores: 1.5, cgroupCpuNrThrottled: 3, cgroupCpuThrottledUsec: 12345 });
   });
 
   it("supports v1 throttled_time nanoseconds and -1 unlimited quota", () => {
     expect(parseCpuCgroupCounters({
-      cpuMax: null, cpuStat: "nr_periods 4\\nnr_throttled 2\\nthrottled_time 1500000\\n",
+      cpuMax: null, cpuStat: "nr_periods 4\nnr_throttled 2\nthrottled_time 1500000\n",
       legacyQuota: "200000", legacyPeriod: "100000",
     })).toEqual({ cgroupCpuQuotaCores: 2, cgroupCpuNrThrottled: 2, cgroupCpuThrottledUsec: 1500 });
     expect(parseCpuCgroupCounters({
-      cpuMax: null, cpuStat: "nr_throttled 0\\nthrottled_time 0",
+      cpuMax: null, cpuStat: "nr_throttled 0\nthrottled_time 0",
       legacyQuota: "-1", legacyPeriod: "100000",
     })).toEqual({ cgroupCpuQuotaCores: null, cgroupCpuNrThrottled: 0, cgroupCpuThrottledUsec: 0 });
   });
