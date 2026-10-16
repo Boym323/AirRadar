@@ -10,6 +10,9 @@ export const ROUTE_METRIC_KEYS = [
 ] as const;
 export const ROUTE_PHASE_KEYS = [
   "routeResolution", "memoryLookup", "readThroughLoad", "postgresCacheRequest",
+  // Independent upstream HTTP and paired origin/destination airport resolver
+  // phases expose which await dominates routeResolution; both are wall time.
+  "adsbdbRouteFetch", "airportResolution",
   "concurrencyBudget", "dbConnection", "resultProcessing", "cacheUpdate", "callerTimeout",
   "dbCallSettlement", "dbReadSettlement", "dbWriteSettlement", "dbMaintenanceSettlement",
   "dbMaintenanceCount", "dbMaintenancePrune",
