@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.479] - 2026-10-16
+
+Changes since v1.0.478.
+
+### Changed
+
+- Controlled production stall canary [t58-stall-canary] (#950) (14b2f1d2)
+
+### Maintenance
+
+- Sync generated repository metadata (#949) (318e6e20)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#949) (318e6e20)
+- ops(t58): controlled production stall canary [t58-stall-canary] (#950) (14b2f1d2)
+
+</details>
 ## [1.0.478] - 2026-10-16
 
 Changes since v1.0.477.
