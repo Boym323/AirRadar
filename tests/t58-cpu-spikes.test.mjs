@@ -182,3 +182,90 @@ describe("T58 resilient bounded production collection", () => {
     assert.equal(report.source.intervals,5);
   });
 });
+
+import { fetchCpuSpikeDiagnostic } from "../scripts/t58-cpu-spike-http.mjs";
+import { SAMPLE_INTERVAL_MS } from "../scripts/t58-cpu-spikes.mjs";
+
+describe("T58 quota-aware diagnostic HTTP", () => {
+  const base = new URL("https://airradar.pomykal.cz/");
+
+  it("uses six requests/minute per endpoint instead of exhausting the 12/min public quota", () => {
+    assert.equal(SAMPLE_INTERVAL_MS, 10_000);
+    assert.equal(60_000 / SAMPLE_INTERVAL_MS, 6);
+    assert.equal(600_000 / SAMPLE_INTERVAL_MS + 1, 61);
+  });
+
+  it("has an explicit endpoint allowlist and never puts credentials in the URL", async () => {
+    const calls = [];
+    const transport = async (url, options) => {
+      calls.push({ path: url.pathname, cookie: options.headers?.Cookie, cache: options.cache });
+      return new Response(JSON.stringify({ scope: "process-local" }), { status: 200 });
+    };
+    const result = await fetchCpuSpikeDiagnostic(base, "SECRET_COOKIE", "runtime", transport);
+    assert.equal(result.scope, "process-local");
+    assert.deepEqual(calls, [{
+      path: "/api/system/runtime-performance",
+      cookie: "SECRET_COOKIE",
+      cache: "no-store",
+    }]);
+    await assert.rejects(fetchCpuSpikeDiagnostic(base, null, "../secret", transport),
+      /t58_spike_invalid_endpoint/);
+    assert.equal(calls.length, 1);
+  });
+
+  it("reports sanitized endpoint-specific status codes 429, 503, 502", async () => {
+    for (const [kind, status] of [
+      ["status", 429], ["runtime", 429],
+      ["status", 503], ["runtime", 502],
+    ]) {
+      const transport = async () => new Response("SECRET_BODY", { status });
+      await assert.rejects(fetchCpuSpikeDiagnostic(base, "SECRET_COOKIE", kind, transport), error => {
+        assert.equal(error.message, "t58_spike_" + kind + "_http_" + status);
+        assert.equal(classifyCpuSpikeFailure(error), kind + "_http_" + status);
+        assert.equal(error.message.includes("SECRET"), false);
+        return true;
+      });
+    }
+  });
+
+  it("keeps 401/403 fatal and rejects unrecognized status/body without leaking data", async () => {
+    for (const status of [401, 403]) {
+      await assert.rejects(
+        fetchCpuSpikeDiagnostic(base, "SECRET", "status", async () =>
+          new Response("SECRET_BODY", { status })),
+        e => classifyCpuSpikeFailure(e) === "authentication_failure");
+    }
+    await assert.rejects(
+      fetchCpuSpikeDiagnostic(base, "SECRET", "runtime", async () =>
+        new Response("SECRET_BODY", { status: 418 })),
+      e => classifyCpuSpikeFailure(e) === "runtime_http_other");
+    await assert.rejects(
+      fetchCpuSpikeDiagnostic(base, null, "runtime", async () =>
+        new Response("SECRET_INVALID_JSON", { status: 200 })),
+      e => classifyCpuSpikeFailure(e) === "telemetry_unavailable");
+  });
+
+  it("a complete ten-minute run with unknown cgroup counters passes with explicit limitations", async () => {
+    let cursor = 0, clock = 0;
+    const state = await collectCpuSpikeSamples({
+      slots: 60, intervalMs: SAMPLE_INTERVAL_MS,
+      now: () => clock,
+      sleep: async ms => { clock += ms; },
+      poll: async () => {
+        const i = cursor++;
+        const sample = raw(i, { cgroupMissing: true });
+        sample.sample.at = new Date(EPOCH + i * SAMPLE_INTERVAL_MS).toISOString();
+        return sample;
+      },
+      checkpoint: async () => {},
+    });
+    const report = buildCpuSpikeReport(state);
+    assert.equal(state.stopReason, "complete");
+    assert.equal(report.collection.plannedSamples, 61);
+    assert.equal(report.collection.validSamples, 61);
+    assert.equal(report.collection.failedSamples, 0);
+    assert.equal(report.source.samplingIntervalSeconds, 10);
+    assert.equal(report.source.intervals, 60);
+    assert.equal(report.collection.verdict, "PASS_WITH_LIMITATIONS");
+  });
+});
