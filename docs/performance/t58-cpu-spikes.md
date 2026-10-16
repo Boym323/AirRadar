@@ -33,7 +33,7 @@ Per-interval analysis:
 
 - Cumulative user+system CPU times converted into percent of a single CPU
   core (values can exceed 100% with multicore processing).
-- cgroup v2 `nr_throttled` and `throttled_usec` deltas with counter coverage
+- cgroup v2 `nr_throttled` and `throttled_usec` deltas (and cgroup v1 `throttled_time` converted from nanoseconds) with counter coverage
   and CPU quota. These counters are for the *whole cgroup*, not solely Node.
   On hosts hiding cgroup counters, verdict remains **unavailable**, never zero.
 - Cumulative V8 GC pause duration, GC/major counts, pause percentage of wall

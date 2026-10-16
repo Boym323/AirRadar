@@ -38,7 +38,7 @@ retence 30 dní. Selhání sběru nezpřístupňuje původní odpovědi API.
 
 - Delta procesního uživatelského a systémového CPU času, vyjádřená
   jako procento jednoho jádra; může přesahovat 100 %.
-- Rozdíly čítačů `nr_throttled` a `throttled_usec` z cgroup v2
+- Rozdíly čítačů `nr_throttled` a `throttled_usec` z cgroup v2 (nebo `throttled_time` z cgroup v1 po převodu z ns)
   a nastavená CPU kvóta. Jde o celý cgroup, nejen aplikaci.
   Pokud chybí data, výsledek je **N/A**, nikoliv nula.
 - Počet a kumulativní doba pauz V8 GC, podíl na měřeném čase

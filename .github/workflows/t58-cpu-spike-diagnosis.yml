@@ -7,6 +7,8 @@ on:
       - '.github/workflows/t58-cpu-spike-diagnosis.yml'
       - 'scripts/t58-cpu-spikes.mjs'
       - 'tests/t58-cpu-spikes.test.mjs'
+      - 'lib/server/runtime-diagnostics.ts'
+      - 'tests/runtime-diagnostics.test.ts'
       - 'docs/performance/t58-cpu-spikes.md'
       - 'docs/cs/performance/t58-cpu-spikes.md'
   workflow_dispatch:
