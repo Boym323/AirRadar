@@ -3,6 +3,7 @@ run-name: T58 short CPU cgroup GC read-only
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     paths:
       - '.github/workflows/t58-cpu-spike-diagnosis.yml'
       - 'scripts/t58-cpu-spikes.mjs'
@@ -42,12 +43,14 @@ jobs:
 
   observe:
     name: Collect read-only CPU/cgroup/GC evidence
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    # One-time authorized production test after PR #935 is merged.
+    # After that, only manual workflow_dispatch may collect production.
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.number == 935 && github.ref == 'refs/heads/main') }}
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration }}
+      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration || '600' }}
       T58_SPIKE_OUTPUT_DIR: .benchmarks/t58-cpu-spikes
       WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
     steps:
