@@ -952,7 +952,9 @@ function uniqueAircraftByHex(aircraft: Aircraft[]): Aircraft[] {
   const unique = new Map<string, Aircraft>();
   for (const item of aircraft) {
     const icaoHex = item.icaoHex.trim().toUpperCase();
-    if (!unique.has(icaoHex)) unique.set(icaoHex, { ...item, icaoHex });
+    // Providers already normalize ICAO hexes. Reuse these immutable inputs
+    // instead of allocating one wide Aircraft copy per due position.
+    if (!unique.has(icaoHex)) unique.set(icaoHex, item.icaoHex === icaoHex ? item : { ...item, icaoHex });
   }
   return [...unique.values()];
 }

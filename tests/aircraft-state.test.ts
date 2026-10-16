@@ -621,6 +621,45 @@ describe("aircraft state service", () => {
     expect(service.getAircraft("abc123", "extended")).toEqual(expected);
   });
 
+  it("reconciles affinity once per snapshot and cleans up the final stale identity", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADSBLOL_STALE_AFTER_MS", "5000");
+    vi.stubEnv("AIRCRAFT_STALE_AFTER_MS", "5000");
+    const at = new Date("2026-10-16T08:00:00Z");
+    vi.setSystemTime(at);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const incoming = normalizeAircraft(
+      { hex: "ABC123", flight: "NET123", lat: 50.1, lon: 14.1 }, receiver, at,
+    );
+    if (!incoming) throw new Error("missing aircraft");
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+      reconcileSourcePreferences: (now?: number) => void;
+      sourcePreferences: Map<string, "local" | "network">;
+      sourcePreferenceMissingSince: Map<string, number>;
+      networkAircraft: Map<string, Aircraft>;
+    };
+    const scan = vi.spyOn(internal, "reconcileSourcePreferences");
+    internal.applyNetworkSnapshot({ aircraft: [{ ...incoming, origin: "adsblol" }], fetchedAt: at.toISOString(), provider: "network" });
+    expect(scan).toHaveBeenCalledTimes(1);
+    expect(internal.sourcePreferences.get("ABC123")).toBe("network");
+
+    const stale = new Date(at.getTime() + 5_001);
+    vi.setSystemTime(stale);
+    internal.applyNetworkSnapshot({ aircraft: [], fetchedAt: stale.toISOString(), provider: "network" });
+    expect(scan).toHaveBeenCalledTimes(2);
+    expect(internal.networkAircraft.has("ABC123")).toBe(false);
+    expect(internal.sourcePreferences.has("ABC123")).toBe(false);
+    expect(internal.sourcePreferenceMissingSince.has("ABC123")).toBe(false);
+
+    const local = normalizeAircraft({ hex: "DEF456", flight: "LOCAL456", lat: 50, lon: 14 }, receiver, stale);
+    if (!local) throw new Error("missing local");
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: stale.toISOString(), provider: "local" });
+    expect(scan).toHaveBeenCalledTimes(3);
+  });
+
   it("retains a missing network aircraft until its stale window expires", () => {
     vi.useFakeTimers();
     vi.stubEnv("ADSBLOL_STALE_AFTER_MS", "30000");

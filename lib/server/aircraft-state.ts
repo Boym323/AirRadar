@@ -1038,8 +1038,9 @@ export class AircraftStateService {
     // preferred source keep its last known position during the grace window,
     // then hand off directly to a live alternate source without disappearing.
     this.reconcileSourcePreferences(now);
-    if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, getAircraftStaleAfterMs(), now);
-    this.reconcileSourcePreferences(now);
+    // pruneMissingAircraft performs the only post-prune affinity cleanup
+    // needed for identities removed from the last retained source.
+    if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, localStaleAfterMs, now);
     const fusionKeys = new Set(currentHexes);
     for (const hex of previousObservedHexes) fusionKeys.add(hex);
     for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
@@ -1216,7 +1217,11 @@ export class AircraftStateService {
       this.continuity.recordObservation("network", incoming.icaoHex, now, reappearWindowMs);
       this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
       const previous = this.networkAircraft.get(incoming.icaoHex);
-      const networkIncoming = plausiblePosition(previous, { ...incoming, origin: incoming.origin ?? "adsblol" });
+      // Most network adapters already provide the canonical origin. Reuse
+      // their immutable observation instead of cloning thousands of objects
+      // every poll solely to assign an existing field.
+      const withOrigin = incoming.origin ? incoming : { ...incoming, origin: "adsblol" as const };
+      const networkIncoming = plausiblePosition(previous, withOrigin);
       const trail = this.updateTrail(previous, networkIncoming, trailMaxAgeMs, trailMaxPoints);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }
@@ -1229,8 +1234,9 @@ export class AircraftStateService {
     this.logMassDropDecision("network", massDrop);
     this.networkObservedHexes = currentHexes;
     this.reconcileSourcePreferences(now);
-    if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
-    this.reconcileSourcePreferences(now);
+    // Preserve the failover grace decision made before pruning, without a
+    // second O(all source affinities) pass after every network snapshot.
+    if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, networkStaleAfterMs, now);
     const fusionKeys = new Set(currentHexes);
     for (const hex of previousObservedHexes) fusionKeys.add(hex);
     for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
@@ -1343,6 +1349,7 @@ export class AircraftStateService {
   ): void {
     const map = origin === "local" ? this.localAircraft : this.networkAircraft;
     const alternateObservedHexes = origin === "local" ? this.networkObservedHexes : this.localObservedHexes;
+    const alternateRetained = origin === "local" ? this.networkAircraft : this.localAircraft;
     const cutoff = now - staleAfterMs;
     const graceMs = getSourceAffinityFailoverGraceMs();
 
@@ -1368,6 +1375,15 @@ export class AircraftStateService {
       this.continuity.recordRemoval(origin, hex, now);
       if (origin === "local") this.removeAircraft(hex);
       else this.networkAircraft.delete(hex);
+      // Previously the second full reconcile pass removed affinities that
+      // lost their final retained source *during* pruning. Only removed
+      // identities need that cleanup; leave a live alternate and its grace
+      // timer untouched. Also preserve the unusual observed-but-not-retained
+      // case rather than changing its historical transition behavior.
+      if (!alternateRetained.has(hex) && !alternateObservedHexes.has(hex)) {
+        this.sourcePreferences.delete(hex);
+        this.sourcePreferenceMissingSince.delete(hex);
+      }
     }
   }
 
