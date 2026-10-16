@@ -33,7 +33,7 @@ Není nutné přidávat obecné `sudo`, heslo ani nové oprávnění do sudoers.
 Neškodná kontrola oprávnění:
 `sudo -n /var/www/airradar/deploy/release.sh --t58-canary-probe`.
 
-### Omezení výsledků a bezpečné dokončení
+**Omezení výsledků a bezpečné dokončení**
 
 Nejde o příkaz umožňující libovolně ovládat systemd ani o vzdálený shell.
 Povolené jsou pouze tři pevně definované operace bez parametrů. Pomocný
