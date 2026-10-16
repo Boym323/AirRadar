@@ -11,6 +11,23 @@ afterEach(() => {
 });
 
 describe("historical flight maintenance", () => {
+  it("reuses normalized aircraft without modifying caller data or duplicate semantics", async () => {
+    vi.mocked(getPrisma).mockReturnValue(null as never);
+    const at = new Date("2026-10-16T09:00:00Z");
+    const normalized = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 },
+      { lat: 50, lon: 14, name: "Test" }, at,
+    );
+    if (!normalized) throw new Error("missing normalized aircraft");
+    Object.freeze(normalized);
+    const lower = { ...normalized, icaoHex: "abc123" };
+    const different = { ...normalized, icaoHex: "DEF456" };
+    const result = await recordAircraftSnapshot([normalized, lower, different], at);
+    expect(result).toEqual({ succeeded: ["ABC123", "DEF456"], failed: [] });
+    expect(lower.icaoHex).toBe("abc123");
+    expect(normalized.icaoHex).toBe("ABC123");
+  });
+
   it("deduplicates aircraft by ICAO hex and retries a concurrent insert conflict", async () => {
     const recordedAt = new Date("2026-01-01T12:00:00Z");
     const aircraft = normalizeAircraft(
