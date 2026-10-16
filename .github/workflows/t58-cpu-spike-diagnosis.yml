@@ -1,5 +1,5 @@
 name: T58 CPU Spike Diagnosis
-run-name: 'T58 read-only CPU/cgroup/GC ${{ github.event.inputs.duration || ''tests'' }}'
+run-name: T58 short CPU cgroup GC read-only
 
 on:
   pull_request:

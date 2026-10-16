@@ -57,5 +57,9 @@ attachment would be required to confirm specific JS stacks. Do not
 enable the Node inspector on a public interface or restart production
 just for profiling.
 
-Smoke validation in PR: `node --test tests/t58-cpu-spikes.test.mjs`.
+Smoke validation in PR:
+
+```bash
+node --test tests/t58-cpu-spikes.test.mjs
+```
 No merge, deploy, or production observation is performed by PR CI.
