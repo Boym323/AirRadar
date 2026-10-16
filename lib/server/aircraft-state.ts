@@ -66,6 +66,7 @@ import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 import { getMemoryRetentionDiagnostics, type MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 import { mapBounded, mapSettledBounded } from "@/lib/server/bounded-batch";
+import { historyAircraftForSnapshot } from "@/lib/server/history-aircraft-payload";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -121,27 +122,6 @@ function mergeEnrichment(
   if (route) merged.route = route;
   if (flightPlan) merged.flightPlan = flightPlan;
   return Object.keys(merged).length ? merged : undefined;
-}
-
-function historyAircraftForSnapshot(snapshotItem: Aircraft, current: Aircraft | undefined): Aircraft {
-  if (!current) return snapshotItem;
-
-  const sameCallsign = current.callsign === snapshotItem.callsign;
-  const metadata = snapshotItem.enrichment?.metadata ?? current.enrichment?.metadata;
-  const route = snapshotItem.enrichment?.route ?? (sameCallsign ? current.enrichment?.route : undefined);
-  const flightPlan = snapshotItem.enrichment?.flightPlan ?? (sameCallsign ? current.enrichment?.flightPlan : undefined);
-  const enrichment: AircraftEnrichment = {};
-  if (metadata) enrichment.metadata = metadata;
-  if (route) enrichment.route = route;
-  if (flightPlan) enrichment.flightPlan = flightPlan;
-
-  return {
-    ...snapshotItem,
-    registration: snapshotItem.registration ?? current.registration,
-    aircraftType: snapshotItem.aircraftType ?? current.aircraftType,
-    aircraftDescription: snapshotItem.aircraftDescription ?? current.aircraftDescription,
-    ...(Object.keys(enrichment).length ? { enrichment } : {}),
-  };
 }
 
 function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">): string | null {
@@ -1255,8 +1235,10 @@ export class AircraftStateService {
   }
 
   private observeTrackFusionShadow(now = Date.now(), keys?: Iterable<string>): void {
-    const evaluationKeys = keys ? [...keys] : undefined;
-    measureRuntime("snapshot.trackFusion", evaluationKeys?.length ?? this.localAircraft.size + this.networkAircraft.size, () => this.observeTrackFusionShadowCore(now, evaluationKeys));
+    // All current callers provide a Set. It can be consumed directly: cloning
+    // 9k+ ICAO keys into an array on each refresh only increased GC pressure.
+    const count = keys instanceof Set ? keys.size : this.localAircraft.size + this.networkAircraft.size;
+    measureRuntime("snapshot.trackFusion", count, () => this.observeTrackFusionShadowCore(now, keys));
   }
 
   private observeTrackFusionShadowCore(now = Date.now(), keys?: Iterable<string>): void {

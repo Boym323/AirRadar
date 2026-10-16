@@ -12,6 +12,8 @@ import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { historyPersistenceCanary, type HistoryPersistenceCanaryDiagnostics } from "@/lib/server/history-persistence-canary";
+import { historyStatementProfiler, type HistoryStatementPhase } from "@/lib/server/history-statement-profiler";
+import { performance } from "node:perf_hooks";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -70,6 +72,8 @@ export interface HistoryPersistenceStatus {
   writes?: ReturnType<typeof getAircraftPersistenceDiagnostics>;
   retention?: HistoryRetentionDiagnostics;
   batchCanary?: HistoryPersistenceCanaryDiagnostics;
+  /** Available only when explicitly enabled; no aircraft or SQL identities. */
+  statementProfile?: ReturnType<typeof historyStatementProfiler.diagnostics>;
 }
 
 export const HISTORY_POSITION_LIMIT = 2_000;
@@ -290,6 +294,8 @@ export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
     writes: getAircraftPersistenceDiagnostics(),
     retention: { ...historyRetentionDiagnostics },
     batchCanary: historyPersistenceCanary.diagnostics(),
+    ...(process.env.HISTORY_STATEMENT_PHASE_PROFILE_ENABLED?.trim().toLowerCase() === "true"
+      ? { statementProfile: historyStatementProfiler.diagnostics() } : {}),
   };
 }
 
@@ -1131,6 +1137,8 @@ export async function recordAircraftSnapshot(
     && Number.isFinite(item.lon)
   ));
 
+  // Local diagnostics only: disabled by default and never changes SQL writes.
+  const profileStatements = process.env.HISTORY_STATEMENT_PHASE_PROFILE_ENABLED?.trim().toLowerCase() === "true";
   await runWithConcurrency(candidates, 8, async (item) => {
     // Provider adapters may omit numeric fields at runtime even though the
     // normalized TypeScript type represents them as `null`. Invalid
@@ -1151,9 +1159,18 @@ export async function recordAircraftSnapshot(
         let statementCount = 0;
         let committed = false;
         const transactionStartedAt = Date.now();
-        const statement = async <T>(operation: () => Promise<T>): Promise<T> => {
+        const statement = async <T>(phase: HistoryStatementPhase, operation: () => Promise<T>): Promise<T> => {
           statementCount += 1;
-          return operation();
+          if (!profileStatements) return operation();
+          const started = performance.now();
+          let succeeded = false;
+          try {
+            const result = await operation();
+            succeeded = true;
+            return result;
+          } finally {
+            historyStatementProfiler.observe(phase, performance.now() - started, succeeded);
+          }
         };
         return trackDbTransaction("history.snapshot", async () => {
           try {
@@ -1170,10 +1187,10 @@ export async function recordAircraftSnapshot(
         upsert?: (input: Record<string, unknown>) => Promise<AircraftPersistenceRow>;
       };
       if (typeof aircraftTable.where === "function") {
-        dbAircraft = await statement(() => aircraftTable.where!({ icaoHex: item.icaoHex }).first());
+        dbAircraft = await statement("aircraft.lookup", () => aircraftTable.where!({ icaoHex: item.icaoHex }).first());
       } else if (typeof aircraftTable.upsert === "function") {
         // Narrow test adapters and older persistence shims may only expose upsert.
-        dbAircraft = await statement(() => aircraftTable.upsert!({
+        dbAircraft = await statement("aircraft.write", () => aircraftTable.upsert!({
           conflictOn: { icaoHex: item.icaoHex },
           update: { ...nextAircraft, updatedAt: recordedAtInstant },
           create: { icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant },
@@ -1182,12 +1199,12 @@ export async function recordAircraftSnapshot(
         aircraftPersistenceDiagnostics.executed += 1;
       }
       if (!dbAircraft) {
-        dbAircraft = await statement(() => schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant }));
+        dbAircraft = await statement("aircraft.write", () => schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant }));
         aircraftPersistenceDiagnostics.executed += 1;
       } else if (!usedAircraftUpsert) {
         const aircraftChanges = changedAircraftValues(dbAircraft, nextAircraft);
         if (Object.keys(aircraftChanges).length > 0) {
-          dbAircraft = await statement(() => schema.Aircraft.where({ id: dbAircraft!.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant }));
+          dbAircraft = await statement("aircraft.write", () => schema.Aircraft.where({ id: dbAircraft!.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant }));
           aircraftPersistenceDiagnostics.executed += 1;
         } else {
           aircraftPersistenceDiagnostics.skippedUnchanged += 1;
@@ -1201,7 +1218,7 @@ export async function recordAircraftSnapshot(
       // existence SELECT can be skipped (common after restart/cache eviction).
       // Only probe previous flights when no active flight was found. Retain
       // the optional capability guard for narrow persistence test adapters.
-      let flight = await statement(() => schema.Flight
+      let flight = await statement("flight.lookup", () => schema.Flight
         .where({ aircraftId: dbAircraft!.id })
         .where({ endTime: null })
         .orderBy((row) => row.startTime.desc())
@@ -1215,7 +1232,7 @@ export async function recordAircraftSnapshot(
             limit?: (value: number) => { all(): Promise<unknown[]> };
           };
           const priorFlights = typeof priorFlightsQuery.limit === "function"
-            ? await statement(() => priorFlightsQuery.limit!(1).all())
+            ? await statement("flight.prior", () => priorFlightsQuery.limit!(1).all())
             : null;
           if (priorFlights !== null) {
             rememberBounded(durableFlightPresence, dbAircraft.id, priorFlights.length > 0);
@@ -1236,7 +1253,7 @@ export async function recordAircraftSnapshot(
         const currentFlight = flight;
         let previousPosition = latestFlightPositions.get(currentFlight.id);
         if (previousPosition === undefined) {
-          const persistedPosition = await statement(() => schema.FlightPosition
+          const persistedPosition = await statement("position.lookup", () => schema.FlightPosition
             .where({ flightId: currentFlight.id })
             .orderBy((position) => position.recordedAt.desc())
             .first());
@@ -1257,7 +1274,7 @@ export async function recordAircraftSnapshot(
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
           const previousFlight = flight;
-          await statement(() => schema.Flight.where({ id: previousFlight.id }).update(
+          await statement("flight.write", () => schema.Flight.where({ id: previousFlight.id }).update(
             continuityBroken
               ? { endTime: timestampAsInstant(previousFlight.lastSeenAt) }
               : { endTime: recordedAtInstant, lastSeenAt: recordedAtInstant },
@@ -1265,7 +1282,7 @@ export async function recordAircraftSnapshot(
         }
         const route = item.enrichment?.route;
         const destinationObservation = observeDestination(null, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
-        flight = await statement(() => schema.Flight.create({
+        flight = await statement("flight.write", () => schema.Flight.create({
           aircraftId: dbAircraft!.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
           callsign: item.callsign,
@@ -1285,7 +1302,7 @@ export async function recordAircraftSnapshot(
         const currentFlight = flight;
         const route = item.enrichment?.route;
         const destinationObservation = observeDestination((currentFlight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
-        await statement(() => schema.Flight.where({ id: currentFlight.id }).update({
+        await statement("flight.write", () => schema.Flight.where({ id: currentFlight.id }).update({
           callsign: currentFlight.callsign ?? item.callsign,
           registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
           aircraftType: currentFlight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
@@ -1303,7 +1320,7 @@ export async function recordAircraftSnapshot(
 
       if (!flight) throw new Error("Flight persistence returned no row");
       const persistedFlight = flight;
-      await statement(() => schema.FlightPosition.create({
+      await statement("position.write", () => schema.FlightPosition.create({
         flightId: persistedFlight.id,
         recordedAt: recordedAtInstant,
         lat: latitude,
@@ -1328,7 +1345,7 @@ export async function recordAircraftSnapshot(
       const altitudeDecision = item.altitudeDecision;
       const anomalyType = altitudeDecision?.anomaly ?? null;
       if (anomalyType && altitudeDecision && shouldPersistAltitudeAnomaly(item.icaoHex, anomalyType, recordedAt.getTime())) {
-        await statement(() => schema.AltitudeAnomaly.create({
+        await statement("anomaly.write", () => schema.AltitudeAnomaly.create({
           icaoHex: item.icaoHex,
           flightId: persistedFlight.id,
           observedAt: timestampAsInstant(new Date(item.altitudeObservation?.observedAt ?? recordedAt)),

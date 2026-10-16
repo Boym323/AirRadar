@@ -136,6 +136,11 @@ jobs:
             echo "Parallel validation failed (lint=$lint_status typecheck=$typecheck_status test=$test_status)"
             exit 1
           fi
+      - name: Profile history-payload CPU and allocations (synthetic; no DB)
+        if: github.event_name == 'pull_request' && steps.scope.outputs.docs_only != 'true'
+        env:
+          JITI_TSCONFIG_PATHS: 'true'
+        run: node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-history-payload.ts
       - run: npm run build:prepared
         if: steps.scope.outputs.docs_only != 'true'
         env:
