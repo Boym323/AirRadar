@@ -64,7 +64,7 @@ function nonNegative(value: number): number {
   return Number.isFinite(value) && value >= 0 ? Math.trunc(value) : 0;
 }
 
-type CgroupMemoryFile = "memory.current" | "memory.max" | "cpu.max" | "cpu.stat";
+type CgroupMemoryFile = "memory.current" | "memory.max" | "cpu.max" | "cpu.stat" | "cpu.cfs_quota_us" | "cpu.cfs_period_us";
 
 function cgroupValue(paths: string[]): number | null {
   for (const path of paths) {
@@ -142,7 +142,7 @@ export function cgroupFileCandidates(file: CgroupMemoryFile, cgroupText = proces
   return [...new Set(candidates)];
 }
 
-function cgroupTextValue(file: "cpu.max" | "cpu.stat"): string | null {
+function cgroupTextValue(file: "cpu.max" | "cpu.stat" | "cpu.cfs_quota_us" | "cpu.cfs_period_us"): string | null {
   for (const candidate of cgroupFileCandidates(file)) {
     try {
       return readFileSync(candidate, "utf8").slice(0, 4096);
@@ -153,24 +153,58 @@ function cgroupTextValue(file: "cpu.max" | "cpu.stat"): string | null {
   return null;
 }
 
-function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
-  const quotaText = cgroupTextValue("cpu.max")?.trim().split(/\s+/) ?? [];
-  const quota = quotaText[0] === "max" ? null : Number(quotaText[0]);
-  const period = Number(quotaText[1]);
-  const quotaCores = quota !== null && Number.isFinite(quota) && quota >= 0 && Number.isFinite(period) && period > 0
-    ? quota / period : null;
-  const stat = cgroupTextValue("cpu.stat") ?? "";
-  const statValue = (name: string) => {
-    const match = stat.match(new RegExp(`^${name}\\s+(\\d+)$`, "m"));
-    return match ? Number(match[1]) : null;
+/**
+ * Parse v2 (microseconds) and v1 (nanoseconds) cgroup CPU stats.
+ * Missing data MUST remain null: unknown is never equivalent to zero.
+ */
+export function parseCpuCgroupCounters(input: {
+  cpuMax: string | null;
+  cpuStat: string | null;
+  legacyQuota: string | null;
+  legacyPeriod: string | null;
+}): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
+  let cores: number | null = null;
+  if (input.cpuMax !== null) {
+    const [quotaRaw, periodRaw] = input.cpuMax.trim().split(/\s+/);
+    const quota = Number(quotaRaw), period = Number(periodRaw);
+    if (quotaRaw !== "max" && Number.isFinite(quota) && Number.isFinite(period) &&
+        quota >= 0 && period > 0) cores = quota / period;
+  } else if (input.legacyQuota !== null && input.legacyPeriod !== null) {
+    const quota = Number(input.legacyQuota.trim()), period = Number(input.legacyPeriod.trim());
+    // cgroup v1: -1 denotes unlimited quota.
+    if (Number.isFinite(quota) && Number.isFinite(period) && quota >= 0 && period > 0)
+      cores = quota / period;
+  }
+  const counter = (key: string): number | null => {
+    const row = (input.cpuStat ?? "").split(/\r?\n/)
+      .find(line => line.startsWith(key + " ") || line.startsWith(key + "\t"));
+    if (!row) return null;
+    const fields = row.trim().split(/\s+/);
+    if (fields.length !== 2 || fields[0] !== key) return null;
+    const value = Number(fields[1]);
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
   };
-  const nrThrottled = statValue("nr_throttled");
-  const throttledUsec = statValue("throttled_usec");
+  const nrThrottled = counter("nr_throttled");
+  const microseconds = counter("throttled_usec");
+  const legacyNanoseconds = microseconds === null ? counter("throttled_time") : null;
+  const throttledUsec = microseconds ?? (legacyNanoseconds === null
+    ? null : Math.floor(legacyNanoseconds / 1_000));
   return {
-    cgroupCpuQuotaCores: quotaCores,
-    cgroupCpuNrThrottled: Number.isSafeInteger(nrThrottled) && nrThrottled! >= 0 ? nrThrottled : null,
-    cgroupCpuThrottledUsec: Number.isSafeInteger(throttledUsec) && throttledUsec! >= 0 ? throttledUsec : null,
+    cgroupCpuQuotaCores: cores,
+    cgroupCpuNrThrottled: nrThrottled,
+    cgroupCpuThrottledUsec: throttledUsec,
   };
+}
+
+function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
+  const cpuMax = cgroupTextValue("cpu.max");
+  return parseCpuCgroupCounters({
+    cpuMax,
+    cpuStat: cgroupTextValue("cpu.stat"),
+    // Only read legacy controller fields when v2 cpu.max is absent.
+    legacyQuota: cpuMax === null ? cgroupTextValue("cpu.cfs_quota_us") : null,
+    legacyPeriod: cpuMax === null ? cgroupTextValue("cpu.cfs_period_us") : null,
+  });
 }
 
 export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}): RuntimeDiagnostics {
