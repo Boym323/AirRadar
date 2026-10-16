@@ -71,7 +71,13 @@ export async function collectCpuSpikeSamples({
     });
   };
 
-  await capture(0);
+  // A transient failure before the baseline must not discard the entire
+  // diagnosis. Retry only a bounded number of times; fatal errors stop now.
+  for (let retry = 0; retry < maxConsecutiveFailures && !identity &&
+      state.stopReason === "running"; retry++) {
+    if (retry > 0) await sleep(Math.min(1_000, intervalMs));
+    await capture(0);
+  }
   if (state.stopReason !== "running" || !identity) {
     state.stopReason = state.stopReason === "running" ? "initial_sample_unavailable" : state.stopReason;
     await checkpoint({ ...state, samples: [...state.samples] });

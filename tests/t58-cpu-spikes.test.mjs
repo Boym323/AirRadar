@@ -116,6 +116,19 @@ describe("T58 resilient bounded production collection", () => {
     assert.equal(encoded.includes("t58_spike_required_telemetry_unavailable"), false);
   });
 
+  it("retries the initial baseline after a transient HTTP failure", async () => {
+    const f = fixture({ failures: { 0: new Error("Diagnostic request /api/system/status HTTP 503") } });
+    const result = await collectCpuSpikeSamples(f.options);
+    const report = buildCpuSpikeReport(result);
+    assert.equal(result.stopReason, "complete");
+    assert.equal(result.samples.length, 9);
+    assert.equal(result.attempts, 10);
+    assert.equal(report.collection.failuresByCategory.http_failure, 1);
+    assert.equal(report.collection.verdict, "PARTIAL");
+    assert.equal(f.checkpoints[0].collection.verdict, "INSUFFICIENT_EVIDENCE");
+    assert.equal(f.checkpoints.at(-1).collection.validSamples, 9);
+  });
+
   it("stops after bounded consecutive timeouts and retains a PARTIAL report", async () => {
     const fixtureValue = fixture({ failures: {
       5: new Error("Diagnostic request /api/system/status HTTP 503"),
