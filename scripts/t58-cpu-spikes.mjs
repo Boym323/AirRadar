@@ -12,16 +12,18 @@ import { mkdir, writeFile, rename } from "node:fs/promises";
 import { resolve } from "node:path";
 import { collectCpuSpikeSamples, classifyCpuSpikeFailure } from "./t58-cpu-spike-collection.mjs";
 import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
+import { fetchCpuSpikeDiagnostic } from "./t58-cpu-spike-http.mjs";
 
 const BASE = new URL("https://airradar.pomykal.cz/");
-const SAMPLE_INTERVAL_MS = 5_000;
+// Both production endpoints allow 12 requests/min per client. Leave 50% headroom.
+export const SAMPLE_INTERVAL_MS = 10_000;
 const HOT_PATHS = new Set([
   "snapshot.apply.total", "snapshot.local", "snapshot.network",
   "snapshot.operationalTwin", "twin.eventOutcome.local",
   "snapshot.trackFusion", "snapshot.trail-update",
   "history.persist", "network.metadata", "snapshot.navigationIntegrity",
 ]);
-const MAX_SAMPLES = 130;
+const MAX_SAMPLES = 70;
 const finite = value => typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 const rounded = value => value === null ? null : Number(value.toFixed(3));
 function percentile(values, fraction) {
@@ -104,7 +106,7 @@ export function analyzeCpuSpikeSamples(samples) {
     if (!Number.isFinite(elapsedMs) || elapsedMs < 500)
       throw Error("t58_spike_invalid_sample_spacing");
     // Lost polls must not be mislabeled as adjacent 5-second CPU/GC spikes.
-    if (elapsedMs > 15_000 || (Number.isSafeInteger(prev.slot) &&
+    if (elapsedMs > SAMPLE_INTERVAL_MS * 2.5 || (Number.isSafeInteger(prev.slot) &&
         Number.isSafeInteger(next.slot) && next.slot !== prev.slot + 1)) {
       skippedIntervals++;
       continue;
@@ -288,8 +290,8 @@ async function session() {
 }
 async function getSample(cookie) {
   const [status, performanceMetrics] = await Promise.all([
-    fetchJson(BASE, "/api/system/status", cookie),
-    fetchJson(BASE, "/api/system/runtime-performance", cookie),
+    fetchCpuSpikeDiagnostic(BASE, cookie, "status"),
+    fetchCpuSpikeDiagnostic(BASE, cookie, "runtime"),
   ]);
   return projectCpuSpikeSample(status, performanceMetrics);
 }
@@ -320,7 +322,7 @@ export async function main() {
     cookie = await session();
   } catch (error) {
     const category = classifyCpuSpikeFailure(error);
-    const state = { samples: [], plannedSlots: seconds / 5 + 1,
+    const state = { samples: [], plannedSlots: seconds * 1_000 / SAMPLE_INTERVAL_MS + 1,
       attempts: 0, failedSlots: 1, failuresByCategory: { [category]: 1 },
       stopReason: category };
     await writeCpuSpikeCheckpoint(directory, state);
@@ -331,7 +333,8 @@ export async function main() {
 
   const result = await collectCpuSpikeSamples({
     poll: () => getSample(cookie),
-    slots: seconds / 5,
+    slots: seconds * 1_000 / SAMPLE_INTERVAL_MS,
+    intervalMs: SAMPLE_INTERVAL_MS,
     checkpoint: state => writeCpuSpikeCheckpoint(directory, state),
   });
   const report = await writeCpuSpikeCheckpoint(directory, result);
