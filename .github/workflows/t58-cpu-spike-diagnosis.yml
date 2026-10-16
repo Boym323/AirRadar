@@ -2,6 +2,10 @@ name: T58 CPU Spike Diagnosis
 run-name: T58 short CPU cgroup GC read-only
 
 on:
+  # One-time read-only measurement on an isolated branch, no production deploy.
+  push:
+    branches:
+      - 'diagnostics/t58-cpu-20261016-after939'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
@@ -48,12 +52,13 @@ jobs:
   observe:
     name: Collect read-only CPU/cgroup/GC evidence
     # Never read production from PR CI, pushes, or deployment hooks.
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    # Temporary branch-only trigger. This change is never merged into main.
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/diagnostics/t58-cpu-20261016-after939') }}
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration }}
+      T58_SPIKE_SECONDS: ${{ github.event.inputs.duration || '600' }}
       T58_SPIKE_OUTPUT_DIR: .benchmarks/t58-cpu-spikes
       WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
     steps:
