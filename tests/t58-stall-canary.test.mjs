@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { sanitizedStallEvent, summarizeCanarySamples } from "../scripts/t58-stall-canary.mjs";
 
 describe("T58 canary report sanitization", () => {
@@ -31,5 +33,52 @@ describe("T58 canary report sanitization", () => {
     assert.equal(summary.totalStalls,1);
     assert.equal(summary.cpuPercentP95,30);
     assert.deepEqual(summary.correlationCounts,{unattributed:1});
+  });
+});
+
+describe("privileged T58 canary control", () => {
+  const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
+  const root = readFileSync(new URL("../deploy/t58-canary-control.sh", import.meta.url), "utf8");
+  const runner = readFileSync(new URL("../scripts/t58-stall-canary.sh", import.meta.url), "utf8");
+  const rollback = readFileSync(new URL("../deploy/rollback-stall-canary.sh", import.meta.url), "utf8");
+
+  it("validates bash syntax for every entrypoint without starting a service", () => {
+    for (const file of [
+      "deploy/release.sh",
+      "deploy/t58-canary-control.sh",
+      "deploy/rollback-stall-canary.sh",
+      "scripts/t58-stall-canary.sh",
+    ]) {
+      execFileSync("bash", ["-n", new URL("../" + file, import.meta.url).pathname]);
+    }
+  });
+
+  it("reuses only the existing sudo-approved release command", () => {
+    assert.match(release, /--t58-canary-probe\|--t58-canary-start\|--t58-canary-stop/);
+    assert.match(release, /"\$EUID" -eq 0/);
+    assert.match(release, /exec \/bin\/bash/);
+    assert.match(runner, /sudo -n "\$control" --t58-canary-probe/);
+    assert.match(runner, /sudo -n "\$control" --t58-canary-start/);
+    assert.match(runner, /sudo -n "\$control" --t58-canary-stop/);
+    assert.doesNotMatch(runner, /sudo -n (?:systemctl|systemd-run|tee|chmod|install|rm)\b/);
+  });
+
+  it("arms independent rollback before enabling the flag and guards concurrent deploys", () => {
+    const timerIndex = root.indexOf("systemd-run --quiet");
+    const writeIndex = root.indexOf('mv -- "$temporary" "$dropin"');
+    assert.ok(timerIndex > 0 && writeIndex > timerIndex);
+    assert.match(root, /flock -w 15 9/);
+    assert.match(root, /23m/);
+    assert.match(release, /A T58 stall canary is active/);
+    assert.match(rollback, /systemctl restart "\$unit"/);
+    assert.match(root, /t58_existing_env_flag/);
+  });
+
+  it("cannot accept dynamic privileged commands or paths", () => {
+    assert.match(root, /case "\$action" in probe\|start\|stop/);
+    assert.match(root, /unit=airradar\.service/);
+    assert.match(root, /dropin=\/etc\/systemd\/system\/airradar\.service\.d\/zz-t58-stall-canary\.conf/);
+    assert.doesNotMatch(root, /eval\s/);
+    assert.doesNotMatch(root, /chmod 0777|NOPASSWD: ALL/);
   });
 });

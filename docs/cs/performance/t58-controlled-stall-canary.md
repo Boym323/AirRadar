@@ -14,3 +14,38 @@ historii letů ani Rust nastavení. Nezasahuje do souboru `.env`.
 
 Ruční nouzový rollback:
 `sudo bash /var/www/airradar/deploy/rollback-stall-canary.sh`.
+
+## Oprava oprávnění self-hosted runneru
+
+Běh #38904102249 skončil před aktivací na chybě
+`sudo: a password is required`. Runner úmyslně nemá obecné právo spouštět
+`sudo systemctl`. Nová verze používá výhradně existující schválený vstup
+`/var/www/airradar/deploy/release.sh` s pevnými volbami
+`--t58-canary-probe`, `--t58-canary-start` a `--t58-canary-stop`.
+Nezadává se žádný externí příkaz, cesta ani shell skript.
+
+Před změnou konfigurace vznikne kopie rollbacku vlastněná rootem pod
+`/run/airradar-t58-stall-canary` a nezávislý 23minutový systemd timer.
+Při neúspěšném preflightu se systemd nemění. Standardní release odmítne
+nové nasazení během aktivního canary.
+
+Není nutné přidávat obecné `sudo`, heslo ani nové oprávnění do sudoers.
+Neškodná kontrola oprávnění:
+`sudo -n /var/www/airradar/deploy/release.sh --t58-canary-probe`.
+
+**Omezení výsledků a bezpečné dokončení**
+
+Nejde o příkaz umožňující libovolně ovládat systemd ani o vzdálený shell.
+Povolené jsou pouze tři pevně definované operace bez parametrů. Pomocný
+privilegovaný skript ověřuje identitu produkční jednotky, stav aplikace,
+neexistenci předchozí diagnostické konfigurace a také shodu nastavení.
+Během zapnutého canary je blokováno nové standardní nasazení, aby změna
+verze nepřerušila porovnání a aby rollback obnovil správnou konfiguraci.
+
+Pozorování zaznamenává jen časové překryvy pojmenovaných synchronních
+operací. Ani shoda s dlouhou prodlevou sama o sobě neprokazuje příčinu:
+příčinou může být také garbage collection, plánování procesů, nativní
+kód nebo další neměřená část aplikace. Výsledky je nutné porovnávat
+s metrikami CPU, RSS, event-loop a se skutečným počtem letadel.
+Pokud diagnostika nenajde žádné blokace, neznamená to automaticky
+odstranění historických problémů. O výsledku rozhodují naměřená data.
