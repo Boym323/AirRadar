@@ -34,6 +34,8 @@ export type RuntimePerformanceMetric = {
 
 type RuntimePerformanceMetricState = RuntimePerformanceMetric & {
   sampleCursor: number;
+  /** Cached numeric minute boundary so hot-path samples avoid Date.parse. */
+  windowStartMs: number;
 };
 
 const globalStore = globalThis as typeof globalThis & {
@@ -59,11 +61,16 @@ function metric(name: string): RuntimePerformanceMetricState {
   value.activeAsync ??= 0;
   value.maxConcurrentAsync ??= 0;
   value.windows ??= [];
+  // Recover retained metrics once after a development hot reload.
+  if (value.windowStartMs === undefined) {
+    const latest = value.windows[value.windows.length - 1];
+    value.windowStartMs = latest ? Date.parse(latest.from) : -1;
+  }
   return value;
 }
 
 function emptyMetric(): RuntimePerformanceMetricState {
-  return { calls: 0, totalMs: 0, maxMs: 0, processedAircraft: 0, samplesMs: [], sampleCursor: 0, cpuMs: 0, waitMs: 0, activeAsync: 0, maxConcurrentAsync: 0, windows: [] };
+  return { calls: 0, totalMs: 0, maxMs: 0, processedAircraft: 0, samplesMs: [], sampleCursor: 0, windowStartMs: -1, cpuMs: 0, waitMs: 0, activeAsync: 0, maxConcurrentAsync: 0, windows: [] };
 }
 
 function percentile(sortedSamples: readonly number[], fraction: number): number {
@@ -90,8 +97,9 @@ function record(name: string, durationMs: number, processedAircraft: number, cpu
   const windowStart = Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS;
   value.windows ??= [];
   let window = value.windows[value.windows.length - 1];
-  if (!window || Date.parse(window.from) !== windowStart) {
+  if (!window || value.windowStartMs !== windowStart) {
     window = { from: new Date(windowStart).toISOString(), to: new Date(windowStart + WINDOW_MS).toISOString(), calls: 0, p95Ms: 0, p99Ms: 0, cpuMs: 0, waitMs: 0, samplesMs: [] };
+    value.windowStartMs = windowStart;
     value.windows.push(window);
     if (value.windows.length > MAX_WINDOWS) value.windows.shift();
   }

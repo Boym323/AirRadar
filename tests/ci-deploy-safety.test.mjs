@@ -45,6 +45,22 @@ test("all release gates run in maintainer-requested previews", () => {
   assert.match(job("deploy"), /release-tests, release-performance/);
 });
 
+test("release preview gates survive the deliberately skipped native-tag prerequisite", () => {
+  const reconcile = job("reconcile-manual-native-tags");
+  assert.match(reconcile, /github\.event_name == 'push'/);
+  const scope = job("release-scope");
+  assert.match(scope, /always\(\)/);
+  for (const name of ["release-validate", "release-tests", "release-performance"]) {
+    const gate = job(name);
+    assert.match(gate, /!cancelled\(\)/, name);
+    assert.match(gate, /needs\.release-scope\.result == 'success'/, name);
+    assert.match(gate, /needs\.release-scope\.outputs\.deploy == 'true'/, name);
+    assert.match(gate, /release-preview/, name);
+  }
+  const deploy = job("deploy");
+  assert.doesNotMatch(deploy, /!cancelled\(\)|release-preview/);
+});
+
 test("release browser throughput remains within the tested bounded scheduler", () => {
   const release = job("release-validate");
   assert.match(release, /AIRRADAR_VISUAL_CONCURRENCY: '2'/);

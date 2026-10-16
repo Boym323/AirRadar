@@ -292,7 +292,10 @@ jobs:
 
   release-validate:
     name: Release validation
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
+    # Explicit status function bypasses implicit success() from the skipped
+    # reconcile-manual-native-tags ancestor during deploy-free PR previews.
+    # Still fail closed when release scope failed or the workflow was cancelled.
+    if: ${{ !cancelled() && needs.release-scope.result == 'success' && (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true' }}
     needs: release-scope
     runs-on: ubuntu-24.04
     steps:
@@ -413,7 +416,10 @@ jobs:
 
   release-tests:
     name: Release tests and typecheck
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
+    # Explicit status function bypasses implicit success() from the skipped
+    # reconcile-manual-native-tags ancestor during deploy-free PR previews.
+    # Still fail closed when release scope failed or the workflow was cancelled.
+    if: ${{ !cancelled() && needs.release-scope.result == 'success' && (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true' }}
     needs: release-scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -469,7 +475,10 @@ jobs:
 
   release-performance:
     name: Release performance regression
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true'
+    # Explicit status function bypasses implicit success() from the skipped
+    # reconcile-manual-native-tags ancestor during deploy-free PR previews.
+    # Still fail closed when release scope failed or the workflow was cancelled.
+    if: ${{ !cancelled() && needs.release-scope.result == 'success' && (github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')) && needs.release-scope.outputs.deploy == 'true' }}
     needs: release-scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
