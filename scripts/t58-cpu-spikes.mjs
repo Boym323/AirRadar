@@ -8,9 +8,9 @@
  * Node --test tests/t58-cpu-spikes.test.mjs
  * T58_SPIKE_SECONDS=120 T58_SPIKE_OUTPUT_DIR="$RUNNER_TEMP/t58-spikes" node scripts/t58-cpu-spikes.mjs
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, rename } from "node:fs/promises";
 import { resolve } from "node:path";
-import { performance } from "node:perf_hooks";
+import { collectCpuSpikeSamples, classifyCpuSpikeFailure } from "./t58-cpu-spike-collection.mjs";
 import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
 
 const BASE = new URL("https://airradar.pomykal.cz/");
@@ -97,11 +97,18 @@ export function analyzeCpuSpikeSamples(samples) {
   if (samples.some(s => s.commit !== commit || s.version !== version))
     throw Error("t58_spike_version_changed");
   const intervals = [];
+  let skippedIntervals = 0;
   for (let i = 1; i < samples.length; i++) {
     const prev = samples[i - 1], next = samples[i];
     const elapsedMs = Date.parse(next.at) - Date.parse(prev.at);
-    if (!Number.isFinite(elapsedMs) || elapsedMs < 500 || elapsedMs > 15_000)
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 500)
       throw Error("t58_spike_invalid_sample_spacing");
+    // Lost polls must not be mislabeled as adjacent 5-second CPU/GC spikes.
+    if (elapsedMs > 15_000 || (Number.isSafeInteger(prev.slot) &&
+        Number.isSafeInteger(next.slot) && next.slot !== prev.slot + 1)) {
+      skippedIntervals++;
+      continue;
+    }
     const cpuUserMs = deltaCount(prev.cpuUserMs, next.cpuUserMs);
     const cpuSystemMs = deltaCount(prev.cpuSystemMs, next.cpuSystemMs);
     const gcPauseMs = deltaCount(prev.gcTotalPauseMs, next.gcTotalPauseMs);
@@ -160,10 +167,10 @@ export function analyzeCpuSpikeSamples(samples) {
     kind: "t58-cpu-spike-readonly",
     generatedAt: new Date().toISOString(),
     source: { commit, version, samplingIntervalSeconds: SAMPLE_INTERVAL_MS / 1000,
-      samples: samples.length, intervals: intervals.length,
+      samples: samples.length, intervals: intervals.length, skippedIntervals,
       aircraftP50: percentile(samples.map(x=>x.aircraftCount).filter(x=>x!==null),.5) },
     cpu: { p50Percent: percentile(cpu,.5), p95Percent: percentile(cpu,.95),
-      maxPercent: rounded(Math.max(...cpu)), thresholdPercent: 85,
+      maxPercent: cpu.length ? rounded(Math.max(...cpu)) : null, thresholdPercent: 85,
       spikeCount: spikes.length },
     cgroup: { quotaCores: quota, observedIntervals: th.length,
       unavailableIntervals: intervals.length - th.length,
@@ -174,7 +181,7 @@ export function analyzeCpuSpikeSamples(samples) {
     gc: { gcCount: intervals.reduce((v,x)=>v+x.gcCount,0),
       majorGcCount: intervals.reduce((v,x)=>v+x.majorGcCount,0),
       totalPauseMs: rounded(gcPauseTotalMs),
-      pauseTimeSharePercent: rounded(gcPauseTotalMs/elapsedTotalMs*100),
+      pauseTimeSharePercent: elapsedTotalMs > 0 ? rounded(gcPauseTotalMs/elapsedTotalMs*100) : null,
       pauseIntervalP95Ms: percentile(intervals.map(x=>x.gcPauseMs),.95),
       highestObservedRecentPauseMs: Math.max(...samples.map(x=>x.gcRecentMaxPauseMs??0)) },
     eventLoop: { rollingP99P95Ms: percentile(intervals.map(x=>x.eventLoopP99Ms)
@@ -192,24 +199,72 @@ export function analyzeCpuSpikeSamples(samples) {
   };
 }
 
+
+/** Turns every checkpoint into a valid bounded, identity-free JSON report. */
+export function buildCpuSpikeReport(state) {
+  const first = state.samples[0] ?? null;
+  let measured = null;
+  let analysisFailure = null;
+  if (state.samples.length >= 5) {
+    try { measured = analyzeCpuSpikeSamples(state.samples); }
+    catch { analysisFailure = "invalid_counter_or_interval"; }
+  }
+  const valid = measured?.source?.intervals ?? 0;
+  const complete = state.stopReason === "complete";
+  const fullCoverage = complete && state.failedSlots === 0 && valid === state.plannedSlots - 1;
+  const verdict = analysisFailure || state.stopReason === "identity_changed"
+    ? "INSUFFICIENT_EVIDENCE"
+    : fullCoverage ? (measured?.cgroup?.coverageComplete ? "PASS" : "PASS_WITH_LIMITATIONS")
+    : valid >= 4 ? "PARTIAL" : "INSUFFICIENT_EVIDENCE";
+  const base = measured ?? {
+    schemaVersion: 1, kind: "t58-cpu-spike-readonly",
+    generatedAt: new Date().toISOString(),
+    source: { commit: first?.commit ?? null, version: first?.version ?? null,
+      samplingIntervalSeconds: SAMPLE_INTERVAL_MS / 1_000,
+      samples: state.samples.length, intervals: 0, skippedIntervals: 0,
+      aircraftP50: null },
+    cpu: null, cgroup: null, gc: null, eventLoop: null,
+    spikes: [], intervals: [], interpretation: [], limitations: [
+      "Insufficient contiguous samples; this report is not a performance verdict.",
+    ],
+  };
+  return {
+    ...base,
+    collection: {
+      verdict, stopReason: state.stopReason,
+      plannedSamples: state.plannedSlots,
+      attemptedSamples: state.attempts,
+      validSamples: state.samples.length, validIntervals: valid,
+      failedSamples: state.failedSlots,
+      failuresByCategory: state.failuresByCategory,
+      analysisFailure,
+    },
+  };
+}
+
 export function cpuSpikeMarkdown(report) {
   const { source, cpu, cgroup, gc, eventLoop } = report;
-  const yes = v => v === null ? "N/A" : String(v);
+  const collection = report.collection ?? null;
+  const yes = v => v === null || v === undefined ? "N/A" : String(v);
   return [
     "# T58 – short, read-only CPU spike / cgroup / GC diagnosis",
+    "", `**Evidence verdict:** ${collection?.verdict ?? "UNSPECIFIED"}`,
+    `**Stop reason:** ${collection?.stopReason ?? "N/A"}`,
+    `**Attempted / planned / valid:** ${collection?.attemptedSamples ?? "N/A"} / ${collection?.plannedSamples ?? "N/A"} / ${collection?.validSamples ?? source.samples}`,
+    `**Failure categories (counts):** ${JSON.stringify(collection?.failuresByCategory ?? {})}`,
     "", `Commit/version: \`${source.commit}\` / \`${source.version}\``,
     `Valid samples: **${source.samples}** at 5-second intervals; aircraft P50: ${yes(source.aircraftP50)}`,
     "", "## Observations", "",
     "| Metric | Value |", "|---|---:|",
-    `| Process CPU P50 / P95 / max (% of one core) | ${yes(cpu.p50Percent)} / ${yes(cpu.p95Percent)} / ${yes(cpu.maxPercent)} |`,
-    `| Flagged CPU/throttling/lag intervals | ${cpu.spikeCount} |`,
-    `| Rolling event-loop P99 P95 (ms) | ${yes(eventLoop.rollingP99P95Ms)} |`,
-    `| Cgroup quota (cores) | ${yes(cgroup.quotaCores)} |`,
-    `| Cgroup counters present | ${cgroup.observedIntervals}/${source.intervals} intervals |`,
-    `| Cgroup throttle events / time (us) | ${cgroup.totalNrThrottled} / ${cgroup.totalThrottledUsec} |`,
-    `| GC count (major) | ${gc.gcCount} (${gc.majorGcCount}) |`,
-    `| GC pause total (ms) | ${gc.totalPauseMs} |`,
-    `| GC paused wall-time share | ${gc.pauseTimeSharePercent}% |`,
+    `| Process CPU P50 / P95 / max (% of one core) | ${yes(cpu?.p50Percent)} / ${yes(cpu?.p95Percent)} / ${yes(cpu?.maxPercent)} |`,
+    `| Flagged CPU/throttling/lag intervals | ${cpu?.spikeCount} |`,
+    `| Rolling event-loop P99 P95 (ms) | ${yes(eventLoop?.rollingP99P95Ms)} |`,
+    `| Cgroup quota (cores) | ${yes(cgroup?.quotaCores)} |`,
+    `| Cgroup counters present | ${cgroup?.observedIntervals}/${source.intervals} intervals |`,
+    `| Cgroup throttle events / time (us) | ${cgroup?.totalNrThrottled} / ${cgroup?.totalThrottledUsec} |`,
+    `| GC count (major) | ${gc?.gcCount} (${gc?.majorGcCount}) |`,
+    `| GC pause total (ms) | ${gc?.totalPauseMs} |`,
+    `| GC paused wall-time share | ${gc?.pauseTimeSharePercent}% |`,
     "", "## Highest observed candidate CPU paths (inclusive, not additive)", "",
     "| UTC | Process CPU % | GC pause ms | Throttle count | Candidate paths |",
     "|---|---:|---:|---:|---|",
@@ -238,37 +293,57 @@ async function getSample(cookie) {
   ]);
   return projectCpuSpikeSample(status, performanceMetrics);
 }
+/** Atomic sanitized checkpoint; only these two allowlisted report files are uploaded. */
+async function writeCpuSpikeCheckpoint(directory, state) {
+  const report = buildCpuSpikeReport(state);
+  const files = [
+    ["summary.json", JSON.stringify(report, null, 2) + "\n"],
+    ["summary.md", cpuSpikeMarkdown(report) + "\n"],
+  ];
+  for (const [filename, contents] of files) {
+    const target = resolve(directory, filename);
+    const temporary = target + ".tmp";
+    await writeFile(temporary, contents, { flag: "w", mode: 0o600 });
+    await rename(temporary, target);
+  }
+  return report;
+}
+
 export async function main() {
   const seconds = requireSeconds();
-  const cookie = await session();
-  const beginning = await getSample(cookie);
-  const baseIdentity = beginning.identity;
-  const observations = [beginning.sample];
-  let next = performance.now();
-  const end = next + seconds * 1_000;
-  while (next + SAMPLE_INTERVAL_MS <= end + 100) {
-    next += SAMPLE_INTERVAL_MS;
-    await new Promise(done=>setTimeout(done,Math.max(0,next-performance.now())));
-    const current = await getSample(cookie);
-    if (current.identity.commit !== baseIdentity.commit ||
-        current.identity.processId !== baseIdentity.processId ||
-        current.identity.storeId !== baseIdentity.storeId)
-      throw Error("t58_spike_deployed_process_changed");
-    observations.push(current.sample);
-    if (observations.length > MAX_SAMPLES) throw Error("t58_spike_bounded_limit");
-  }
-  const report = analyzeCpuSpikeSamples(observations);
   const directory = resolve(process.env.T58_SPIKE_OUTPUT_DIR ??
     ".benchmarks/t58-cpu-spikes");
-  await mkdir(directory,{recursive:true,mode:0o700});
-  await writeFile(resolve(directory,"summary.json"),JSON.stringify(report,null,2)+"\n",{flag:"wx",mode:0o600});
-  await writeFile(resolve(directory,"summary.md"),cpuSpikeMarkdown(report)+"\n",{flag:"wx",mode:0o600});
-  process.stdout.write(cpuSpikeMarkdown(report)+"\n");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+
+  let cookie;
+  try {
+    cookie = await session();
+  } catch (error) {
+    const category = classifyCpuSpikeFailure(error);
+    const state = { samples: [], plannedSlots: seconds / 5 + 1,
+      attempts: 0, failedSlots: 1, failuresByCategory: { [category]: 1 },
+      stopReason: category };
+    await writeCpuSpikeCheckpoint(directory, state);
+    process.stdout.write("T58 diagnosis: " + category + " (sanitized report preserved)\n");
+    process.exitCode = 1;
+    return;
+  }
+
+  const result = await collectCpuSpikeSamples({
+    poll: () => getSample(cookie),
+    slots: seconds / 5,
+    checkpoint: state => writeCpuSpikeCheckpoint(directory, state),
+  });
+  const report = await writeCpuSpikeCheckpoint(directory, result);
+  process.stdout.write(cpuSpikeMarkdown(report) + "\n");
+  // Incomplete evidence must not be reported as a successful Actions job.
+  if (!["PASS", "PASS_WITH_LIMITATIONS"].includes(report.collection.verdict))
+    process.exitCode = 1;
 }
 if (process.argv[1]?.endsWith("t58-cpu-spikes.mjs")) {
-  main().catch(error=>{
-    const name=error instanceof Error?error.message:"t58_spike_unknown_failure";
-    console.error(/^t58_spike_[a-z_]+$/.test(name)?name:"t58_spike_collection_failed");
-    process.exitCode=1;
+  main().catch(() => {
+    // No raw exception text: it could expose request metadata.
+    console.error("t58_spike_unexpected_collector_error");
+    process.exitCode = 1;
   });
 }
