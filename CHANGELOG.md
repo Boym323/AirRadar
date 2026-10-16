@@ -17,6 +17,20 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.478] - 2026-10-16
+
+Changes since v1.0.477.
+
+### Performance
+
+- Bounded stall diagnostics and safe native tag reconciliation (#948) (16f1a3aa)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(t58): bounded stall diagnostics and safe native tag reconciliation (#948) (16f1a3aa)
+
+</details>
 ## [1.0.477] - 2026-10-16
 
 Changes since v1.0.476.
