@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getRuntimePerformanceDiagnostics,
   measureRuntime,
@@ -22,6 +22,31 @@ describe("runtime performance diagnostics", () => {
     expect(entry.windows[0]?.samplesMs.length).toBeLessThanOrEqual(64);
     expect(entry.windows[0]?.p99Ms).toBeGreaterThanOrEqual(entry.windows[0]?.p95Ms ?? 0);
     expect(entry.cpuAttribution).toBe("inclusive-process-overlap");
+  });
+
+  it("reuses the minute boundary until rollover without exposing internal state", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-10-16T10:00:59.900Z"));
+      for (let index = 0; index < 1_000; index += 1) {
+        measureRuntime("snapshot.trail-update", 1, () => index);
+      }
+      let entry = getRuntimePerformanceDiagnostics()["snapshot.trail-update"];
+      expect(entry.windows.map((window) => window.from)).toEqual(["2026-10-16T10:00:00.000Z"]);
+      expect(entry.windows[0]?.calls).toBe(1_000);
+
+      vi.setSystemTime(new Date("2026-10-16T10:01:00.000Z"));
+      measureRuntime("snapshot.trail-update", 1, () => 1);
+      entry = getRuntimePerformanceDiagnostics()["snapshot.trail-update"];
+      expect(entry.windows.map((window) => window.from)).toEqual([
+        "2026-10-16T10:00:00.000Z",
+        "2026-10-16T10:01:00.000Z",
+      ]);
+      expect(entry.windows.map((window) => window.calls)).toEqual([1_000, 1]);
+      expect(entry).not.toHaveProperty("windowStartMs");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports overlapping async operations without claiming exclusive process CPU", async () => {
