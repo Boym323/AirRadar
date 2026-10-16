@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/t58-cpu-spike-diagnosis.yml'
       - 'scripts/t58-cpu-spikes.mjs'
+      - 'scripts/t58-cpu-spike-http.mjs'
       - 'scripts/t58-cpu-spike-collection.mjs'
       - 'tests/t58-cpu-spikes.test.mjs'
       - 'lib/server/runtime-diagnostics.ts'
@@ -41,6 +42,7 @@ jobs:
           node-version: '22'
       - run: node --test tests/t58-cpu-spikes.test.mjs
       - run: node --check scripts/t58-cpu-spikes.mjs
+      - run: node --check scripts/t58-cpu-spike-http.mjs
       - run: node --check scripts/t58-cpu-spike-collection.mjs
 
   observe:
