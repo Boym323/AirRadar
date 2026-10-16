@@ -1,0 +1,1304 @@
+{
+  "verdict": "PASS_WITH_LIMITATIONS",
+  "stableProcessAndCommit": true,
+  "segments": 1,
+  "samples": 61,
+  "missing": 0,
+  "failureCategories": {
+    "http_timeout": 0,
+    "authentication_failure": 0,
+    "response_validation_failure": 0,
+    "network_failure": 0,
+    "http_failure": 0,
+    "unclassified_legacy": 0
+  },
+  "pollingFailureContext": {
+    "delayedPollingMisses": 0,
+    "eventLoopSchedulingDelayCorrelatedMisses": 0,
+    "interpretation": "Correlation with a completed service event-loop window is not proof that scheduling delay caused a failed sample."
+  },
+  "expected": 61,
+  "durationSeconds": 3601.817,
+  "commit": "a19febff",
+  "version": "1.0.482",
+  "steadyStateSamples": 51,
+  "majorGcBaselines": 44,
+  "memoryMiB": {
+    "rss": {
+      "count": 51,
+      "min": 790.711,
+      "p50": 993.453,
+      "p95": 1483.367,
+      "max": 1520.078,
+      "mean": 1127.661
+    },
+    "heapUsed": {
+      "count": 51,
+      "min": 401.765,
+      "p50": 485.968,
+      "p95": 991.108,
+      "max": 1135.244,
+      "mean": 551.603
+    },
+    "oldSpace": {
+      "count": 51,
+      "min": 329.156,
+      "p50": 410.674,
+      "p95": 875.023,
+      "max": 1029.166,
+      "mean": 469.905
+    }
+  },
+  "postMajorGcTrendMiB": {
+    "heapUsed": 16.815,
+    "rss": -492.781,
+    "oldSpace": 19.576
+  },
+  "cpuPercent": {
+    "count": 51,
+    "min": 13.484,
+    "p50": 20.561,
+    "p95": 37.091,
+    "max": 92.061,
+    "mean": 23.308
+  },
+  "pollDelayMs": {
+    "count": 61,
+    "min": 0,
+    "p50": 44,
+    "p95": 50,
+    "max": 51,
+    "mean": 36.049
+  },
+  "delayedPollingSamples": 0,
+  "eventLoopWindowP99Ms": {
+    "count": 51,
+    "min": 41.353,
+    "p50": 51.347,
+    "p95": 65.864,
+    "max": 70.058,
+    "mean": 52.115
+  },
+  "eventLoopWindowMaxMs": {
+    "count": 51,
+    "min": 542.114,
+    "p50": 1943.011,
+    "p95": 4475.322,
+    "max": 4672.455,
+    "mean": 2228.481
+  },
+  "eventLoopWindows": 51,
+  "stallCorrelations": {
+    "snapshot.operationalTwin": {
+      "samples": 51,
+      "r": -0.02
+    },
+    "twin.eventOutcome.local": {
+      "samples": 51,
+      "r": -0.02
+    },
+    "history.persist": {
+      "samples": 51,
+      "r": 0.111
+    },
+    "network.metadata": {
+      "samples": 51,
+      "r": 0.26
+    },
+    "operationalTwin.nonOverlappingTopLevelPhases": {
+      "samples": 0,
+      "r": null
+    },
+    "gc.pause": {
+      "samples": 51,
+      "r": 0.067
+    },
+    "cgroup.cpuThrottledUsecDelta": {
+      "samples": 0,
+      "r": null
+    }
+  },
+  "stallAttribution": {
+    "thresholdMs": 1000,
+    "confirmedSynchronousBlockers": [],
+    "strongCorrelations": [],
+    "unattributedStalls": [
+      {
+        "from": "2026-10-16T15:28:02.844Z",
+        "to": "2026-10-16T15:29:02.844Z",
+        "p95Ms": 21.152,
+        "p99Ms": 70.058,
+        "maxMs": 3571.45,
+        "gcCount": 382,
+        "gcPauseMs": 1487.992
+      },
+      {
+        "from": "2026-10-16T15:29:02.844Z",
+        "to": "2026-10-16T15:30:02.844Z",
+        "p95Ms": 20.972,
+        "p99Ms": 52.462,
+        "maxMs": 1574.961,
+        "gcCount": 309,
+        "gcPauseMs": 1152.992
+      },
+      {
+        "from": "2026-10-16T15:30:02.844Z",
+        "to": "2026-10-16T15:31:02.844Z",
+        "p95Ms": 20.939,
+        "p99Ms": 49.873,
+        "maxMs": 4125.098,
+        "gcCount": 233,
+        "gcPauseMs": 765.447
+      },
+      {
+        "from": "2026-10-16T15:31:02.845Z",
+        "to": "2026-10-16T15:32:02.845Z",
+        "p95Ms": 20.988,
+        "p99Ms": 54.166,
+        "maxMs": 1943.011,
+        "gcCount": 247,
+        "gcPauseMs": 826.714
+      },
+      {
+        "from": "2026-10-16T15:32:02.845Z",
+        "to": "2026-10-16T15:33:02.845Z",
+        "p95Ms": 20.939,
+        "p99Ms": 49.775,
+        "maxMs": 1054.867,
+        "gcCount": 260,
+        "gcPauseMs": 805.622
+      },
+      {
+        "from": "2026-10-16T15:33:02.845Z",
+        "to": "2026-10-16T15:34:02.845Z",
+        "p95Ms": 20.972,
+        "p99Ms": 51.347,
+        "maxMs": 2483.028,
+        "gcCount": 263,
+        "gcPauseMs": 805.836
+      },
+      {
+        "from": "2026-10-16T15:34:02.845Z",
+        "to": "2026-10-16T15:35:02.845Z",
+        "p95Ms": 21.004,
+        "p99Ms": 54.46,
+        "maxMs": 3628.073,
+        "gcCount": 246,
+        "gcPauseMs": 748.363
+      },
+      {
+        "from": "2026-10-16T15:36:02.846Z",
+        "to": "2026-10-16T15:37:02.846Z",
+        "p95Ms": 20.988,
+        "p99Ms": 54.493,
+        "maxMs": 2946.499,
+        "gcCount": 267,
+        "gcPauseMs": 873.95
+      },
+      {
+        "from": "2026-10-16T15:37:02.846Z",
+        "to": "2026-10-16T15:38:02.846Z",
+        "p95Ms": 21.07,
+        "p99Ms": 58.556,
+        "maxMs": 1969.226,
+        "gcCount": 262,
+        "gcPauseMs": 799.259
+      },
+      {
+        "from": "2026-10-16T15:38:02.846Z",
+        "to": "2026-10-16T15:39:02.846Z",
+        "p95Ms": 21.053,
+        "p99Ms": 67.502,
+        "maxMs": 2149.581,
+        "gcCount": 286,
+        "gcPauseMs": 908.654
+      },
+      {
+        "from": "2026-10-16T15:39:02.846Z",
+        "to": "2026-10-16T15:40:02.846Z",
+        "p95Ms": 21.004,
+        "p99Ms": 65.864,
+        "maxMs": 1579.155,
+        "gcCount": 275,
+        "gcPauseMs": 911.245
+      },
+      {
+        "from": "2026-10-16T15:40:02.847Z",
+        "to": "2026-10-16T15:41:02.847Z",
+        "p95Ms": 20.988,
+        "p99Ms": 60.883,
+        "maxMs": 4217.373,
+        "gcCount": 267,
+        "gcPauseMs": 891.5
+      },
+      {
+        "from": "2026-10-16T15:42:02.846Z",
+        "to": "2026-10-16T15:43:02.846Z",
+        "p95Ms": 20.972,
+        "p99Ms": 50.79,
+        "maxMs": 2384.462,
+        "gcCount": 251,
+        "gcPauseMs": 754.106
+      },
+      {
+        "from": "2026-10-16T15:43:02.846Z",
+        "to": "2026-10-16T15:44:02.846Z",
+        "p95Ms": 20.988,
+        "p99Ms": 46.268,
+        "maxMs": 1551.892,
+        "gcCount": 273,
+        "gcPauseMs": 797.431
+      },
+      {
+        "from": "2026-10-16T15:44:02.846Z",
+        "to": "2026-10-16T15:45:02.846Z",
+        "p95Ms": 21.021,
+        "p99Ms": 48.792,
+        "maxMs": 1615.856,
+        "gcCount": 267,
+        "gcPauseMs": 809.527
+      },
+      {
+        "from": "2026-10-16T15:45:02.846Z",
+        "to": "2026-10-16T15:46:02.846Z",
+        "p95Ms": 20.955,
+        "p99Ms": 50.954,
+        "maxMs": 2688.549,
+        "gcCount": 256,
+        "gcPauseMs": 744.777
+      },
+      {
+        "from": "2026-10-16T15:46:02.846Z",
+        "to": "2026-10-16T15:47:02.846Z",
+        "p95Ms": 20.972,
+        "p99Ms": 52.101,
+        "maxMs": 1900.02,
+        "gcCount": 285,
+        "gcPauseMs": 922.163
+      },
+      {
+        "from": "2026-10-16T15:47:02.846Z",
+        "to": "2026-10-16T15:48:02.846Z",
+        "p95Ms": 21.004,
+        "p99Ms": 49.84,
+        "maxMs": 3007.316,
+        "gcCount": 258,
+        "gcPauseMs": 769.176
+      },
+      {
+        "from": "2026-10-16T15:49:02.847Z",
+        "to": "2026-10-16T15:50:02.847Z",
+        "p95Ms": 20.988,
+        "p99Ms": 57.246,
+        "maxMs": 1023.41,
+        "gcCount": 264,
+        "gcPauseMs": 723.494
+      },
+      {
+        "from": "2026-10-16T15:50:02.846Z",
+        "to": "2026-10-16T15:51:02.846Z",
+        "p95Ms": 20.922,
+        "p99Ms": 57.639,
+        "maxMs": 1734.345,
+        "gcCount": 242,
+        "gcPauseMs": 665.528
+      },
+      {
+        "from": "2026-10-16T15:51:03.289Z",
+        "to": "2026-10-16T15:52:03.289Z",
+        "p95Ms": 20.955,
+        "p99Ms": 60.49,
+        "maxMs": 4047.503,
+        "gcCount": 243,
+        "gcPauseMs": 651.385
+      },
+      {
+        "from": "2026-10-16T15:52:03.289Z",
+        "to": "2026-10-16T15:53:03.289Z",
+        "p95Ms": 21.053,
+        "p99Ms": 61.8,
+        "maxMs": 1035.469,
+        "gcCount": 278,
+        "gcPauseMs": 770.348
+      },
+      {
+        "from": "2026-10-16T15:53:03.289Z",
+        "to": "2026-10-16T15:54:03.289Z",
+        "p95Ms": 21.004,
+        "p99Ms": 59.638,
+        "maxMs": 3042.968,
+        "gcCount": 268,
+        "gcPauseMs": 763.215
+      },
+      {
+        "from": "2026-10-16T15:55:04.727Z",
+        "to": "2026-10-16T15:56:04.727Z",
+        "p95Ms": 21.021,
+        "p99Ms": 54.952,
+        "maxMs": 2608.857,
+        "gcCount": 260,
+        "gcPauseMs": 692.895
+      },
+      {
+        "from": "2026-10-16T15:57:07.404Z",
+        "to": "2026-10-16T15:58:07.404Z",
+        "p95Ms": 21.004,
+        "p99Ms": 49.218,
+        "maxMs": 4555.014,
+        "gcCount": 248,
+        "gcPauseMs": 663.482
+      },
+      {
+        "from": "2026-10-16T15:58:07.404Z",
+        "to": "2026-10-16T15:59:07.404Z",
+        "p95Ms": 21.135,
+        "p99Ms": 55.706,
+        "maxMs": 2952.79,
+        "gcCount": 290,
+        "gcPauseMs": 811.862
+      },
+      {
+        "from": "2026-10-16T15:59:10.959Z",
+        "to": "2026-10-16T16:00:10.959Z",
+        "p95Ms": 21.004,
+        "p99Ms": 54.067,
+        "maxMs": 4475.322,
+        "gcCount": 265,
+        "gcPauseMs": 736.625
+      },
+      {
+        "from": "2026-10-16T16:01:10.960Z",
+        "to": "2026-10-16T16:02:10.960Z",
+        "p95Ms": 20.972,
+        "p99Ms": 59.245,
+        "maxMs": 1134.559,
+        "gcCount": 263,
+        "gcPauseMs": 734.467
+      },
+      {
+        "from": "2026-10-16T16:02:14.270Z",
+        "to": "2026-10-16T16:03:14.270Z",
+        "p95Ms": 21.004,
+        "p99Ms": 51.577,
+        "maxMs": 4672.455,
+        "gcCount": 254,
+        "gcPauseMs": 721.239
+      },
+      {
+        "from": "2026-10-16T16:03:14.270Z",
+        "to": "2026-10-16T16:04:14.270Z",
+        "p95Ms": 20.988,
+        "p99Ms": 45.777,
+        "maxMs": 3460.301,
+        "gcCount": 288,
+        "gcPauseMs": 838.482
+      },
+      {
+        "from": "2026-10-16T16:04:17.205Z",
+        "to": "2026-10-16T16:05:17.205Z",
+        "p95Ms": 21.037,
+        "p99Ms": 45.974,
+        "maxMs": 4213.178,
+        "gcCount": 264,
+        "gcPauseMs": 754.531
+      },
+      {
+        "from": "2026-10-16T16:05:17.206Z",
+        "to": "2026-10-16T16:06:17.206Z",
+        "p95Ms": 21.037,
+        "p99Ms": 50.463,
+        "maxMs": 2447.376,
+        "gcCount": 269,
+        "gcPauseMs": 799.158
+      },
+      {
+        "from": "2026-10-16T16:06:17.206Z",
+        "to": "2026-10-16T16:07:17.206Z",
+        "p95Ms": 21.053,
+        "p99Ms": 43.811,
+        "maxMs": 1093.665,
+        "gcCount": 263,
+        "gcPauseMs": 748.603
+      },
+      {
+        "from": "2026-10-16T16:07:17.205Z",
+        "to": "2026-10-16T16:08:17.205Z",
+        "p95Ms": 21.037,
+        "p99Ms": 48.071,
+        "maxMs": 1816.134,
+        "gcCount": 264,
+        "gcPauseMs": 754.609
+      },
+      {
+        "from": "2026-10-16T16:09:17.205Z",
+        "to": "2026-10-16T16:10:17.205Z",
+        "p95Ms": 20.922,
+        "p99Ms": 47.415,
+        "maxMs": 4148.167,
+        "gcCount": 227,
+        "gcPauseMs": 644.495
+      },
+      {
+        "from": "2026-10-16T16:10:17.220Z",
+        "to": "2026-10-16T16:11:17.220Z",
+        "p95Ms": 20.955,
+        "p99Ms": 47.874,
+        "maxMs": 4024.435,
+        "gcCount": 229,
+        "gcPauseMs": 667.354
+      },
+      {
+        "from": "2026-10-16T16:12:17.220Z",
+        "to": "2026-10-16T16:13:17.220Z",
+        "p95Ms": 20.906,
+        "p99Ms": 41.583,
+        "maxMs": 1785.725,
+        "gcCount": 233,
+        "gcPauseMs": 655.497
+      },
+      {
+        "from": "2026-10-16T16:13:17.220Z",
+        "to": "2026-10-16T16:14:17.220Z",
+        "p95Ms": 20.955,
+        "p99Ms": 44.532,
+        "maxMs": 1621.098,
+        "gcCount": 237,
+        "gcPauseMs": 653.398
+      },
+      {
+        "from": "2026-10-16T16:14:17.220Z",
+        "to": "2026-10-16T16:15:17.220Z",
+        "p95Ms": 20.939,
+        "p99Ms": 44.532,
+        "maxMs": 2069.889,
+        "gcCount": 236,
+        "gcPauseMs": 696.198
+      },
+      {
+        "from": "2026-10-16T16:17:17.221Z",
+        "to": "2026-10-16T16:18:17.221Z",
+        "p95Ms": 20.922,
+        "p99Ms": 41.615,
+        "maxMs": 1738.539,
+        "gcCount": 220,
+        "gcPauseMs": 597.967
+      },
+      {
+        "from": "2026-10-16T16:18:17.222Z",
+        "to": "2026-10-16T16:19:17.222Z",
+        "p95Ms": 20.906,
+        "p99Ms": 41.353,
+        "maxMs": 2248.147,
+        "gcCount": 222,
+        "gcPauseMs": 601.1
+      }
+    ],
+    "interpretation": "A sampled synchronous phase with process CPU over the threshold confirms substantial synchronous CPU in an overlapping window; correlation alone does not assign a stall to a phase."
+  },
+  "load": {
+    "aircraft": {
+      "count": 51,
+      "min": 40,
+      "p50": 59,
+      "p95": 85,
+      "max": 91,
+      "mean": 62.608
+    },
+    "sseClients": {
+      "count": 51,
+      "min": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0,
+      "mean": 0
+    },
+    "localTrailPoints": {
+      "count": 51,
+      "min": 2673,
+      "p50": 5642,
+      "p95": 8275,
+      "max": 8679,
+      "mean": 5565.078
+    },
+    "networkTrailPoints": {
+      "count": 51,
+      "min": 67741,
+      "p50": 73827,
+      "p95": 78043,
+      "max": 80660,
+      "mean": 73494.922
+    }
+  },
+  "changesFirstLastDecile": {
+    "localAircraft": -10,
+    "networkAircraft": -227,
+    "localStaleRetained": 1,
+    "networkStaleRetained": 2,
+    "sourcePreferences": -227,
+    "lastHistorySample": 191,
+    "networkTrailPoints": -6587
+  },
+  "overLimit": false,
+  "routeCache": {
+    "measured": true,
+    "phaseLatencyMs": {
+      "routeResolution": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 1,
+          "p95": 1,
+          "max": 1,
+          "mean": 0.843
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 1,
+          "p50": 2,
+          "p95": 4,
+          "max": 4,
+          "mean": 2.137
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 2,
+          "p50": 4,
+          "p95": 52,
+          "max": 76,
+          "mean": 7.49
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 5,
+          "p50": 32,
+          "p95": 2577,
+          "max": 3522,
+          "mean": 214.176
+        }
+      },
+      "memoryLookup": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 0,
+          "p50": 1,
+          "p95": 1,
+          "max": 2,
+          "mean": 0.961
+        }
+      },
+      "readThroughLoad": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 1,
+          "p95": 1,
+          "max": 1,
+          "mean": 0.843
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 1,
+          "p50": 2,
+          "p95": 4,
+          "max": 4,
+          "mean": 2.137
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 2,
+          "p50": 4,
+          "p95": 58,
+          "max": 76,
+          "mean": 8.667
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 5,
+          "p50": 32,
+          "p95": 2577,
+          "max": 3522,
+          "mean": 214.059
+        }
+      },
+      "postgresCacheRequest": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 4,
+          "p50": 6,
+          "p95": 7,
+          "max": 7,
+          "mean": 5.843
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 21,
+          "p50": 46,
+          "p95": 47,
+          "max": 47,
+          "mean": 41.706
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 61,
+          "p50": 62,
+          "p95": 69,
+          "max": 69,
+          "mean": 64.529
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 71,
+          "p50": 71,
+          "p95": 72,
+          "max": 72,
+          "mean": 71.392
+        }
+      },
+      "concurrencyBudget": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbConnection": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "resultProcessing": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 0,
+          "p50": 1,
+          "p95": 1,
+          "max": 1,
+          "mean": 0.882
+        }
+      },
+      "cacheUpdate": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 2,
+          "p50": 3,
+          "p95": 5,
+          "max": 5,
+          "mean": 3.314
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 10,
+          "p50": 10,
+          "p95": 13,
+          "max": 13,
+          "mean": 10.451
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 13,
+          "p50": 277,
+          "p95": 277,
+          "max": 277,
+          "mean": 209.706
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 277,
+          "p50": 277,
+          "p95": 277,
+          "max": 277,
+          "mean": 277
+        }
+      },
+      "callerTimeout": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbCallSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 4.64,
+          "p50": 5.305,
+          "p95": 5.764,
+          "max": 5.777,
+          "mean": 5.326
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 18.183,
+          "p50": 43.356,
+          "p95": 46.165,
+          "max": 46.354,
+          "mean": 38.615
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 60.966,
+          "p50": 62.727,
+          "p95": 71.049,
+          "max": 71.049,
+          "mean": 65.818
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 277.289,
+          "p50": 277.289,
+          "p95": 277.289,
+          "max": 277.289,
+          "mean": 277.289
+        }
+      },
+      "dbReadSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 4.312,
+          "p50": 5.862,
+          "p95": 6.755,
+          "max": 6.755,
+          "mean": 5.883
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 20.224,
+          "p50": 46.059,
+          "p95": 46.684,
+          "max": 47.06,
+          "mean": 41.52
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 60.966,
+          "p50": 62.727,
+          "p95": 69.021,
+          "max": 69.021,
+          "mean": 64.808
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 71.049,
+          "p50": 71.049,
+          "p95": 71.225,
+          "max": 71.225,
+          "mean": 71.118
+        }
+      },
+      "dbWriteSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 2.281,
+          "p50": 3.167,
+          "p95": 4.739,
+          "max": 4.739,
+          "mean": 3.333
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 9.899,
+          "p50": 10.183,
+          "p95": 12.544,
+          "max": 12.544,
+          "mean": 10.384
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 12.544,
+          "p50": 277.289,
+          "p95": 277.289,
+          "max": 277.289,
+          "mean": 209.805
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 277.289,
+          "p50": 277.289,
+          "p95": 277.289,
+          "max": 277.289,
+          "mean": 277.289
+        }
+      },
+      "dbMaintenanceSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 4.123,
+          "p95": 4.123,
+          "max": 4.123,
+          "mean": 4.123
+        },
+        "p95Ms": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 10.319,
+          "p95": 10.319,
+          "max": 10.319,
+          "mean": 8.21
+        },
+        "p99Ms": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 10.319,
+          "p95": 10.319,
+          "max": 10.319,
+          "mean": 8.21
+        },
+        "maxMs": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 10.319,
+          "p95": 10.319,
+          "max": 10.319,
+          "mean": 8.21
+        }
+      },
+      "dbMaintenanceCount": {
+        "measured": true,
+        "p50Ms": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 4.123,
+          "p95": 4.123,
+          "max": 4.123,
+          "mean": 4.123
+        },
+        "p95Ms": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 10.319,
+          "p95": 10.319,
+          "max": 10.319,
+          "mean": 8.21
+        },
+        "p99Ms": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 10.319,
+          "p95": 10.319,
+          "max": 10.319,
+          "mean": 8.21
+        },
+        "maxMs": {
+          "count": 47,
+          "min": 4.123,
+          "p50": 10.319,
+          "p95": 10.319,
+          "max": 10.319,
+          "mean": 8.21
+        }
+      },
+      "dbMaintenancePrune": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbLateSettlement": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "callerTimeoutOvershoot": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      }
+    },
+    "countersDelta": {
+      "ramHit": null,
+      "dbHit": null,
+      "dbMiss": null,
+      "dbWrite": null,
+      "dbError": null,
+      "dbBypassed": null,
+      "adsbdbLookup": null,
+      "dbLatencySamples": null,
+      "dbLatencyTotalMs": null
+    },
+    "databaseHitRateLast": 0.06718991556665478,
+    "databaseAverageLatencyMsLast": 12.321646629805874,
+    "circuitOpenSamples": 0,
+    "circuitOpenSampleRatio": 0,
+    "maxActiveDbOperations": 4,
+    "maxActiveDbWrites": 0,
+    "maxObservedActiveDbOperations": 0,
+    "maxRejectedConcurrencyCounter": 36,
+    "maxRecoveryProbeInFlight": 0,
+    "callerTimeoutsDelta": null,
+    "completedAfterCallerTimeoutDelta": 0,
+    "eventLoopAtTimeout": {
+      "p50Percent": null,
+      "p95Percent": null,
+      "p99Percent": null,
+      "sampleCountMax": 0,
+      "scope": "process-local-recent-samples"
+    },
+    "sqlLatencyMeasurement": "db_call_elapsed; server-side SQL latency NOT MEASURED"
+  },
+  "hotPathsByWindowCpuMs": [
+    {
+      "name": "snapshot.network",
+      "windows": 51,
+      "calls": 2704,
+      "cpuMs": 42452.551,
+      "waitMs": 0,
+      "p99MsMax": 105.983
+    },
+    {
+      "name": "history.persist",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 39779.134,
+      "waitMs": 2895.105,
+      "p99MsMax": 688.376
+    },
+    {
+      "name": "history.transaction",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 39740.67,
+      "waitMs": 2895.269,
+      "p99MsMax": 688.345
+    },
+    {
+      "name": "snapshot.apply.total",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 34279.53,
+      "waitMs": 0,
+      "p99MsMax": 230.573
+    },
+    {
+      "name": "snapshot.local",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 34274.718,
+      "waitMs": 0,
+      "p99MsMax": 230.566
+    },
+    {
+      "name": "snapshot.operationalTwin",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 19850.403,
+      "waitMs": 0,
+      "p99MsMax": 104.33
+    },
+    {
+      "name": "twin.eventOutcome.local",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 19767.768,
+      "waitMs": 0,
+      "p99MsMax": 104.234
+    },
+    {
+      "name": "snapshot.trail-update",
+      "windows": 51,
+      "calls": 3514526,
+      "cpuMs": 16117.915,
+      "waitMs": 0,
+      "p99MsMax": 0.344
+    },
+    {
+      "name": "snapshot.trackFusion",
+      "windows": 51,
+      "calls": 3694,
+      "cpuMs": 15831.345,
+      "waitMs": 0,
+      "p99MsMax": 55.289
+    },
+    {
+      "name": "network.metadata",
+      "windows": 51,
+      "calls": 987,
+      "cpuMs": 14388.359,
+      "waitMs": 10382.685,
+      "p99MsMax": 3521.251
+    },
+    {
+      "name": "snapshot.navigationIntegrity",
+      "windows": 51,
+      "calls": 3694,
+      "cpuMs": 8203.598,
+      "waitMs": 0,
+      "p99MsMax": 90.131
+    },
+    {
+      "name": "snapshot.intelligence",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 3812.317,
+      "waitMs": 0,
+      "p99MsMax": 17.465
+    },
+    {
+      "name": "twin.outcome.truth",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 25.203,
+      "waitMs": 0,
+      "p99MsMax": 0.118
+    },
+    {
+      "name": "twin.trajectoryQualityV2.truth",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 18.279,
+      "waitMs": 0,
+      "p99MsMax": 0.097
+    },
+    {
+      "name": "twin.trajectoryQuality.truth",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 17.378,
+      "waitMs": 0,
+      "p99MsMax": 0.128
+    },
+    {
+      "name": "twin.regionalAttention.truth",
+      "windows": 51,
+      "calls": 990,
+      "cpuMs": 4.939,
+      "waitMs": 0,
+      "p99MsMax": 0.079
+    }
+  ],
+  "operationalTwinForensics": {
+    "enabled": true,
+    "windows": 62,
+    "phases": {
+      "truthInputFingerprint": {
+        "calls": 3763,
+        "sampledCalls": 14,
+        "estimatedCpuMs": 122.939,
+        "estimatedWallMs": 127.767,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.182,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.178
+      },
+      "truthPoints": {
+        "calls": 3593,
+        "sampledCalls": 14,
+        "estimatedCpuMs": 39.151,
+        "estimatedWallMs": 43.252,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.124,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.314
+      },
+      "truthStateDiff": {
+        "calls": 3593,
+        "sampledCalls": 14,
+        "estimatedCpuMs": 77.688,
+        "estimatedWallMs": 77.375,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.242,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.244
+      },
+      "pendingTraversal": {
+        "calls": 1191,
+        "sampledCalls": 4,
+        "estimatedCpuMs": 1367.639,
+        "estimatedWallMs": 1186.763,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 16.812,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 21.039
+      },
+      "pendingTruthEvaluation": {
+        "calls": 3593,
+        "sampledCalls": 14,
+        "estimatedCpuMs": 6931.796,
+        "estimatedWallMs": 6569.609,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 20.101,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 23.685
+      },
+      "spatialTruthMatches": {
+        "calls": 4748,
+        "sampledCalls": 18,
+        "estimatedCpuMs": 6579.688,
+        "estimatedWallMs": 6075.269,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 22.607,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 26.503
+      },
+      "atcContextComputation": {
+        "calls": 1466,
+        "sampledCalls": 5,
+        "estimatedCpuMs": 2910.148,
+        "estimatedWallMs": 2708.333,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 16.495,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 20.381
+      },
+      "atcCacheOperations": {
+        "calls": 5939,
+        "sampledCalls": 23,
+        "estimatedCpuMs": 5427.903,
+        "estimatedWallMs": 6339.271,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 34.595,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 21.609
+      },
+      "expiryHeap": {
+        "calls": 76443,
+        "sampledCalls": 298,
+        "estimatedCpuMs": 837.029,
+        "estimatedWallMs": 1036.313,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.633,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 1.374
+      },
+      "capacityEviction": {
+        "calls": 61,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "cleanup": {
+        "calls": 1796,
+        "sampledCalls": 7,
+        "estimatedCpuMs": 3.19,
+        "estimatedWallMs": 4.34,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.034,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.021
+      }
+    },
+    "cacheHitRate": 0.64,
+    "ratesPerMinute": {
+      "captures": 2.033,
+      "expirations": 0.467,
+      "truthInvalidations": 62.429,
+      "actualTruthResolutions": 1,
+      "pendingCapacityEvictions": 0,
+      "atcCacheEvictions": 0,
+      "atcCacheExpirations": 17.933,
+      "cacheHits": 48.435,
+      "cacheMisses": 26.607
+    },
+    "pendingPopulation": {
+      "p50": 18,
+      "p95": 37,
+      "max": 38
+    },
+    "pendingPerAircraftDistribution": {
+      "one": 95864,
+      "two": 78724,
+      "threeToFour": 74512,
+      "fiveToEight": 4665,
+      "overEight": 5193
+    }
+  },
+  "caveats": [
+    "Continuous clean windows and two major GC observations are required for evidence.",
+    "A restart, changed commit, or insufficient coverage yields INSUFFICIENT_EVIDENCE.",
+    "Process CPU attribution for overlapping async paths is not a per-operation profiler.",
+    "Old-space growth and bounded-container counts alone do not prove a leak.",
+    "Traffic mix, cold caches and 0 SSE clients can limit inference.",
+    "No sensitive telemetry, heap object graphs, flight coordinates or raw API responses are stored."
+  ]
+}
