@@ -1,0 +1,886 @@
+{
+  "verdict": "PASS_WITH_LIMITATIONS",
+  "stableProcessAndCommit": true,
+  "segments": 1,
+  "samples": 61,
+  "missing": 0,
+  "failureCategories": {
+    "http_timeout": 0,
+    "authentication_failure": 0,
+    "response_validation_failure": 0,
+    "network_failure": 0,
+    "http_failure": 0,
+    "unclassified_legacy": 0
+  },
+  "pollingFailureContext": {
+    "delayedPollingMisses": 0,
+    "eventLoopSchedulingDelayCorrelatedMisses": 0,
+    "interpretation": "Correlation with a completed service event-loop window is not proof that scheduling delay caused a failed sample."
+  },
+  "expected": 61,
+  "durationSeconds": 3601.966,
+  "commit": "208bf3e7",
+  "version": "1.0.481",
+  "steadyStateSamples": 51,
+  "majorGcBaselines": 49,
+  "memoryMiB": {
+    "rss": {
+      "count": 51,
+      "min": 766.844,
+      "p50": 893.164,
+      "p95": 1427.105,
+      "max": 1468.215,
+      "mean": 921.29
+    },
+    "heapUsed": {
+      "count": 51,
+      "min": 329.918,
+      "p50": 400.63,
+      "p95": 706.849,
+      "max": 923.504,
+      "mean": 425.029
+    },
+    "oldSpace": {
+      "count": 51,
+      "min": 266.504,
+      "p50": 328.258,
+      "p95": 630.225,
+      "max": 809.643,
+      "mean": 355.578
+    }
+  },
+  "postMajorGcTrendMiB": {
+    "heapUsed": 40.759,
+    "rss": -531.691,
+    "oldSpace": 40.689
+  },
+  "cpuPercent": {
+    "count": 51,
+    "min": 14.311,
+    "p50": 24.843,
+    "p95": 39.241,
+    "max": 49.197,
+    "mean": 25.464
+  },
+  "pollDelayMs": {
+    "count": 61,
+    "min": 1,
+    "p50": 49,
+    "p95": 50,
+    "max": 50,
+    "mean": 40.279
+  },
+  "delayedPollingSamples": 0,
+  "eventLoopWindowP99Ms": {
+    "count": 51,
+    "min": 31.949,
+    "p50": 34.603,
+    "p95": 38.306,
+    "max": 55.312,
+    "mean": 35.173
+  },
+  "eventLoopWindowMaxMs": {
+    "count": 51,
+    "min": 483.656,
+    "p50": 597.164,
+    "p95": 667.419,
+    "max": 740.819,
+    "mean": 585.799
+  },
+  "eventLoopWindows": 51,
+  "stallCorrelations": {
+    "snapshot.operationalTwin": {
+      "samples": 0,
+      "r": null
+    },
+    "twin.eventOutcome.local": {
+      "samples": 51,
+      "r": -0.008
+    },
+    "history.persist": {
+      "samples": 51,
+      "r": -0.039
+    },
+    "network.metadata": {
+      "samples": 0,
+      "r": null
+    },
+    "operationalTwin.nonOverlappingTopLevelPhases": {
+      "samples": 1,
+      "r": null
+    },
+    "gc.pause": {
+      "samples": 51,
+      "r": 0.014
+    },
+    "cgroup.cpuThrottledUsecDelta": {
+      "samples": 0,
+      "r": null
+    }
+  },
+  "stallAttribution": {
+    "thresholdMs": 1000,
+    "confirmedSynchronousBlockers": [],
+    "strongCorrelations": [],
+    "unattributedStalls": [],
+    "interpretation": "A sampled synchronous phase with process CPU over the threshold confirms substantial synchronous CPU in an overlapping window; correlation alone does not assign a stall to a phase."
+  },
+  "load": {
+    "aircraft": {
+      "count": 51,
+      "min": 33,
+      "p50": 82,
+      "p95": 92,
+      "max": 96,
+      "mean": 77.451
+    },
+    "sseClients": {
+      "count": 51,
+      "min": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0,
+      "mean": 0
+    },
+    "localTrailPoints": {
+      "count": 51,
+      "min": 2582,
+      "p50": 9683,
+      "p95": 11460,
+      "max": 11585,
+      "mean": 8311.902
+    },
+    "networkTrailPoints": {
+      "count": 51,
+      "min": 75563,
+      "p50": 78595,
+      "p95": 81166,
+      "max": 83558,
+      "mean": 78278.431
+    }
+  },
+  "changesFirstLastDecile": {
+    "localAircraft": 9,
+    "networkAircraft": 16,
+    "localStaleRetained": 0,
+    "networkStaleRetained": -3,
+    "sourcePreferences": 16,
+    "lastHistorySample": 231,
+    "networkTrailPoints": -1273
+  },
+  "overLimit": false,
+  "routeCache": {
+    "measured": true,
+    "phaseLatencyMs": {
+      "routeResolution": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 2857,
+          "p50": 2857,
+          "p95": 2857,
+          "max": 2857,
+          "mean": 2857
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 3183,
+          "p50": 3183,
+          "p95": 3183,
+          "max": 3183,
+          "mean": 3183
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 3432,
+          "p50": 3432,
+          "p95": 3432,
+          "max": 3432,
+          "mean": 3432
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 3432,
+          "p50": 3432,
+          "p95": 3432,
+          "max": 3432,
+          "mean": 3432
+        }
+      },
+      "memoryLookup": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        }
+      },
+      "readThroughLoad": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 2857,
+          "p50": 2857,
+          "p95": 2857,
+          "max": 2857,
+          "mean": 2857
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 3183,
+          "p50": 3183,
+          "p95": 3183,
+          "max": 3183,
+          "mean": 3183
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 3431,
+          "p50": 3431,
+          "p95": 3431,
+          "max": 3431,
+          "mean": 3431
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 3431,
+          "p50": 3431,
+          "p95": 3431,
+          "max": 3431,
+          "mean": 3431
+        }
+      },
+      "postgresCacheRequest": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 9,
+          "p50": 9,
+          "p95": 9,
+          "max": 9,
+          "mean": 9
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 320,
+          "p50": 320,
+          "p95": 320,
+          "max": 320,
+          "mean": 320
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 328,
+          "p50": 328,
+          "p95": 328,
+          "max": 328,
+          "mean": 328
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 328,
+          "p50": 328,
+          "p95": 328,
+          "max": 328,
+          "mean": 328
+        }
+      },
+      "concurrencyBudget": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbConnection": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "resultProcessing": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0,
+          "mean": 0
+        }
+      },
+      "cacheUpdate": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 8,
+          "p50": 8,
+          "p95": 8,
+          "max": 8,
+          "mean": 8
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 20,
+          "p50": 20,
+          "p95": 20,
+          "max": 20,
+          "mean": 20
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 20,
+          "p50": 20,
+          "p95": 20,
+          "max": 20,
+          "mean": 20
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 20,
+          "p50": 20,
+          "p95": 20,
+          "max": 20,
+          "mean": 20
+        }
+      },
+      "callerTimeout": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbCallSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 8.645,
+          "p50": 8.645,
+          "p95": 8.645,
+          "max": 8.645,
+          "mean": 8.645
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 309.086,
+          "p50": 309.086,
+          "p95": 309.086,
+          "max": 309.086,
+          "mean": 309.086
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 327.194,
+          "p50": 327.194,
+          "p95": 327.194,
+          "max": 327.194,
+          "mean": 327.194
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 327.194,
+          "p50": 327.194,
+          "p95": 327.194,
+          "max": 327.194,
+          "mean": 327.194
+        }
+      },
+      "dbReadSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 8.949,
+          "p50": 8.949,
+          "p95": 8.949,
+          "max": 8.949,
+          "mean": 8.949
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 319.351,
+          "p50": 319.351,
+          "p95": 319.351,
+          "max": 319.351,
+          "mean": 319.351
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 327.194,
+          "p50": 327.194,
+          "p95": 327.194,
+          "max": 327.194,
+          "mean": 327.194
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 327.194,
+          "p50": 327.194,
+          "p95": 327.194,
+          "max": 327.194,
+          "mean": 327.194
+        }
+      },
+      "dbWriteSettlement": {
+        "measured": true,
+        "p50Ms": {
+          "count": 51,
+          "min": 8.599,
+          "p50": 8.599,
+          "p95": 8.599,
+          "max": 8.599,
+          "mean": 8.599
+        },
+        "p95Ms": {
+          "count": 51,
+          "min": 19.327,
+          "p50": 19.327,
+          "p95": 19.327,
+          "max": 19.327,
+          "mean": 19.327
+        },
+        "p99Ms": {
+          "count": 51,
+          "min": 19.327,
+          "p50": 19.327,
+          "p95": 19.327,
+          "max": 19.327,
+          "mean": 19.327
+        },
+        "maxMs": {
+          "count": 51,
+          "min": 19.327,
+          "p50": 19.327,
+          "p95": 19.327,
+          "max": 19.327,
+          "mean": 19.327
+        }
+      },
+      "dbMaintenanceSettlement": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbMaintenanceCount": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbMaintenancePrune": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "dbLateSettlement": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      },
+      "callerTimeoutOvershoot": {
+        "measured": false,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null
+      }
+    },
+    "countersDelta": {
+      "ramHit": null,
+      "dbHit": null,
+      "dbMiss": null,
+      "dbWrite": null,
+      "dbError": null,
+      "dbBypassed": null,
+      "adsbdbLookup": null,
+      "dbLatencySamples": null,
+      "dbLatencyTotalMs": null
+    },
+    "databaseHitRateLast": 0.07120288873843376,
+    "databaseAverageLatencyMsLast": 12.285599219232163,
+    "circuitOpenSamples": 0,
+    "circuitOpenSampleRatio": 0,
+    "maxActiveDbOperations": 4,
+    "maxActiveDbWrites": 0,
+    "maxObservedActiveDbOperations": 0,
+    "maxRejectedConcurrencyCounter": 43,
+    "maxRecoveryProbeInFlight": 0,
+    "callerTimeoutsDelta": null,
+    "completedAfterCallerTimeoutDelta": 0,
+    "eventLoopAtTimeout": {
+      "p50Percent": null,
+      "p95Percent": null,
+      "p99Percent": null,
+      "sampleCountMax": 0,
+      "scope": "process-local-recent-samples"
+    },
+    "sqlLatencyMeasurement": "db_call_elapsed; server-side SQL latency NOT MEASURED"
+  },
+  "hotPathsByWindowCpuMs": [
+    {
+      "name": "snapshot.network",
+      "windows": 51,
+      "calls": 2749,
+      "cpuMs": 46438.248,
+      "waitMs": 0,
+      "p99MsMax": 102.652
+    },
+    {
+      "name": "history.persist",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 37723.424,
+      "waitMs": 3007.425,
+      "p99MsMax": 934.02
+    },
+    {
+      "name": "history.transaction",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 37701.18,
+      "waitMs": 3005.454,
+      "p99MsMax": 933.989
+    },
+    {
+      "name": "snapshot.trail-update",
+      "windows": 51,
+      "calls": 3919018,
+      "cpuMs": 17544.381,
+      "waitMs": 0,
+      "p99MsMax": 0.014
+    },
+    {
+      "name": "snapshot.trackFusion",
+      "windows": 51,
+      "calls": 3757,
+      "cpuMs": 17430.455,
+      "waitMs": 0,
+      "p99MsMax": 67.283
+    },
+    {
+      "name": "snapshot.apply.total",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 16230.42,
+      "waitMs": 0,
+      "p99MsMax": 112.404
+    },
+    {
+      "name": "snapshot.local",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 16227.504,
+      "waitMs": 0,
+      "p99MsMax": 112.4
+    },
+    {
+      "name": "snapshot.navigationIntegrity",
+      "windows": 51,
+      "calls": 3757,
+      "cpuMs": 9111.503,
+      "waitMs": 0,
+      "p99MsMax": 98.935
+    },
+    {
+      "name": "snapshot.intelligence",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 4685.373,
+      "waitMs": 0,
+      "p99MsMax": 16.979
+    },
+    {
+      "name": "atc.dataset.freeze.coordinates",
+      "windows": 10,
+      "calls": 203,
+      "cpuMs": 1292.129,
+      "waitMs": 0,
+      "p99MsMax": 12.763
+    },
+    {
+      "name": "atc.dataset.orm-materialization",
+      "windows": 9,
+      "calls": 9,
+      "cpuMs": 1208.264,
+      "waitMs": 0,
+      "p99MsMax": 220.752
+    },
+    {
+      "name": "atc.dataset.polygon-json-parse",
+      "windows": 10,
+      "calls": 1140,
+      "cpuMs": 1155.319,
+      "waitMs": 0,
+      "p99MsMax": 12.333
+    },
+    {
+      "name": "twin.eventOutcome.local",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 46.095,
+      "waitMs": 0,
+      "p99MsMax": 0.128
+    },
+    {
+      "name": "twin.outcome.truth",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 17.846,
+      "waitMs": 0,
+      "p99MsMax": 0.217
+    },
+    {
+      "name": "twin.trajectoryQuality.truth",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 13.695,
+      "waitMs": 0,
+      "p99MsMax": 0.144
+    },
+    {
+      "name": "twin.trajectoryQualityV2.truth",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 11.344,
+      "waitMs": 0,
+      "p99MsMax": 0.063
+    },
+    {
+      "name": "twin.regionalAttention.truth",
+      "windows": 51,
+      "calls": 1008,
+      "cpuMs": 3.147,
+      "waitMs": 0,
+      "p99MsMax": 0.04
+    }
+  ],
+  "operationalTwinForensics": {
+    "enabled": true,
+    "windows": 61,
+    "phases": {
+      "truthInputFingerprint": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "truthPoints": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "truthStateDiff": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "pendingTraversal": {
+        "calls": 1188,
+        "sampledCalls": 4,
+        "estimatedCpuMs": 2.12,
+        "estimatedWallMs": 2.125,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.033,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.033
+      },
+      "pendingTruthEvaluation": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "spatialTruthMatches": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "atcContextComputation": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "atcCacheOperations": {
+        "calls": 1188,
+        "sampledCalls": 4,
+        "estimatedCpuMs": 0.42,
+        "estimatedWallMs": 0.832,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.012,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.007
+      },
+      "expiryHeap": {
+        "calls": 93440,
+        "sampledCalls": 365,
+        "estimatedCpuMs": 383.988,
+        "estimatedWallMs": 915.604,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.029,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.016
+      },
+      "capacityEviction": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "cleanup": {
+        "calls": 2070,
+        "sampledCalls": 8,
+        "estimatedCpuMs": 2.799,
+        "estimatedWallMs": 3.864,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": 0.021,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": 0.015
+      }
+    },
+    "cacheHitRate": null,
+    "ratesPerMinute": {
+      "captures": 0,
+      "expirations": 0,
+      "truthInvalidations": 0,
+      "actualTruthResolutions": 0,
+      "pendingCapacityEvictions": 0,
+      "atcCacheEvictions": 0,
+      "atcCacheExpirations": 0,
+      "cacheHits": 0,
+      "cacheMisses": 0
+    },
+    "pendingPopulation": {
+      "p50": 0,
+      "p95": 0,
+      "max": 0
+    },
+    "pendingPerAircraftDistribution": {
+      "one": 0,
+      "two": 0,
+      "threeToFour": 0,
+      "fiveToEight": 0,
+      "overEight": 0
+    }
+  },
+  "caveats": [
+    "Continuous clean windows and two major GC observations are required for evidence.",
+    "A restart, changed commit, or insufficient coverage yields INSUFFICIENT_EVIDENCE.",
+    "Process CPU attribution for overlapping async paths is not a per-operation profiler.",
+    "Old-space growth and bounded-container counts alone do not prove a leak.",
+    "Traffic mix, cold caches and 0 SSE clients can limit inference.",
+    "No sensitive telemetry, heap object graphs, flight coordinates or raw API responses are stored."
+  ]
+}
