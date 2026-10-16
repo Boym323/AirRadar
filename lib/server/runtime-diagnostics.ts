@@ -171,33 +171,17 @@ export function parseCpuCgroupCounters(input: {
         quota >= 0 && period > 0) cores = quota / period;
   } else if (input.legacyQuota !== null && input.legacyPeriod !== null) {
     const quota = Number(input.legacyQuota.trim()), period = Number(input.legacyPeriod.trim());
-    // cgroup v1 uses -1 for unlimited quota.
+    // cgroup v1: -1 denotes unlimited quota.
     if (Number.isFinite(quota) && Number.isFinite(period) && quota >= 0 && period > 0)
       cores = quota / period;
   }
   const counter = (key: string): number | null => {
-    const match = input.cpuStat?.match(new RegExp(`^${key}\\s+(\\d+)export function parseCpuCgroupCounters(input: {
-  cpuMax: string | null;
-  cpuStat: string | null;
-  legacyQuota: string | null;
-  legacyPeriod: string | null;
-}): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
-  let cores: number | null = null;
-  if (input.cpuMax !== null) {
-    const [quotaRaw, periodRaw] = input.cpuMax.trim().split(/\s+/);
-    const quota = Number(quotaRaw), period = Number(periodRaw);
-    if (quotaRaw !== "max" && Number.isFinite(quota) && Number.isFinite(period) &&
-        quota >= 0 && period > 0) cores = quota / period;
-  } else if (input.legacyQuota !== null && input.legacyPeriod !== null) {
-    const quota = Number(input.legacyQuota.trim()), period = Number(input.legacyPeriod.trim());
-    // cgroup v1 uses -1 for unlimited quota.
-    if (Number.isFinite(quota) && Number.isFinite(period) && quota >= 0 && period > 0)
-      cores = quota / period;
-  }
-  const counter = (key: string): number | null => {
-, "m"));
-    if (!match) return null;
-    const value = Number(match[1]);
+    const row = (input.cpuStat ?? "").split(/\r?\n/)
+      .find(line => line.startsWith(key + " ") || line.startsWith(key + "\t"));
+    if (!row) return null;
+    const fields = row.trim().split(/\s+/);
+    if (fields.length !== 2 || fields[0] !== key) return null;
+    const value = Number(fields[1]);
     return Number.isSafeInteger(value) && value >= 0 ? value : null;
   };
   const nrThrottled = counter("nr_throttled");
@@ -205,8 +189,11 @@ export function parseCpuCgroupCounters(input: {
   const legacyNanoseconds = microseconds === null ? counter("throttled_time") : null;
   const throttledUsec = microseconds ?? (legacyNanoseconds === null
     ? null : Math.floor(legacyNanoseconds / 1_000));
-  return { cgroupCpuQuotaCores: cores, cgroupCpuNrThrottled: nrThrottled,
-    cgroupCpuThrottledUsec: throttledUsec };
+  return {
+    cgroupCpuQuotaCores: cores,
+    cgroupCpuNrThrottled: nrThrottled,
+    cgroupCpuThrottledUsec: throttledUsec,
+  };
 }
 
 function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
