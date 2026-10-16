@@ -17,3 +17,26 @@ are not changed.
 
 Rollback if interrupted: `sudo bash /var/www/airradar/deploy/rollback-stall-canary.sh`.
 The one-time job is `.github/workflows/t58-stall-canary.yml`.
+
+## Production runner permissions (fixed after #38904102249)
+
+The runner intentionally **does not** have wildcard passwordless sudo.
+It can execute the existing root-reviewed release entrypoint at
+`/var/www/airradar/deploy/release.sh`. The canary now calls only its exact
+`--t58-canary-probe`, `--t58-canary-start` and `--t58-canary-stop`
+subcommands. The release entrypoint delegates to a fixed root-only helper;
+there are no privileged arguments, paths or shell fragments supplied by CI.
+
+An early sudo policy mismatch fails closed **before any systemd modification**.
+Before enabling the service, the helper installs a root-owned rescue copy
+under `/run/airradar-t58-stall-canary` and schedules an independent 23-minute
+rollback. Its implementation and path are not writable by the runner while
+the measurement is active. Normal termination uses the same narrowly scoped
+release entrypoint to restore configuration.
+
+The release pipeline also refuses to deploy while the temporary systemd
+override is present. This prevents mixing deployment and observation.
+
+No new sudoers entry, root password, SSH key, or broader permissions are
+required. To manually verify the production privilege path without changes:
+`sudo -n /var/www/airradar/deploy/release.sh --t58-canary-probe`.

@@ -14,3 +14,21 @@ historii letů ani Rust nastavení. Nezasahuje do souboru `.env`.
 
 Ruční nouzový rollback:
 `sudo bash /var/www/airradar/deploy/rollback-stall-canary.sh`.
+
+## Oprava oprávnění self-hosted runneru
+
+Běh #38904102249 skončil před aktivací na chybě
+`sudo: a password is required`. Runner úmyslně nemá obecné právo spouštět
+`sudo systemctl`. Nová verze používá výhradně existující schválený vstup
+`/var/www/airradar/deploy/release.sh` s pevnými volbami
+`--t58-canary-probe`, `--t58-canary-start` a `--t58-canary-stop`.
+Nezadává se žádný externí příkaz, cesta ani shell skript.
+
+Před změnou konfigurace vznikne kopie rollbacku vlastněná rootem pod
+`/run/airradar-t58-stall-canary` a nezávislý 23minutový systemd timer.
+Při neúspěšném preflightu se systemd nemění. Standardní release odmítne
+nové nasazení během aktivního canary.
+
+Není nutné přidávat obecné `sudo`, heslo ani nové oprávnění do sudoers.
+Neškodná kontrola oprávnění:
+`sudo -n /var/www/airradar/deploy/release.sh --t58-canary-probe`.

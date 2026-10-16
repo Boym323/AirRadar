@@ -1246,6 +1246,12 @@ main() {
   parse_args "$@"
   preflight
 
+  # Never deploy over an active T58 canary; its watchdog must restore the
+  # exact pre-canary environment and report a stable production identity.
+  if [[ -e "/etc/systemd/system/airradar.service.d/zz-t58-stall-canary.conf" ]]; then
+    die "A T58 stall canary is active; finish its rollback before deployment."
+  fi
+
   if (( DRY_RUN == 1 )); then
     print_dry_run_plan
     return 0
@@ -1267,6 +1273,20 @@ main() {
   log "Release successful: ${RELEASE_TAG}"
 }
 
+# The existing production runner already has passwordless sudo restricted
+# to this release entrypoint. Reuse it for exactly three bounded canary
+# commands; do not grant blanket sudo/systemctl permissions to Actions.
+# This branch runs before normal release argument parsing or mutations.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  main "$@"
+  case "${1:-}" in
+    --t58-canary-probe|--t58-canary-start|--t58-canary-stop)
+      [[ $# -eq 1 ]] || die "T58 canary command takes no extra arguments."
+      [[ "$EUID" -eq 0 ]] || die "T58 canary control requires the approved privileged release entrypoint."
+      [[ "${APP_DIR}" == "${EXPECTED_APP_DIR}" ]] || die "Unexpected canary application directory."
+      exec /bin/bash "${APP_DIR}/deploy/t58-canary-control.sh" "${1#--t58-canary-}"
+      ;;
+    *)
+      main "$@"
+      ;;
+  esac
 fi
