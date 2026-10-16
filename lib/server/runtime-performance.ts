@@ -1,4 +1,5 @@
 import { performance } from "node:perf_hooks";
+import { recordRuntimeSlowSyncSpan } from "@/lib/server/runtime-stall-evidence";
 
 const MAX_SAMPLES = 128;
 // Bounded headroom for dedicated Twin validator scopes alongside existing health metrics.
@@ -109,10 +110,13 @@ export function measureRuntime<T>(name: string, processedAircraft: number | (() 
   try {
     return operation();
   } finally {
-    const durationMs = Math.max(0, performance.now() - started);
+    const ended = performance.now();
+    const durationMs = Math.max(0, ended - started);
     // This is an inclusive synchronous wall-time proxy. Nested scopes
     // overlap and must never be summed as exclusive process CPU.
     record(name, durationMs, typeof processedAircraft === "function" ? processedAircraft() : processedAircraft, durationMs);
+    // Millions of tiny trail-update calls must not pay for diagnostics.
+    if (durationMs >= 25) recordRuntimeSlowSyncSpan(name, started, ended);
   }
 }
 
