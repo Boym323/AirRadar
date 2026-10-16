@@ -17,28 +17,6 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.481] - 2026-10-16
-
-Changes since v1.0.480.
-
-### Fixed
-
-- Tolerate pre-enabled evidence and classify canary preflight [t58-stall-canary] (#954) (99963a34)
-
-### Maintenance
-
-- Sync generated repository metadata (#953) (97942222)
-- Update release script permissions to executable (208bf3e7)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#953) (97942222)
-- fix(t58): tolerate pre-enabled evidence and classify canary preflight [t58-stall-canary] (#954) (99963a34)
-- chore(release): update release script permissions to executable (208bf3e7)
-
-</details>
-
 ## [1.0.480] - 2026-10-16
 
 Changes since v1.0.479.
@@ -58,6 +36,7 @@ Changes since v1.0.479.
 - fix(t58): use approved release sudo entrypoint [t58-stall-canary] (#952) (2081b38d)
 
 </details>
+
 ## [1.0.479] - 2026-10-16
 
 Changes since v1.0.478.
@@ -77,6 +56,7 @@ Changes since v1.0.478.
 - ops(t58): controlled production stall canary [t58-stall-canary] (#950) (14b2f1d2)
 
 </details>
+
 ## [1.0.478] - 2026-10-16
 
 Changes since v1.0.477.
@@ -91,6 +71,7 @@ Changes since v1.0.477.
 - perf(t58): bounded stall diagnostics and safe native tag reconciliation (#948) (16f1a3aa)
 
 </details>
+
 ## [1.0.477] - 2026-10-16
 
 Changes since v1.0.476.
@@ -150,6 +131,7 @@ Changes since v1.0.474.
 - perf: profile history SQL await phases and trim snapshot allocation (#946) (3ee302dd)
 
 </details>
+
 ## [1.0.474] - 2026-10-16
 
 Changes since v1.0.473.
@@ -169,6 +151,7 @@ Changes since v1.0.473.
 - perf: one source-affinity sweep per snapshot, cheaper history inputs (#944) (29bed75c)
 
 </details>
+
 ## [1.0.473] - 2026-10-16
 
 Changes since v1.0.472.
@@ -188,6 +171,7 @@ Changes since v1.0.472.
 - perf: T58 follow-up — bounded metadata patches and history shadow fast path (#942) (a5f2a087)
 
 </details>
+
 ## [1.0.472] - 2026-10-16
 
 Changes since v1.0.471.
@@ -207,6 +191,7 @@ Changes since v1.0.471.
 - Fix T58 CPU diagnostics: respect API rate limits and identify HTTP failures (#939) (d06b3ea1)
 
 </details>
+
 ## [1.0.471] - 2026-10-16
 
 Changes since v1.0.470.
@@ -231,6 +216,7 @@ Changes since v1.0.470.
 - Merge pull request #937 from Boym323/fix/t58-spike-fail-closed-checkpoints (60b7127c)
 
 </details>
+
 ## [1.0.470] - 2026-10-16
 
 Changes since v1.0.469.
@@ -268,6 +254,7 @@ Changes since v1.0.469.
 - Merge pull request #935 from Boym323/perf/t58-cpu-spike-attribution (8f09ed1d)
 
 </details>
+
 ## [1.0.469] - 2026-10-15
 
 Changes since v1.0.468.
@@ -323,6 +310,7 @@ Changes since v1.0.468.
 - fix(ci): stabilize mobile radar traffic drawer production smoke (#932) (c5539b03)
 
 </details>
+
 ## [1.0.468] - 2026-10-15
 
 Changes since v1.0.467.
