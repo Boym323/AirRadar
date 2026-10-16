@@ -265,6 +265,7 @@ describe("T58 quota-aware diagnostic HTTP", () => {
     assert.equal(report.collection.validSamples, 61);
     assert.equal(report.collection.failedSamples, 0);
     assert.equal(report.source.samplingIntervalSeconds, 10);
+    assert.match(cpuSpikeMarkdown(report), /61\*\* at 10-second intervals/);
     assert.equal(report.source.intervals, 60);
     assert.equal(report.collection.verdict, "PASS_WITH_LIMITATIONS");
   });

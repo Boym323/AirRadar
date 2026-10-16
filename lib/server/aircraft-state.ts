@@ -886,38 +886,33 @@ export class AircraftStateService {
     }
   }
 
-  private async hydrateInitialIconMetadata<T extends ProviderSnapshot["aircraft"]>(
-    aircraft: T,
+  private async hydrateInitialIconMetadata(
+    aircraft: ProviderSnapshot["aircraft"],
     existing: ReadonlyMap<string, Aircraft> = this.localAircraft,
-  ): Promise<T> {
-    if (!this.enrichment.hasInitialMetadataProvider) return aircraft;
+  ): Promise<Aircraft[]> {
+    // This is a patch list, not a second full snapshot: both consumers apply
+    // metadata only to matching current aircraft and never replace positions.
+    if (!this.enrichment.hasInitialMetadataProvider) return [];
 
     const candidates = aircraft.filter((item) => {
       if (existing.get(item.icaoHex)?.enrichment?.metadata) return false;
       return aircraftIconNeedsInitialMetadata(item);
     });
-    if (candidates.length === 0) return aircraft;
+    if (candidates.length === 0) return [];
 
-    const results = await mapBounded(candidates, ENRICHMENT_WORKER_LIMIT, async (item) => ({
-      icaoHex: item.icaoHex,
-      metadata: await this.enrichment.getInitialAircraftMetadata(item.icaoHex),
-    }));
-    const metadataByHex = new Map(results
-      .filter((result) => result.metadata !== null)
-      .map((result) => [result.icaoHex, result.metadata!]));
-    if (metadataByHex.size === 0) return aircraft;
-
-    return aircraft.map((item) => {
-        const metadata = metadataByHex.get(item.icaoHex);
-        if (!metadata) return item;
-        return {
-          ...item,
-          enrichment: {
-            ...(item.enrichment ?? {}),
-            metadata,
-          },
-        };
-    }) as T;
+    const metadata = await mapBounded(candidates, ENRICHMENT_WORKER_LIMIT,
+      (item) => this.enrichment.getInitialAircraftMetadata(item.icaoHex));
+    const patches: Aircraft[] = [];
+    for (let i = 0; i < metadata.length; i++) {
+      const value = metadata[i];
+      if (!value) continue;
+      const item = candidates[i]!;
+      patches.push({
+        ...item,
+        enrichment: { ...(item.enrichment ?? {}), metadata: value },
+      });
+    }
+    return patches;
   }
 
   private applyInitialMetadata(aircraft: ProviderSnapshot["aircraft"]): void {
@@ -1480,30 +1475,35 @@ export class AircraftStateService {
 
     const now = Date.now();
     const sampleIntervalMs = getHistorySampleIntervalMs();
-    const activeHexes: string[] = [];
+    const shadowEnabled = flightPositionPersistenceShadow.isEnabled;
+    // Avoid shadow-only objects, proximity calculations and the active-key
+    // array entirely while the observational shadow gate is disabled.
+    const activeHexes: string[] | null = shadowEnabled ? [] : null;
     const due: Aircraft[] = [];
     for (const item of snapshot.aircraft) {
-      activeHexes.push(item.icaoHex);
+      if (activeHexes) activeHexes.push(item.icaoHex);
       if (item.lat === null || item.lon === null) continue;
       const previous = this.lastHistorySample.get(item.icaoHex);
       const currentPersist = previous === undefined || sampledAt - previous >= sampleIntervalMs;
       // Merge metadata/route only for position samples actually due for
       // persistence. The shadow policy still observes every valid position.
       if (currentPersist) due.push(historyAircraftForSnapshot(item, this.aircraft.get(item.icaoHex)));
-      flightPositionPersistenceShadow.observe({
-        aircraftHex: item.icaoHex,
-        currentPersist,
-        candidate: {
-          recordedAtMs: sampledAt, lat: item.lat, lon: item.lon, altitudeFt: item.altitude,
-          trackDeg: item.track, groundSpeedKt: item.groundSpeed, verticalRateFpm: item.verticalRate,
-          onGround: item.onGround, source: item.provenance?.positionSource ?? item.source,
-          airportProximity: isAirportProximity(item),
-          phase: item.onGround ? "airport" : item.targetState?.approachMode ? "approach" : item.verticalRate !== null && item.verticalRate >= 250 ? "climb" : item.verticalRate !== null && item.verticalRate <= -250 ? "descent" : item.groundSpeed !== null && item.groundSpeed > 120 ? "cruise" : "unknown",
-        },
-        nowMs: now,
-      });
+      if (shadowEnabled) {
+        flightPositionPersistenceShadow.observe({
+          aircraftHex: item.icaoHex,
+          currentPersist,
+          candidate: {
+            recordedAtMs: sampledAt, lat: item.lat, lon: item.lon, altitudeFt: item.altitude,
+            trackDeg: item.track, groundSpeedKt: item.groundSpeed, verticalRateFpm: item.verticalRate,
+            onGround: item.onGround, source: item.provenance?.positionSource ?? item.source,
+            airportProximity: isAirportProximity(item),
+            phase: item.onGround ? "airport" : item.targetState?.approachMode ? "approach" : item.verticalRate !== null && item.verticalRate >= 250 ? "climb" : item.verticalRate !== null && item.verticalRate <= -250 ? "descent" : item.groundSpeed !== null && item.groundSpeed > 120 ? "cruise" : "unknown",
+          },
+          nowMs: now,
+        });
+      }
     }
-    flightPositionPersistenceShadow.cleanup(activeHexes, now);
+    if (activeHexes) flightPositionPersistenceShadow.cleanup(activeHexes, now);
     if (due.length) {
       // Weather is a separate sparse lane. It is intentionally fire-and-forget
       // so a database hiccup cannot add latency to the live Beast/SSE loop.
@@ -1633,7 +1633,7 @@ export class AircraftStateService {
     const observedAt = new Date(snapshot.fetchedAt);
     const results = await mapSettledBounded(candidates, ENRICHMENT_WORKER_LIMIT, async (item) => ({
       item,
-      enrichment: await this.enrichment.enrich(item, observedAt),
+      enrichment: await this.enrichment.enrich(item, observedAt, this.aircraft.get(item.icaoHex)?.enrichment),
     }));
     if (this.shuttingDown) return;
     let changed = false;
