@@ -78,7 +78,7 @@ jobs:
           node scripts/changelog.mjs check
       - name: Verify release gate planner
         if: steps.scope.outputs.docs_only != 'true'
-        run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs
+        run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs tests/reconcile-manual-native-release-tags.test.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
@@ -175,9 +175,33 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+  reconcile-manual-native-tags:
+    name: Reconcile manually deployed native release tags
+    # After the manually deployed native 1.0.476/1.0.477 builds, no Git tags
+    # were published. This bounded, main-only one-time repair runs before any
+    # tag-dependent validation, version resolution or deployment.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Restore only verified missing native release tag refs
+        run: node scripts/reconcile-manual-native-release-tags.mjs
+
   release-scope:
     name: Release scope
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview')
+    needs: [reconcile-manual-native-tags]
+    if: >-
+      ${{ always() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.reconcile-manual-native-tags.result == 'success') ||
+        (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release-preview'))
+      ) }}
     runs-on: ubuntu-24.04
     # Read-only verification of the exact-tree PR preview against GitHub.
     permissions:
