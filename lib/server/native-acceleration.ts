@@ -36,7 +36,11 @@ export function getNativeBeastEngine(): NativeBeastBindings | null {
   }
   try {
     // Dynamic absolute path avoids a required .node import in Next standalone.
-    const loaded = createRequire(import.meta.url)(filename) as Partial<NativeBeastBindings>;
+    // Next standalone bundles this module into a CommonJS server file where
+    // import.meta.url does not provide a usable require parent. The service's
+    // working directory is stable and trusted, so use its package boundary
+    // while retaining the mandatory absolute addon path check above.
+    const loaded = createRequire(`${process.cwd()}/package.json`)(filename) as Partial<NativeBeastBindings>;
     if (typeof loaded.NativeBeastParser !== "function"
       || typeof loaded.NativeBeastParser.prototype?.pushPacked !== "function"
       || typeof loaded.NativeBeastParser.prototype?.pushPackedWithCrc !== "function"
