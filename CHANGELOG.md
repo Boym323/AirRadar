@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.472] - 2026-10-16
+
+Changes since v1.0.471.
+
+### Changed
+
+- Fix T58 CPU diagnostics: respect API rate limits and identify HTTP failures (#939) (d06b3ea1)
+
+### Maintenance
+
+- Sync generated repository metadata (#938) (3a28c660)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#938) (3a28c660)
+- Fix T58 CPU diagnostics: respect API rate limits and identify HTTP failures (#939) (d06b3ea1)
+
+</details>
 ## [1.0.471] - 2026-10-16
 
 Changes since v1.0.470.
