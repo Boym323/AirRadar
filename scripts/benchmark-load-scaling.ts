@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { runT56dSseScenario } from "./t56d-sse-fanout-benchmark";
 import { runT57Scenario } from "./benchmark-operational-twin-t57";
 import { snapshotApplyBenchmark, snapshotApplyComparisonBenchmark } from "./benchmark-live-performance";
+import { runAtcRingScenario } from "./benchmark-atc-ring-stalls";
 
 const multiplier = Number(process.env.AIRRADAR_LOAD_MULTIPLIER ?? "1");
 if (![1, 2, 4].includes(multiplier)) throw new Error("invalid_load_multiplier");
@@ -25,6 +26,7 @@ if (JSON.stringify(twinIncremental.semantic) !== JSON.stringify(twinFullScan.sem
   throw new Error("operational_twin_semantic_parity_failed");
 }
 const sse = runT56dSseScenario(aircraft, clients, 0.02, 5, 10);
+const atcGeometry = await runAtcRingScenario(multiplier);
 const report = {
   schemaVersion: 1,
   workload: { multiplier, aircraft, twinAircraft: twinScenario.aircraft,
@@ -42,6 +44,7 @@ const report = {
     semanticParity: true,
   },
   sseFanout: sse,
+  atcGeometry,
   limitations: [
     "Synthetic deterministic data only; no receiver, network, PostgreSQL, TLS, proxy, or stream backpressure.",
     "SSE clients represent concurrent subscribers sharing one Node event loop; work is synchronous fanout.",

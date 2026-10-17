@@ -17,6 +17,81 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.500] - 2026-10-17
+
+Changes since v1.0.499.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Fixed
+
+- Preserve sloped edge ray casting (2b788a45)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(atc): preserve sloped edge ray casting (2b788a45)
+
+</details>
+
+## [1.0.499] - 2026-10-17
+
+Changes since v1.0.498.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Performance
+
+- Skip non-crossing ring edges early (226154e7)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(atc): skip non-crossing ring edges early (226154e7)
+
+</details>
+
+## [1.0.498] - 2026-10-17
+
+Changes since v1.0.497.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Performance
+
+- Reuse polygon containment result (4e623ff9)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(atc): reuse polygon containment result (4e623ff9)
+
+</details>
+
+## [1.0.497] - 2026-10-17
+
+Changes since v1.0.496.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Performance
+
+- Avoid repeated large ring scans in point containment (548a7059)
+- Keep hot ring scan allocation free (9c0c9f2a)
+
+### Maintenance
+
+- Sync generated repository metadata (#989) (f0f75079)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#989) (f0f75079)
+- perf(atc): avoid repeated large ring scans in point containment (548a7059)
+- perf(atc): keep hot ring scan allocation free (9c0c9f2a)
+
+</details>
+
 ## [1.0.496] - 2026-10-17
 
 Changes since v1.0.495.

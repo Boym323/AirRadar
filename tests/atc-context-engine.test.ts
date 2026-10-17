@@ -16,12 +16,37 @@ describe("ATC Context Engine", () => {
   it("treats boundaries as inside and supports polygon holes", () => {
     expect(pointInPolygon([14, 49.5], [[[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]]])).toBe("boundary");
     expect(pointInPolygon([14.5, 49.5], [[[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]], [[14.25, 49.25], [14.75, 49.25], [14.75, 49.75], [14.25, 49.75], [14.25, 49.25]]])).toBeNull();
+    const withHole: [number, number][][] = [
+      [[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]],
+      [[14.25, 49.25], [14.75, 49.25], [14.75, 49.75], [14.25, 49.75], [14.25, 49.25]],
+    ];
+    expect(pointInPolygon([14.25, 49.5], withHole)).toBe("boundary");
+    expect(pointInPolygon([14.1, 49.5], withHole)).toBe("inside");
+    expect(pointInPolygon([15.1, 49.5], withHole)).toBeNull();
+    expect(pointInPolygon([14.5, 49.5], [])).toBeNull();
+  });
+
+  it("keeps ray casting correct for sloped edges", () => {
+    const triangle = [[[0, 0], [2, 3], [4, 0], [0, 0]]] as [number, number][][];
+    expect(pointInPolygon([2, 1], triangle)).toBe("inside");
+    expect(pointInPolygon([0.5, 2], triangle)).toBeNull();
+    expect(pointInPolygon([2, 3], triangle)).toBe("boundary");
   });
 
   it("keeps all matching spaces and chooses the most specific display space", () => {
     const result = computeAtcContext(input(), dataset([sector(), sector({ id: "CZ-TMA", name: "TMA PRAHA", airspaceType: "TMA", lowerAltitudeFt: 3000, upperAltitudeFt: 25000, lowerAltitudeReference: "AMSL", upperAltitudeReference: "AMSL" })]));
     expect(result.currentAirspaces.map((value) => value.id)).toEqual(["CZ-TMA", "CZ-FIR"]);
     expect(result.primaryAirspace?.id).toBe("CZ-TMA");
+  });
+
+  it("preserves boundary priority across disjoint polygons", () => {
+    const result = computeAtcContext(input({ lat: 49.5, lon: 16 }), dataset([sector({
+      polygons: [
+        [[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]],
+        [[16, 49], [17, 49], [17, 50], [16, 50], [16, 49]],
+      ],
+    })]));
+    expect(result.currentAirspaces[0]?.horizontalMatch).toBe("boundary");
   });
 
   it("does not show a TMA above its upper limit", () => {
