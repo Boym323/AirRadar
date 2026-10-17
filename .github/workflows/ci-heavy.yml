@@ -42,7 +42,7 @@ jobs:
           path: .next/cache
           key: heavy-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
           restore-keys: |
-            next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+            heavy-next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - name: Build full regression fixture
         run: npm run build:prepared
         env:
