@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.496] - 2026-10-17
+
+Changes since v1.0.495.
+
+### Changed
+
+- Safe V8 source-map locations [t58-stall-canary] (22eba05e)
+
+### Maintenance
+
+- Sync generated repository metadata (#987) (99a0df89)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#987) (99a0df89)
+- diagnostics(t58): safe V8 source-map locations [t58-stall-canary] (22eba05e)
+
+</details>
 ## [1.0.495] - 2026-10-17
 
 Changes since v1.0.494.
