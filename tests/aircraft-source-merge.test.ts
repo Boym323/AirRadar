@@ -258,6 +258,47 @@ describe("aircraft source merge", () => {
     });
   });
 
+  it("preserves the original ordered union and complete payload under a large overlapping workload", () => {
+    const local = new Map<string, Aircraft>();
+    const network = new Map<string, Aircraft>();
+    const sourcePreferences = new Map<string, "local" | "network">();
+    const hexFor = (index: number) => (0xA00000 + index).toString(16).toUpperCase();
+
+    for (let i = 0; i < 96; i++) {
+      const hex = hexFor(i);
+      const missingPosition = i % 11 === 0;
+      local.set(hex, make(hex, "local", missingPosition
+        ? { lat: null, lon: null, seen_pos: null }
+        : { lon: 14.1 + i / 10_000 }));
+    }
+    // 48 overlapping aircraft followed by 1,552 network-only observations.
+    for (let i = 48; i < 1_648; i++) {
+      const hex = hexFor(i);
+      network.set(hex, make(hex, "adsblol", {
+        lon: 14.2 + i / 10_000,
+        ...(i % 17 === 0 ? { seen_pos: 90 } : {}),
+      }));
+      if (i % 3 === 0) sourcePreferences.set(hex, "network");
+      else if (i % 3 === 1) sourcePreferences.set(hex, "local");
+    }
+    const frozenOptions = Object.freeze({ ...options, sourcePreferences });
+
+    // Independent reference retains the original Set union and per-key spread.
+    const union = new Set([...local.keys(), ...network.keys()]);
+    const expected = [...union]
+      .map((key) => mergeAircraftObservations(local.get(key), network.get(key), receiver, {
+        ...frozenOptions,
+        preferredOrigin: frozenOptions.sourcePreferences.get(key),
+      }))
+      .filter((item): item is Aircraft => item !== null);
+    const actual = mergeAircraftMaps(local, network, receiver, frozenOptions);
+
+    expect(actual.map((item) => item.icaoHex)).toEqual([...union]);
+    expect(actual).toEqual(expected);
+    expect(actual).toHaveLength(1_648);
+    expect(frozenOptions).not.toHaveProperty("preferredOrigin");
+  });
+
   it("preserves emergency from a fresh network observation and keeps non-ICAO identity separate", () => {
     const local = make("~ABC123", "local");
     const network = make("ABC123", "adsblol", { emergency: "7700" });
