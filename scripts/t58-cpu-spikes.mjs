@@ -83,6 +83,8 @@ export function projectCpuSpikeSample(status, metrics, at = new Date().toISOStri
       quotaCores: finite(sys.cgroupCpuQuotaCores),
       nrThrottled: finite(sys.cgroupCpuNrThrottled),
       throttledUsec: finite(sys.cgroupCpuThrottledUsec),
+      cgroupThrottleStatus: ["available", "controller_disabled", "unavailable"].includes(sys.cgroupCpuThrottleStatus)
+        ? sys.cgroupCpuThrottleStatus : null,
       aircraftCount: finite(sys.aircraftCount),
       hotPaths,
     },
@@ -138,6 +140,7 @@ export function analyzeCpuSpikeSamples(samples) {
       cpuUserMs: rounded(cpuUserMs), cpuSystemMs: rounded(cpuSystemMs),
       gcPauseMs: rounded(gcPauseMs), gcCount, majorGcCount, gcPausePercent,
       eventLoopP99Ms: next.eventLoopP99Ms,
+      cgroupThrottleStatus: next.cgroupThrottleStatus,
       quotaCores: next.quotaCores, aircraftCount: next.aircraftCount,
       throttledEvents, throttledUsec, throttledTimePercent,
       // No double counting: nested path CPU values are independent timings.
@@ -155,9 +158,12 @@ export function analyzeCpuSpikeSamples(samples) {
   const elapsedTotalMs = intervals.reduce((v,x)=>v+x.elapsedMs,0);
   const cpu = intervals.map(x=>x.cpuPercent);
   const quota = samples.map(x=>x.quotaCores).find(v=>v!==null) ?? null;
+  const cgroupStatuses = [...new Set(samples.map(x => x.cgroupThrottleStatus).filter(Boolean))];
   const spikes = intervals.filter(x=>x.spike);
   const interpretation = [];
-  if (th.length < intervals.length) interpretation.push(
+  if (cgroupStatuses.includes("controller_disabled")) interpretation.push(
+    "The production cgroup does not expose the CPU controller; throttling counters are unavailable, not zero.");
+  else if (cgroupStatuses.includes("unavailable") || th.length < intervals.length) interpretation.push(
     "Cgroup throttling telemetry is missing in some/all intervals: cannot rule out throttling.");
   else if (throttledIntervals.length) interpretation.push(
     "Cgroup throttling counter increased; causality of CPU or event-loop spikes is NOT established.");
@@ -176,7 +182,8 @@ export function analyzeCpuSpikeSamples(samples) {
     cpu: { p50Percent: percentile(cpu,.5), p95Percent: percentile(cpu,.95),
       maxPercent: cpu.length ? rounded(Math.max(...cpu)) : null, thresholdPercent: 85,
       spikeCount: spikes.length },
-    cgroup: { quotaCores: quota, observedIntervals: th.length,
+    cgroup: { quotaCores: quota, throttleStatus: cgroupStatuses.length === 1 ? cgroupStatuses[0] : cgroupStatuses.length ? "mixed" : null,
+      observedIntervals: th.length,
       unavailableIntervals: intervals.length - th.length,
       throttledIntervals: throttledIntervals.length,
       totalNrThrottled: th.reduce((v,x)=>v+x.throttledEvents,0),
@@ -264,6 +271,7 @@ export function cpuSpikeMarkdown(report) {
     `| Flagged CPU/throttling/lag intervals | ${cpu?.spikeCount} |`,
     `| Rolling event-loop P99 P95 (ms) | ${yes(eventLoop?.rollingP99P95Ms)} |`,
     `| Cgroup quota (cores) | ${yes(cgroup?.quotaCores)} |`,
+    `| Cgroup throttle telemetry | ${yes(cgroup?.throttleStatus)} |`,
     `| Cgroup counters present | ${cgroup?.observedIntervals}/${source.intervals} intervals |`,
     `| Cgroup throttle events / time (us) | ${cgroup?.totalNrThrottled} / ${cgroup?.totalThrottledUsec} |`,
     `| GC count (major) | ${gc?.gcCount} (${gc?.majorGcCount}) |`,

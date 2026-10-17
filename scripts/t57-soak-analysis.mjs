@@ -219,6 +219,8 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       cgroupCpuQuotaCores: safe(system.cgroupCpuQuotaCores),
       cgroupCpuNrThrottled: safe(system.cgroupCpuNrThrottled),
       cgroupCpuThrottledUsec: safe(system.cgroupCpuThrottledUsec),
+      cgroupCpuThrottleStatus: ["available", "controller_disabled", "unavailable"].includes(system.cgroupCpuThrottleStatus)
+        ? system.cgroupCpuThrottleStatus : null,
       majorGcCount: safe(runtime.majorGcCount),
       postMajorGc: gc && safe(gc.observedAtMs) !== null ? {
         observedAtMs: safe(gc.observedAtMs), heapUsedBytes: safe(gc.heapUsedBytes),
@@ -585,6 +587,15 @@ export function analyzeT57Soak(records) {
       oldSpace: gcTrend("oldSpaceUsedBytes"),
     },
     cpuPercent: series(steady, (r) => r.cpuPercent),
+    cgroupCpuThrottleTelemetry: (() => {
+      const statuses = ["available", "controller_disabled", "unavailable"];
+      const counts = Object.fromEntries(statuses.map((status) => [status,
+        steady.filter((row) => row.cgroupCpuThrottleStatus === status).length]));
+      return {
+        statuses: counts,
+        coverageComplete: steady.length > 0 && counts.available === steady.length,
+      };
+    })(),
     pollDelayMs: series(rows, (r) => safe(r.pollDelayMs)),
     delayedPollingSamples: rows.filter((r) => r.pollDelayCategory === "delayed_polling").length,
     eventLoopWindowP99Ms: series(loopWindows, (r) => r.p99Ms),

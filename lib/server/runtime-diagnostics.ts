@@ -35,6 +35,7 @@ export interface RuntimeDiagnostics {
   cgroupCpuQuotaCores?: number | null;
   cgroupCpuNrThrottled?: number | null;
   cgroupCpuThrottledUsec?: number | null;
+  cgroupCpuThrottleStatus?: "available" | "controller_disabled" | "unavailable";
   aircraftCount: number | null;
   localTrailAircraftCount: number | null;
   networkTrailAircraftCount: number | null;
@@ -153,6 +154,22 @@ function cgroupTextValue(file: "cpu.max" | "cpu.stat" | "cpu.cfs_quota_us" | "cp
   return null;
 }
 
+function cgroupV2Controllers(): string | null {
+  const cgroupText = processCgroupText();
+  for (const line of cgroupText?.split(/\r?\n/) ?? []) {
+    const [hierarchy, , rawPath] = line.split(":");
+    if (hierarchy !== "0") continue;
+    const relativePath = safeCgroupPath(rawPath ?? "");
+    if (!relativePath) continue;
+    try {
+      return readFileSync(`/sys/fs/cgroup${relativePath}/cgroup.controllers`, "utf8").trim();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /**
  * Parse v2 (microseconds) and v1 (nanoseconds) cgroup CPU stats.
  * Missing data MUST remain null: unknown is never equivalent to zero.
@@ -196,15 +213,27 @@ export function parseCpuCgroupCounters(input: {
   };
 }
 
-function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec"> {
+function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" | "cgroupCpuNrThrottled" | "cgroupCpuThrottledUsec" | "cgroupCpuThrottleStatus"> {
   const cpuMax = cgroupTextValue("cpu.max");
-  return parseCpuCgroupCounters({
+  const cpuStat = cgroupTextValue("cpu.stat");
+  const parsed = parseCpuCgroupCounters({
     cpuMax,
-    cpuStat: cgroupTextValue("cpu.stat"),
+    cpuStat,
     // Only read legacy controller fields when v2 cpu.max is absent.
     legacyQuota: cpuMax === null ? cgroupTextValue("cpu.cfs_quota_us") : null,
     legacyPeriod: cpuMax === null ? cgroupTextValue("cpu.cfs_period_us") : null,
   });
+  const hasThrottleCounters = parsed.cgroupCpuNrThrottled !== null &&
+    parsed.cgroupCpuThrottledUsec !== null;
+  const v2Controllers = cgroupV2Controllers();
+  const status = hasThrottleCounters ? "available" as const
+    : v2Controllers !== null && !v2Controllers.split(/\s+/).includes("cpu")
+      ? "controller_disabled" as const
+      : cpuStat === null ? "unavailable" as const : "controller_disabled" as const;
+  return {
+    ...parsed,
+    cgroupCpuThrottleStatus: status,
+  };
 }
 
 export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}): RuntimeDiagnostics {
