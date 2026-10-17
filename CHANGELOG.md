@@ -17,6 +17,23 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.500] - 2026-10-17
+
+Changes since v1.0.499.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Fixed
+
+- Preserve sloped edge ray casting (2b788a45)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(atc): preserve sloped edge ray casting (2b788a45)
+
+</details>
+
 ## [1.0.499] - 2026-10-17
 
 Changes since v1.0.498.
