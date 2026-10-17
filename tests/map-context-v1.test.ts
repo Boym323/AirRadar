@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { mkdtemp, mkdir, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { WeatherRadarArchiveService } from "@/lib/server/map-context";
@@ -95,6 +95,86 @@ describe("Map Context V1 providers", () => {
     expect(provider.diagnostics()).toMatchObject({ status: "degraded", consecutiveFailures: 1, validTimes: 1 });
     await provider.getWind(300);
     expect(provider.diagnostics()).toMatchObject({ status: "online", consecutiveFailures: 0 });
+  });
+
+  describe("weather radar archive retention", () => {
+    const originalArchiveDir = process.env.WEATHER_RADAR_ARCHIVE_DIR;
+    const originalRetentionDays = process.env.MAP_CONTEXT_RETENTION_DAYS;
+    const originalMaxBytes = process.env.WEATHER_RADAR_ARCHIVE_MAX_BYTES;
+    let archiveDir: string;
+
+    async function putFrame(id: string, bytes: number | Uint8Array): Promise<string> {
+      const destination = path.join(archiveDir, id.slice(0, 4), id.slice(4, 6), id.slice(6, 8), `${id}.png`);
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, typeof bytes === "number" ? Buffer.alloc(bytes, 0x01) : bytes);
+      return destination;
+    }
+
+    async function cleanupService(service: WeatherRadarArchiveService): Promise<void> {
+      await (service as unknown as { cleanup(): Promise<void> }).cleanup();
+    }
+
+    beforeEach(async () => {
+      archiveDir = await mkdtemp(path.join(process.cwd(), ".tmp-radar-archive-"));
+      vi.stubEnv("WEATHER_RADAR_ARCHIVE_DIR", archiveDir);
+      vi.stubEnv("MAP_CONTEXT_RETENTION_DAYS", "30");
+      vi.stubEnv("WEATHER_RADAR_ARCHIVE_MAX_BYTES", String(32 * 1024 * 1024));
+    });
+
+    afterEach(async () => {
+      if (originalArchiveDir === undefined) delete process.env.WEATHER_RADAR_ARCHIVE_DIR;
+      else process.env.WEATHER_RADAR_ARCHIVE_DIR = originalArchiveDir;
+      if (originalRetentionDays === undefined) delete process.env.MAP_CONTEXT_RETENTION_DAYS;
+      else process.env.MAP_CONTEXT_RETENTION_DAYS = originalRetentionDays;
+      if (originalMaxBytes === undefined) delete process.env.WEATHER_RADAR_ARCHIVE_MAX_BYTES;
+      else process.env.WEATHER_RADAR_ARCHIVE_MAX_BYTES = originalMaxBytes;
+      vi.unstubAllEnvs();
+      await rm(archiveDir, { recursive: true, force: true });
+    });
+
+    it("keeps public listing bounded while cleanup sees and removes expired frames", async () => {
+      await putFrame("202609011200", 4);
+      await putFrame("202610161200", 4);
+      const service = new WeatherRadarArchiveService();
+      expect((await service.listFrames()).map((frame) => frame.id)).toEqual(["202610161200"]);
+      expect((await service.listAllArchivedFrames()).map((frame) => frame.id)).toEqual(["202609011200", "202610161200"]);
+      await cleanupService(service);
+      await expect(stat(path.join(archiveDir, "2026/09/01/202609011200.png"))).rejects.toThrow();
+      expect((await service.listFrames()).map((frame) => frame.id)).toEqual(["202610161200"]);
+    });
+
+    it("removes oldest valid frames first when the archive quota is exceeded", async () => {
+      await putFrame("202610161100", 17 * 1024 * 1024);
+      await putFrame("202610161200", 17 * 1024 * 1024);
+      await putFrame("202610161300", 1);
+      await cleanupService(new WeatherRadarArchiveService());
+      await expect(stat(path.join(archiveDir, "2026/10/16/202610161100.png"))).rejects.toThrow();
+      await expect(stat(path.join(archiveDir, "2026/10/16/202610161200.png"))).resolves.toBeTruthy();
+      await expect(stat(path.join(archiveDir, "2026/10/16/202610161300.png"))).resolves.toBeTruthy();
+    });
+
+    it("does not touch invalid names, symlinks, temporary downloads, or a raced-away file", async () => {
+      const valid = await putFrame("202610161200", 4);
+      const dayDir = path.dirname(valid);
+      await writeFile(path.join(dayDir, "not-a-frame.png"), Buffer.alloc(4));
+      await writeFile(path.join(dayDir, "202610161201.png.tmp"), Buffer.alloc(4));
+      const outside = path.join(archiveDir, "outside.png");
+      await writeFile(outside, Buffer.alloc(4));
+      await symlink(outside, path.join(dayDir, "202610161202.png"));
+      await unlink(valid);
+      await expect(cleanupService(new WeatherRadarArchiveService())).resolves.toBeUndefined();
+      await expect(stat(path.join(dayDir, "not-a-frame.png"))).resolves.toBeTruthy();
+      await expect(stat(path.join(dayDir, "202610161201.png.tmp"))).resolves.toBeTruthy();
+      await expect(stat(outside)).resolves.toBeTruthy();
+    });
+
+    it("reports capacity over the complete valid inventory, including expired frames", async () => {
+      await putFrame("202609011200", 7);
+      await putFrame("202610161200", 11);
+      const diagnostics = await new WeatherRadarArchiveService().diagnostics();
+      expect(diagnostics.frames).toBe(1);
+      expect(diagnostics.diskBytes).toBe(18);
+    });
   });
   it("returns the readFile Buffer without an additional frame-sized copy", async () => {
     const archiveDir = await mkdtemp(path.join(process.cwd(), ".tmp-radar-frame-"));
