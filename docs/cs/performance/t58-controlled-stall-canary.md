@@ -83,3 +83,21 @@ který sám vytvořil dočasné nastavení, může spustit vlastní cleanup.
 Úspěch je podmíněn odstraněním override, neaktivním watchdogem a potvrzením
 vypnuté diagnostiky v běžící aplikaci se správným commitem i Rust backendem.
 Samotný soubor s naměřenými daty **není důkazem rollbacku**.
+
+## Jednorázové vzorkování CPU pomocí V8 během canary
+
+Stejný dočasný systemd override zapíná také `AIRRADAR_T58_CPU_PROFILE_ENABLED=1`.
+Vestavěný `node:inspector` spustí vzorkování hlavního vlákna před zahájením
+sběru letadel, po 20 ms. Skončí po 120 sekundách nebo při RSS nad 1 750 MiB;
+neotevírá síťový port inspectoru. Profil se zahodí při překročení 10 000
+vzorků či uzlů nebo 32 KiB očištěného souhrnu. Stávající 23minutový watchdog
+odstraní oba přepínače a při ztrátě runneru restartuje službu. Po rollbacku
+musí read-only API potvrdit vypnutí obou diagnostik.
+
+Plný V8 profil, URL, cesty, zdrojový kód, data požadavků a argumenty se
+neukládají ani nenahrávají. Autentizovaný endpoint poskytuje pouze omezené
+názvy funkcí, hrubé kategorie JS/nativní/GC/idle, počty vzorků a delty CPU,
+GC a plánování hlavního vlákna pro jednotlivé blokace. Patnáctiminutový
+canary report obsahuje tento očištěný souhrn. Vzorek CPU uvnitř blokace je
+silnější důkaz než minutová korelace, ale je nutné jej posoudit spolu s CPU,
+GC a čekáním plánovače.

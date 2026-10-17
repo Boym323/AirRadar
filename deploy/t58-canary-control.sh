@@ -42,7 +42,7 @@ if [[ "$action" == "stop" ]]; then
 fi
 systemctl is-active --quiet "$unit" || { echo "t58_service_unhealthy" >&2; exit 1; }
 [[ ! -e "$dropin" && ! -L "$dropin" ]] || { echo "t58_canary_already_active" >&2; exit 1; }
-if grep -Eq '^[[:space:]]*AIRRADAR_STALL_EVIDENCE_ENABLED[[:space:]]*=' "$envfile"; then
+if grep -Eq '^[[:space:]]*AIRRADAR_(STALL_EVIDENCE|T58_CPU_PROFILE)_ENABLED[[:space:]]*=' "$envfile"; then
   echo "t58_existing_env_flag" >&2; exit 1
 fi
 if systemctl is-active --quiet "$timer.timer"; then echo "t58_watchdog_already_active" >&2; exit 1; fi
@@ -63,7 +63,7 @@ on_exit() {
 trap on_exit EXIT
 install -d -o root -g root -m 0755 "$(dirname "$dropin")"
 temporary="$(mktemp "$dropin.XXXXXX")"
-printf '[Service]\nEnvironment="AIRRADAR_STALL_EVIDENCE_ENABLED=1"\n' > "$temporary"
+printf '[Service]\nEnvironment="AIRRADAR_STALL_EVIDENCE_ENABLED=1" "AIRRADAR_T58_CPU_PROFILE_ENABLED=1"\n' > "$temporary"
 chmod 0644 "$temporary"
 started=1
 mv -- "$temporary" "$dropin"
