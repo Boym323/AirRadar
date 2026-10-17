@@ -144,6 +144,18 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(report.verdict).toBe("INSUFFICIENT_EVIDENCE");
   });
 
+  it("marks a missing interval as a continuity gap and rejects a continuous-soak verdict", () => {
+    const rows = records(61);
+    rows.splice(31, 1);
+    rows.push({ type: "unavailable", at: at(30), category: "collection_interruption" });
+
+    const report = analyzeT57Soak(rows);
+    expect(report.samples).toBe(60);
+    expect(report.missing).toBe(1);
+    expect(report.sampleGaps).toEqual([{ from: at(29), to: at(31), missedIntervals: 1 }]);
+    expect(report.verdict).toBe("INSUFFICIENT_EVIDENCE");
+  });
+
   it("preserves bounded V5 SQL settlement and event-loop evidence without raw route data", () => {
     const { status, metrics } = raw(1);
     status.routeEnrichment = {
