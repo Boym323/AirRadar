@@ -10,6 +10,7 @@ const STARTUP_RETRYABLE = new Set([
   "canary_evidence_state_mismatch",
   "canary_cpu_profile_invalid_stalls",
 ]);
+const STARTUP_HTTP_RETRYABLE = /^Diagnostic request \/api\/(?:system\/(?:runtime-performance|status)|version) HTTP (?:502|503)$/;
 const BASE = "https://airradar.pomykal.cz";
 const SAFE_SCOPE = /^(?:snapshot|twin|history|network|health|atc|routeCache)\.[a-z][a-zA-Z0-9.-]{0,64}$/;
 
@@ -176,7 +177,10 @@ export async function sampleWithStartupRetry(readSample, { attempts = 10, delayM
     try {
       return await readSample();
     } catch (error) {
-      if (!(error instanceof Error) || !STARTUP_RETRYABLE.has(error.message) || attempt === attempts - 1) {
+      const retryable = error instanceof Error && (
+        STARTUP_RETRYABLE.has(error.message) || STARTUP_HTTP_RETRYABLE.test(error.message)
+      );
+      if (!retryable || attempt === attempts - 1) {
         throw error;
       }
       await new Promise((resolve) => setTimeout(resolve, delayMs));

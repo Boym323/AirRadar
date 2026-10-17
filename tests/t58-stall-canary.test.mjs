@@ -134,7 +134,7 @@ describe("safe read-only evidence contract", () => {
     let attempts = 0;
     const value = await sampleWithStartupRetry(async () => {
       attempts += 1;
-      if (attempts === 1) throw new Error("canary_cpu_profile_not_enabled");
+      if (attempts === 1) throw new Error("Diagnostic request /api/system/runtime-performance HTTP 502");
       if (attempts === 2) throw new Error("canary_cpu_profile_invalid_stalls");
       return "ready";
     }, { attempts: 3, delayMs: 0 });
@@ -143,6 +143,10 @@ describe("safe read-only evidence contract", () => {
     await assert.rejects(
       sampleWithStartupRetry(async () => { throw new Error("canary_deployed_commit_changed"); }, { attempts: 3, delayMs: 0 }),
       /canary_deployed_commit_changed/,
+    );
+    await assert.rejects(
+      sampleWithStartupRetry(async () => { throw new Error("Diagnostic request /api/system/runtime-performance HTTP 429"); }, { attempts: 3, delayMs: 0 }),
+      /HTTP 429/,
     );
   });
   it("fails closed with specific sanitized reasons", () => {
