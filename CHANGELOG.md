@@ -17,6 +17,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.490] - 2026-10-17
+
+Changes since v1.0.489.
+
+### Performance
+
+- Harden runtime measurements and resumable soak (#969) (8d09e7e0)
+
+### Documentation
+
+- Define agent autonomy, performance evidence and merge safeguards (#974) (9e929300)
+
+### Maintenance
+
+- Sync generated repository metadata (#975) (d8b0bd13)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf: harden runtime measurements and resumable soak (#969) (8d09e7e0)
+- chore(metadata): sync generated repository metadata (#975) (d8b0bd13)
+- docs: define agent autonomy, performance evidence and merge safeguards (#974) (9e929300)
+
+</details>
 ## [1.0.489] - 2026-10-17
 
 Changes since v1.0.488.
