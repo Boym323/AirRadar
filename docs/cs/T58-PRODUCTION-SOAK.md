@@ -68,9 +68,25 @@ výpadky vzorků se nezamlčují.
    V adresáři `reports/t58/` vznikne `INDEX.md` s odkazy na jednotlivé
    měření. Každý pokus má vlastní složku (datum, GitHub run ID, attempt).
 
-**Do GitHubu se neukládá syrový NDJSON deník, přístupové údaje ani identita
-či souřadnice letadel.** Sběrová úloha má oprávnění jen číst; samostatná
-archivační úloha může zapisovat do Git, ale nemá token k administraci AirRadaru.
+**Do trvalé historie GitHubu se neukládá syrový NDJSON deník, přístupové údaje
+ani identita či souřadnice letadel.** Soukromý krátkodobý checkpoint artefakt
+slouží jen k automatickému předání mezi úlohami a scratch soubory runneru se
+po jobu zahodí. Sběr je automaticky rozdělen do tří po sobě
+jdoucích dvacetiminutových GitHub úloh. Každá je pod pozorovaným
+třicetiminutovým limitem hostovaného jobu a předává soukromý checkpoint NDJSON
+přes krátkodobý Actions artefakt. Poslední úloha ověří a nahraje pouze
+sanitizovaný agregovaný report; ruční pokračování není potřeba. Zpoždění mezi
+úlohami se zaznamená jako nedostupný interval a nikdy se tiše nepřevede na
+nulu.
+
+Sběrové úlohy mají oprávnění jen číst; samostatná archivační úloha může
+zapisovat do Git, ale nemá token k administraci AirRadaru.
+
+Runtime report rozlišuje stav cgroup CPU throttlingu `available`,
+`controller_disabled` a `unavailable`. Chybějící hodnoty se nevykazují jako
+nula. V aktuální produkci má systemd služba memory accounting, ale cgroup v2
+CPU controller není zapnutý; throttling proto nelze potvrdit ani vyloučit bez
+samostatné změny systemd konfigurace.
 
 Pokud administrátor zakázal zápis GitHub Actions do repozitáře nebo chrání
 archivní větev, report zůstane v artefaktu běhu a archivace viditelně selže.

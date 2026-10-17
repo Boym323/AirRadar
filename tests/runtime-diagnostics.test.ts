@@ -59,5 +59,7 @@ describe("runtime memory diagnostics", () => {
     expect(diagnostics.processPrivateDirtyBytes).toBeGreaterThan(0);
     expect(diagnostics.heapUsedBytes).toBeGreaterThan(0);
     expect(diagnostics.activeSseClients).toBeGreaterThanOrEqual(0);
+    expect(["available", "controller_disabled", "unavailable"])
+      .toContain(diagnostics.cgroupCpuThrottleStatus);
   });
 });

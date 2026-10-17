@@ -69,15 +69,31 @@ sample is recorded and classified. A failed preflight never starts the soak.
   directory and a row in `reports/t58/INDEX.md`.
   Branch pushes intentionally do **not** touch `main` or start a production
   deployment.
-- **No raw journal** is uploaded or committed. GitHub-hosted runner scratch
-  files and the temporary NDJSON are discarded with the runner after the job.
+- **No raw journal** is committed or placed in permanent history. A private,
+  short-retention checkpoint artifact is used only for automatic chunk handoff;
+  runner scratch files are discarded after the job.
 
-The `collect` job has read-only GitHub permissions and holds the optional
+Collection is automatically divided into three sequential 20-minute GitHub
+jobs. Each job is below the repository's observed 30-minute hosted-job limit
+and hands off a private NDJSON checkpoint through a short-retention Actions
+artifact. The final job validates and uploads only the sanitized aggregate
+report; no manual resume is required. Handoff delays are recorded as
+unavailable intervals and never silently converted to zeros.
+
+The collection jobs have read-only GitHub permissions and hold the optional
 watchlist secret. The separate `archive` job has Git write permission but
 **never receives the watchlist secret**. If repository policies prohibit
-GitHub Actions from creating the archive branch, artifact upload remains
-available and the archive job fails visibly. An administrator may need to
-enable GitHub Actions `Read and write permissions` for the archive job.
+GitHub Actions from creating the archive branch, the sanitized artifact
+remains available and the archive job fails visibly. An administrator may
+need to enable GitHub Actions `Read and write permissions` for the archive
+job.
+
+The runtime report distinguishes cgroup CPU throttle telemetry as
+`available`, `controller_disabled`, or `unavailable`. Missing values are not
+reported as zero. On the current production system the systemd service has
+memory accounting but the cgroup v2 CPU controller is not enabled, so
+throttling cannot be ruled in or out without a separate systemd configuration
+change.
 
 ## Baseline, verdict and interpretation
 

@@ -89,6 +89,7 @@ function markdown(report) {
     "## CPU and event loop",
     "",
     "- CPU interval P50/P95: " + fmt(report.cpuPercent?.p50) + " / " + fmt(report.cpuPercent?.p95) + " %",
+    "- Cgroup CPU throttle telemetry: " + JSON.stringify(report.cgroupCpuThrottleTelemetry),
     "- Completed 60-second event-loop p99 P50/P95/max: " +
       fmt(report.eventLoopWindowP99Ms?.p50) + " / " + fmt(report.eventLoopWindowP99Ms?.p95) +
       " / " + fmt(report.eventLoopWindowP99Ms?.max) + " ms",
@@ -289,7 +290,12 @@ async function run() {
   }
   const startedAt = priorRecords[0] ? new Date(priorRecords[0].startedAt) : new Date();
   const startEpoch = startedAt.getTime();
-  const firstIndex = lastSample ? Math.floor((Date.now() - startEpoch) / (intervalSeconds * 1000)) + 1 : 0;
+  const priorScheduledIndex = Number.isSafeInteger(lastSample?.scheduledIndex)
+    ? lastSample.scheduledIndex : -1;
+  const firstIndex = lastSample ? Math.max(
+    Math.floor((Date.now() - startEpoch) / (intervalSeconds * 1000)) + 1,
+    priorScheduledIndex + 1,
+  ) : 0;
   const endIndex = Math.min(Math.ceil(seconds / intervalSeconds), firstIndex + Math.ceil(chunkSeconds / intervalSeconds) - 1);
   const chunkStartIndex = lastSample ? firstIndex : 0;
   const started = performance.now();
@@ -297,7 +303,9 @@ async function run() {
     if (!resume) await write({ type: "header", schemaVersion: 1, measurementId,
       startedAt: startedAt.toISOString(), plannedEndAt: new Date(startEpoch + seconds * 1000).toISOString(),
       seconds, intervalSeconds, warmupSeconds });
-    let lastScheduledIndex = lastSample ? Math.floor((Date.parse(lastSample.at) - startEpoch) / (intervalSeconds * 1000)) : -1;
+    let lastScheduledIndex = priorScheduledIndex >= 0
+      ? priorScheduledIndex
+      : lastSample ? Math.floor((Date.parse(lastSample.at) - startEpoch) / (intervalSeconds * 1000)) : -1;
     for (let i = chunkStartIndex; i <= endIndex && !stopped; i++) {
       if (i > lastScheduledIndex + 1) {
         for (let skipped = lastScheduledIndex + 1; skipped < i; skipped++) {
@@ -335,7 +343,7 @@ async function run() {
             ? "delayed_polling" : null,
           failureCategory: null,
         }, cursors);
-        await write({ type: "sample", value: sample });
+        await write({ type: "sample", value: { ...sample, scheduledIndex: i } });
         written++; checkpointValid++;
         const elapsedSeconds = Math.floor((Date.now() - startEpoch) / 1000);
         if (elapsedSeconds >= nextCheckpoint || (elapsedSeconds >= seconds && nextCheckpoint <= seconds)) {
@@ -370,7 +378,9 @@ async function run() {
   }
   // The report is deliberately not re-read until collection ends. An
   // interrupted run can be analyzed manually using --analyze OUTPUT.
-  if (Date.now() < startEpoch + seconds * 1000) {
+  const logicalMeasurementComplete = lastScheduledIndex >= Math.ceil(seconds / intervalSeconds);
+  const finalizeChunk = process.env.T57_FINALIZE_CHUNK === "1";
+  if (!logicalMeasurementComplete && !finalizeChunk && Date.now() < startEpoch + seconds * 1000) {
     process.stdout.write(JSON.stringify({ status: "CHUNK_COMPLETE", measurementId,
       elapsedSeconds: Math.floor((Date.now() - startEpoch) / 1000), capturedSamples: written,
       unavailableSamples: failures, resumeRequired: true }, null, 2) + "\n");
