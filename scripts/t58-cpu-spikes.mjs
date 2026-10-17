@@ -19,6 +19,8 @@ const BASE = new URL("https://airradar.pomykal.cz/");
 export const SAMPLE_INTERVAL_MS = 10_000;
 const HOT_PATHS = new Set([
   "snapshot.apply.total", "snapshot.local", "snapshot.network",
+  "snapshot.local.ingest", "snapshot.network.ingest",
+  "ingest.local-beast", "ingest.network-beast", "ingest.network-mlat",
   "snapshot.operationalTwin", "twin.eventOutcome.local",
   "snapshot.trackFusion", "snapshot.trail-update",
   "history.persist", "network.metadata", "snapshot.navigationIntegrity",

@@ -991,22 +991,24 @@ export class AircraftStateService {
     const now = Date.now();
     const localStaleAfterMs = getAircraftStaleAfterMs();
     const reappearWindowMs = getAircraftReappearWindowMs();
-    for (const incoming of snapshot.aircraft) {
-      if (Date.parse(incoming.lastSeen) < now - localStaleAfterMs) continue;
-      currentHexes.add(incoming.icaoHex);
-      if (!newObservedIdentity && !previousObservedHexes.has(incoming.icaoHex)) newObservedIdentity = true;
-      this.continuity.recordObservation("local", incoming.icaoHex, now, reappearWindowMs);
-      this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "local");
-      const previous = this.localAircraft.get(incoming.icaoHex);
-      const localIncoming = plausiblePosition(previous, { ...incoming, origin: "local" as const });
-      const trail = this.updateTrail(previous, localIncoming);
-      const sameCallsign = previous?.callsign === incoming.callsign;
-      const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
-      // ATC is assigned from position/altitude, not callsign. Preserve a
-      // still-valid estimate across an observation callsign change.
-      const atc = atcResolutionEnabled ? previous?.atc ?? incoming.atc : undefined;
-      this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
-    }
+    measureRuntime("snapshot.local.ingest", snapshot.aircraft.length, () => {
+      for (const incoming of snapshot.aircraft) {
+        if (Date.parse(incoming.lastSeen) < now - localStaleAfterMs) continue;
+        currentHexes.add(incoming.icaoHex);
+        if (!newObservedIdentity && !previousObservedHexes.has(incoming.icaoHex)) newObservedIdentity = true;
+        this.continuity.recordObservation("local", incoming.icaoHex, now, reappearWindowMs);
+        this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "local");
+        const previous = this.localAircraft.get(incoming.icaoHex);
+        const localIncoming = plausiblePosition(previous, { ...incoming, origin: "local" as const });
+        const trail = this.updateTrail(previous, localIncoming);
+        const sameCallsign = previous?.callsign === incoming.callsign;
+        const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
+        // ATC is assigned from position/altitude, not callsign. Preserve a
+        // still-valid estimate across an observation callsign change.
+        const atc = atcResolutionEnabled ? previous?.atc ?? incoming.atc : undefined;
+        this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
+      }
+    });
     this.continuity.observeMembership("local", previousObservedHexes, currentHexes, now);
     const massDropBaseline = previousObservedHexes.size > 0 ? previousObservedHexes : new Set(this.localAircraft.keys());
     const massDrop = this.continuity.evaluateMassDrop("local", massDropBaseline, currentHexes, now, {
@@ -1197,22 +1199,24 @@ export class AircraftStateService {
     const trailMaxAgeMs = getNetworkTrailMaxAgeMs();
     const trailMaxPoints = getNetworkTrailMaxPoints();
     const cutoff = now - networkStaleAfterMs;
-    for (const incoming of snapshot.aircraft) {
-      const lastSeen = Date.parse(incoming.lastSeen);
-      if (!Number.isFinite(lastSeen) || lastSeen < cutoff) continue;
-      currentHexes.add(incoming.icaoHex);
-      if (!newObservedIdentity && !previousObservedHexes.has(incoming.icaoHex)) newObservedIdentity = true;
-      this.continuity.recordObservation("network", incoming.icaoHex, now, reappearWindowMs);
-      this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
-      const previous = this.networkAircraft.get(incoming.icaoHex);
-      // Most network adapters already provide the canonical origin. Reuse
-      // their immutable observation instead of cloning thousands of objects
-      // every poll solely to assign an existing field.
-      const withOrigin = incoming.origin ? incoming : { ...incoming, origin: "adsblol" as const };
-      const networkIncoming = plausiblePosition(previous, withOrigin);
-      const trail = this.updateTrail(previous, networkIncoming, trailMaxAgeMs, trailMaxPoints);
-      this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
-    }
+    measureRuntime("snapshot.network.ingest", snapshot.aircraft.length, () => {
+      for (const incoming of snapshot.aircraft) {
+        const lastSeen = Date.parse(incoming.lastSeen);
+        if (!Number.isFinite(lastSeen) || lastSeen < cutoff) continue;
+        currentHexes.add(incoming.icaoHex);
+        if (!newObservedIdentity && !previousObservedHexes.has(incoming.icaoHex)) newObservedIdentity = true;
+        this.continuity.recordObservation("network", incoming.icaoHex, now, reappearWindowMs);
+        this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
+        const previous = this.networkAircraft.get(incoming.icaoHex);
+        // Most network adapters already provide the canonical origin. Reuse
+        // their immutable observation instead of cloning thousands of objects
+        // every poll solely to assign an existing field.
+        const withOrigin = incoming.origin ? incoming : { ...incoming, origin: "adsblol" as const };
+        const networkIncoming = plausiblePosition(previous, withOrigin);
+        const trail = this.updateTrail(previous, networkIncoming, trailMaxAgeMs, trailMaxPoints);
+        this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
+      }
+    });
     this.continuity.observeMembership("network", previousObservedHexes, currentHexes, now);
     const massDrop = this.continuity.evaluateMassDrop("network", previousObservedHexes, currentHexes, now, {
       enabled: isAircraftMassDropGuardEnabled(),

@@ -10,7 +10,7 @@ const MAX_SPANS = 64;
 const MAX_EVENTS = 24;
 const SPAN_RETENTION_MS = 10_000;
 // The scope name must be code-defined, not a request-dependent string.
-const SAFE_SCOPE = /^(?:snapshot|twin|history|network|health|atc|routeCache)\.[a-z][a-zA-Z0-9.-]{0,64}$/;
+const SAFE_SCOPE = /^(?:snapshot|ingest|twin|history|network|health|atc|routeCache)\.[a-z][a-zA-Z0-9.-]{0,64}$/;
 
 type SyncSpan = {
   name: string;

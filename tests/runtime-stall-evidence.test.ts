@@ -32,6 +32,19 @@ describe("bounded event-loop stall evidence", () => {
     expect(tracker.snapshot().totalStalls).toBe(1);
   });
 
+  it("accepts bounded ingest scopes without accepting payload-derived names", () => {
+    const tracker = new RuntimeStallEvidenceRecorder();
+    tracker.recordSync("ingest.network-beast", 1_000, 5_000);
+    tracker.recordSync("ingest.network-beast/ABC123", 1_000, 5_000);
+    const event = tracker.tick(5_000, Date.parse("2026-10-17T12:00:00Z"), 3_500, 250);
+    expect(event).toMatchObject({
+      overshootMs: 2_500,
+      attribution: "temporal-overlap-only",
+      correlatedScope: { name: "ingest.network-beast", overlapMs: 2_500 },
+    });
+    expect(tracker.snapshot().recentStalls).toHaveLength(1);
+  });
+
   it("does not convert nearby asynchronous work or clock changes into a causal claim", () => {
     const tracker = new RuntimeStallEvidenceRecorder();
     tracker.recordSync("history.persist", 500, 900);
