@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getPrisma } from "@/lib/server/db";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
@@ -20,6 +20,7 @@ const WIND_MAX_DELTA_MS = 60 * 60_000;
 const MAX_METAR_ENTRIES = 100_000;
 const MAX_WIND_ENTRIES = 1_024;
 const MAX_AUP_ENTRIES = 512;
+const MAX_RADAR_CLEANUP_FILES_PER_PASS = 500;
 
 export interface HistoricalMetarObservation extends Omit<MetarMapObservation, "observedAt"> {
   observedAt: string;
@@ -229,7 +230,12 @@ export class WeatherRadarArchiveService {
     } catch { return null; }
   }
 
-  async listFrames(): Promise<Array<{ id: string; at: string }>> {
+  /**
+   * Enumerate the complete valid archive inventory. This intentionally does
+   * not apply public retention filtering: cleanup and capacity enforcement
+   * must see expired files too.
+   */
+  async listAllArchivedFrames(): Promise<Array<{ id: string; at: string }>> {
     const root = getWeatherRadarArchiveDir();
     const found: Array<{ id: string; at: string }> = [];
     const years = await readdir(root, { withFileTypes: true }).catch(() => []);
@@ -250,15 +256,22 @@ export class WeatherRadarArchiveService {
         }
       }
     }
+    return [...new Map(found.map((frame) => [frame.id, frame])).values()].sort((left, right) => left.at.localeCompare(right.at));
+  }
+
+  /** Public history remains bounded by the configured retention window. */
+  async listFrames(): Promise<Array<{ id: string; at: string }>> {
     const minimum = Date.now() - getMapContextMaxAgeMs();
-    return [...new Map(found.filter((frame) => Date.parse(frame.at) >= minimum).map((frame) => [frame.id, frame])).values()].sort((left, right) => left.at.localeCompare(right.at));
+    return (await this.listAllArchivedFrames()).filter((frame) => Date.parse(frame.at) >= minimum);
   }
 
   async diagnostics(): Promise<{ status: "online" | "degraded" | "offline"; oldest: string | null; latest: string | null; frames: number; diskBytes: number | null; failures: number; lastWriteAt: string | null }> {
     if (this.diagnosticsCache && Date.now() - this.diagnosticsCache.at < 30_000) return this.diagnosticsCache.value;
     const frames = await this.listFrames();
     let diskBytes = 0;
-    for (const frame of frames) { try { diskBytes += (await stat(radarPath(frame.id))).size; } catch { /* ignore disappearing files */ } }
+    // diskBytes intentionally includes expired valid frames: it describes the
+    // archive capacity subject to cleanup, not only the public time range.
+    for (const frame of await this.listAllArchivedFrames()) { try { diskBytes += (await stat(radarPath(frame.id))).size; } catch { /* ignore disappearing files */ } }
     const value = { status: this.failures && !frames.length ? "offline" as const : this.failures ? "degraded" as const : "online" as const, oldest: frames[0]?.at ?? this.oldest, latest: frames.at(-1)?.at ?? this.latest, frames: frames.length || this.archivedCount, diskBytes, failures: this.failures, lastWriteAt: this.lastWriteAt };
     this.diagnosticsCache = { at: Date.now(), value };
     return value;
@@ -292,15 +305,21 @@ export class WeatherRadarArchiveService {
   }
 
   private async cleanup(): Promise<void> {
-    const frames = await this.listFrames();
+    const frames = await this.listAllArchivedFrames();
     const cutoff = Date.now() - getMapContextMaxAgeMs();
     let bytes = 0;
-    const sizes = await Promise.all(frames.map(async (frame) => ({ frame, size: await stat(radarPath(frame.id)).then((value) => value.size).catch(() => 0) })));
+    const sizes: Array<{ frame: { id: string; at: string }; size: number }> = [];
+    for (const frame of frames) {
+      try { sizes.push({ frame, size: (await stat(radarPath(frame.id))).size }); } catch { /* ignore disappearing files */ }
+    }
     bytes = sizes.reduce((total, item) => total + item.size, 0);
+    let removed = 0;
     for (const item of sizes) {
+      if (removed >= MAX_RADAR_CLEANUP_FILES_PER_PASS) break;
       if (Date.parse(item.frame.at) < cutoff || bytes > getWeatherRadarArchiveMaxBytes()) {
-        await import("node:fs/promises").then(({ unlink }) => unlink(radarPath(item.frame.id)).catch(() => undefined));
+        await unlink(radarPath(item.frame.id)).catch(() => undefined);
         bytes -= item.size;
+        removed += 1;
       }
     }
   }
