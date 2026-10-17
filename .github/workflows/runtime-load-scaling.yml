@@ -1,0 +1,41 @@
+name: Runtime load scaling benchmarks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Synthetic ${{ matrix.multiplier }}x load
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        multiplier: [1, 2, 4]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
+      - name: Generate isolated snapshot, Operational Twin and SSE measurements
+        env:
+          AIRRADAR_LOAD_MULTIPLIER: ${{ matrix.multiplier }}
+          GITHUB_SHA: ${{ github.sha }}
+          AIRRADAR_PERF_OUTPUT_DIR: ${{ runner.temp }}/airradar-load
+        run: npm run benchmark:load-scaling
+      - uses: actions/upload-artifact@v7
+        with:
+          name: runtime-load-${{ matrix.multiplier }}x-${{ github.run_id }}
+          path: ${{ runner.temp }}/airradar-load/load-${{ matrix.multiplier }}x.json
+          retention-days: 30
+          if-no-files-found: error

@@ -67,6 +67,10 @@ function markdown(report) {
     "- Sanitized unavailable-sample categories: " + JSON.stringify(report.failureCategories),
     "- Polling-delay context: " + JSON.stringify(report.pollingFailureContext),
     "- Process segments: " + report.segments + "; stable: " + report.stableProcessAndCommit,
+    "- Primary process identity: " + fmt(report.segmentSummaries?.[0]?.processIdentity),
+    "- Timestamp continuity gaps: " + (report.sampleGaps?.length ?? 0),
+    "- Segment transitions: " + JSON.stringify(report.segmentChanges ?? []),
+    "- Segment windows: " + JSON.stringify(report.segmentSummaries ?? []),
     "- Duration: " + fmt(report.durationSeconds) + " seconds",
     "- Distinct major GC observations: " + report.majorGcBaselines,
     "- Distinct completed event-loop windows: " + report.eventLoopWindows,
@@ -215,10 +219,14 @@ async function preflight() {
 async function run() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   const base = trustedBase();
-  const seconds = durationSetting("T57_SECONDS", 86400, MIN_T57_SOAK_SECONDS, 86400);
+  const seconds = durationSetting("T57_TOTAL_SECONDS",
+    durationSetting("T57_SECONDS", 86400, MIN_T57_SOAK_SECONDS, 86400),
+    MIN_T57_SOAK_SECONDS, 86400);
+  const chunkSeconds = durationSetting("T57_CHUNK_SECONDS", Math.min(seconds, 20_400), 60, 20_400);
   const intervalSeconds = durationSetting("T57_INTERVAL_SECONDS", 60, 30, 120);
   const warmupSeconds = durationSetting("T57_WARMUP_SECONDS", 600, 0, 1800);
   if (warmupSeconds > seconds / 2) throw new Error("warmup_too_long");
+  const resume = process.env.T57_RESUME === "1";
 
   // Preflight: fail closed before creating the output file.
   let cookie = await establishSession(base, token);
@@ -235,41 +243,92 @@ async function run() {
   if (!output.endsWith(".ndjson")) throw new Error("ndjson_output_required");
   if (privateDir === null) await mkdir(dirname(output), { recursive: true });
 
-  const handle = await open(output, "wx", 0o600);
+  let priorRecords = [];
+  if (resume) {
+    const journal = await open(output, constants.O_RDONLY | constants.O_NOFOLLOW);
+    let priorText;
+    try {
+      const fileInfo = await journal.stat();
+      if (!fileInfo.isFile() || fileInfo.size > MAX_REPORT_BYTES) throw new Error("invalid_resume_journal");
+      priorText = await journal.readFile("utf8");
+    } finally {
+      await journal.close();
+    }
+    if (Buffer.byteLength(priorText) > MAX_REPORT_BYTES || !priorText.endsWith("\n")) throw new Error("invalid_resume_journal");
+    priorRecords = priorText.trimEnd().split("\n").map((line) => JSON.parse(line));
+    const header = priorRecords[0];
+    if (header?.type !== "header" || header.schemaVersion !== 1 || header.seconds !== seconds ||
+        header.intervalSeconds !== intervalSeconds ||
+        (process.env.T57_MEASUREMENT_ID && header.measurementId !== process.env.T57_MEASUREMENT_ID)) {
+      throw new Error("resume_identity_mismatch");
+    }
+  }
+  const handle = await open(output, resume
+    ? constants.O_WRONLY | constants.O_APPEND | constants.O_NOFOLLOW
+    : constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
   let stopped = false;
   process.once("SIGINT", () => { stopped = true; });
   process.once("SIGTERM", () => { stopped = true; });
   const write = async (record) => handle.writeFile(JSON.stringify(record) + "\n");
-  let previousIdentity = initial.identity;
-  let segment = 1, failures = 0, written = 0;
+  const priorSamples = priorRecords.filter((record) => record.type === "sample").map((record) => record.value);
+  const lastSample = priorSamples.at(-1) ?? null;
+  let segment = lastSample?.segment ?? 1;
+  let previousIdentity = lastSample ? { processIdentity: lastSample.processIdentity,
+    commit: lastSample.commit, version: lastSample.version } : { processIdentity: initial.sample.processIdentity,
+    commit: initial.sample.commit, version: initial.sample.version };
+  let failures = 0, written = 0;
   let checkpointValid = 0, checkpointUnavailable = 0, nextCheckpoint = 3600;
-  const measurementId = randomUUID();
+  const measurementId = priorRecords[0]?.measurementId ?? randomUUID();
   const cursors = new Map();
+  for (const sample of priorSamples) {
+    for (const [key, list] of [["event-loop", sample.eventLoopWindows],
+      ...sample.hotPaths.map((path) => ["hot:" + path.name, path.windows])]) {
+      const latest = list?.at(-1)?.to;
+      if (latest) cursors.set(key, Date.parse(latest));
+    }
+  }
+  const startedAt = priorRecords[0] ? new Date(priorRecords[0].startedAt) : new Date();
+  const startEpoch = startedAt.getTime();
+  const firstIndex = lastSample ? Math.floor((Date.now() - startEpoch) / (intervalSeconds * 1000)) + 1 : 0;
+  const endIndex = Math.min(Math.ceil(seconds / intervalSeconds), firstIndex + Math.ceil(chunkSeconds / intervalSeconds) - 1);
+  const chunkStartIndex = lastSample ? firstIndex : 0;
   const started = performance.now();
-  const count = Math.ceil(seconds / intervalSeconds) + 1;
   try {
-    const startedAt = new Date();
-    await write({ type: "header", schemaVersion: 1, measurementId,
-      startedAt: startedAt.toISOString(), plannedEndAt: new Date(startedAt.getTime() + seconds * 1000).toISOString(),
+    if (!resume) await write({ type: "header", schemaVersion: 1, measurementId,
+      startedAt: startedAt.toISOString(), plannedEndAt: new Date(startEpoch + seconds * 1000).toISOString(),
       seconds, intervalSeconds, warmupSeconds });
-    for (let i = 0; i < count && !stopped; i++) {
-      const delay = started + i * intervalSeconds * 1000 - performance.now();
+    let lastScheduledIndex = lastSample ? Math.floor((Date.parse(lastSample.at) - startEpoch) / (intervalSeconds * 1000)) : -1;
+    for (let i = chunkStartIndex; i <= endIndex && !stopped; i++) {
+      if (i > lastScheduledIndex + 1) {
+        for (let skipped = lastScheduledIndex + 1; skipped < i; skipped++) {
+          await write({ type: "unavailable", at: new Date(startEpoch + skipped * intervalSeconds * 1000).toISOString(),
+            category: "collection_interruption", pollDelayMs: null, pollDelayCategory: "interrupted_chunk" });
+          failures++;
+        }
+      }
+      const scheduledAt = startEpoch + i * intervalSeconds * 1000;
+      const delay = started + (scheduledAt - Date.now()) - (performance.now() - started);
       if (delay > 0) await new Promise((done) => setTimeout(done, delay));
       if (stopped) break;
-      const pollDelayMs = Math.max(0, performance.now() - (started + i * intervalSeconds * 1000));
+      const pollDelayMs = Math.max(0, Date.now() - scheduledAt);
       try {
         if (Date.now() - authenticatedAt > SESSION_REFRESH_MS) {
           cookie = await establishSession(base, token);
           authenticatedAt = Date.now();
         }
-        const observation = i === 0 ? initial : await collect(base, cookie);
-        const identity = observation.identity;
-        if (identity.commit !== previousIdentity.commit ||
-            identity.pid !== previousIdentity.pid || identity.storeId !== previousIdentity.storeId) {
+        const observation = !lastSample && i === 0 ? initial : await collect(base, cookie);
+        const processChanged = observation.sample.processIdentity !== previousIdentity.processIdentity;
+        const commitChanged = observation.sample.commit !== previousIdentity.commit;
+        const versionChanged = observation.sample.version !== previousIdentity.version;
+        if (processChanged || commitChanged || versionChanged) {
           segment += 1;
           cursors.clear();
+          await write({ type: "segment_change", at: new Date().toISOString(), segment,
+            reason: [processChanged && "process_identity_changed", commitChanged && "commit_changed",
+              versionChanged && "version_changed"].filter(Boolean) });
         }
-        previousIdentity = identity;
+        previousIdentity = { processIdentity: observation.sample.processIdentity,
+          commit: observation.sample.commit, version: observation.sample.version };
         const sample = newT57Windows({ ...observation.sample, segment,
           pollDelayMs: Math.round(pollDelayMs),
           pollingDelayCategory: pollDelayMs > Math.max(5_000, intervalSeconds * 250)
@@ -278,7 +337,7 @@ async function run() {
         }, cursors);
         await write({ type: "sample", value: sample });
         written++; checkpointValid++;
-        const elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+        const elapsedSeconds = Math.floor((Date.now() - startEpoch) / 1000);
         if (elapsedSeconds >= nextCheckpoint || (elapsedSeconds >= seconds && nextCheckpoint <= seconds)) {
           await write({ type: "checkpoint", value: {
             measurementId, at: new Date().toISOString(), elapsedSeconds,
@@ -292,7 +351,7 @@ async function run() {
           checkpointValid = 0; checkpointUnavailable = 0;
         }
       } catch (error) {
-        if (i === 0) throw new Error("initial_t57_sample_unavailable");
+        if (i === 0 && !lastSample) throw new Error("initial_t57_sample_unavailable");
         failures++;
         checkpointUnavailable++;
         await write({ type: "unavailable", at: new Date().toISOString(), category: classifyT57Failure(error),
@@ -302,6 +361,7 @@ async function run() {
         // on the next poll without writing credentials or error details.
         authenticatedAt = 0;
       }
+      lastScheduledIndex = i;
       if (i % 10 === 0) await handle.sync();
     }
     await handle.sync();
@@ -310,6 +370,12 @@ async function run() {
   }
   // The report is deliberately not re-read until collection ends. An
   // interrupted run can be analyzed manually using --analyze OUTPUT.
+  if (Date.now() < startEpoch + seconds * 1000) {
+    process.stdout.write(JSON.stringify({ status: "CHUNK_COMPLETE", measurementId,
+      elapsedSeconds: Math.floor((Date.now() - startEpoch) / 1000), capturedSamples: written,
+      unavailableSamples: failures, resumeRequired: true }, null, 2) + "\n");
+    return;
+  }
   const result = await analyzeFile(output);
   process.stdout.write(JSON.stringify({ ...result, unavailableSamples: failures,
     capturedSamples: written }, null, 2) + "\n");

@@ -93,7 +93,7 @@ function buildService(aircraft: Aircraft[], airports?: ReturnType<typeof benchma
   return service;
 }
 
-function snapshotApplyBenchmark(count: number) {
+export function snapshotApplyBenchmark(count: number) {
   resetRuntimePerformanceDiagnosticsForTests();
   const aircraft = fixtureAircraft(count);
   const service = buildService(aircraft);
@@ -129,7 +129,7 @@ function snapshotApplyBenchmark(count: number) {
   };
 }
 
-async function snapshotApplyComparisonBenchmark(count = 1_000) {
+export async function snapshotApplyComparisonBenchmark(count = 1_000) {
   const airports = benchmarkAirports();
   const run = async (mode: LookupMode) => {
     resetRuntimePerformanceDiagnosticsForTests();
@@ -224,7 +224,7 @@ function intelligenceAirportLookupBenchmark() {
   return { scenario: "intelligence-nearest-airport", airports: airports.length, aircraft: aircraft.length, linear: linearResult, indexed: indexedResult, mismatches, speedup: Number((linearResult.elapsedMs / Math.max(indexedResult.elapsedMs, 0.001)).toFixed(2)) };
 }
 
-function fanoutBenchmark(count: number, clients: number, coverage: "local" | "extended") {
+export function fanoutBenchmark(count: number, clients: number, coverage: "local" | "extended") {
   const service = buildService(fixtureAircraft(count));
   const releases = Array.from({ length: clients }, () => service.subscribe(() => undefined, { coverage }));
   const before = service.getSnapshotCacheDiagnostics();
@@ -236,7 +236,7 @@ function fanoutBenchmark(count: number, clients: number, coverage: "local" | "ex
   return { count, clients, coverage, elapsedMs: Math.round(elapsedMs * 100) / 100, buildsBefore: before.builds[coverage], buildsAfter: after.builds[coverage], cachedSnapshots: after.cachedSnapshots };
 }
 
-function sseBenchmark(count: number, clients: number) {
+export function sseBenchmark(count: number, clients: number) {
   const service = buildService(fixtureAircraft(count));
   const internal = service.getSnapshot();
   const initial = toPublicLiveStateSnapshot(internal, "hidden");
@@ -329,17 +329,21 @@ function sourceMergeBenchmark(count: number) {
 
 // Keep these sizes aligned with the runtime audit contract. The benchmark is
 // intentionally report-only; hosted runner wall-clock values are informative.
-const counts = [100, 1_000, 5_000];
-const comparison = await snapshotApplyComparisonBenchmark();
-const results = [
-  comparison,
-  intelligenceAirportLookupBenchmark(),
-  ...[100, 1_000, 5_000].map(snapshotApplyBenchmark),
-  ...counts.map(detailLookupBenchmark),
-  ...counts.map(sourceMergeBenchmark),
-  ...counts.flatMap((count) => [fanoutBenchmark(count, 1, "local"), fanoutBenchmark(count, 20, "local")]),
-  ...counts.map((count) => fanoutBenchmark(count, 20, "extended")),
-  ...counts.map((count) => sseBenchmark(count, 20)),
-];
-console.log(JSON.stringify(results, null, 2));
-process.exit(0);
+async function main() {
+  const counts = [100, 1_000, 5_000];
+  const comparison = await snapshotApplyComparisonBenchmark();
+  const results = [
+    comparison,
+    intelligenceAirportLookupBenchmark(),
+    ...counts.map(snapshotApplyBenchmark),
+    ...counts.map(detailLookupBenchmark),
+    ...counts.map(sourceMergeBenchmark),
+    ...counts.flatMap((count) => [fanoutBenchmark(count, 1, "local"), fanoutBenchmark(count, 20, "local")]),
+    ...counts.map((count) => fanoutBenchmark(count, 20, "extended")),
+    ...counts.map((count) => sseBenchmark(count, 20)),
+  ];
+  console.log(JSON.stringify(results, null, 2));
+}
+if (process.argv[1]?.endsWith("benchmark-live-performance.ts")) {
+  main().catch((error) => { console.error(error); process.exitCode = 1; });
+}

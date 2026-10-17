@@ -87,7 +87,7 @@ function records(count = 61) {
   for (let i = 0; i < count; i++) {
     const observation = fixture(i);
     rows.push({ type: "sample", value: newT57Windows({
-      ...observation.sample, segment: 1,
+      ...observation.sample, segment: 1, processIdentity: "a".repeat(24),
     }, seen) });
   }
   return rows;
@@ -118,6 +118,48 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(JSON.stringify(result.sample)).not.toContain("PRIVATE_STORE");
     expect(JSON.stringify(result.sample)).not.toContain("1234");
     expect(JSON.stringify(result.sample)).not.toContain("ICAO-ID-PRIVATE");
+    expect(result.sample.processIdentity).toMatch(/^[a-f0-9]{24}$/);
+    expect(result.sample).toHaveProperty("at");
+    expect(result.sample).toHaveProperty("commit", "commit-t57");
+    expect(JSON.stringify(result.sample)).not.toContain("PRIVATE_STORE");
+  });
+
+  it("keeps process restarts in separate analysis segments", () => {
+    const rows = records(61);
+    const secondProcess = fixture(61).sample;
+    rows[0].seconds = 7_200;
+    rows.push({ type: "sample", value: { ...secondProcess, at: at(61), segment: 2,
+      processIdentity: "b".repeat(24), commit: "commit-t57", version: "1.0.401" } });
+    rows.push({ type: "sample", value: { ...fixture(62).sample, at: at(62), segment: 2,
+      processIdentity: "b".repeat(24), commit: "commit-t57", version: "1.0.401" } });
+
+    const report = analyzeT57Soak(rows);
+    expect(report.segments).toBe(2);
+    expect(report.segmentSummaries).toHaveLength(2);
+    expect(report.segmentSummaries.map((item) => item.processIdentity)).toEqual([
+      "a".repeat(24), "b".repeat(24),
+    ]);
+    expect(report.durationSeconds).toBe(3_600);
+    expect(report.stableProcessAndCommit).toBe(false);
+    expect(report.verdict).toBe("INSUFFICIENT_EVIDENCE");
+  });
+
+  it("marks a missing interval as a continuity gap and rejects a continuous-soak verdict", () => {
+    const rows = records(61);
+    rows.splice(31, 1);
+    rows.push({ type: "unavailable", at: at(30), category: "collection_interruption" });
+
+    const report = analyzeT57Soak(rows);
+    expect(report.samples).toBe(60);
+    expect(report.missing).toBe(1);
+    expect(report.sampleGaps).toEqual([{ from: at(29), to: at(31), missedIntervals: 1 }]);
+    expect(report.verdict).toBe("INSUFFICIENT_EVIDENCE");
+  });
+
+  it("rejects samples without timestamp, deployed commit, version field and process key", () => {
+    const rows = records(2);
+    delete rows[1].value.processIdentity;
+    expect(() => analyzeT57Soak(rows)).toThrow("t57_sample_identity_incomplete");
   });
 
   it("preserves bounded V5 SQL settlement and event-loop evidence without raw route data", () => {

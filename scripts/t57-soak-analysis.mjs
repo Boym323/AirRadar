@@ -1,6 +1,8 @@
 // T5.7C: allowlisted, read-only projections and offline 24-hour analysis.
 // No raw API response, aircraft identity, position, token, cookie, PID or
-// diagnostics store ID may be written to an output report.
+// diagnostics store ID may be written to an output report. Process continuity
+// uses a one-way process key derived from the private diagnostics identity.
+import { createHash } from "node:crypto";
 import { stats } from "./t55-runtime-analysis.mjs";
 
 const MiB = 1024 * 1024;
@@ -205,6 +207,9 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
     sample: {
       at, commit: status.application.commit,
       version: typeof status.application.version === "string" ? status.application.version : null,
+      processIdentity: createHash("sha256")
+        .update(`${process.processId}:${process.diagnosticsStoreId}`)
+        .digest("hex").slice(0, 24),
       rssBytes: safe(runtime.rssBytes),
       heapUsedBytes: safe(runtime.heapUsedBytes),
       heapTotalBytes: safe(runtime.heapTotalBytes),
@@ -293,10 +298,27 @@ export function analyzeT57Soak(records) {
       !Number.isSafeInteger(header.intervalSeconds) || !Number.isSafeInteger(header.warmupSeconds)) {
     throw new Error("invalid_t57_header");
   }
-  const rows = records.filter((r) => r.type === "sample").map((r) => r.value);
+  const allRows = records.filter((r) => r.type === "sample").map((r) => r.value);
+  if (allRows.some((row) => !stamp(row?.at) || typeof row?.commit !== "string" || !row.commit ||
+      !Object.hasOwn(row, "version") || (row.version !== null && typeof row.version !== "string") ||
+      typeof row?.processIdentity !== "string" || !/^[a-f0-9]{24}$/.test(row.processIdentity))) {
+    throw new Error("t57_sample_identity_incomplete");
+  }
+  const bySegment = new Map();
+  for (const row of allRows) {
+    const key = String(row.segment ?? "legacy");
+    const group = bySegment.get(key) ?? [];
+    group.push(row);
+    bySegment.set(key, group);
+  }
+  // Never calculate a continuous trend by joining different process
+  // lifetimes. The largest segment is reported as the primary window and all
+  // other segments remain visible as separate evidence below.
+  const primaryRows = [...bySegment.values()].sort((a, b) => b.length - a.length)[0] ?? [];
+  const rows = primaryRows;
   const unavailable = records.filter((r) => r.type === "unavailable");
   const missing = unavailable.length;
-  const allowedFailureCategories = ["http_timeout", "authentication_failure", "response_validation_failure",
+  const allowedFailureCategories = ["http_timeout", "authentication_failure", "response_validation_failure", "collection_interruption",
     "network_failure", "http_failure", "unclassified_legacy"];
   const failureCategories = Object.fromEntries(allowedFailureCategories.map((category) => [category, 0]));
   for (const record of unavailable) {
@@ -304,13 +326,38 @@ export function analyzeT57Soak(records) {
     failureCategories[category] += 1;
   }
   const first = rows[0], last = rows.at(-1);
-  const segmentIds = new Set(rows.map((r) => r.segment));
+  const segmentIds = new Set(allRows.map((r) => r.segment));
+  const segmentSummaries = [...bySegment.entries()].map(([segment, values]) => ({
+    segment: Number.isFinite(Number(segment)) ? Number(segment) : segment,
+    processIdentity: values[0]?.processIdentity ?? null,
+    commit: values[0]?.commit ?? null,
+    version: values[0]?.version ?? null,
+    samples: values.length,
+    from: values[0]?.at ?? null,
+    to: values.at(-1)?.at ?? null,
+    durationSeconds: values.length > 1 ? rounded((Date.parse(values.at(-1).at) - Date.parse(values[0].at)) / 1000) : 0,
+  }));
+  const segmentChanges = records.filter((record) => record.type === "segment_change").map((record) => ({
+    at: stamp(record.at), segment: safe(record.segment),
+    reason: Array.isArray(record.reason) ? record.reason.filter((item) =>
+      ["process_identity_changed", "commit_changed", "version_changed"].includes(item)) : [],
+  }));
   const steady = first ? rows.filter((r) => Date.parse(r.at) >=
     Date.parse(first.at) + header.warmupSeconds * 1000) : [];
   const span = first && last ? (Date.parse(last.at) - Date.parse(first.at)) / 1000 : 0;
+  const sampleGaps = [];
+  for (let index = 1; index < rows.length; index++) {
+    const previousAt = Date.parse(rows[index - 1].at), currentAt = Date.parse(rows[index].at);
+    const gapSeconds = (currentAt - previousAt) / 1000;
+    if (gapSeconds > header.intervalSeconds * 1.5) sampleGaps.push({
+      from: rows[index - 1].at, to: rows[index].at,
+      missedIntervals: Math.max(1, Math.floor(gapSeconds / header.intervalSeconds) - 1),
+    });
+  }
   const expected = Math.ceil(header.seconds / header.intervalSeconds) + 1;
   const stable = segmentIds.size === 1 && rows.length > 1 &&
-    rows.every((r) => r.commit === first.commit);
+    rows.every((r) => r.commit === first.commit && r.version === first.version &&
+      (!r.processIdentity || r.processIdentity === first.processIdentity));
   const gcBaselines = [...new Map(steady.flatMap((r) => {
     const g = r.postMajorGc;
     return g?.observedAtMs && g.observedAtMs >= Date.parse(first.at) +
@@ -484,7 +531,8 @@ export function analyzeT57Soak(records) {
   }
   const overLimit = steady.some((r) => (r.localTrailOverLimitAircraft ?? 0) > 0 ||
     (r.networkTrailOverLimitAircraft ?? 0) > 0);
-  const measuredEnough = stable && span >= header.seconds - header.intervalSeconds * 2 &&
+  const measuredEnough = stable && missing === 0 && sampleGaps.length === 0 &&
+    span >= header.seconds - header.intervalSeconds * 2 &&
     rows.length >= Math.ceil(expected * 0.95) && steady.length >= 30 &&
     gcBaselines.length >= 2 && loopWindows.length >= 10;
   const verdict = overLimit ? "FAIL" :
@@ -513,7 +561,10 @@ export function analyzeT57Soak(records) {
   return {
     verdict, stableProcessAndCommit: stable,
     segments: segmentIds.size,
-    samples: rows.length, missing, failureCategories,
+    segmentSummaries,
+    segmentChanges,
+    sampleGaps,
+    samples: allRows.length, missing, failureCategories,
     pollingFailureContext: {
       delayedPollingMisses: delayedPollingMisses.length,
       eventLoopSchedulingDelayCorrelatedMisses: eventLoopSchedulingDelayCorrelatedMisses.length,

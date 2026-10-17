@@ -1,0 +1,117 @@
+name: T57 24-hour read-only performance soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      resume_run_id:
+        description: Previous run ID with a t57 journal artifact; empty starts a new soak
+        required: false
+        type: string
+      resume_attempt:
+        description: Previous run attempt containing the checkpoint artifact
+        required: false
+        type: string
+      resume_chunk:
+        description: Chunk number to resume (1 to 5)
+        required: false
+        default: "1"
+        type: choice
+        options: ["1", "2", "3", "4", "5"]
+      expected_commit:
+        description: Production commit pinned by the original run
+        required: false
+        type: string
+
+run-name: "T57 24h read-only soak · ${{ inputs.resume_run_id || github.event.pull_request.number || 'start' }}"
+
+concurrency:
+  group: airradar-t57-24-hour-read-only-soak
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate-resume:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate resume chunk
+        env:
+          RESUME_CHUNK: ${{ inputs.resume_chunk || '1' }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$RESUME_CHUNK" =~ ^[1-5]$ ]] || {
+            echo "resume_chunk must be an integer from 1 to 5" >&2
+            exit 1
+          }
+
+  chunk_1:
+    needs: [validate-resume]
+    if: ${{ needs.validate-resume.result == 'success' && inputs.resume_chunk <= '1' }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 1
+      chunk_seconds: 20400
+      previous_chunk: 0
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ inputs.expected_commit || '' }}
+    secrets: inherit
+
+  chunk_2:
+    needs: [validate-resume, chunk_1]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_1.result == 'success' || needs.chunk_1.result == 'skipped') && inputs.resume_chunk <= '2' }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 2
+      chunk_seconds: 20400
+      previous_chunk: 1
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_1.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
+
+  chunk_3:
+    needs: [validate-resume, chunk_2]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_2.result == 'success' || needs.chunk_2.result == 'skipped') && inputs.resume_chunk <= '3' }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 3
+      chunk_seconds: 20400
+      previous_chunk: 2
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_2.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
+
+  chunk_4:
+    needs: [validate-resume, chunk_3]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_3.result == 'success' || needs.chunk_3.result == 'skipped') && inputs.resume_chunk <= '4' }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 4
+      chunk_seconds: 20400
+      previous_chunk: 3
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_3.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
+
+  chunk_5:
+    needs: [validate-resume, chunk_4]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_4.result == 'success' || needs.chunk_4.result == 'skipped') && inputs.resume_chunk <= '5' }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 5
+      chunk_seconds: 4920
+      previous_chunk: 4
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_4.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit

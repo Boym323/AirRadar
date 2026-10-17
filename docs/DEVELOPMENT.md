@@ -244,6 +244,31 @@ nightly/manual heavy workflow. The normal metadata test still proves multiple
 full batches, a remainder batch, bounded batch size, streaming, and record
 counts.
 
+## Runtime measurement and soak evidence
+
+`npm run benchmark:runtime-instrumentation` measures the synchronous recorder
+with a numeric count and a result counter, using synthetic work only. Treat
+the output as overhead evidence for the current Node/runtime, not a production
+speed claim. Metric storage is bounded and diagnostic names/counters are
+allowlisted; do not add payloads, aircraft identity, or provider data to it.
+
+The T5.7 read-only sampler polls sanitized system/runtime diagnostics. Each
+sample carries a timestamp, deployed commit/version, and a one-way process
+identity. PID and internal diagnostics IDs remain out of reports. Process,
+commit, or version changes start a distinct segment; trends use one segment at
+a time. Missing samples and timestamp gaps are reported and prevent a
+continuous-soak PASS. The sampler performs no build, restart, database write,
+live SSE subscription, forced GC, or heap snapshot.
+
+`.github/workflows/t57-24-hour-soak.yml` runs only by explicit
+`workflow_dispatch` after the workflow is present on the default branch. It
+divides the 24-hour window into sequential
+hosted jobs below the runner's per-job limit and hands off a sanitized journal
+artifact at each boundary. Each chunk has a bounded two-minute poll cadence;
+handoff delays are recorded as missing intervals. To resume a failed run,
+dispatch the workflow with its prior run ID, attempt, chunk number, and pinned
+production commit from that run's summary. The sampler itself remains read-only.
+
 Relevant production gates are:
 
 ```bash
