@@ -156,6 +156,12 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(report.verdict).toBe("INSUFFICIENT_EVIDENCE");
   });
 
+  it("rejects samples without timestamp, deployed commit, version field and process key", () => {
+    const rows = records(2);
+    delete rows[1].value.processIdentity;
+    expect(() => analyzeT57Soak(rows)).toThrow("t57_sample_identity_incomplete");
+  });
+
   it("preserves bounded V5 SQL settlement and event-loop evidence without raw route data", () => {
     const { status, metrics } = raw(1);
     status.routeEnrichment = {

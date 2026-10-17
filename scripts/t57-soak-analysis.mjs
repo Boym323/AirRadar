@@ -299,6 +299,11 @@ export function analyzeT57Soak(records) {
     throw new Error("invalid_t57_header");
   }
   const allRows = records.filter((r) => r.type === "sample").map((r) => r.value);
+  if (allRows.some((row) => !stamp(row?.at) || typeof row?.commit !== "string" || !row.commit ||
+      !Object.hasOwn(row, "version") || (row.version !== null && typeof row.version !== "string") ||
+      typeof row?.processIdentity !== "string" || !/^[a-f0-9]{24}$/.test(row.processIdentity))) {
+    throw new Error("t57_sample_identity_incomplete");
+  }
   const bySegment = new Map();
   for (const row of allRows) {
     const key = String(row.segment ?? "legacy");
