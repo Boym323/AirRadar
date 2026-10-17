@@ -224,8 +224,9 @@ npm run test:changed
 
 Vitest follows static imports to include transitive dependants. If it cannot
 prove a relationship, prefer a targeted or full run; do not narrow a test run
-to force it to pass. `npm test` is the affected-test default and may select no
-tests in a clean tree. The complete suite is available explicitly:
+to force it to pass. `npm run test:changed` selects tests affected by the diff and may select
+none in a clean tree. `npm test` runs the complete suite (`vitest run`), as
+does `npm run test:full`:
 
 ```bash
 npm test
@@ -394,6 +395,81 @@ editing the same lines or running competing builds against one checkout.
 The production release script is tied to `/var/www/airradar`, service state,
 locks, migrations, and health checks; do not run it from a development
 worktree. A release is never an implicit development or documentation step.
+
+## Agent autonomy, pull requests, and production boundaries
+
+A request to investigate or optimize authorizes analysis and an isolated
+implementation, **not** an implicit merge or production release.
+
+- **Read-only diagnosis:** inspect source, CI evidence, and permitted bounded
+  diagnostics; identify assumptions and missing evidence. Avoid configuration
+  changes, service restarts, database writes, or production feature toggles.
+- **Implementation:** use a task branch and separate worktree. Preserve other
+  agents' changes, add focused tests, keep flags conservative, and publish a
+  PR (draft when validation is incomplete). Never force-push shared branches.
+- **Integration:** require explicit authorization before merging, pushing
+  directly to `main`, enabling auto-merge, bypassing checks, or changing
+  repository protection. Passing tests alone does not grant approval. Failed
+  CodeQL/CI checks and uncertain regressions block a ready-to-merge verdict.
+- **Deployment:** classify the complete diff with
+  `node scripts/release-scope.mjs <changed-paths>` (or its `--stdin0` form)
+  before an authorized merge. A merge into `main` can trigger automatic
+  deployment under `.github/workflows/ci.yml`; do not treat merge as a
+  harmless documentation step. Manual releases follow `docs/RELEASE.md`
+  and require explicit release authorization. Never silently change production
+  flags, data, services, or migrations.
+
+Every PR/handoff should report: problem and scope; root-cause evidence versus
+hypothesis; changes and invariant impact; exactly which commands/gates passed,
+failed, or were not run; any before/after performance evidence; risk, feature
+flags, and rollback; release-scope classification; and remaining blockers.
+Re-evaluate checks after integrating concurrent changes. Do not declare a
+release, performance improvement, or production health PASS without observed
+evidence.
+
+## Repository merge protection
+
+Documentation is not a substitute for an enforced GitHub branch ruleset.
+A maintainer should configure protection for `main` in GitHub repository
+Settings > Rules > Rulesets: require a PR and passing applicable checks, block
+force pushes and deletion, and consider resolved review conversations and
+independent approval where practicable. First inspect actual check contexts for
+ordinary PRs, `release-preview` PRs, and metadata automation: a conditionally
+skipped check must not accidentally deadlock merges. Verify enforcement with a
+safe rejected-path test. Do not claim these protections are active merely
+because they are documented.
+
+## Performance optimization evidence
+
+For performance, reliability, native/Rust, SSE, ingestion, or memory changes,
+follow this protocol before claiming an improvement:
+
+1. State the suspected bottleneck, affected path, measured symptom, acceptance
+   metric, and rollback trigger. Do not treat correlation as proven causation.
+2. Capture a baseline and candidate under comparable workloads, build modes,
+   flags, host/runner conditions, and durations. Record exact commits, sample
+   counts, scenario/input size, and raw artifact/CI links. Clearly distinguish
+   synthetic benchmarks, read-only production observation, and production
+   canaries.
+3. For backend hot paths report relevant throughput/CPU, event-loop lag and
+   utilization, P50/P95/P99 and maximum stalls where sample counts permit,
+   RSS/heap/external memory, GC pauses, cgroup CPU throttling, queue/backpressure
+   depth, and SSE freshness. An improvement in the mean must not hide a worse
+   tail; do not claim P99 or statistical significance from insufficient data.
+4. Re-check live-path invariants, bounded state/queues, error isolation,
+   single-poller ownership, fallback/feature-OFF behavior, and compatibility
+   with consumers. For native code, include JS/native parity, addon absence or
+   failure fallback, startup/ABI handling, memory cost, and FFI overhead.
+5. Run targeted regressions and relevant CI gates, then propose a bounded
+   OFF-to-ON canary/T58 verification only when authorized. Compare against the
+   same acceptance criteria; stop or roll back on a measured regression. Do not
+   enable production flags, restart services, or run intrusive load tests as
+   part of routine investigation.
+
+If attribution remains uncertain, submit bounded diagnostics and a measurement
+plan rather than an unverified "fixed" claim. Expose only sanitized, bounded
+telemetry; do not publish secrets, aircraft/receiver private positions, or
+provider raw payloads.
 
 ## Safe changes
 
