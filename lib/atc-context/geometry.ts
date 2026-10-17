@@ -47,16 +47,27 @@ export async function bboxAsync(rings: PolygonRings): Promise<[number, number, n
   }
   return [minLon, minLat, maxLon, maxLat];
 }
-function onSegment(p: LonLat, a: LonLat, b: LonLat): boolean {
-  const cross = (p[1] - a[1]) * (b[0] - a[0]) - (p[0] - a[0]) * (b[1] - a[1]);
-  return Math.abs(cross) < 1e-9 && p[0] >= Math.min(a[0], b[0]) - 1e-9 && p[0] <= Math.max(a[0], b[0]) + 1e-9 && p[1] >= Math.min(a[1], b[1]) - 1e-9 && p[1] <= Math.max(a[1], b[1]) + 1e-9;
-}
 function ringContains(point: LonLat, ring: LonLat[]): "inside" | "boundary" | null {
   let inside = false;
+  const x = point[0];
+  const y = point[1];
+  const epsilon = 1e-9;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    if (onSegment(point, ring[j], ring[i])) return "boundary";
-    if ((ring[i][1] > point[1]) !== (ring[j][1] > point[1]) &&
-        point[0] < ((ring[j][0] - ring[i][0]) * (point[1] - ring[i][1])) / (ring[j][1] - ring[i][1]) + ring[i][0]) {
+    const a = ring[j];
+    const b = ring[i];
+    const ay = a[1];
+    const by = b[1];
+    const minY = ay < by ? ay : by;
+    const maxY = ay > by ? ay : by;
+    if (y >= minY - epsilon && y <= maxY + epsilon) {
+      const cross = (y - ay) * (b[0] - a[0]) - (x - a[0]) * (by - ay);
+      if (Math.abs(cross) < epsilon) {
+        const minX = a[0] < b[0] ? a[0] : b[0];
+        const maxX = a[0] > b[0] ? a[0] : b[0];
+        if (x >= minX - epsilon && x <= maxX + epsilon) return "boundary";
+      }
+    }
+    if ((by > y) !== (ay > y) && x < ((a[0] - b[0]) * (y - ay)) / (by - ay) + a[0]) {
       inside = !inside;
     }
   }
