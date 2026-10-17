@@ -53,21 +53,12 @@ function onSegment(p: LonLat, a: LonLat, b: LonLat): boolean {
 }
 function ringContains(point: LonLat, ring: LonLat[]): "inside" | "boundary" | null {
   let inside = false;
-  const x = point[0];
-  const y = point[1];
-  const epsilon = 1e-9;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const a = ring[j];
-    const b = ring[i];
-    const ay = a[1];
-    const by = b[1];
-    // Most edges of the large imported FIR rings cannot touch this latitude.
-    // Preserve the original epsilon boundary rule, but evaluate its cross
-    // product only for an edge whose expanded bounds contain the point.
-    if (y >= Math.min(ay, by) - epsilon && y <= Math.max(ay, by) + epsilon &&
-        x >= Math.min(a[0], b[0]) - epsilon && x <= Math.max(a[0], b[0]) + epsilon &&
-        onSegment(point, a, b)) return "boundary";
-    if ((by > y) !== (ay > y) && x < ((a[0] - b[0]) * (y - by)) / (ay - by) + b[0]) inside = !inside;
+    if (onSegment(point, ring[j], ring[i])) return "boundary";
+    if ((ring[i][1] > point[1]) !== (ring[j][1] > point[1]) &&
+        point[0] < ((ring[j][0] - ring[i][0]) * (point[1] - ring[i][1])) / (ring[j][1] - ring[i][1]) + ring[i][0]) {
+      inside = !inside;
+    }
   }
   return inside ? "inside" : null;
 }
