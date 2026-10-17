@@ -15,7 +15,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, open, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
 import { projectT57SoakSample, newT57Windows, analyzeT57Soak } from "./t57-soak-analysis.mjs";
@@ -29,6 +28,10 @@ export function durationSetting(name, fallback, min, max) {
   const n = Number(process.env[name] ?? fallback);
   if (!Number.isSafeInteger(n) || n < min || n > max) throw new Error("invalid_t57_schedule");
   return n;
+}
+
+export function scheduledPollDelayMs(scheduledAt, now = Date.now()) {
+  return Math.max(0, scheduledAt - now);
 }
 
 export function classifyT57Failure(error) {
@@ -298,14 +301,13 @@ async function run() {
   ) : 0;
   const endIndex = Math.min(Math.ceil(seconds / intervalSeconds), firstIndex + Math.ceil(chunkSeconds / intervalSeconds) - 1);
   const chunkStartIndex = lastSample ? firstIndex : 0;
-  const started = performance.now();
+  let lastScheduledIndex = priorScheduledIndex >= 0
+    ? priorScheduledIndex
+    : lastSample ? Math.floor((Date.parse(lastSample.at) - startEpoch) / (intervalSeconds * 1000)) : -1;
   try {
     if (!resume) await write({ type: "header", schemaVersion: 1, measurementId,
       startedAt: startedAt.toISOString(), plannedEndAt: new Date(startEpoch + seconds * 1000).toISOString(),
       seconds, intervalSeconds, warmupSeconds });
-    let lastScheduledIndex = priorScheduledIndex >= 0
-      ? priorScheduledIndex
-      : lastSample ? Math.floor((Date.parse(lastSample.at) - startEpoch) / (intervalSeconds * 1000)) : -1;
     for (let i = chunkStartIndex; i <= endIndex && !stopped; i++) {
       if (i > lastScheduledIndex + 1) {
         for (let skipped = lastScheduledIndex + 1; skipped < i; skipped++) {
@@ -315,7 +317,7 @@ async function run() {
         }
       }
       const scheduledAt = startEpoch + i * intervalSeconds * 1000;
-      const delay = started + (scheduledAt - Date.now()) - (performance.now() - started);
+      const delay = scheduledPollDelayMs(scheduledAt);
       if (delay > 0) await new Promise((done) => setTimeout(done, delay));
       if (stopped) break;
       const pollDelayMs = Math.max(0, Date.now() - scheduledAt);
