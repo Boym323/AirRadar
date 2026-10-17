@@ -116,11 +116,14 @@ describe("safe read-only evidence contract", () => {
       sampleIntervalUs: 20000, samples: 200, nodes: 50, rawProfile: "SECRET",
       stalls: [{ observedAt: "2026-10-17T12:00:00Z", overshootMs: 1200,
         sampleCount: 40, sampledMs: 800, cpuPercent: 90,
-        topFrames: [{ frame: "snapshotLoop > decodeFrame", category: "javascript", samples: 40, url: "SECRET" }] }] });
+        topFrames: [{ frame: "snapshotLoop > decodeFrame", category: "javascript", samples: 40,
+          chunk: "lib_07shbkf._.js", line: 12, column: 34, url: "SECRET" }] }] });
     assert.equal(safe.stalls[0].topFrames[0].frame, "snapshotLoop > decodeFrame");
     assert.ok(!JSON.stringify(safe).includes("SECRET"));
+    assert.equal(safe.stalls[0].topFrames[0].chunk, "lib_07shbkf._.js");
     assert.throws(() => sanitizedCpuProfile({ status: "completed", stalls: [{
-      topFrames: [{ frame: "https://secret", category: "javascript", samples: 1 }] }] }),
+      topFrames: [{ frame: "https://secret", category: "javascript", samples: 1,
+        chunk: "secret.js", line: 0, column: 0 }] }] }),
     /canary_cpu_profile_invalid_stalls/);
   });
   it("accepts both already-on and default-off monitoring on preflight", () => {

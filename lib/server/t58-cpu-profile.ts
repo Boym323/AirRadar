@@ -14,7 +14,9 @@ const MAX_STALLS = 24;
 const MAX_PROFILE_SCHED_WAIT_MS = 180_000;
 const SAFE_NAME = /^[A-Za-z_$][A-Za-z0-9_$ .:-]{0,79}$/;
 
-type ProfileNode = { id: number; callFrame: { functionName: string; url: string }; parent?: number; children?: number[] };
+type ProfileNode = { id: number; callFrame: {
+  functionName: string; url: string; lineNumber?: number; columnNumber?: number;
+}; parent?: number; children?: number[] };
 type CpuProfile = { startTime: number; endTime: number; nodes: ProfileNode[]; samples?: number[]; timeDeltas?: number[] };
 type StallContext = {
   observedAt: string; endedMonoMs: number; overshootMs: number;
@@ -24,7 +26,8 @@ type StallContext = {
 };
 type StallSummary = Omit<StallContext, "endedMonoMs"> & {
   sampledMs: number; sampleCount: number;
-  topFrames: Array<{ frame: string; category: "javascript" | "native" | "gc" | "idle" | "unknown"; samples: number }>;
+  topFrames: Array<{ frame: string; category: "javascript" | "native" | "gc" | "idle" | "unknown";
+    chunk: string | null; line: number | null; column: number | null; samples: number }>;
 };
 type Summary = {
   status: "disabled" | "starting" | "running" | "stopping" | "completed" | "discarded";
@@ -59,16 +62,26 @@ function schedulerSample(): [number, number, number] | null {
   } catch { return null; }
 }
 
-function safeFrame(node: ProfileNode): { frame: string; category: StallSummary["topFrames"][number]["category"] } {
+function safeFrame(node: ProfileNode): Omit<StallSummary["topFrames"][number], "samples"> {
   const name = node.callFrame?.functionName ?? "";
-  if (name === "(garbage collector)") return { frame: "(garbage collector)", category: "gc" };
-  if (name === "(idle)") return { frame: "(idle)", category: "idle" };
+  const emptyLocation = { chunk: null, line: null, column: null };
+  if (name === "(garbage collector)") return { frame: "(garbage collector)", category: "gc", ...emptyLocation };
+  if (name === "(idle)") return { frame: "(idle)", category: "idle", ...emptyLocation };
   const url = node.callFrame?.url ?? "";
   const category = url.startsWith("node:") || name.startsWith("Builtin:") || name.startsWith("Stub:")
     ? "native" : url.startsWith("file:") || url.startsWith("webpack-internal:") ? "javascript" : "unknown";
   // Function names can be generated from dynamic source. Only a narrow static
   // alphabet leaves the process; never export URLs, paths, source or arguments.
-  return { frame: SAFE_NAME.test(name) ? name : "(redacted)", category };
+  // Only a fixed build path and a bare chunk basename are exported. No URL,
+  // directory, query string, application data or source text leaves the process.
+  const chunk = /^file:\/\/\/var\/www\/airradar\/\.next\/standalone\/\.next\/server\/chunks\/(?:ssr\/)?((?!.*\.\.)[A-Za-z0-9_.-]{1,80}\.js)$/.exec(url)?.[1] ?? null;
+  const line = chunk && Number.isSafeInteger(node.callFrame.lineNumber) &&
+    node.callFrame.lineNumber! >= 0 && node.callFrame.lineNumber! <= 1_000_000
+    ? node.callFrame.lineNumber! : null;
+  const column = chunk && Number.isSafeInteger(node.callFrame.columnNumber) &&
+    node.callFrame.columnNumber! >= 0 && node.callFrame.columnNumber! <= 1_000_000
+    ? node.callFrame.columnNumber! : null;
+  return { frame: SAFE_NAME.test(name) ? name : "(redacted)", category, chunk, line, column };
 }
 
 export function summarizeT58CpuProfile(profile: CpuProfile, startedMonoMs: number, stalls: StallContext[]): Summary {
@@ -82,9 +95,8 @@ export function summarizeT58CpuProfile(profile: CpuProfile, startedMonoMs: numbe
   const nodes = new Map(profile.nodes.map((node) => [node.id, node]));
   const parent = new Map<number, number>();
   for (const node of profile.nodes) for (const child of node.children ?? []) parent.set(child, node.id);
-  const aggregates = stalls.slice(0, MAX_STALLS).map((stall) => ({ stall, counts: new Map<string, {
-    frame: string; category: StallSummary["topFrames"][number]["category"]; samples: number;
-  }>(), samples: 0 }));
+  const aggregates = stalls.slice(0, MAX_STALLS).map((stall) => ({ stall, counts: new Map<string,
+    StallSummary["topFrames"][number]>(), samples: 0 }));
   let cursorUs = profile.startTime;
   for (let i = 0; i < profile.samples.length; i++) {
     const delta = profile.timeDeltas[i]!;
@@ -103,12 +115,12 @@ export function summarizeT58CpuProfile(profile: CpuProfile, startedMonoMs: numbe
       if (name !== "(redacted)" && name !== "(root)") stack.unshift(name);
       parentId = parent.get(parentId);
     }
-    const frame = { frame: stack.join(" > ").slice(0, 240), category: leaf.category };
+    const frame = { ...leaf, frame: stack.join(" > ").slice(0, 240) };
     for (const aggregate of aggregates) {
       const { stall } = aggregate;
       if (sampleMonoMs < stall.endedMonoMs - stall.overshootMs || sampleMonoMs > stall.endedMonoMs) continue;
       aggregate.samples++;
-      const key = `${frame.category}:${frame.frame}`;
+      const key = `${frame.category}:${frame.frame}:${frame.chunk}:${frame.line}:${frame.column}`;
       const item = aggregate.counts.get(key) ?? { ...frame, samples: 0 };
       item.samples++;
       aggregate.counts.set(key, item);

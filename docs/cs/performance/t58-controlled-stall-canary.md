@@ -101,3 +101,9 @@ GC a plánování hlavního vlákna pro jednotlivé blokace. Patnáctiminutový
 canary report obsahuje tento očištěný souhrn. Vzorek CPU uvnitř blokace je
 silnější důkaz než minutová korelace, ale je nutné jej posoudit spolu s CPU,
 GC a čekáním plánovače.
+
+U minifikovaných názvů funkcí obsahuje souhrn pouze povolený název chunku
+`.next/server/chunks` a pozici koncového frame (řádek/sloupec číslovaný od
+nuly). Operátor ji může převést pomocí soukromé source mapy přesného
+nasazeného buildu. Report neobsahuje absolutní cestu, libovolnou URL, obsah
+source mapy ani plný profil.

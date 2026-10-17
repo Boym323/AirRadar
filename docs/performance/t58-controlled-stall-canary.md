@@ -101,3 +101,9 @@ per-stall CPU/GC/main-thread scheduler deltas. The 15-minute canary report
 includes this sanitized summary. A CPU sample within an event-loop stall is
 stronger attribution than a one-minute correlation, but interpretation still
 requires multiple samples and cross-checking CPU, GC and scheduler wait.
+
+When a stack has minified function names, the summary includes only the
+allowlisted `.next/server/chunks` basename and zero-based line/column of its
+leaf frame. An operator can resolve this location against the exact deployed
+build's private source map. No absolute path, arbitrary URL, source-map
+contents or raw profile is included in the report.
