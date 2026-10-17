@@ -1,0 +1,149 @@
+name: T57 soak chunk (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      chunk:
+        required: true
+        type: number
+      chunk_seconds:
+        required: true
+        type: number
+      previous_chunk:
+        required: true
+        type: number
+      previous_run_id:
+        required: false
+        type: string
+        default: ""
+      previous_attempt:
+        required: false
+        type: string
+        default: ""
+      resume_chunk:
+        required: false
+        type: string
+        default: "1"
+      expected_commit:
+        required: false
+        type: string
+        default: ""
+    outputs:
+      deployed_sha:
+        description: Production commit checked by the read-only preflight
+        value: ${{ jobs.collect.outputs.deployed_sha }}
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    outputs:
+      deployed_sha: ${{ steps.preflight.outputs.deployed_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Prepare private journal directory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t57"
+          chmod 700 "$RUNNER_TEMP/t57"
+
+      - name: Validate resume inputs
+        shell: bash
+        env:
+          PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
+          RESUME_CHUNK: ${{ inputs.resume_chunk }}
+        run: |
+          set -Eeuo pipefail
+          if [[ "$RESUME_CHUNK" != "1" && -z "$PREVIOUS_RUN_ID" ]]; then
+            echo "resume_run_id_required_for_later_chunk" >&2
+            exit 1
+          fi
+
+      - name: Read-only preflight and pin deployed commit
+        id: preflight
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -Eeuo pipefail
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t57/preflight.json"
+          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t57/preflight.json")"
+          git rev-parse --verify "$deployed_sha^{commit}" >/dev/null
+          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
+          echo "Pinned read-only production commit $deployed_sha"
+
+      - name: Download prior-run resume checkpoint
+        if: ${{ inputs.previous_run_id != '' && inputs.chunk == fromJSON(inputs.resume_chunk) }}
+        uses: actions/download-artifact@v8
+        with:
+          name: t57-journal-${{ inputs.previous_run_id }}-chunk${{ inputs.chunk }}-attempt${{ inputs.previous_attempt || '1' }}
+          run-id: ${{ inputs.previous_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/t57/resume
+
+      - name: Download previous chunk from this workflow run
+        if: ${{ inputs.chunk > fromJSON(inputs.resume_chunk) || (inputs.previous_run_id == '' && inputs.chunk > 1) }}
+        uses: actions/download-artifact@v8
+        with:
+          name: t57-journal-${{ github.run_id }}-chunk${{ inputs.previous_chunk }}-attempt${{ github.run_attempt }}
+          path: ${{ runner.temp }}/t57/resume
+
+      - name: Continue or start the pinned measurement
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
+          T57_TOTAL_SECONDS: "86400"
+          T57_CHUNK_SECONDS: ${{ inputs.chunk_seconds }}
+          T57_INTERVAL_SECONDS: "120"
+          T57_WARMUP_SECONDS: "600"
+          T57_OUTPUT: ${{ runner.temp }}/t57/soak.ndjson
+          RESUME_CHUNK: ${{ inputs.resume_chunk }}
+          CURRENT_CHUNK: ${{ inputs.chunk }}
+          PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
+        run: |
+          set -Eeuo pipefail
+          if [[ -n "$PREVIOUS_RUN_ID" && "$CURRENT_CHUNK" == "$RESUME_CHUNK" ]]; then
+            cp "$RUNNER_TEMP/t57/resume/soak.ndjson" "$T57_OUTPUT"
+            chmod 600 "$T57_OUTPUT"
+            export T57_RESUME=1
+            export T57_MEASUREMENT_ID="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8").split("\n")[0]).measurementId)' "$T57_OUTPUT")"
+          elif [[ "$CURRENT_CHUNK" -gt 1 ]]; then
+            cp "$RUNNER_TEMP/t57/resume/soak.ndjson" "$T57_OUTPUT"
+            chmod 600 "$T57_OUTPUT"
+            export T57_RESUME=1
+            export T57_MEASUREMENT_ID="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8").split("\n")[0]).measurementId)' "$T57_OUTPUT")"
+          fi
+          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57/collector-result.json"
+          cat "$RUNNER_TEMP/t57/collector-result.json" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -s "$RUNNER_TEMP/t57/soak.summary.md" ]]; then
+            cat "$RUNNER_TEMP/t57/soak.summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload resumable checkpoint or final report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: t57-journal-${{ github.run_id }}-chunk${{ inputs.chunk }}-attempt${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t57/soak.ndjson
+            ${{ runner.temp }}/t57/soak.summary.json
+            ${{ runner.temp }}/t57/soak.summary.md
+            ${{ runner.temp }}/t57/collector-result.json
+          retention-days: 30
+          if-no-files-found: warn

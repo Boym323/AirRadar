@@ -260,6 +260,15 @@ a time. Missing samples and timestamp gaps are reported and prevent a
 continuous-soak PASS. The sampler performs no build, restart, database write,
 live SSE subscription, forced GC, or heap snapshot.
 
+`.github/workflows/t57-24-hour-soak.yml` runs only after a `release-preview`
+label or an explicit dispatch. It divides the 24-hour window into sequential
+hosted jobs below the runner's per-job limit and hands off a sanitized journal
+artifact at each boundary. Each chunk has a bounded two-minute poll cadence;
+handoff delays are recorded as missing intervals. To resume a failed run,
+dispatch the workflow with its prior run ID, attempt, chunk number, and pinned
+production commit from that run's summary. Do not merge to `main` to start the
+read-only measurement.
+
 Relevant production gates are:
 
 ```bash

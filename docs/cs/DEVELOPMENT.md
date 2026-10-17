@@ -443,3 +443,11 @@ commitu nebo verze začíná nový segment; trendy se počítají vždy jen v je
 segmentu. Chybějící vzorky a časové mezery jsou viditelné a brání PASS za
 nepřerušený soak. Sampler nic nestaví ani nerestartuje, nezapisuje do databáze,
 neotevírá live SSE klienta a nevynucuje GC ani heap snapshot.
+
+`.github/workflows/t57-24-hour-soak.yml` se spouští po přidání labelu
+`release-preview` nebo ručním dispatchi. Rozděluje 24hodinové měření do
+navazujících hosted jobů pod limitem jednoho běhu a předává sanitizovaný
+journal artefakt. Vzorky pořizuje po dvou minutách; prodleva mezi joby se
+zaznamená jako chybějící interval. Pro pokračování neúspěšného běhu zadejte ID
+běhu, pokus, číslo posledního chunku a připnutý commit produkce z jeho
+souhrnu. Read-only měření nevyžaduje merge do `main`.

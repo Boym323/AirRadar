@@ -1,18 +1,29 @@
 name: T57 24-hour read-only performance soak
 
 on:
+  pull_request:
+    types: [labeled]
   workflow_dispatch:
     inputs:
       resume_run_id:
-        description: Previous run ID with a t57-journal artifact (leave empty to start)
+        description: Previous run ID with a t57 journal artifact; empty starts a new soak
         required: false
         type: string
+      resume_attempt:
+        description: Previous run attempt containing the checkpoint artifact
+        required: false
+        type: string
+      resume_chunk:
+        description: Chunk number to resume (1 to 5)
+        required: false
+        default: "1"
+        type: string
       expected_commit:
-        description: Production commit pinned by the first chunk
+        description: Production commit pinned by the original run
         required: false
         type: string
 
-run-name: "T57 24h read-only soak · ${{ inputs.resume_run_id || 'start' }}"
+run-name: "T57 24h read-only soak · ${{ inputs.resume_run_id || github.event.pull_request.number || 'start' }}"
 
 concurrency:
   group: airradar-t57-24-hour-read-only-soak
@@ -20,99 +31,74 @@ concurrency:
 
 permissions:
   contents: read
-  actions: write
+  actions: read
 
 jobs:
-  collect:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 350
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
+  chunk_1:
+    if: ${{ (github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '1') }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 1
+      chunk_seconds: 20400
+      previous_chunk: 0
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ inputs.expected_commit || '' }}
+    secrets: inherit
 
-      - name: Prepare private journal directory
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          umask 077
-          mkdir -p "$RUNNER_TEMP/t57"
-          chmod 700 "$RUNNER_TEMP/t57"
+  chunk_2:
+    needs: chunk_1
+    if: ${{ always() && (needs.chunk_1.result == 'success' || needs.chunk_1.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '2')) }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 2
+      chunk_seconds: 20400
+      previous_chunk: 1
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_1.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
 
-      - name: Read-only preflight and pin deployed commit
-        id: preflight
-        shell: bash
-        env:
-          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
-          T57_BASE_URL: https://airradar.pomykal.cz
-          T57_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
-        run: |
-          set -Eeuo pipefail
-          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t57/preflight.json"
-          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t57/preflight.json")"
-          git rev-parse --verify "$deployed_sha^{commit}" >/dev/null
-          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
-          echo "Pinned read-only production commit $deployed_sha"
+  chunk_3:
+    needs: chunk_2
+    if: ${{ always() && (needs.chunk_2.result == 'success' || needs.chunk_2.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '3')) }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 3
+      chunk_seconds: 20400
+      previous_chunk: 2
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_2.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
 
-      - name: Download previous checkpoint journal
-        if: ${{ inputs.resume_run_id != '' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: t57-journal-${{ inputs.resume_run_id }}
-          run-id: ${{ inputs.resume_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/t57/resume
+  chunk_4:
+    needs: chunk_3
+    if: ${{ always() && (needs.chunk_3.result == 'success' || needs.chunk_3.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '4')) }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 4
+      chunk_seconds: 20400
+      previous_chunk: 3
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_3.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
 
-      - name: Continue or start the 24-hour collection window
-        id: collect
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
-          T57_BASE_URL: https://airradar.pomykal.cz
-          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
-          T57_TOTAL_SECONDS: "86400"
-          T57_CHUNK_SECONDS: "20400"
-          T57_INTERVAL_SECONDS: "60"
-          T57_WARMUP_SECONDS: "600"
-          T57_OUTPUT: ${{ runner.temp }}/t57/soak.ndjson
-          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
-          WORKFLOW_REF: ${{ github.ref_name }}
-          DEPLOYED_SHA: ${{ steps.preflight.outputs.deployed_sha }}
-        run: |
-          set -Eeuo pipefail
-          if [[ -n "$RESUME_RUN_ID" ]]; then
-            cp "$RUNNER_TEMP/t57/resume/soak.ndjson" "$T57_OUTPUT"
-            chmod 600 "$T57_OUTPUT"
-            export T57_RESUME=1
-            export T57_MEASUREMENT_ID="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8").split("\n")[0]).measurementId)' "$T57_OUTPUT")"
-          fi
-          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57/collector-result.json"
-          cat "$RUNNER_TEMP/t57/collector-result.json" >> "$GITHUB_STEP_SUMMARY"
-          status="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).status ?? "COMPLETE")' "$RUNNER_TEMP/t57/collector-result.json")"
-          if [[ "$status" == "CHUNK_COMPLETE" ]]; then
-            gh workflow run t57-24-hour-soak.yml --repo "$GITHUB_REPOSITORY" --ref "$WORKFLOW_REF" \
-              -f resume_run_id="$GITHUB_RUN_ID" -f expected_commit="$DEPLOYED_SHA"
-            echo "Next checkpoint run queued. This run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
-          else
-            cp "$RUNNER_TEMP/t57/soak.summary.md" "$RUNNER_TEMP/t57/final-report.md"
-            cat "$RUNNER_TEMP/t57/final-report.md" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload checkpoint journal and final report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: t57-journal-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/t57/soak.ndjson
-            ${{ runner.temp }}/t57/soak.summary.json
-            ${{ runner.temp }}/t57/soak.summary.md
-            ${{ runner.temp }}/t57/collector-result.json
-          retention-days: 30
-          if-no-files-found: warn
+  chunk_5:
+    needs: chunk_4
+    if: ${{ always() && (needs.chunk_4.result == 'success' || needs.chunk_4.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '5')) }}
+    uses: ./.github/workflows/t57-soak-chunk.yml
+    with:
+      chunk: 5
+      chunk_seconds: 4920
+      previous_chunk: 4
+      previous_run_id: ${{ inputs.resume_run_id || '' }}
+      previous_attempt: ${{ inputs.resume_attempt || '' }}
+      resume_chunk: ${{ inputs.resume_chunk || '1' }}
+      expected_commit: ${{ needs.chunk_4.outputs.deployed_sha || inputs.expected_commit || '' }}
+    secrets: inherit
