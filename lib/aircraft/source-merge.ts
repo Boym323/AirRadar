@@ -284,21 +284,35 @@ export function mergeAircraftMaps(
   receiver: ReceiverPosition,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number; sourcePreferences?: ReadonlyMap<string, "local" | "network"> },
 ): Aircraft[] {
-  // Preserve local-first iteration order without materializing both key arrays.
-  const keys = new Set(local.keys());
-  for (const key of network.keys()) keys.add(key);
   const merged: Aircraft[] = [];
   // This expensive invariant is useful in development only.
   const mergedKeys = process.env.NODE_ENV !== "production" ? new Set<string>() : null;
-  for (const key of keys) {
-    const value = mergeAircraftObservations(local.get(key), network.get(key), receiver, {
-      ...options,
-      preferredOrigin: options.sourcePreferences?.get(key),
-    });
+
+  // Preference options are identical for every aircraft of a given affinity.
+  // Avoid an object spread per identity in multi-thousand-aircraft snapshots.
+  const sourcePreferences = options.sourcePreferences;
+  const defaultOptions = { ...options, preferredOrigin: undefined };
+  const localOptions = { ...options, preferredOrigin: "local" as const };
+  const networkOptions = { ...options, preferredOrigin: "network" as const };
+
+  // Iterating local first and then network-only identities has exactly the
+  // insertion order of the former Set(local.keys()) + network.keys() union,
+  // but avoids materializing that potentially large temporary Set.
+  for (const [key, localAircraft] of local) {
+    const preference = sourcePreferences?.get(key);
+    const value = mergeAircraftObservations(localAircraft, network.get(key), receiver,
+      preference === "local" ? localOptions : preference === "network" ? networkOptions : defaultOptions);
     if (value) {
       merged.push(value);
       mergedKeys?.add(key);
     }
+  }
+  for (const [key, networkAircraft] of network) {
+    if (local.has(key)) continue;
+    const preference = sourcePreferences?.get(key);
+    const value = mergeAircraftObservations(undefined, networkAircraft, receiver,
+      preference === "local" ? localOptions : preference === "network" ? networkOptions : defaultOptions);
+    if (value) merged.push(value);
   }
   if (mergedKeys) {
     const missingLocal = [...local.keys()].filter((key) => !mergedKeys.has(key));
