@@ -23,7 +23,9 @@ import { projectT57SoakSample, newT57Windows, analyzeT57Soak } from "./t57-soak-
 const SESSION_REFRESH_MS = 6 * 3600 * 1000; // session expires after 8 h
 const MAX_REPORT_BYTES = 50_000_000;
 
-function durationSetting(name, fallback, min, max) {
+export const MIN_T57_SOAK_SECONDS = 1800;
+
+export function durationSetting(name, fallback, min, max) {
   const n = Number(process.env[name] ?? fallback);
   if (!Number.isSafeInteger(n) || n < min || n > max) throw new Error("invalid_t57_schedule");
   return n;
@@ -213,7 +215,7 @@ async function preflight() {
 async function run() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   const base = trustedBase();
-  const seconds = durationSetting("T57_SECONDS", 86400, 3600, 86400);
+  const seconds = durationSetting("T57_SECONDS", 86400, MIN_T57_SOAK_SECONDS, 86400);
   const intervalSeconds = durationSetting("T57_INTERVAL_SECONDS", 60, 30, 120);
   const warmupSeconds = durationSetting("T57_WARMUP_SECONDS", 600, 0, 1800);
   if (warmupSeconds > seconds / 2) throw new Error("warmup_too_long");
