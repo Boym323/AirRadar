@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.506] - 2026-10-18
+
+Changes since v1.0.505.
+
+### Fixed
+
+- Retry canary diagnostics startup race (b829f15e)
+
+### Maintenance
+
+- Sync generated repository metadata (#999) (447b48c2)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#999) (447b48c2)
+- fix(t58): retry canary diagnostics startup race (b829f15e)
+
+</details>
 ## [1.0.505] - 2026-10-18
 
 Changes since v1.0.504.
