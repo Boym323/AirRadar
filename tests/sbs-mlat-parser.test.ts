@@ -2,12 +2,43 @@ import { describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import type net from "node:net";
 import { AdsbHubProvider } from "@/lib/server/adsbhub-provider";
+import { AdsbLolRawProvider } from "@/lib/server/adsblol-raw-provider";
+import { getRuntimePerformanceDiagnostics, resetRuntimePerformanceDiagnosticsForTests } from "@/lib/server/runtime-performance";
 import { parseSbsLine, parseSbsMlatLine, SbsLineBuffer } from "@/lib/server/sbs-mlat-parser";
 
 const receiver = { lat: 49.22, lon: 17.67, name: "test" };
 const line = "MSG,3,111,ABC123,ABC123,TEST123 ,2026/09/19,12:00:00.000,2026/09/19,12:00:00.000,12000,12000,420,180,49.3,17.8,640,7700,0,0,0,0";
 
 describe("SBS MLAT parser", () => {
+  it("records per-callback BEAST and MLAT measurements without changing fragmented decode semantics", () => {
+    resetRuntimePerformanceDiagnosticsForTests();
+    const provider = new AdsbLolRawProvider(receiver);
+    const ingest = provider as unknown as {
+      handleBeast(chunk: Uint8Array): void;
+      handleMlat(chunk: Uint8Array): void;
+    };
+    const beastFrame = Uint8Array.from([0x1a, 0x32, ...Array(6).fill(0), 0x20, ...Array(7).fill(0)]);
+    ingest.handleBeast(beastFrame.subarray(0, 5));
+    ingest.handleBeast(beastFrame.subarray(5));
+
+    const encodedLine = new TextEncoder().encode(line + "\r\n");
+    ingest.handleMlat(encodedLine.subarray(0, 28));
+    ingest.handleMlat(encodedLine.subarray(28));
+
+    const diag = provider.getDiagnostics();
+    expect(diag.beastFramesReceived).toBe(1);
+    expect(diag.mlatLinesReceived).toBe(1);
+    expect(diag.mlatLinesParsed).toBe(1);
+
+    const metrics = getRuntimePerformanceDiagnostics();
+    expect(metrics["ingest.network-beast"]).toMatchObject({ calls: 2, processedAircraft: 1 });
+    expect(metrics["ingest.network-mlat"]).toMatchObject({ calls: 2, processedAircraft: 1 });
+    const sanitized = JSON.stringify(metrics);
+    expect(sanitized).not.toContain("ABC123");
+    expect(sanitized).not.toContain("TEST123");
+    resetRuntimePerformanceDiagnosticsForTests();
+  });
+
   it("handles fragmented and CRLF-delimited lines", () => {
     const buffer = new SbsLineBuffer();
     expect(buffer.push(line.slice(0, 25))).toEqual([]);
