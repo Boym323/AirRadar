@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.492] - 2026-10-17
+
+Changes since v1.0.491.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Performance
+
+- Remove union Set and per-identity option allocation (#979) (697b7735)
+
+### Maintenance
+
+- Sync generated repository metadata (#978) (aa4e1a99)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#978) (aa4e1a99)
+- perf(aircraft): remove union Set and per-identity option allocation (#979) (697b7735)
+
+</details>
 ## [1.0.491] - 2026-10-17
 
 Changes since v1.0.490.
