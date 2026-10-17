@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.491] - 2026-10-17
+
+Changes since v1.0.490.
+
+**Features touched:** Live Radar.
+
+### Performance
+
+- Amortize TypeScript fallback parser buffering (#977) (5fac8481)
+
+### Documentation
+
+- Přidání pokynů pro autonomní výkonové inženýrství (ffaf1439)
+
+### Maintenance
+
+- Sync generated repository metadata (#976) (d326e3df)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#976) (d326e3df)
+- docs: přidání pokynů pro autonomní výkonové inženýrství (ffaf1439)
+- perf(beast): amortize TypeScript fallback parser buffering (#977) (5fac8481)
+
+</details>
 ## [1.0.490] - 2026-10-17
 
 Changes since v1.0.489.
