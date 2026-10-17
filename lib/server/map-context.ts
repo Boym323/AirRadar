@@ -225,7 +225,8 @@ export class WeatherRadarArchiveService {
 
   async getFrame(id: string): Promise<Uint8Array | null> {
     try {
-      const bytes = new Uint8Array(await readFile(radarPath(id)));
+      // Node readFile returns a Buffer (Uint8Array); avoid an unnecessary frame-sized copy.
+      const bytes = await readFile(radarPath(id));
       return validPng(bytes) ? bytes : null;
     } catch { return null; }
   }
