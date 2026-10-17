@@ -17,6 +17,23 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.498] - 2026-10-17
+
+Changes since v1.0.497.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Performance
+
+- Reuse polygon containment result (4e623ff9)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(atc): reuse polygon containment result (4e623ff9)
+
+</details>
+
 ## [1.0.497] - 2026-10-17
 
 Changes since v1.0.496.
