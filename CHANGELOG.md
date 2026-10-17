@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.493] - 2026-10-17
+
+Changes since v1.0.492.
+
+**Features touched:** Map Context & Weather.
+
+### Performance
+
+- Attribute synchronous network ingest and snapshot update phases (#980) (d88fb2d6)
+- Enforce radar archive retention over full inventory (#982) (0a76eebc)
+
+### Maintenance
+
+- Sync generated repository metadata (#981) (7f5ac3c1)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf(t58): attribute synchronous network ingest and snapshot update phases (#980) (d88fb2d6)
+- chore(metadata): sync generated repository metadata (#981) (7f5ac3c1)
+- perf(map-context): enforce radar archive retention over full inventory (#982) (0a76eebc)
+
+</details>
 ## [1.0.492] - 2026-10-17
 
 Changes since v1.0.491.
