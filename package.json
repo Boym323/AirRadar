@@ -102,6 +102,8 @@
     "visual:check": "node scripts/visual-system-audit.mjs",
     "icons:audit": "node scripts/aircraft-icon-audit.mjs",
     "benchmark:twin-fusion": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-twin-fusion.ts",
+    "benchmark:runtime-instrumentation": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-runtime-instrumentation.ts",
+    "benchmark:load-scaling": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-load-scaling.ts",
     "benchmark:twin-t57": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-operational-twin-t57.ts",
     "benchmark:atc:preparation": "ATC_BENCHMARK_NON_PRODUCTION=true JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-preparation.ts"
   },

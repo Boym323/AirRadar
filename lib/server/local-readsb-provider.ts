@@ -5,6 +5,11 @@ import { getReceiverRefreshIntervalMs } from "@/lib/server/config";
 import { getReceiverAdvancedStatistics } from "@/lib/server/receiver-advanced-statistics";
 import { measureRuntime } from "@/lib/server/runtime-performance";
 
+function countParsedAircraft(payload: unknown): number {
+  const aircraft = (payload as { aircraft?: unknown } | null)?.aircraft;
+  return Array.isArray(aircraft) ? aircraft.length : 0;
+}
+
 function endpoint(baseUrl: string, path: string): string {
   const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   return new URL(path.replace(/^\//, ""), base).toString();
@@ -87,13 +92,7 @@ export class LocalReadsbProvider implements AircraftProvider {
       const response = await fetch(url, { cache: "no-store", signal: controller.signal });
       if (!response.ok) throw new Error(`readsb returned HTTP ${response.status}`);
       const body = await response.text();
-      let processedAircraft = 0;
-      return measureRuntime("network.readsb-json-parse", () => processedAircraft, () => {
-        const payload = JSON.parse(body) as T;
-        const aircraft = (payload as { aircraft?: unknown } | null)?.aircraft;
-        processedAircraft = Array.isArray(aircraft) ? aircraft.length : 0;
-        return payload;
-      });
+      return measureRuntime("network.readsb-json-parse", countParsedAircraft, () => JSON.parse(body) as T);
     } finally {
       clearTimeout(timeout);
       if (this.controller === controller) this.controller = null;

@@ -428,3 +428,18 @@ ověřte fyzické tabulky, připravte odpovídající `@@map` na samostatné vě
 a otestujte emitovaný kontrakt, rozdíly migrací a dotazy se skutečnými
 obnovenými DEV daty. CLI a runtime aktualizujte v kompatibilní dvojici
 podle vydaných verzí. Bez destruktivního zásahu do produkční databáze.
+
+### Měření režie a soak běh
+
+`npm run benchmark:runtime-instrumentation` měří synchronní měřicí scope na
+syntetické práci, včetně číselného počítadla a callbacku nad výsledkem.
+Výsledek popisuje režii aktuálního Node/runtime, nikoli zrychlení produkce.
+Úložiště metrik je omezené; názvy a počítadla jsou povoleným seznamem.
+
+Read-only sampler T5.7 načítá sanitizované systémové a runtime diagnostiky.
+Každý vzorek obsahuje čas, nasazený commit/verzi a jednosměrnou identitu
+procesu. PID ani interní ID diagnostik se do reportu neukládají. Změna procesu,
+commitu nebo verze začíná nový segment; trendy se počítají vždy jen v jednom
+segmentu. Chybějící vzorky a časové mezery jsou viditelné a brání PASS za
+nepřerušený soak. Sampler nic nestaví ani nerestartuje, nezapisuje do databáze,
+neotevírá live SSE klienta a nevynucuje GC ani heap snapshot.

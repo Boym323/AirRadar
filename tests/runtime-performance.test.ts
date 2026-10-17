@@ -86,4 +86,16 @@ describe("runtime performance diagnostics", () => {
     expect(metric.p95Ms).toBeGreaterThanOrEqual(metric.p50Ms);
     expect(metric.p99Ms).toBeGreaterThanOrEqual(metric.p95Ms);
   });
+
+  it("counts results with the supplied allowlisted counter and never stores result data", () => {
+    const payload = { aircraft: [{ hex: "ABCDEF", flight: "PRIVATE123", lat: 50.1 }] };
+    const countAircraft = (result: typeof payload | undefined) => result?.aircraft.length ?? 0;
+    expect(measureRuntime("network.readsb-json-parse", countAircraft, () => payload)).toBe(payload);
+    const output = JSON.stringify(getRuntimePerformanceDiagnostics());
+    expect(output).toContain("network.readsb-json-parse");
+    expect(output).not.toContain("ABCDEF");
+    expect(output).not.toContain("PRIVATE123");
+    expect(output).not.toContain("50.1");
+    expect(getRuntimePerformanceDiagnostics()["network.readsb-json-parse"]?.processedAircraft).toBe(1);
+  });
 });

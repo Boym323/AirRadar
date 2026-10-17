@@ -1,0 +1,118 @@
+name: T57 24-hour read-only performance soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      resume_run_id:
+        description: Previous run ID with a t57-journal artifact (leave empty to start)
+        required: false
+        type: string
+      expected_commit:
+        description: Production commit pinned by the first chunk
+        required: false
+        type: string
+
+run-name: "T57 24h read-only soak · ${{ inputs.resume_run_id || 'start' }}"
+
+concurrency:
+  group: airradar-t57-24-hour-read-only-soak
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  collect:
+    if: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Prepare private journal directory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t57"
+          chmod 700 "$RUNNER_TEMP/t57"
+
+      - name: Read-only preflight and pin deployed commit
+        id: preflight
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -Eeuo pipefail
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t57/preflight.json"
+          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t57/preflight.json")"
+          git rev-parse --verify "$deployed_sha^{commit}" >/dev/null
+          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
+          echo "Pinned read-only production commit $deployed_sha"
+
+      - name: Download previous checkpoint journal
+        if: ${{ inputs.resume_run_id != '' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: t57-journal-${{ inputs.resume_run_id }}
+          run-id: ${{ inputs.resume_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/t57/resume
+
+      - name: Continue or start the 24-hour collection window
+        id: collect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
+          T57_TOTAL_SECONDS: "86400"
+          T57_CHUNK_SECONDS: "20400"
+          T57_INTERVAL_SECONDS: "60"
+          T57_WARMUP_SECONDS: "600"
+          T57_OUTPUT: ${{ runner.temp }}/t57/soak.ndjson
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+          WORKFLOW_REF: ${{ github.ref_name }}
+          DEPLOYED_SHA: ${{ steps.preflight.outputs.deployed_sha }}
+        run: |
+          set -Eeuo pipefail
+          if [[ -n "$RESUME_RUN_ID" ]]; then
+            cp "$RUNNER_TEMP/t57/resume/soak.ndjson" "$T57_OUTPUT"
+            chmod 600 "$T57_OUTPUT"
+            export T57_RESUME=1
+            export T57_MEASUREMENT_ID="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8").split("\n")[0]).measurementId)' "$T57_OUTPUT")"
+          fi
+          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57/collector-result.json"
+          cat "$RUNNER_TEMP/t57/collector-result.json" >> "$GITHUB_STEP_SUMMARY"
+          status="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).status ?? "COMPLETE")' "$RUNNER_TEMP/t57/collector-result.json")"
+          if [[ "$status" == "CHUNK_COMPLETE" ]]; then
+            gh workflow run t57-24-hour-soak.yml --repo "$GITHUB_REPOSITORY" --ref "$WORKFLOW_REF" \
+              -f resume_run_id="$GITHUB_RUN_ID" -f expected_commit="$DEPLOYED_SHA"
+            echo "Next checkpoint run queued. This run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          else
+            cp "$RUNNER_TEMP/t57/soak.summary.md" "$RUNNER_TEMP/t57/final-report.md"
+            cat "$RUNNER_TEMP/t57/final-report.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload checkpoint journal and final report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: t57-journal-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/t57/soak.ndjson
+            ${{ runner.temp }}/t57/soak.summary.json
+            ${{ runner.temp }}/t57/soak.summary.md
+            ${{ runner.temp }}/t57/collector-result.json
+          retention-days: 30
+          if-no-files-found: warn
