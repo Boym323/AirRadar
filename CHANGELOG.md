@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.486] - 2026-10-17
+
+Changes since v1.0.485.
+
+### Performance
+
+- Measure readsb parse and SSE serialization (#966) (0841fdbf)
+
+### Maintenance
+
+- Sync generated repository metadata (#965) (fdedf509)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#965) (fdedf509)
+- perf: measure readsb parse and SSE serialization (#966) (0841fdbf)
+
+</details>
 ## [1.0.485] - 2026-10-17
 
 Changes since v1.0.484.
