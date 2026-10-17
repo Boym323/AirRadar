@@ -76,6 +76,9 @@ export function sanitizedCpuProfile(raw) {
   const safeFrame = (frame) => frame && typeof frame.frame === "string" && frame.frame.length <= 240 &&
     /^[A-Za-z_$(][A-Za-z0-9_$ .:()>-]{0,239}$/.test(frame.frame) &&
     ["javascript", "native", "gc", "idle", "unknown"].includes(frame.category) &&
+    (frame.chunk === null || typeof frame.chunk === "string" && /^(?!.*\.\.)[A-Za-z0-9_.-]{1,80}\.js$/.test(frame.chunk)) &&
+    (frame.line === null || Number.isSafeInteger(frame.line) && frame.line >= 0 && frame.line <= 1_000_000) &&
+    (frame.column === null || Number.isSafeInteger(frame.column) && frame.column >= 0 && frame.column <= 1_000_000) &&
     Number.isSafeInteger(frame.samples) && frame.samples >= 0 && frame.samples <= 10_000;
   if (!Array.isArray(raw.stalls) || raw.stalls.length > 24 ||
       raw.stalls.some((stall) => !Array.isArray(stall.topFrames) || stall.topFrames.length > 8 ||
@@ -95,7 +98,8 @@ export function sanitizedCpuProfile(raw) {
       schedulerWaitMs: number(stall.schedulerWaitMs, 180_000),
       schedulerSwitches: number(stall.schedulerSwitches, 100_000),
       sampledMs: number(stall.sampledMs, 180_000), sampleCount: number(stall.sampleCount, 10_000),
-      topFrames: stall.topFrames.map((frame) => ({ frame: frame.frame, category: frame.category, samples: frame.samples })),
+      topFrames: stall.topFrames.map((frame) => ({ frame: frame.frame, category: frame.category,
+        chunk: frame.chunk, line: frame.line, column: frame.column, samples: frame.samples })),
     })),
   };
 }

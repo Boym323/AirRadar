@@ -14,12 +14,15 @@ describe("bounded T58 V8 profile attribution", () => {
       nodes: [
         { id: 1, callFrame: { functionName: "(root)", url: "" }, children: [2] },
         { id: 2, callFrame: { functionName: "snapshotLoop", url: "file:///private/path?token=SECRET" }, children: [3] },
-        { id: 3, callFrame: { functionName: "decodeFrame", url: "file:///private/path?token=SECRET" } },
+        { id: 3, callFrame: { functionName: "decodeFrame",
+          url: "file:///var/www/airradar/.next/standalone/.next/server/chunks/lib_07shbkf._.js",
+          lineNumber: 12, columnNumber: 34 } },
       ],
       samples: [3, 3, 3], timeDeltas: [500_000, 500_000, 1_100_000],
     }, 0, [stall]);
     expect(result).toMatchObject({ status: "completed", samples: 3, stalls: [{ sampleCount: 1,
-      topFrames: [{ frame: "snapshotLoop > decodeFrame", category: "javascript", samples: 1 }] }] });
+      topFrames: [{ frame: "snapshotLoop > decodeFrame", category: "javascript",
+        chunk: "lib_07shbkf._.js", line: 12, column: 34, samples: 1 }] }] });
     expect(JSON.stringify(result)).not.toContain("SECRET");
     expect(JSON.stringify(result)).not.toContain("private/path");
   });
