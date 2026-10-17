@@ -148,6 +148,10 @@ describe("safe read-only evidence contract", () => {
       sampleWithStartupRetry(async () => { throw new Error("Diagnostic request /api/system/runtime-performance HTTP 429"); }, { attempts: 3, delayMs: 0 }),
       /HTTP 429/,
     );
+    await assert.rejects(
+      sampleWithStartupRetry(async () => { throw new Error("Diagnostic request /api/other HTTP 502"); }, { attempts: 3, delayMs: 0 }),
+      /HTTP 502/,
+    );
   });
   it("fails closed with specific sanitized reasons", () => {
     assert.throws(()=>classifyStallEvidence(undefined), /canary_evidence_field_missing/);
