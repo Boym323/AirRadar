@@ -5,6 +5,10 @@ import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
 
 export const CANARY_SECONDS = 900;
 export const INTERVAL_MS = 15_000;
+const STARTUP_RETRYABLE = new Set([
+  "canary_cpu_profile_not_enabled",
+  "canary_evidence_state_mismatch",
+]);
 const BASE = "https://airradar.pomykal.cz";
 const SAFE_SCOPE = /^(?:snapshot|twin|history|network|health|atc|routeCache)\.[a-z][a-zA-Z0-9.-]{0,64}$/;
 
@@ -166,6 +170,20 @@ async function sample(cookie, sha, enabled) {
   };
 }
 
+export async function sampleWithStartupRetry(readSample, { attempts = 10, delayMs = 3_000 } = {}) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await readSample();
+    } catch (error) {
+      if (!(error instanceof Error) || !STARTUP_RETRYABLE.has(error.message) || attempt === attempts - 1) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("canary_startup_retry_exhausted");
+}
+
 async function main() {
   const mode = process.argv[2];
   if (mode !== "preflight" && mode !== "observe" && mode !== "verify-restored") {
@@ -203,7 +221,7 @@ async function main() {
   const results = [], started = Date.now();
   for (let i=0; i<=CANARY_SECONDS*1000/INTERVAL_MS; i++) {
     if (i) await new Promise(r=>setTimeout(r, Math.max(0,started+i*INTERVAL_MS-Date.now())));
-    results.push(await sample(cookie, sha, true));
+    results.push(await sampleWithStartupRetry(() => sample(cookie, sha, true)));
   }
   const output = process.env.T58_CANARY_OUTPUT;
   if (!output || !isAbsolute(output)) throw new Error("canary_invalid_report_path");

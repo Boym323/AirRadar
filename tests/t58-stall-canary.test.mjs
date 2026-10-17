@@ -5,7 +5,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sanitizedStallEvent, summarizeCanarySamples, classifyStallEvidence, sanitizedCpuProfile } from "../scripts/t58-stall-canary.mjs";
+import { sanitizedStallEvent, summarizeCanarySamples, classifyStallEvidence, sanitizedCpuProfile, sampleWithStartupRetry } from "../scripts/t58-stall-canary.mjs";
 
 describe("T58 canary report sanitization", () => {
   it("keeps only bounded safe fields and drops payloads and identities", () => {
@@ -129,6 +129,20 @@ describe("safe read-only evidence contract", () => {
   it("accepts both already-on and default-off monitoring on preflight", () => {
     assert.equal(classifyStallEvidence({status:"disabled",totalStalls:0,recentStalls:[]}), "disabled");
     assert.equal(classifyStallEvidence({status:"enabled",totalStalls:5,recentStalls:[]}), "enabled");
+  });
+  it("retries only the bounded diagnostic startup race", async () => {
+    let attempts = 0;
+    const value = await sampleWithStartupRetry(async () => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("canary_cpu_profile_not_enabled");
+      return "ready";
+    }, { attempts: 3, delayMs: 0 });
+    assert.equal(value, "ready");
+    assert.equal(attempts, 3);
+    await assert.rejects(
+      sampleWithStartupRetry(async () => { throw new Error("canary_deployed_commit_changed"); }, { attempts: 3, delayMs: 0 }),
+      /canary_deployed_commit_changed/,
+    );
   });
   it("fails closed with specific sanitized reasons", () => {
     assert.throws(()=>classifyStallEvidence(undefined), /canary_evidence_field_missing/);
