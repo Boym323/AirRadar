@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.507] - 2026-10-18
+
+Changes since v1.0.506.
+
+### Fixed
+
+- Tolerate incomplete profiler startup payload (be2f7d8d)
+
+### Maintenance
+
+- Sync generated repository metadata (#1001) (86eaf1d0)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1001) (86eaf1d0)
+- fix(t58): tolerate incomplete profiler startup payload (be2f7d8d)
+
+</details>
 ## [1.0.506] - 2026-10-18
 
 Changes since v1.0.505.
