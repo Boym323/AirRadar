@@ -17,6 +17,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.497] - 2026-10-17
+
+Changes since v1.0.496.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Performance
+
+- Avoid repeated large ring scans in point containment (548a7059)
+- Keep hot ring scan allocation free (9c0c9f2a)
+
+### Maintenance
+
+- Sync generated repository metadata (#989) (f0f75079)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#989) (f0f75079)
+- perf(atc): avoid repeated large ring scans in point containment (548a7059)
+- perf(atc): keep hot ring scan allocation free (9c0c9f2a)
+
+</details>
+
 ## [1.0.496] - 2026-10-17
 
 Changes since v1.0.495.
