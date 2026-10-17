@@ -53,17 +53,36 @@ function onSegment(p: LonLat, a: LonLat, b: LonLat): boolean {
 }
 function ringContains(point: LonLat, ring: LonLat[]): "inside" | "boundary" | null {
   let inside = false;
+  const x = point[0];
+  const y = point[1];
+  const epsilon = 1e-9;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    if (onSegment(point, ring[j], ring[i])) return "boundary";
-    if ((ring[i][1] > point[1]) !== (ring[j][1] > point[1]) && point[0] < ((ring[j][0] - ring[i][0]) * (point[1] - ring[i][1])) / (ring[j][1] - ring[i][1]) + ring[i][0]) inside = !inside;
+    const a = ring[j];
+    const b = ring[i];
+    const ay = a[1];
+    const by = b[1];
+    // Most edges of the large imported FIR rings cannot touch this latitude.
+    // Preserve the original epsilon boundary rule, but evaluate its cross
+    // product only for an edge whose expanded bounds contain the point.
+    if (y >= Math.min(ay, by) - epsilon && y <= Math.max(ay, by) + epsilon &&
+        x >= Math.min(a[0], b[0]) - epsilon && x <= Math.max(a[0], b[0]) + epsilon &&
+        onSegment(point, a, b)) return "boundary";
+    if ((by > y) !== (ay > y) && x < ((a[0] - b[0]) * (y - by)) / (ay - by) + b[0]) inside = !inside;
   }
   return inside ? "inside" : null;
 }
 /** GeoJSON polygon semantics: first ring is exterior, subsequent rings are holes. Boundary is inside for UI. */
 export function pointInPolygon(point: LonLat, rings: PolygonRings): "inside" | "boundary" | null {
-  if (!rings[0] || ringContains(point, rings[0]) === null) return null;
-  if (rings.slice(1).some((hole) => ringContains(point, hole) === "inside")) return null;
-  return rings.some((ring) => ringContains(point, ring) === "boundary") ? "boundary" : "inside";
+  if (!rings[0]) return null;
+  const exterior = ringContains(point, rings[0]);
+  if (exterior === null) return null;
+  let boundary = exterior === "boundary";
+  for (let i = 1; i < rings.length; i++) {
+    const hole = ringContains(point, rings[i]);
+    if (hole === "inside") return null;
+    if (hole === "boundary") boundary = true;
+  }
+  return boundary ? "boundary" : "inside";
 }
 export function distanceToSegmentNm(point: LonLat, from: LonLat, to: LonLat): number { return distanceToGreatCircleSegmentKm(from[1], from[0], to[1], to[0], point[1], point[0]) * NM_PER_KM; }
 export function bearing(from: LonLat, to: LonLat): number { return initialBearing(from[1], from[0], to[1], to[0]); }

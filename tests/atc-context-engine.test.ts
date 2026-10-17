@@ -16,6 +16,14 @@ describe("ATC Context Engine", () => {
   it("treats boundaries as inside and supports polygon holes", () => {
     expect(pointInPolygon([14, 49.5], [[[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]]])).toBe("boundary");
     expect(pointInPolygon([14.5, 49.5], [[[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]], [[14.25, 49.25], [14.75, 49.25], [14.75, 49.75], [14.25, 49.75], [14.25, 49.25]]])).toBeNull();
+    const withHole: [number, number][][] = [
+      [[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]],
+      [[14.25, 49.25], [14.75, 49.25], [14.75, 49.75], [14.25, 49.75], [14.25, 49.25]],
+    ];
+    expect(pointInPolygon([14.25, 49.5], withHole)).toBe("boundary");
+    expect(pointInPolygon([14.1, 49.5], withHole)).toBe("inside");
+    expect(pointInPolygon([15.1, 49.5], withHole)).toBeNull();
+    expect(pointInPolygon([14.5, 49.5], [])).toBeNull();
   });
 
   it("keeps all matching spaces and chooses the most specific display space", () => {
