@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.494] - 2026-10-17
+
+Changes since v1.0.493.
+
+**Features touched:** Map Context & Weather.
+
+### Performance
+
+- Avoid copying archived radar frame buffers (#983) (c7d57580)
+
+### Maintenance
+
+- Sync generated repository metadata (#984) (6263a549)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#984) (6263a549)
+- perf(map-context): avoid copying archived radar frame buffers (#983) (c7d57580)
+
+</details>
 ## [1.0.493] - 2026-10-17
 
 Changes since v1.0.492.
