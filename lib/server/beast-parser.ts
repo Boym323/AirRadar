@@ -25,6 +25,8 @@ const FRAME_LENGTHS: Record<BeastFrameType, number> = { 0x31: 11, 0x32: 16, 0x33
 /** Incremental, bounded Beast binary protocol parser. */
 export class BeastParser {
   private buffer = Buffer.alloc(0);
+  private bufferStart = 0;
+  private bufferEnd = 0;
   private readonly native: NativeBeastParser | null;
   private readonly precomputeCrc: boolean;
   readonly maxBufferedBytes: number;
@@ -75,45 +77,82 @@ export class BeastParser {
       }
       return frames;
     }
-    if (chunk.byteLength) this.buffer = Buffer.concat([this.buffer, Buffer.from(chunk)]);
+    if (chunk.byteLength) this.append(chunk);
     const frames: BeastFrame[] = [];
-    while (this.buffer.length) {
-      const start = this.buffer.indexOf(ESCAPE);
+    while (this.bufferStart < this.bufferEnd) {
+      const relativeStart = this.buffer.subarray(this.bufferStart, this.bufferEnd).indexOf(ESCAPE);
+      const start = relativeStart < 0 ? -1 : this.bufferStart + relativeStart;
       if (start < 0) {
-        this.buffer = Buffer.alloc(0);
+        this.bufferStart = this.bufferEnd;
         break;
       }
-      if (start > 0) this.buffer = this.buffer.subarray(start);
-      if (this.buffer.length < 2) break;
-      const type = this.buffer[1] as BeastFrameType;
+      this.bufferStart = start;
+      if (this.bufferEnd - this.bufferStart < 2) break;
+      const type = this.buffer[this.bufferStart + 1] as BeastFrameType;
       const decoded = FRAME_LENGTHS[type];
       if (!decoded) {
-        this.buffer = this.buffer.subarray(1);
+        this.bufferStart += 1;
         continue;
       }
-      let source = 2;
+      let source = this.bufferStart + 2;
       let rawBytes = 0;
       const output: number[] = [];
-      while (source < this.buffer.length && output.length < decoded - 2) {
+      while (source < this.bufferEnd && output.length < decoded - 2) {
         const value = this.buffer[source++];
         if (value === ESCAPE) {
-          if (source >= this.buffer.length) break;
+          if (source >= this.bufferEnd) break;
           const next = this.buffer[source++];
           if (next === ESCAPE) output.push(ESCAPE);
           else { output.length = 0; rawBytes = -1; break; }
         } else output.push(value);
         rawBytes += 1;
       }
-      if (rawBytes < 0) { this.buffer = this.buffer.subarray(1); continue; }
+      if (rawBytes < 0) { this.bufferStart += 1; continue; }
       if (output.length < decoded - 2) break;
-      const frameBytes = source;
       const metadata = Buffer.from(output);
       frames.push({ type, timestamp: metadata.subarray(0, 6), signal: metadata[6], payload: metadata.subarray(7) });
-      this.buffer = this.buffer.subarray(frameBytes);
+      this.bufferStart = source;
     }
-    if (this.buffer.length > this.maxBufferedBytes) this.buffer = this.buffer.subarray(this.buffer.length - this.maxBufferedBytes);
+    this.compactOrBound();
     return frames;
   }
 
-  get bufferedBytes(): number { return this.native?.bufferedBytes ?? this.buffer.length; }
+  private append(chunk: Uint8Array): void {
+    const unread = this.bufferEnd - this.bufferStart;
+    const required = unread + chunk.byteLength;
+    if (required > this.buffer.length) {
+      const capacity = Math.min(this.maxBufferedBytes + chunk.byteLength,
+        Math.max(required, Math.max(256, this.buffer.length * 2)));
+      const next = Buffer.allocUnsafe(capacity);
+      if (unread) this.buffer.copy(next, 0, this.bufferStart);
+      this.buffer = next;
+      this.bufferStart = 0;
+    } else if (this.bufferStart > 0 && this.bufferStart + required > this.buffer.length) {
+      this.buffer.copy(this.buffer, 0, this.bufferStart, this.bufferEnd);
+      this.bufferStart = 0;
+    }
+    const destination = this.bufferStart + unread;
+    Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength).copy(this.buffer, destination);
+    this.bufferEnd = destination + chunk.byteLength;
+  }
+
+  private compactOrBound(): void {
+    const unread = this.bufferEnd - this.bufferStart;
+    if (unread > this.maxBufferedBytes) {
+      this.buffer = Buffer.from(this.buffer.subarray(this.bufferEnd - this.maxBufferedBytes, this.bufferEnd));
+      this.bufferStart = 0;
+      this.bufferEnd = this.buffer.length;
+    } else if (unread === 0) {
+      this.buffer = Buffer.alloc(0);
+      this.bufferStart = 0;
+      this.bufferEnd = 0;
+    } else if (this.bufferStart > 0 && (this.bufferStart >= 4096 || this.bufferStart * 2 >= this.buffer.length)) {
+      this.buffer.copy(this.buffer, 0, this.bufferStart, this.bufferEnd);
+      this.buffer = this.buffer.subarray(0, unread);
+      this.bufferStart = 0;
+      this.bufferEnd = unread;
+    }
+  }
+
+  get bufferedBytes(): number { return this.native?.bufferedBytes ?? this.bufferEnd - this.bufferStart; }
 }

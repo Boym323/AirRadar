@@ -25,6 +25,14 @@ describe("BeastParser", () => {
     const result = parser.push(input.subarray(5));
     expect(result).toHaveLength(1); expect(result[0].payload[0]).toBe(0x1a);
   });
+  it("preserves bursts containing repeated escaped bytes", () => {
+    const parser = new BeastParser(64 * 1024, { native: false });
+    const input = Buffer.concat(Array.from({ length: 64 }, (_, index) => frame(Buffer.alloc(14, index === 26 ? 0x1a : index))));
+    const parsed = parser.push(input);
+    expect(parsed).toHaveLength(64);
+    expect(parsed[26]?.payload).toEqual(Buffer.alloc(14, 0x1a));
+    expect(parser.bufferedBytes).toBe(0);
+  });
   it("recovers from malformed types and bounds incomplete input", () => {
     const parser = new BeastParser(32);
     expect(parser.push(Buffer.concat([Buffer.from([0x1a, 0x99, 1, 2]), frame(Buffer.alloc(14, 4))]))).toHaveLength(1);
