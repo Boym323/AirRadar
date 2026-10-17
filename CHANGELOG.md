@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.495] - 2026-10-17
+
+Changes since v1.0.494.
+
+### Changed
+
+- Bounded V8 stall profile [t58-stall-canary] (b00841de)
+
+### Maintenance
+
+- Sync generated repository metadata (#985) (55ee8fbf)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#985) (55ee8fbf)
+- diagnostics(t58): bounded V8 stall profile [t58-stall-canary] (b00841de)
+
+</details>
 ## [1.0.494] - 2026-10-17
 
 Changes since v1.0.493.
