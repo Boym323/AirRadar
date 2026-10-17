@@ -10,7 +10,7 @@ const STARTUP_RETRYABLE = new Set([
   "canary_evidence_state_mismatch",
   "canary_cpu_profile_invalid_stalls",
 ]);
-const STARTUP_HTTP_RETRYABLE = /^Diagnostic request \/api\/(?:system\/(?:runtime-performance|status)|version) HTTP (?:502|503)$/;
+const STARTUP_HTTP_RETRYABLE = /^Diagnostic request \/api\/(?:system\/(?:runtime-performance|status)|version|watchlist\/session) HTTP (?:502|503)$/;
 const BASE = "https://airradar.pomykal.cz";
 const SAFE_SCOPE = /^(?:snapshot|twin|history|network|health|atc|routeCache)\.[a-z][a-zA-Z0-9.-]{0,64}$/;
 
@@ -111,7 +111,9 @@ export function sanitizedCpuProfile(raw) {
 }
 
 async function sessionCookie() {
-  const session = await fetchJson(BASE, "/api/watchlist/session", null);
+  const session = await sampleWithStartupRetry(
+    () => fetchJson(BASE, "/api/watchlist/session", null),
+  );
   if (session?.configured === false) return null;
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   if (!token) throw new Error("canary_auth_unavailable");
