@@ -1,0 +1,100 @@
+name: T58 30-minute read-only production soak
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - ".github/workflows/t58-readonly-30min.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t58-readonly-30m-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: 30-minute read-only production diagnostics
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/t58-readonly-30min-20261017' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Validate schedule and collector syntax
+        run: |
+          set -Eeuo pipefail
+          node --check scripts/t57-production-soak.mjs
+          node --test tests/t57-30min-schedule.test.mjs
+          node --check scripts/t58-report.mjs
+
+      - name: Preflight and pin live production identity
+        id: preflight
+        env:
+          T57_BASE_URL: https://airradar.pomykal.cz
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t58-30m"
+          chmod 700 "$RUNNER_TEMP/t58-30m"
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t58-30m/preflight.json"
+          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t58-30m/preflight.json")"
+          resolved_sha="$(git rev-parse --verify "$deployed_sha^{commit}")"
+          git merge-base --is-ancestor e9a9b8354fe1c433b4a3baf406574b9cc3d6f207 "$resolved_sha"
+          printf 'deployed_sha=%s\n' "$resolved_sha" >> "$GITHUB_OUTPUT"
+          echo "Read-only 30-minute telemetry preflight passed; pinned deployed commit."
+
+      - name: Collect 30-minute read-only sample (61 planned polls)
+        id: soak
+        env:
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
+          T57_SECONDS: "1800"
+          T57_INTERVAL_SECONDS: "30"
+          T57_WARMUP_SECONDS: "300"
+          T57_OUTPUT: ${{ runner.temp }}/t58-30m/soak.ndjson
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          # Strictly read-only HTTP; no production restart, config write, profiler or deploy.
+          # Private raw journal stays on ephemeral runner and is never archived.
+          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t58-30m/collector-result.json"
+
+      - name: Validate and summarize sanitized report
+        id: prepare
+        if: always()
+        run: |
+          set -Eeuo pipefail
+          summary="$RUNNER_TEMP/t58-30m/soak.summary.json"
+          markdown="$RUNNER_TEMP/t58-30m/soak.summary.md"
+          if [[ -s "$summary" && -s "$markdown" ]]; then
+            node scripts/t58-report.mjs verify "$summary"
+            node scripts/t58-report.mjs comparison "$summary" \
+              "$RUNNER_TEMP/t58-30m/comparison.md" \
+              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            printf 'report_ready=true\n' >> "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/t58-30m/comparison.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf 'report_ready=false\n' >> "$GITHUB_OUTPUT"
+            echo "30-minute soak incomplete: no sanitized summary. Check preflight and collector." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload sanitized aggregates only
+        if: ${{ always() && steps.prepare.outputs.report_ready == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: t58-readonly-30m-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t58-30m/soak.summary.json
+            ${{ runner.temp }}/t58-30m/soak.summary.md
+            ${{ runner.temp }}/t58-30m/comparison.md
+          retention-days: 30
+          if-no-files-found: error
