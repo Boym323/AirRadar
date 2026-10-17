@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.503] - 2026-10-17
+
+Changes since v1.0.502.
+
+### Fixed
+
+- Split soak below hosted job limit (b37b884d)
+
+### Maintenance
+
+- Sync generated repository metadata (#993) (6adf4ec6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#993) (6adf4ec6)
+- fix(t58): split soak below hosted job limit (b37b884d)
+
+</details>
 ## [1.0.502] - 2026-10-17
 
 Changes since v1.0.501.
