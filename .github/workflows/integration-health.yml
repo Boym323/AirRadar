@@ -2,8 +2,8 @@ name: Integration Health
 
 on:
   workflow_dispatch:
-  # The post-CI event occurs AFTER the standard production deployment job,
-  # unlike a main-push probe that would inspect the previous release.
+  # Run the post-release audit only when this CI run actually deployed. CI
+  # also completes successfully for docs-only changes that skip deployment.
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -18,14 +18,33 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: airradar-integration-health
   cancel-in-progress: true
 
 jobs:
+  post-deploy:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-24.04
+    outputs:
+      deployed: ${{ steps.release.outputs.deployed }}
+    steps:
+      - name: Check whether CI deployed production
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -Eeuo pipefail
+          deployed="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/jobs?per_page=100" \
+            --jq '[.jobs[] | select(.name == "Deploy production" and .conclusion == "success")] | length > 0')"
+          echo "deployed=${deployed}" >> "$GITHUB_OUTPUT"
+
   health:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
+    needs: [post-deploy]
+    if: ${{ always() && (github.event_name != 'workflow_run' || (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success' && needs.post-deploy.outputs.deployed == 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
