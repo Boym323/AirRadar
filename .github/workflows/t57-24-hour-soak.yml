@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   collect:
-    if: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     steps:
