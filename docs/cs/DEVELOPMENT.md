@@ -226,8 +226,9 @@ npm run test:changed
 
 Vitest sleduje statické importy a zahrne i tranzitivně závislé testy. Pokud
 nedokáže vztah spolehlivě určit, zvolte cílený nebo úplný běh; nezužujte sadu
-testů jen proto, aby prošla. `npm test` je výchozí affected-test režim a v
-čistém stromu nemusí vybrat žádné testy. Kompletní sada je dostupná explicitně:
+testů jen proto, aby prošla. `npm run test:changed` vybírá testy ovlivněné diffem a v čistém stromu
+nemusí vybrat žádné. `npm test` spouští celou sadu (`vitest run`), stejně
+jako `npm run test:full`:
 
 ```bash
 npm test
@@ -372,6 +373,78 @@ konkurenční buildy nad jedním checkoutem.
 Produkční release skript je svázaný s `/var/www/airradar`, stavem služby,
 locky, migracemi a health kontrolami; nespouštějte jej z vývojového worktree.
 Release nikdy není implicitní krok vývoje ani dokumentace.
+
+## Autonomie agentů, pull requesty a hranice produkce
+
+Požadavek na audit či optimalizaci opravňuje k analýze a izolované implementaci,
+**nikoli** automaticky k merge nebo produkčnímu release.
+
+- **Read-only diagnostika:** kontrolujte kód, důkazy CI a povolenou omezenou
+  telemetrii; uvádějte předpoklady a chybějící důkazy. Neměňte konfiguraci,
+  nerestartujte služby, nezapisujte do databáze ani nepřepínejte produkční flagy.
+- **Implementace:** použijte samostatnou větev a worktree. Chraňte práci
+  ostatních agentů, přidejte cílené testy, ponechte bezpečné výchozí flagy a
+  připravte PR (draft při neúplném ověření). Neforce-pushujte sdílené větve.
+- **Integrace:** merge, přímý push do `main`, auto-merge, obcházení kontrol
+  nebo změna ochrany repozitáře vyžadují výslovné oprávnění. Zelené testy
+  samy o sobě nejsou souhlasem. Neprošlý CodeQL/CI nebo nejasná regrese
+  blokují verdikt „připraveno k merge“.
+- **Nasazení:** před schváleným merge klasifikujte úplný diff příkazem
+  `node scripts/release-scope.mjs <changed-paths>` (případně `--stdin0`).
+  Merge do `main` může podle `.github/workflows/ci.yml` automaticky
+  spustit produkční nasazení; ani dokumentační změnu nepovažujte bez ověření
+  za neškodnou. Ruční release se řídí `docs/RELEASE.md` a vyžaduje
+  výslovné schválení. Neměňte bez vědomí uživatele produkční flagy, data,
+  služby ani migrace.
+
+Každý PR/předávací report musí obsahovat: problém a rozsah, důkazy oproti
+hypotézám, provedené změny a dopad na invarianty, přesný seznam prošlých,
+selhaných a neprovedených kontrol, dostupná výkonnostní měření před/po,
+rizika, feature flagy a rollback, klasifikaci deploye a zbývající blokace.
+Po integraci paralelních změn znovu vyhodnoťte dotčené testy. Bez měření
+netvrďte, že release, výkon nebo produkční zdraví mají stav PASS.
+
+## Ochrana integrace do hlavní větve
+
+Dokumentace nenahrazuje skutečně vynucený GitHub ruleset. Správce by měl v
+nastavení repozitáře Settings > Rules > Rulesets chránit `main`: vyžadovat
+PR a úspěšné použitelné kontroly, zakázat force push a smazání větve a podle
+možností vyžadovat vyřešené review konverzace a nezávislé schválení. Nejprve
+ověřte skutečné názvy status checks pro běžné PR, PR s `release-preview` a
+metadata automatizaci: podmíněně přeskočená povinná kontrola nesmí zablokovat
+veškeré mergování. Vynucování ověřte bezpečným negativním testem.
+Neprezentujte tato pravidla jako aktivní jen proto, že jsou v dokumentaci.
+
+## Dokládání výkonnostních optimalizací
+
+U změn výkonu, spolehlivosti, nativního/Rust kódu, SSE, ingestu nebo paměti
+dodržujte před tvrzením o zlepšení následující postup:
+
+1. Popište předpokládané úzké místo, dotčenou cestu, změřený příznak, metriky
+   úspěchu a podmínku pro rollback. Korelace sama o sobě nedokazuje příčinu.
+2. Změřte baseline a kandidáta za srovnatelné zátěže, režimu buildu, přepínačů,
+   podmínek hostitele/runneru a doby měření. Zaznamenejte přesné commity, počty
+   vzorků, scénář/velikost vstupu a odkazy na původní artefakty nebo CI.
+   Rozlišujte syntetický benchmark, read-only pozorování produkce a produkční
+   canary test.
+3. U backendových hot paths podle relevance uveďte propustnost/CPU, zpoždění
+   a využití event loopu, P50/P95/P99 i maximální blokace při dostatku vzorků,
+   RSS/heap/externí paměť, GC pauzy, cgroup CPU throttling, délky front a
+   čerstvost SSE. Lepší průměr nesmí zakrýt zhoršený ocas rozdělení; z
+   nedostatečných dat nevyvozujte P99 ani statistickou významnost.
+4. Znovu ověřte invarianty live cesty, omezené fronty/stav, izolaci selhání,
+   jediný poller, fallback a režim feature-OFF i kompatibilitu konzumentů.
+   U nativního kódu přidejte test parity JS/native, fallback při chybějícím
+   nebo nefunkčním addonu, startup/ABI, paměťové náklady a režii FFI.
+5. Spusťte cílené regresní testy a relevantní CI. Omezený OFF-to-ON canary/T58
+   navrhujte až po oprávnění. Vyhodnoťte stejné akceptační metriky; při
+   prokázané regresi zastavte nebo proveďte rollback. Běžná diagnostika
+   neopravňuje zapnutí produkčních přepínačů, restart ani zatěžovací test.
+
+Pokud příčina zůstává nejistá, připravte omezenou diagnostiku a plán měření,
+nikoli nepodložené tvrzení „opraveno“. Telemetrie musí být omezená a
+anonymizovaná; nezveřejňujte tajné údaje, soukromé polohy letadel/přijímače
+ani surové payloady providerů.
 
 ## Bezpečné změny
 
