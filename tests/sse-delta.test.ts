@@ -4,6 +4,7 @@ import { applySseV2Event, shouldRebuildSseV2Order, SSE_V2_PROTOCOL } from "@/lib
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
 import { encodeAircraftSseFrame } from "@/lib/server/sse-wire";
 import { acquireSseClient, getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
+import { getRuntimePerformanceDiagnostics, resetRuntimePerformanceDiagnosticsForTests } from "@/lib/server/runtime-performance";
 
 function aircraft(index: number, overrides: Partial<AircraftView> = {}): AircraftView {
   const hex = index.toString(16).padStart(6, "0").toUpperCase();
@@ -82,6 +83,21 @@ function sseBytes(eventName: string, payload: unknown): number {
 }
 
 describe("SSE Delta V2", () => {
+  it("measures only uncached frame serialization and counts its aircraft", () => {
+    resetRuntimePerformanceDiagnosticsForTests();
+    const current = snapshot([aircraft(41), aircraft(42)]);
+
+    const first = encodeAircraftSseFrame(current, null);
+    const second = encodeAircraftSseFrame(current, null);
+
+    expect(second).toBe(first);
+    expect(getRuntimePerformanceDiagnostics()["snapshot.sse-serialization"]).toMatchObject({
+      calls: 1,
+      processedAircraft: 2,
+      cpuAttribution: "inclusive-process-overlap",
+    });
+  });
+
   it("shares wire bytes across legacy and aligned V2 clients without changing wire JSON", () => {
     const initial = snapshot([aircraft(1), aircraft(2)]);
     const changed = snapshot([aircraft(1, { altitude: 21_000 }), aircraft(2)]);

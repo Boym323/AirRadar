@@ -1,5 +1,6 @@
 import type { PublicStateSnapshot } from "@/lib/aircraft/types";
 import type { SseDeltaEvent } from "@/lib/server/sse-delta";
+import { measureRuntime } from "@/lib/server/runtime-performance";
 
 /**
  * The public snapshot is already shared by identity across SSE subscribers.
@@ -28,7 +29,9 @@ export function encodeAircraftSseFrame(
   const cached = frames?.get(key);
   if (cached) return cached;
 
-  const bytes = encoder.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+  const processedAircraft = delta?.event === "delta" ? delta.payload.changed.length : snapshot.aircraft.length;
+  const bytes = measureRuntime("snapshot.sse-serialization", processedAircraft, () =>
+    encoder.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`));
   if (!frames) {
     frames = new Map<string, Uint8Array>();
     encodedFrames.set(identity, frames);

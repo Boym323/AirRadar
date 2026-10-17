@@ -3,6 +3,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog, parseAircraftMetadataCsv } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
+import { getRuntimePerformanceDiagnostics, resetRuntimePerformanceDiagnosticsForTests } from "@/lib/server/runtime-performance";
 import { TAR1090_BLOCK_CACHE_MAX_BYTES, Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -85,6 +86,22 @@ describe("optional enrichment providers", () => {
 });
 
 describe("local readsb provider", () => {
+  it("records bounded synchronous JSON parse timing and aircraft count", async () => {
+    resetRuntimePerformanceDiagnosticsForTests();
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ aircraft: [{ hex: "3c1234" }] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ lat: 50, lon: 14 }))));
+    const provider = new LocalReadsbProvider("http://receiver.local/tar1090", { lat: 50, lon: 14, name: "Configured" });
+
+    await provider.getSnapshot();
+
+    expect(getRuntimePerformanceDiagnostics()["network.readsb-json-parse"]).toMatchObject({
+      calls: 2,
+      processedAircraft: 1,
+      cpuAttribution: "inclusive-process-overlap",
+    });
+  });
+
   it("reads the tar1090 data endpoints and normalizes a real readsb-shaped payload", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
