@@ -116,6 +116,25 @@ function cpuSnapshot() {
   return { userTimeMs, systemTimeMs, intervalUserTimeMs, intervalSystemTimeMs, intervalCpuPercent };
 }
 
+/**
+ * Cheap cumulative GC counters for the opt-in stall heartbeat. Unlike the
+ * full health snapshot, this performs no heap-space walk or CPU sampling.
+ * GC PerformanceObserver callbacks are asynchronous: a delta is temporal
+ * context only and cannot prove a particular pause caused a stall.
+ */
+export function getRuntimeGcTotals(): {
+  gcCount: number;
+  majorGcCount: number;
+  gcPauseMs: number;
+} | null {
+  if (!state.observer) return null;
+  return {
+    gcCount: state.gcCount,
+    majorGcCount: state.majorGcCount ?? 0,
+    gcPauseMs: state.gcPauseMs,
+  };
+}
+
 export function startRuntimeHealthObservation(): void {
   if (process.env.AIRRADAR_RUNTIME_HEALTH_OBSERVATION?.trim().toLowerCase() === "false") return;
   if (state.loop) return;
