@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.484] - 2026-10-17
+
+Changes since v1.0.483.
+
+### Changed
+
+- Correlate long stalls with GC and ELU (#961) [t58-stall-canary] (6fc4296f)
+
+### Maintenance
+
+- Sync generated repository metadata (#960) (4e194da5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#960) (4e194da5)
+- diagnostics(t58): correlate long stalls with GC and ELU (#961) [t58-stall-canary] (6fc4296f)
+
+</details>
 ## [1.0.483] - 2026-10-16
 
 Changes since v1.0.482.
