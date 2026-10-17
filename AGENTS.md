@@ -51,6 +51,16 @@ writing or changing documentation.
   Documentation changes must update the corresponding Czech page when one
   exists, and new authoritative documents must add both language links.
 
+- Follow the agent decision boundaries and performance evidence protocol in
+  `docs/DEVELOPMENT.md`: use an isolated branch/PR, report exactly which checks
+  ran, compare measured tails before/after optimization, and never equate a
+  successful microbenchmark with proven production improvement.
+- Do not merge or push directly to `main`, enable auto-merge, bypass failing
+  checks, or modify production configuration/services without explicit user
+  authorization. A merge into `main` can trigger automated deployment;
+  verify the complete diff with `scripts/release-scope.mjs` first. This rule
+  complements the manual-release restrictions in `docs/RELEASE.md`.
+
 `README.md` is the human-facing entry point. The documents above are the
 compact agent context; update `AGENTS.md` only when a durable rule or source
 of truth changes.
