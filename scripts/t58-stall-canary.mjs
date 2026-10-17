@@ -13,7 +13,7 @@ export function sanitizedStallEvent(raw) {
   const time = Date.parse(raw.observedAt);
   if (!Number.isFinite(time)) return null;
   const num = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0
-    ? Math.round(n * 1000) / 1000 : null;
+    ? Math.round(Math.min(n, 600_000) * 1000) / 1000 : null;
   const name = typeof raw.correlatedScope?.name === "string" &&
     SAFE_SCOPE.test(raw.correlatedScope.name) ? raw.correlatedScope.name : null;
   return {
@@ -22,6 +22,11 @@ export function sanitizedStallEvent(raw) {
     intervalCpuPercent: num(raw.intervalCpuPercent),
     correlatedScope: name,
     overlapMs: name ? num(raw.correlatedScope.overlapMs) : null,
+    gcPauseMs: num(raw.intervalGcPauseMs),
+    gcCount: num(raw.intervalGcCount),
+    majorGcCount: num(raw.intervalMajorGcCount),
+    eventLoopActiveMs: num(raw.intervalEventLoopActiveMs),
+    eventLoopIdleMs: num(raw.intervalEventLoopIdleMs),
   };
 }
 
@@ -53,6 +58,9 @@ export function summarizeCanarySamples(samples) {
     rssMiBP50: percentile(values("rssMiB"), .5),
     eventLoopP99P95Ms: percentile(values("eventLoopP99Ms"), .95),
     correlationCounts: counts,
+    gcContextEvents: events.filter((e) => e.gcPauseMs !== null && e.gcCount !== null).length,
+    eventLoopUtilizationContextEvents: events.filter((e) =>
+      e.eventLoopActiveMs !== null && e.eventLoopIdleMs !== null).length,
     topEvents: events.slice(0, 20),
     attribution: "temporal-overlap-not-causality",
   };
