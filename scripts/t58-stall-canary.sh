@@ -52,8 +52,14 @@ case "$preflight_status" in
   *) echo "canary_invalid_preflight_result" >&2; exit 1 ;;
 esac
 sudo -n "$control" --t58-canary-probe
+# The privileged helper has its own fail-safe rollback on activation error.
+# Do NOT claim ownership or call stop unless it positively confirms start:
+# an already-active canary may belong to a different invocation.
+if ! sudo -n "$control" --t58-canary-start; then
+  echo "::error::Canary activation failed. Runner will not stop an override it did not start; check root-helper rollback/watchdog." >&2
+  exit 1
+fi
 activated=1
-sudo -n "$control" --t58-canary-start
 echo "[t58-canary] Temporary diagnostic enabled via approved deployment entrypoint."
 # Permit the standalone process to finish bootstrap before authenticated probes.
 ready=0
