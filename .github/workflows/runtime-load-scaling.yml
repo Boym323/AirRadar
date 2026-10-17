@@ -26,6 +26,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
       - name: Generate isolated snapshot, Operational Twin and SSE measurements
         env:
           AIRRADAR_LOAD_MULTIPLIER: ${{ matrix.multiplier }}
