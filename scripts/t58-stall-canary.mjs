@@ -67,8 +67,6 @@ export function summarizeCanarySamples(samples) {
 }
 
 async function sessionCookie() {
-  const session = await fetchJson(BASE, "/api/watchlist/session", null);
-  if (session?.configured === false) return null;
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   if (!token) throw new Error("canary_auth_unavailable");
   return login(BASE, token);

@@ -150,12 +150,12 @@ async function readResponse(response) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-async function fetchJson(baseUrl, path, timeoutMs = DEFAULT_TIMEOUT_MS) {
+async function fetchJson(baseUrl, path, timeoutMs = DEFAULT_TIMEOUT_MS, cookie = null) {
   const url = new URL(path, baseUrl);
   const response = await fetch(url, {
     method: "GET",
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...(cookie ? { Cookie: cookie } : {}) },
     signal: AbortSignal.timeout(timeoutMs),
   });
   const status = response.status;
@@ -167,6 +167,20 @@ async function fetchJson(baseUrl, path, timeoutMs = DEFAULT_TIMEOUT_MS) {
   } catch {
     return { status, value: null };
   }
+}
+
+async function createAdminCookie(baseUrl, token) {
+  if (!token) return null;
+  const response = await fetch(new URL("/api/watchlist/session", baseUrl), {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (!response.ok) return null;
+  const setCookie = response.headers.get("set-cookie");
+  return setCookie?.split(";", 1)[0] ?? null;
 }
 
 function providerChecks({ health, integrations, runtime, mode }) {
@@ -413,7 +427,7 @@ async function loadFixture(path) {
   return { health: value.health ?? null, integrations: value.integrations ?? null, runtime: value.runtime ?? null, version: value.version ?? null };
 }
 
-export async function runAudit({ root = process.cwd(), mode = "readonly", baseUrl = DEFAULT_BASE_URL, fixturePath = null, previousPath = null } = {}) {
+export async function runAudit({ root = process.cwd(), mode = "readonly", baseUrl = DEFAULT_BASE_URL, fixturePath = null, previousPath = null, adminToken = process.env.WATCHLIST_ADMIN_TOKEN?.trim() || null } = {}) {
   if (!["readonly", "offline", "ci"].includes(mode)) throw new Error("invalid_audit_mode");
   let health = null;
   let integrations = null;
@@ -422,10 +436,11 @@ export async function runAudit({ root = process.cwd(), mode = "readonly", baseUr
   if (mode === "offline" || mode === "ci") {
     ({ health, integrations, runtime, version } = await loadFixture(fixturePath));
   } else {
+    const cookie = await createAdminCookie(baseUrl, adminToken);
     const results = await Promise.all([
       fetchJson(baseUrl, "/api/health"),
-      fetchJson(baseUrl, "/api/system/integrations"),
-      fetchJson(baseUrl, "/api/system/runtime-performance"),
+      fetchJson(baseUrl, "/api/system/integrations", DEFAULT_TIMEOUT_MS, cookie),
+      fetchJson(baseUrl, "/api/system/runtime-performance", DEFAULT_TIMEOUT_MS, cookie),
       fetchJson(baseUrl, "/api/version"),
     ]);
     health = results[0].value;
@@ -459,7 +474,7 @@ async function main() {
   const mode = option("--mode", process.env.AIRRADAR_INTEGRATION_AUDIT_MODE ?? "readonly");
   const jsonPath = option("--json");
   const markdownPath = option("--markdown");
-  const report = await runAudit({ root: process.cwd(), mode, baseUrl: option("--base-url", process.env.AIRRADAR_INTEGRATION_DIAGNOSTICS_BASE_URL ?? DEFAULT_BASE_URL), fixturePath: option("--fixture", process.env.AIRRADAR_INTEGRATION_AUDIT_FIXTURE), previousPath: option("--previous") });
+  const report = await runAudit({ root: process.cwd(), mode, baseUrl: option("--base-url", process.env.AIRRADAR_INTEGRATION_DIAGNOSTICS_BASE_URL ?? DEFAULT_BASE_URL), fixturePath: option("--fixture", process.env.AIRRADAR_INTEGRATION_AUDIT_FIXTURE), previousPath: option("--previous"), adminToken: process.env.WATCHLIST_ADMIN_TOKEN?.trim() || null });
   const markdown = renderMarkdown(report);
   await writeAuditOutputs({ report, markdown, jsonPath, markdownPath });
   process.stdout.write(JSON.stringify(report) + "\n");

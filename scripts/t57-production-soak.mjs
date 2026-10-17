@@ -175,11 +175,6 @@ async function collect(base, cookie) {
 }
 
 async function establishSession(base, token) {
-  // Production may intentionally run with open admin diagnostics. In that
-  // mode the GET is the read-only capability check and no synthetic login is
-  // attempted (the POST endpoint correctly returns 503 when auth is off).
-  const session = await fetchJson(base, "/api/watchlist/session", null);
-  if (session?.configured === false) return null;
   if (!token) throw new Error("authorization_missing");
   return login(base, token);
 }

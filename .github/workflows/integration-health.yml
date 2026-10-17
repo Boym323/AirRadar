@@ -37,6 +37,8 @@ jobs:
       # readiness gate. Real DEGRADED/BLOCKED evidence remains in the artifact
       # and emits an Actions warning. Runtime/tool/security failures still fail.
       - name: Run bounded read-only integration audit (degradation warns)
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
         run: |
           mkdir -p "$RUNNER_TEMP/airradar-audit"
           node scripts/integration-audit.mjs \

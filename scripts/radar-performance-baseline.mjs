@@ -326,9 +326,8 @@ function evaluateSoakFootprint(before, after) {
 }
 
 async function createAdminSessionCookie() {
-  // The default deployment deliberately has open administration. Probe the
-  // effective runtime mode instead of treating a configured legacy token as
-  // proof that a login is required.
+  // Runtime and admin diagnostics always require an explicit signed session,
+  // including legacy deployments where ordinary watchlist writes are open.
   const modeResponse = await fetch(`${baseUrl}/api/watchlist/session`, {
     cache: "no-store",
   });
@@ -341,7 +340,6 @@ async function createAdminSessionCookie() {
   } catch {
     throw new Error("Soak admin mode check returned invalid JSON");
   }
-  if (mode.configured === false && mode.authenticated === true) return null;
   if (mode.configured !== true) {
     throw new Error("Soak admin diagnostics unavailable: authentication is enabled but no valid admin configuration is present");
   }

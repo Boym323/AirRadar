@@ -28,11 +28,11 @@ authenticated read-only HTTP requests to existing AirRadar endpoints.
   runners over `https://airradar.pomykal.cz`. If firewall or VPN rules block
   access, the workflow fails safely at preflight; it cannot silently assume
   loopback access to a production host.
-- If watchlist admin access is configured, add repository Actions secret
+- Add repository Actions secret
   **`T58_WATCHLIST_ADMIN_TOKEN`** under Settings → Secrets and variables →
-  Actions. Do **not** put the token into a script, shell command, commit, issue,
-  workflow input, log, or report. No secret is needed when the existing admin
-  diagnostics explicitly report authentication disabled.
+  Actions. Runtime and `/api/admin/*` diagnostics fail closed even when the
+  legacy watchlist open mode is enabled. Do **not** put the token into a
+  script, shell command, commit, issue, workflow input, log, or report.
 - The live `/api/system/status` must report a deployed commit that is an
   ancestor-compatible descendant of merged PR #885
   (`e9a9b8354fe1c433b4a3baf406574b9cc3d6f207`).

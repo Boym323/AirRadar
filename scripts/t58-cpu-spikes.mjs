@@ -11,7 +11,7 @@
 import { mkdir, writeFile, rename } from "node:fs/promises";
 import { resolve } from "node:path";
 import { collectCpuSpikeSamples, classifyCpuSpikeFailure } from "./t58-cpu-spike-collection.mjs";
-import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
+import { login } from "./t53-navigation-production-sampler.mjs";
 import { fetchCpuSpikeDiagnostic } from "./t58-cpu-spike-http.mjs";
 
 const BASE = new URL("https://airradar.pomykal.cz/");
@@ -283,8 +283,6 @@ function requireSeconds() {
   return n;
 }
 async function session() {
-  const challenge = await fetchJson(BASE, "/api/watchlist/session", null);
-  if (challenge?.configured === false) return null;
   if (!process.env.WATCHLIST_ADMIN_TOKEN?.trim()) throw Error("t58_spike_authorization_missing");
   return login(BASE, process.env.WATCHLIST_ADMIN_TOKEN.trim());
 }

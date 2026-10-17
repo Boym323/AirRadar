@@ -26,11 +26,10 @@ nepřistupuje k databázi pro zápis a nemění nastavení produkce.**
 - Produkční diagnostika na `https://airradar.pomykal.cz` musí být dostupná
   z GitHub runneru. Pokud je blokována firewallem/VPN, preflight bezpečně
   skončí chybou.
-- Při zapnuté autentizaci watchlist administrace vlož token **pouze** do
-  repozitářového GitHub Actions secretu `T58_WATCHLIST_ADMIN_TOKEN`
-  (Settings → Secrets and variables → Actions). Nepiš token do skriptu,
-  parametrů příkazu, historie shellu, commitu ani issue. Pokud administrace
-  explicitně hlásí vypnutou autentizaci, secret není potřeba.
+- Token vlož vždy **pouze** do repozitářového GitHub Actions secretu
+  `T58_WATCHLIST_ADMIN_TOKEN` (Settings → Secrets and variables → Actions).
+  Interní diagnostika je fail-closed i při starém open režimu watchlistu.
+  Nepiš token do skriptu, parametrů příkazu, historie shellu, commitu ani issue.
 - Nasazený commit musí obsahovat sloučené PR #885
   (`e9a9b8354fe1c433b4a3baf406574b9cc3d6f207`).
 - V běžící aplikaci musí už být aktivní volitelná diagnostika

@@ -60,22 +60,47 @@ export function isWatchlistAuthConfigured(): boolean {
   return isAdminAuthEnabled() && getWatchlistAdminToken() !== null;
 }
 
-export function isWatchlistSessionValid(request: Request, now = Date.now()): boolean {
+type SessionValidationOptions = { requireExplicitAuth?: boolean };
+
+function requiresExplicitAuth(request: Request): boolean {
+  const path = new URL(request.url).pathname;
+  return path === "/api/system/runtime-performance"
+    || path === "/api/system/runtime-history"
+    || path === "/api/system/integrations"
+    || path === "/api/admin"
+    || path.startsWith("/api/admin/");
+}
+
+function isWatchlistSessionValidWithOptions(
+  request: Request,
+  now = Date.now(),
+  options: SessionValidationOptions = {},
+): boolean {
+  if ((options.requireExplicitAuth || requiresExplicitAuth(request)) && !isAdminAuthEnabled()) return false;
   if (!isAdminAuthEnabled()) return true;
   const secret = getWatchlistAdminToken();
   return Boolean(secret && validSession(request, secret, now));
 }
 
-export function requireWatchlistMutation(request: Request): Response | null {
+export function isWatchlistSessionValid(request: Request, now = Date.now()): boolean {
+  return isWatchlistSessionValidWithOptions(request, now);
+}
+
+/** Sensitive diagnostics and /api/admin require explicit signed auth. */
+export function isSensitiveWatchlistSessionValid(request: Request, now = Date.now()): boolean {
+  return isWatchlistSessionValidWithOptions(request, now, { requireExplicitAuth: true });
+}
+
+export function requireWatchlistMutation(request: Request, options: SessionValidationOptions = {}): Response | null {
   // Preserve origin checks for edits even when no admin login is required.
   if (!sameOrigin(request)) {
     return Response.json({ error: "Cross-origin watchlist mutation rejected", code: "csrf_rejected" }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
-  if (!isAdminAuthEnabled()) return null;
+  if (!(options.requireExplicitAuth || requiresExplicitAuth(request)) && !isAdminAuthEnabled()) return null;
   if (!isWatchlistAuthConfigured()) {
     return Response.json({ error: "Watchlist authentication is not configured", code: "auth_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
-  if (!isWatchlistSessionValid(request)) {
+  if (!isWatchlistSessionValidWithOptions(request, Date.now(), options)) {
     return Response.json({ error: "Watchlist authentication required", code: "auth_required" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   return null;

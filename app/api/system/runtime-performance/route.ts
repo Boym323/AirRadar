@@ -1,4 +1,4 @@
-import { isAdminAuthEnabled, isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { isSensitiveWatchlistSessionValid } from "@/lib/server/watchlist-auth";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { getRuntimePerformanceDiagnostics } from "@/lib/server/runtime-performance";
 import { getRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
@@ -19,7 +19,7 @@ export async function GET(request: Request): Promise<Response> {
   // Runtime diagnostics are sensitive even when the private receiver keeps
   // ordinary watchlist administration open for compatibility. Fail closed
   // unless the operator explicitly enables signed admin sessions.
-  if (!isAdminAuthEnabled() || !isWatchlistSessionValid(request)) {
+  if (!isSensitiveWatchlistSessionValid(request)) {
     return Response.json({ error: "Authentication required", code: "auth_required" }, {
       status: 401, headers: { "Cache-Control": "no-store" },
     });

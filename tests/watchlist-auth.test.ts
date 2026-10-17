@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isAdminAuthEnabled,
+  isSensitiveWatchlistSessionValid,
   isWatchlistAuthConfigured,
   isWatchlistSessionValid,
   requireWatchlistMutation,
@@ -11,7 +12,7 @@ import {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("optional AirRadar administrator authentication", () => {
-  const request = (headers: Record<string, string> = {}) => new Request("https://radar.example/api/watchlist", {
+  const request = (headers: Record<string, string> = {}, path = "/api/watchlist") => new Request(`https://radar.example${path}`, {
     method: "POST",
     headers: { host: "radar.example", "x-forwarded-proto": "https", ...headers },
   });
@@ -41,6 +42,16 @@ describe("optional AirRadar administrator authentication", () => {
     expect(requireWatchlistMutation(request())?.status).toBe(503);
   });
 
+  it("keeps sensitive diagnostics fail-closed in legacy open mode", () => {
+    vi.stubEnv("AIRRADAR_ADMIN_AUTH_ENABLED", "false");
+    vi.stubEnv("WATCHLIST_ADMIN_TOKEN", "legacy-token");
+    expect(isWatchlistSessionValid(request())).toBe(true);
+    expect(isSensitiveWatchlistSessionValid(request())).toBe(false);
+    expect(requireWatchlistMutation(request({ origin: "https://radar.example" }), { requireExplicitAuth: true })?.status).toBe(503);
+    expect(isWatchlistSessionValid(request({}, "/api/admin/alerts/history"))).toBe(false);
+    expect(requireWatchlistMutation(request({ origin: "https://radar.example" }, "/api/admin/alerts/rules"))?.status).toBe(503);
+  });
+
   it("accepts signed sessions only when explicitly enabled and rejects cross-origin requests", () => {
     vi.stubEnv("AIRRADAR_ADMIN_AUTH_ENABLED", "true");
     vi.stubEnv("WATCHLIST_ADMIN_TOKEN", "test-admin-token");
@@ -54,6 +65,7 @@ describe("optional AirRadar administrator authentication", () => {
     expect(sessionCookie).toContain("Path=/;");
     expect(sessionCookie).toContain("HttpOnly");
     expect(sessionCookie).toContain("SameSite=Strict");
+    expect(sessionCookie).toContain("Secure");
     const cookie = sessionCookie.split(";", 1)[0];
     expect(isWatchlistSessionValid(request())).toBe(false);
     expect(isWatchlistSessionValid(request({ cookie }))).toBe(true);
