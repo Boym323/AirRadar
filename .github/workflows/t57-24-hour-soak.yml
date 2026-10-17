@@ -1,8 +1,6 @@
 name: T57 24-hour read-only performance soak
 
 on:
-  pull_request:
-    types: [labeled]
   workflow_dispatch:
     inputs:
       resume_run_id:
@@ -35,7 +33,7 @@ permissions:
 
 jobs:
   chunk_1:
-    if: ${{ (github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '1') }}
+    if: ${{ inputs.resume_chunk <= '1' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 1
@@ -49,7 +47,7 @@ jobs:
 
   chunk_2:
     needs: chunk_1
-    if: ${{ always() && (needs.chunk_1.result == 'success' || needs.chunk_1.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '2')) }}
+    if: ${{ always() && (needs.chunk_1.result == 'success' || needs.chunk_1.result == 'skipped') && inputs.resume_chunk <= '2' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 2
@@ -63,7 +61,7 @@ jobs:
 
   chunk_3:
     needs: chunk_2
-    if: ${{ always() && (needs.chunk_2.result == 'success' || needs.chunk_2.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '3')) }}
+    if: ${{ always() && (needs.chunk_2.result == 'success' || needs.chunk_2.result == 'skipped') && inputs.resume_chunk <= '3' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 3
@@ -77,7 +75,7 @@ jobs:
 
   chunk_4:
     needs: chunk_3
-    if: ${{ always() && (needs.chunk_3.result == 'success' || needs.chunk_3.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '4')) }}
+    if: ${{ always() && (needs.chunk_3.result == 'success' || needs.chunk_3.result == 'skipped') && inputs.resume_chunk <= '4' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 4
@@ -91,7 +89,7 @@ jobs:
 
   chunk_5:
     needs: chunk_4
-    if: ${{ always() && (needs.chunk_4.result == 'success' || needs.chunk_4.result == 'skipped') && ((github.event_name == 'pull_request' && github.event.label.name == 'release-preview') || (github.event_name == 'workflow_dispatch' && inputs.resume_chunk <= '5')) }}
+    if: ${{ always() && (needs.chunk_4.result == 'success' || needs.chunk_4.result == 'skipped') && inputs.resume_chunk <= '5' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 5
