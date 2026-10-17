@@ -40,3 +40,28 @@ override is present. This prevents mixing deployment and observation.
 No new sudoers entry, root password, SSH key, or broader permissions are
 required. To manually verify the production privilege path without changes:
 `sudo -n /var/www/airradar/deploy/release.sh --t58-canary-probe`.
+
+## Per-stall interval context (T58 v1.0.483 follow-up)
+
+When the opt-in stall observer is enabled, the 1-second monotonic heartbeat
+now retains a **bounded numeric** GC pause/count delta and Node event-loop
+utilization active/idle milliseconds alongside the existing process CPU
+percentage, overshoot and allowlisted synchronous scope. Each value is
+recorded only for a stall above the existing threshold, in the ring of at most
+24 events. Unavailable counters stay `null`.
+
+The canary exports these measurements only through its sanitized top-20
+events, plus counts of events with GC and ELU coverage. It never exports raw
+performance entries, stack frames, aircraft identities, process IDs, heap
+graphs, cgroup paths or environment values.
+
+**Interpretation:** GC PerformanceObserver delivery is asynchronous. A GC
+delta or high ELU in the same heartbeat interval is useful temporal context,
+NOT proof of the exact cause of a stall. Process-wide CPU includes worker
+threads; ELU measures the Node event loop. Unavailable cgroup quota/throttling
+telemetry remains unknown, never zero throttling.
+
+This change is **off by default** and does not trigger the canary or alter
+production configuration. The existing canary still requires a separately
+authorized, one-time marked release with its two controlled restarts, pinned
+commit checks and mandatory independent rollback.

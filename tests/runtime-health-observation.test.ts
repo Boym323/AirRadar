@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getRuntimeHealthObservation, getV8HeapSpaces, startRuntimeHealthObservation, stopRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
+import { getRuntimeGcTotals, getRuntimeHealthObservation, getV8HeapSpaces, startRuntimeHealthObservation, stopRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 
 describe("opt-in runtime health observation", () => {
   afterEach(() => stopRuntimeHealthObservation());
@@ -38,6 +38,19 @@ describe("opt-in runtime health observation", () => {
     expect(getRuntimeHealthObservation().status).toBe("disabled");
     expect(getRuntimeHealthObservation().majorGcCount).toBe(0);
     expect(getRuntimeHealthObservation().postMajorGc).toBeNull();
+  });
+
+  it("returns only cheap numeric GC totals when the observer is active", () => {
+    stopRuntimeHealthObservation();
+    expect(getRuntimeGcTotals()).toBeNull();
+    startRuntimeHealthObservation();
+    expect(getRuntimeGcTotals()).toEqual({
+      gcCount: 0,
+      majorGcCount: 0,
+      gcPauseMs: 0,
+    });
+    stopRuntimeHealthObservation();
+    expect(getRuntimeGcTotals()).toBeNull();
   });
 
   it("shares observation state across separately evaluated module copies", async () => {

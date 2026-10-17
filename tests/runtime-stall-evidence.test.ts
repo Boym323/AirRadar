@@ -43,6 +43,43 @@ describe("bounded event-loop stall evidence", () => {
     expect(tracker.snapshot().totalStalls).toBe(1);
   });
 
+  it("records bounded GC and event-loop context without claiming a root cause", () => {
+    const tracker = new RuntimeStallEvidenceRecorder();
+    const stall = tracker.tick(6_000, Date.parse("2026-10-16T12:00:00Z"), 3_000, 200, {
+      gcPauseMs: 375.12549,
+      gcCount: 8,
+      majorGcCount: 1,
+      eventLoopActiveMs: 2_750.1828,
+      eventLoopIdleMs: 249.8172,
+    });
+    expect(stall).toMatchObject({
+      attribution: "unattributed",
+      intervalCpuPercent: 6.7,
+      intervalGcPauseMs: 375.125,
+      intervalGcCount: 8,
+      intervalMajorGcCount: 1,
+      intervalEventLoopActiveMs: 2_750.183,
+      intervalEventLoopIdleMs: 249.817,
+    });
+    expect(tracker.snapshot().recentStalls[0]).toEqual(stall);
+
+    const missing = tracker.tick(10_000, Date.parse("2026-10-16T12:00:04Z"), 3_000, null, {
+      gcPauseMs: -2,
+      gcCount: Number.NaN,
+      majorGcCount: null,
+      eventLoopActiveMs: Number.POSITIVE_INFINITY,
+      eventLoopIdleMs: undefined,
+    });
+    expect(missing).toMatchObject({
+      intervalCpuPercent: null,
+      intervalGcPauseMs: null,
+      intervalGcCount: null,
+      intervalMajorGcCount: null,
+      intervalEventLoopActiveMs: null,
+      intervalEventLoopIdleMs: null,
+    });
+  });
+
   it("retains only 24 safe events and returns detached snapshots", () => {
     const tracker = new RuntimeStallEvidenceRecorder();
     for (let n = 0; n < 40; n++) {

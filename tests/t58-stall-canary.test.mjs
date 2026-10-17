@@ -8,20 +8,42 @@ describe("T58 canary report sanitization", () => {
   it("keeps only bounded safe fields and drops payloads and identities", () => {
     const result=sanitizedStallEvent({
       observedAt:"2026-10-16T12:00:00Z",overshootMs:4000,intervalCpuPercent:87,
+      intervalGcPauseMs:440.4567,intervalGcCount:7,intervalMajorGcCount:1,
+      intervalEventLoopActiveMs:3985.442,intervalEventLoopIdleMs:14.558,
       correlatedScope:{name:"snapshot.apply",overlapMs:3900,icao:"ABC123"},
       url:"/secret",token:"unsafe",payload:"ABC123",stack:"secret",
     });
     assert.deepEqual(result,{
       observedAt:"2026-10-16T12:00:00.000Z",overshootMs:4000,intervalCpuPercent:87,
       correlatedScope:"snapshot.apply",overlapMs:3900,
+      gcPauseMs:440.457,gcCount:7,majorGcCount:1,
+      eventLoopActiveMs:3985.442,eventLoopIdleMs:14.558,
     });
     assert.ok(!JSON.stringify(result).includes("ABC123"));
+  });
+  it("counts GC and loop context only when provided, without raw identity fields", () => {
+    const sample = {observedAt:"2026-10-16T12:00:00Z",overshootMs:2500,
+      intervalGcPauseMs:42.8,intervalGcCount:4,intervalMajorGcCount:0,
+      intervalEventLoopActiveMs:2700,intervalEventLoopIdleMs:800,
+      diagnosticStoreId:"PRIVATE",pid:125,stack:"PRIVATE"};
+    const summary = summarizeCanarySamples([
+      {totalStalls:1,recentStalls:[sample],cpuPercent:20},
+    ]);
+    assert.equal(summary.gcContextEvents,1);
+    assert.equal(summary.eventLoopUtilizationContextEvents,1);
+    assert.equal(summary.topEvents[0].gcPauseMs,42.8);
+    assert.ok(!JSON.stringify(summary).includes("PRIVATE"));
+    assert.ok(!JSON.stringify(summary).includes("pid"));
   });
   it("rejects arbitrary scope names and bad timestamps", () => {
     const bad={observedAt:"2026-10-16T12:00:00Z",overshootMs:1000,
       correlatedScope:{name:"snapshot.ABC123/x",overlapMs:1000}};
     assert.equal(sanitizedStallEvent(bad)?.correlatedScope,null);
     assert.equal(sanitizedStallEvent({...bad,observedAt:"invalid"}),null);
+    assert.deepEqual({
+      gcPauseMs: sanitizedStallEvent({...bad,intervalGcPauseMs:-7})?.gcPauseMs,
+      eventLoopActiveMs: sanitizedStallEvent({...bad,intervalEventLoopActiveMs:Infinity})?.eventLoopActiveMs,
+    },{gcPauseMs:null,eventLoopActiveMs:null});
   });
   it("deduplicates repeated bounded rings and counts correlation", () => {
     const ev={observedAt:"2026-10-16T12:00:00Z",overshootMs:1300};
@@ -33,6 +55,8 @@ describe("T58 canary report sanitization", () => {
     assert.equal(summary.totalStalls,1);
     assert.equal(summary.cpuPercentP95,30);
     assert.deepEqual(summary.correlationCounts,{unattributed:1});
+    assert.equal(summary.gcContextEvents,0);
+    assert.equal(summary.eventLoopUtilizationContextEvents,0);
   });
 });
 

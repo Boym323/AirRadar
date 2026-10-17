@@ -1,4 +1,5 @@
 import { performance } from "node:perf_hooks";
+import { getRuntimeGcTotals } from "@/lib/server/runtime-health-observation";
 
 // Deliberately not an inspector or profiler: only bounded timing summaries,
 // never payloads, flight identities, stack traces or callback arguments.
@@ -23,6 +24,13 @@ export interface RuntimeStallEvent {
   overshootMs: number;
   intervalMs: number;
   intervalCpuPercent: number | null;
+  /** Approximate temporal context from asynchronous GC notifications. */
+  intervalGcPauseMs: number | null;
+  intervalGcCount: number | null;
+  intervalMajorGcCount: number | null;
+  /** Node event-loop utilization deltas, NOT exclusive process CPU. */
+  intervalEventLoopActiveMs: number | null;
+  intervalEventLoopIdleMs: number | null;
   correlatedScope: { name: string; durationMs: number; overlapMs: number } | null;
   /** A temporal overlap is NOT proof of the stall's root cause. */
   attribution: "temporal-overlap-only" | "unattributed";
@@ -41,7 +49,16 @@ export class RuntimeStallEvidenceRecorder {
     if (this.spans.length > MAX_SPANS) this.spans.shift();
   }
 
-  tick(nowMs: number, observedAtMs: number, elapsedMs: number, cpuTimeMs: number | null): RuntimeStallEvent | null {
+  tick(
+    nowMs: number, observedAtMs: number, elapsedMs: number, cpuTimeMs: number | null,
+    context: Partial<{
+      gcPauseMs: number | null;
+      gcCount: number | null;
+      majorGcCount: number | null;
+      eventLoopActiveMs: number | null;
+      eventLoopIdleMs: number | null;
+    }> = {},
+  ): RuntimeStallEvent | null {
     if (!Number.isFinite(nowMs) || !Number.isFinite(observedAtMs) ||
         !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null;
     // A monotonic clock prevents NTP or wall-clock adjustments looking like stalls.
@@ -68,11 +85,19 @@ export class RuntimeStallEvidenceRecorder {
     const percent = cpuTimeMs !== null && Number.isFinite(cpuTimeMs) && cpuTimeMs >= 0
       ? Number(Math.min(1_000, 100 * cpuTimeMs / elapsedMs).toFixed(1))
       : null;
+    const bounded = (value: number | null | undefined): number | null =>
+      value !== null && value !== undefined && Number.isFinite(value) && value >= 0
+        ? Number(Math.min(value, 600_000).toFixed(3)) : null;
     const event: RuntimeStallEvent = {
       observedAt: new Date(observedAtMs).toISOString(),
       overshootMs: Number(overshootMs.toFixed(3)),
       intervalMs: Number(elapsedMs.toFixed(3)),
       intervalCpuPercent: percent,
+      intervalGcPauseMs: bounded(context.gcPauseMs),
+      intervalGcCount: bounded(context.gcCount),
+      intervalMajorGcCount: bounded(context.majorGcCount),
+      intervalEventLoopActiveMs: bounded(context.eventLoopActiveMs),
+      intervalEventLoopIdleMs: bounded(context.eventLoopIdleMs),
       correlatedScope: candidate,
       attribution: candidate ? "temporal-overlap-only" : "unattributed",
     };
@@ -112,14 +137,33 @@ export function startRuntimeStallEvidence(): void {
   if (state.timer || process.env.AIRRADAR_STALL_EVIDENCE_ENABLED !== "1") return;
   let lastTickMs = performance.now();
   let lastCpu = process.cpuUsage();
+  let lastGc = getRuntimeGcTotals();
+  let lastElu = performance.eventLoopUtilization();
   state.enabled = true;
   state.timer = setInterval(() => {
     const nowMs = performance.now();
     const elapsedMs = nowMs - lastTickMs;
     const cpu = process.cpuUsage(lastCpu);
+    const currentGc = getRuntimeGcTotals();
+    const currentElu = performance.eventLoopUtilization();
+    const deltaElu = performance.eventLoopUtilization(currentElu, lastElu);
+    const deltaGc = (field: "gcPauseMs" | "gcCount" | "majorGcCount"): number | null => {
+      if (!lastGc || !currentGc) return null;
+      const delta = currentGc[field] - lastGc[field];
+      return Number.isFinite(delta) && delta >= 0 ? delta : null;
+    };
+    const intervalContext = {
+      gcPauseMs: deltaGc("gcPauseMs"),
+      gcCount: deltaGc("gcCount"),
+      majorGcCount: deltaGc("majorGcCount"),
+      eventLoopActiveMs: deltaElu.active,
+      eventLoopIdleMs: deltaElu.idle,
+    };
     lastTickMs = nowMs;
     lastCpu = process.cpuUsage();
-    state.recorder.tick(nowMs, Date.now(), elapsedMs, (cpu.user + cpu.system) / 1_000);
+    lastGc = currentGc;
+    lastElu = currentElu;
+    state.recorder.tick(nowMs, Date.now(), elapsedMs, (cpu.user + cpu.system) / 1_000, intervalContext);
   }, STALL_HEARTBEAT_MS);
   state.timer.unref?.();
 }
