@@ -12,7 +12,9 @@ function raw(i,opts={}){
    gcMaxPauseMs:18,eventLoopLagP99Ms:80+i},
    hotPaths:[{name:"snapshot.operationalTwin",cpuMs:100+i*1400},
     {name:"SECRET_ICAO_XYZ",cpuMs:200+i*999},
-    {name:"snapshot.trackFusion",cpuMs:10+i*800}],
+    {name:"snapshot.trackFusion",cpuMs:10+i*800},
+    {name:"snapshot.network.ingest",cpuMs:10+i*120},
+    {name:"ingest.network-beast",cpuMs:10+i*240}],
    validatorPaths:[{name:"twin.eventOutcome.local",cpuMs:90+i*1300}],
   };
  if(opts.cgroupMissing){sys.runtime.cgroupCpuNrThrottled=null;sys.runtime.cgroupCpuThrottledUsec=null;}
@@ -29,6 +31,8 @@ describe("T58 read-only spike correlation",()=>{
    assert.equal(report.cgroup.totalNrThrottled,6);
    assert.equal(report.cgroup.totalThrottledUsec,15000);
    assert.equal(report.gc.totalPauseMs,360);
+   assert.equal(arr[0].sample.hotPaths["ingest.network-beast"],10);
+   assert.equal(arr[1].sample.hotPaths["snapshot.network.ingest"],130);
    assert.equal(report.gc.pauseTimeSharePercent,1.2);
    assert.equal(report.cpu.p50Percent,102);
    assert.ok(report.spikes.length>0);
