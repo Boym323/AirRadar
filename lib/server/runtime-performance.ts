@@ -3,7 +3,9 @@ import { recordRuntimeSlowSyncSpan } from "@/lib/server/runtime-stall-evidence";
 
 const MAX_SAMPLES = 128;
 // Bounded headroom for dedicated Twin validator scopes alongside existing health metrics.
-const MAX_METRICS = 48;
+// Reserve room for transport callbacks in addition to the existing snapshot,
+// history and health scopes. Names remain code-defined and storage bounded.
+const MAX_METRICS = 64;
 const WINDOW_MS = 60_000;
 const MAX_WINDOWS = 15;
 const MAX_WINDOW_SAMPLES = 64;

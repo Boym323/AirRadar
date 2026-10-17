@@ -49,10 +49,11 @@ export async function GET(request: Request): Promise<Response> {
   // Low-cost individual Twin validators may fall outside the top 12, despite
   // the inclusive parent being slow. Export exactly these five separately.
   const validatorPaths = paths.filter((path) => path.name.startsWith("twin.")).slice(0, 5);
+  const ingestPaths = paths.filter((path) => path.name.startsWith("ingest.")).slice(0, 3);
   const runtime = getRuntimeHealthObservation();
   const operationalTwinForensics = getOperationalTwinForensicsReport();
   return Response.json({
-    schemaVersion: 4, scope: "process-local", phases, hotPaths, validatorPaths, operationalTwinForensics,
+    schemaVersion: 4, scope: "process-local", phases, hotPaths, validatorPaths, ingestPaths, operationalTwinForensics,
     stallEvidence: getRuntimeStallEvidence(),
     runtime: {
       status: runtime.status,
