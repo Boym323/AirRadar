@@ -8,6 +8,7 @@ export const INTERVAL_MS = 15_000;
 const STARTUP_RETRYABLE = new Set([
   "canary_cpu_profile_not_enabled",
   "canary_evidence_state_mismatch",
+  "canary_cpu_profile_invalid_stalls",
 ]);
 const BASE = "https://airradar.pomykal.cz";
 const SAFE_SCOPE = /^(?:snapshot|twin|history|network|health|atc|routeCache)\.[a-z][a-zA-Z0-9.-]{0,64}$/;

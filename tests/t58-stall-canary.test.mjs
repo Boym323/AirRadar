@@ -134,7 +134,8 @@ describe("safe read-only evidence contract", () => {
     let attempts = 0;
     const value = await sampleWithStartupRetry(async () => {
       attempts += 1;
-      if (attempts < 3) throw new Error("canary_cpu_profile_not_enabled");
+      if (attempts === 1) throw new Error("canary_cpu_profile_not_enabled");
+      if (attempts === 2) throw new Error("canary_cpu_profile_invalid_stalls");
       return "ready";
     }, { attempts: 3, delayMs: 0 });
     assert.equal(value, "ready");
