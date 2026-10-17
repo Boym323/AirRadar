@@ -29,10 +29,24 @@ describe("authenticated runtime performance projection", () => {
     expect(body.phases["health.total"].samplesMs).toBeUndefined();
     expect(Object.keys(body.phases)).toHaveLength(9);
     expect(body.hotPaths).toEqual([]);
+    expect(body.ingestPaths).toEqual([]);
     expect(body.runtime.status).toBe("disabled");
     expect(body.runtime.v8HeapSpaces).toHaveLength(1);
     expect(body.runtime.v8HeapSpaces[0].name).toBe("old_space");
     expect(body.runtime.majorGcCount).toBe(2);
     expect(body.runtime.postMajorGc.oldSpaceUsedBytes).toBe(80);
+  });
+
+  it("exports named ingest timings without callback data or raw samples", async () => {
+    mocks.authenticated.mockReturnValue(true);
+    mocks.metrics.mockReturnValueOnce({
+      "ingest.local-beast": {
+        calls: 2, totalMs: 3, avgMs: 1.5, maxMs: 2, p95Ms: 2, p99Ms: 2,
+        cpuMs: 3, waitMs: 0, windows: [], processedAircraft: 0, samplesMs: [1, 2],
+      },
+    } as never);
+    const body = await (await GET(new Request("http://localhost/api/system/runtime-performance"))).json();
+    expect(body.ingestPaths).toMatchObject([{ name: "ingest.local-beast", calls: 2, maxMs: 2 }]);
+    expect(body.ingestPaths[0].samplesMs).toBeUndefined();
   });
 });
