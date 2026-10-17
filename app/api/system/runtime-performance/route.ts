@@ -3,6 +3,7 @@ import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit
 import { getRuntimePerformanceDiagnostics } from "@/lib/server/runtime-performance";
 import { getRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 import { getRuntimeStallEvidence } from "@/lib/server/runtime-stall-evidence";
+import { getT58CpuProfileSummary } from "@/lib/server/t58-cpu-profile";
 import { getOperationalTwinForensicsReport } from "@/lib/operational-twin/event-outcome";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,7 @@ export async function GET(request: Request): Promise<Response> {
   return Response.json({
     schemaVersion: 4, scope: "process-local", phases, hotPaths, validatorPaths, ingestPaths, operationalTwinForensics,
     stallEvidence: getRuntimeStallEvidence(),
+    t58CpuProfile: getT58CpuProfileSummary(),
     runtime: {
       status: runtime.status,
       v8HeapSpaces: runtime.v8HeapSpaces,

@@ -1,5 +1,6 @@
 import { performance } from "node:perf_hooks";
 import { getRuntimeGcTotals } from "@/lib/server/runtime-health-observation";
+import { observeT58CpuProfileInterval } from "@/lib/server/t58-cpu-profile";
 
 // Deliberately not an inspector or profiler: only bounded timing summaries,
 // never payloads, flight identities, stack traces or callback arguments.
@@ -163,7 +164,8 @@ export function startRuntimeStallEvidence(): void {
     lastCpu = process.cpuUsage();
     lastGc = currentGc;
     lastElu = currentElu;
-    state.recorder.tick(nowMs, Date.now(), elapsedMs, (cpu.user + cpu.system) / 1_000, intervalContext);
+    const event = state.recorder.tick(nowMs, Date.now(), elapsedMs, (cpu.user + cpu.system) / 1_000, intervalContext);
+    observeT58CpuProfileInterval(event, nowMs);
   }, STALL_HEARTBEAT_MS);
   state.timer.unref?.();
 }

@@ -82,3 +82,22 @@ Cleanup must verify the override has been removed and the watchdog stopped,
 then independently confirm the read-only authenticated runtime reports
 disabled diagnostics on the expected commit and healthy Rust backends.
 A report artifact alone describes measurement, not rollback evidence.
+
+## One-shot V8 CPU sampling during the canary
+
+The same temporary systemd override also enables `AIRRADAR_T58_CPU_PROFILE_ENABLED=1`.
+The in-process `node:inspector` Session starts V8 sampling before aircraft
+polling, at 20 ms per sample, and stops after 120 seconds or when RSS exceeds
+1,750 MiB. It opens no inspector network port. The response is discarded if
+it exceeds 10,000 samples or nodes, or if the sanitized summary exceeds 32
+KiB. The existing 23-minute watchdog still removes both flags and restarts
+the service if the runner disappears. The read-only API must report both
+diagnostics disabled after rollback.
+
+Raw V8 profiles, URLs, paths, source, request data and arguments are never
+written or uploaded. The authenticated runtime endpoint exposes only bounded
+function names, coarse JS/native/GC/idle categories, sample counts, and
+per-stall CPU/GC/main-thread scheduler deltas. The 15-minute canary report
+includes this sanitized summary. A CPU sample within an event-loop stall is
+stronger attribution than a one-minute correlation, but interpretation still
+requires multiple samples and cross-checking CPU, GC and scheduler wait.

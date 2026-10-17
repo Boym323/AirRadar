@@ -5,7 +5,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sanitizedStallEvent, summarizeCanarySamples, classifyStallEvidence } from "../scripts/t58-stall-canary.mjs";
+import { sanitizedStallEvent, summarizeCanarySamples, classifyStallEvidence, sanitizedCpuProfile } from "../scripts/t58-stall-canary.mjs";
 
 describe("T58 canary report sanitization", () => {
   it("keeps only bounded safe fields and drops payloads and identities", () => {
@@ -111,6 +111,18 @@ describe("privileged T58 canary control", () => {
 });
 
 describe("safe read-only evidence contract", () => {
+  it("exports only bounded V8 sample attribution and never raw profile fields", () => {
+    const safe = sanitizedCpuProfile({ status: "completed", reason: null, durationMs: 120000,
+      sampleIntervalUs: 20000, samples: 200, nodes: 50, rawProfile: "SECRET",
+      stalls: [{ observedAt: "2026-10-17T12:00:00Z", overshootMs: 1200,
+        sampleCount: 40, sampledMs: 800, cpuPercent: 90,
+        topFrames: [{ frame: "snapshotLoop > decodeFrame", category: "javascript", samples: 40, url: "SECRET" }] }] });
+    assert.equal(safe.stalls[0].topFrames[0].frame, "snapshotLoop > decodeFrame");
+    assert.ok(!JSON.stringify(safe).includes("SECRET"));
+    assert.throws(() => sanitizedCpuProfile({ status: "completed", stalls: [{
+      topFrames: [{ frame: "https://secret", category: "javascript", samples: 1 }] }] }),
+    /canary_cpu_profile_invalid_stalls/);
+  });
   it("accepts both already-on and default-off monitoring on preflight", () => {
     assert.equal(classifyStallEvidence({status:"disabled",totalStalls:0,recentStalls:[]}), "disabled");
     assert.equal(classifyStallEvidence({status:"enabled",totalStalls:5,recentStalls:[]}), "enabled");

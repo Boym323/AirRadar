@@ -63,6 +63,40 @@ export function summarizeCanarySamples(samples) {
       e.eventLoopActiveMs !== null && e.eventLoopIdleMs !== null).length,
     topEvents: events.slice(0, 20),
     attribution: "temporal-overlap-not-causality",
+    cpuProfile: samples.findLast((s) => s.cpuProfile?.status === "completed")?.cpuProfile ??
+      samples.findLast((s) => s.cpuProfile?.status === "discarded")?.cpuProfile ?? null,
+  };
+}
+
+export function sanitizedCpuProfile(raw) {
+  if (!raw || !["starting", "running", "stopping", "completed", "discarded"].includes(raw.status)) {
+    throw new Error("canary_cpu_profile_invalid_status");
+  }
+  const number = (value, max) => Number.isFinite(value) && value >= 0 && value <= max ? value : null;
+  const safeFrame = (frame) => frame && typeof frame.frame === "string" && frame.frame.length <= 240 &&
+    /^[A-Za-z_$(][A-Za-z0-9_$ .:()>-]{0,239}$/.test(frame.frame) &&
+    ["javascript", "native", "gc", "idle", "unknown"].includes(frame.category) &&
+    Number.isSafeInteger(frame.samples) && frame.samples >= 0 && frame.samples <= 10_000;
+  if (!Array.isArray(raw.stalls) || raw.stalls.length > 24 ||
+      raw.stalls.some((stall) => !Array.isArray(stall.topFrames) || stall.topFrames.length > 8 ||
+        stall.topFrames.some((frame) => !safeFrame(frame)))) {
+    throw new Error("canary_cpu_profile_invalid_stalls");
+  }
+  return {
+    status: raw.status,
+    reason: typeof raw.reason === "string" && /^[a-z_]{1,40}$/.test(raw.reason) ? raw.reason : null,
+    durationMs: number(raw.durationMs, 180_000), sampleIntervalUs: number(raw.sampleIntervalUs, 100_000),
+    samples: number(raw.samples, 10_000), nodes: number(raw.nodes, 10_000),
+    stalls: raw.stalls.map((stall) => ({
+      observedAt: Number.isFinite(Date.parse(stall.observedAt)) ? new Date(stall.observedAt).toISOString() : null,
+      overshootMs: number(stall.overshootMs, 180_000), cpuPercent: number(stall.cpuPercent, 1_000),
+      gcPauseMs: number(stall.gcPauseMs, 180_000), gcCount: number(stall.gcCount, 10_000),
+      mainThreadCpuMs: number(stall.mainThreadCpuMs, 180_000),
+      schedulerWaitMs: number(stall.schedulerWaitMs, 180_000),
+      schedulerSwitches: number(stall.schedulerSwitches, 100_000),
+      sampledMs: number(stall.sampledMs, 180_000), sampleCount: number(stall.sampleCount, 10_000),
+      topFrames: stall.topFrames.map((frame) => ({ frame: frame.frame, category: frame.category, samples: frame.samples })),
+    })),
   };
 }
 
@@ -107,6 +141,16 @@ async function sample(cookie, sha, enabled) {
   }
   const evidence = metrics.stallEvidence;
   const evidenceStatus = classifyStallEvidence(evidence, enabled === null ? "any" : enabled ? "enabled" : "disabled");
+  const cpuProfile = metrics.t58CpuProfile;
+  if (enabled === null && cpuProfile?.status !== "disabled") {
+    throw new Error("canary_cpu_profile_already_enabled");
+  }
+  if (enabled === true && (!cpuProfile || cpuProfile.status === "disabled")) {
+    throw new Error("canary_cpu_profile_not_enabled");
+  }
+  if (enabled === false && cpuProfile?.status !== "disabled") {
+    throw new Error("canary_cpu_profile_not_restored");
+  }
   return {
     evidenceStatus,
     totalStalls: evidence.totalStalls,
@@ -114,6 +158,7 @@ async function sample(cookie, sha, enabled) {
     cpuPercent: metrics.runtime?.cpuIntervalPercent ?? null,
     rssMiB: Number.isFinite(metrics.runtime?.rssBytes) ? metrics.runtime.rssBytes/1048576 : null,
     eventLoopP99Ms: metrics.runtime?.eventLoopLagP99Ms ?? null,
+    cpuProfile: enabled === true ? sanitizedCpuProfile(cpuProfile) : null,
   };
 }
 
@@ -162,6 +207,7 @@ async function main() {
     durationSeconds:CANARY_SECONDS, verdict:"COLLECTED_WITH_LIMITATIONS",
     ...summarizeCanarySamples(results) };
   if (summary.sampleCount !== 61) throw new Error("canary_incomplete_sample_count");
+  if (summary.cpuProfile?.status !== "completed") throw new Error("canary_cpu_profile_incomplete");
   await writeFile(output, JSON.stringify(summary, null, 2)+"\n", {mode:0o600});
   console.log("[t58-canary] Saved sanitized report. Samples="+summary.sampleCount+
     " stalls="+summary.distinctObservedStalls+" worstMs="+summary.worstOvershootMs);
