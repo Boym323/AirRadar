@@ -1,7 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { sanitizedStallEvent, summarizeCanarySamples, classifyStallEvidence } from "../scripts/t58-stall-canary.mjs";
 
 describe("T58 canary report sanitization", () => {
@@ -117,5 +120,66 @@ describe("safe read-only evidence contract", () => {
     assert.throws(()=>classifyStallEvidence({status:"enabled"}), /canary_evidence_invalid_structure/);
     assert.throws(()=>classifyStallEvidence({status:"unexpected",totalStalls:0,recentStalls:[]}), /canary_evidence_invalid_status/);
     assert.throws(()=>classifyStallEvidence({status:"disabled",totalStalls:0,recentStalls:[]}, "enabled"), /canary_evidence_state_mismatch/);
+  });
+});
+
+
+describe("T58 canary lifecycle with mocked commands (no production changes)", () => {
+  function runMockCanary(preflight, verificationFails = false) {
+    const dir = mkdtempSync(join(tmpdir(), "t58-canary-failclosed-"));
+    const trace = join(dir, "trace.log");
+    const mock = (name, content) => writeFileSync(join(dir, name), content, { mode: 0o700 });
+    try {
+      mock("git", '#!/bin/sh\nprintf "%s\\n" "$EXPECTED_SHA"\n');
+      mock("node", `#!/bin/sh
+printf 'node %s\\n' "$*" >> "$CANARY_TRACE"
+case "$2" in
+  preflight) printf '%s\\n' "$MOCK_PREFLIGHT" ;;
+  observe) exit 0 ;;
+  verify-restored) if [ "$MOCK_VERIFY_FAIL" = 1 ]; then exit 1; fi; echo CANARY_RESTORED ;;
+  *) exit 77 ;;
+esac
+`);
+      mock("sudo", '#!/bin/sh\nprintf "sudo %s\\n" "$*" >> "$CANARY_TRACE"\n');
+      mock("curl", '#!/bin/sh\nprintf "curl %s\\n" "$*" >> "$CANARY_TRACE"\n');
+      const result = spawnSync("bash", ["scripts/t58-stall-canary.sh"], {
+        cwd: fileURLToPath(new URL("../", import.meta.url)),
+        encoding: "utf8",
+        timeout: 8_000,
+        env: { ...process.env, PATH: dir + ":" + process.env.PATH,
+          GITHUB_EVENT_NAME: "workflow_run", GITHUB_ACTIONS: "true",
+          EXPECTED_SHA: "a".repeat(40), T58_CANARY_OUTPUT: join(dir, "safe.json"),
+          CANARY_TRACE: trace, MOCK_PREFLIGHT: preflight,
+          MOCK_VERIFY_FAIL: verificationFails ? "1" : "0" },
+      });
+      return { result, trace: existsSync(trace) ? readFileSync(trace, "utf8") : "" };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("fails closed if diagnostics were enabled before this job; does not stop or restart the service", () => {
+    const { result, trace } = runMockCanary("CANARY_ALREADY_ENABLED");
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /::error::Canary blocked/);
+    assert.match(trace, /node scripts\/t58-stall-canary\.mjs preflight/);
+    assert.doesNotMatch(trace, /observe|verify-restored|sudo|curl/);
+  });
+
+  it("does not declare success when sudo stop succeeds but runtime restoration cannot be verified", () => {
+    const { result, trace } = runMockCanary("CANARY_DISABLED", true);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /::error::Canary rollback unverified/);
+    assert.match(trace, /--t58-canary-start/);
+    assert.match(trace, /--t58-canary-stop/);
+    assert.match(trace, /node scripts\/t58-stall-canary\.mjs verify-restored/);
+  });
+
+  it("succeeds only when a started canary receives an explicit restored-runtime confirmation", () => {
+    const { result, trace } = runMockCanary("CANARY_DISABLED");
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Rollback verified/);
+    assert.match(trace, /--t58-canary-stop/);
+    assert.match(trace, /verify-restored/);
   });
 });

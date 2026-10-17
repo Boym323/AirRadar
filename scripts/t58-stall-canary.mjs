@@ -119,9 +119,31 @@ async function sample(cookie, sha, enabled) {
 
 async function main() {
   const mode = process.argv[2];
-  if (mode !== "preflight" && mode !== "observe") throw new Error("canary_invalid_mode");
+  if (mode !== "preflight" && mode !== "observe" && mode !== "verify-restored") {
+    throw new Error("canary_invalid_mode");
+  }
   const sha = process.env.EXPECTED_SHA ?? "";
   if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("canary_expected_commit_missing");
+  if (mode === "verify-restored") {
+    // A systemd restart can complete before the authenticated HTTP API is
+    // available. Verify the recovered runtime, not merely the sudo exit code.
+    // Fail closed on a changed production commit or broken Rust acceleration.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        const cookie = await sessionCookie();
+        await sample(cookie, sha, false);
+        console.log("CANARY_RESTORED");
+        return;
+      } catch (error) {
+        if (error instanceof Error && (
+          error.message === "canary_deployed_commit_changed" ||
+          error.message === "canary_native_backend_unhealthy"
+        )) throw error;
+        if (attempt < 19) await new Promise((r) => setTimeout(r, 3_000));
+      }
+    }
+    throw new Error("canary_rollback_unverified");
+  }
   const cookie = await sessionCookie();
   if (mode === "preflight") {
     const current = await sample(cookie, sha, null);
