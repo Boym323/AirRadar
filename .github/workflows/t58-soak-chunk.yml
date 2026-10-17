@@ -1,0 +1,137 @@
+name: T58 internal soak chunk
+
+on:
+  workflow_call:
+    inputs:
+      chunk: { required: true, type: number }
+      chunk_seconds: { required: true, type: number }
+      previous_chunk: { required: true, type: number }
+      expected_commit: { required: false, type: string, default: "" }
+      finalize: { required: true, type: boolean }
+    outputs:
+      deployed_sha:
+        description: Deployed commit pinned by the read-only preflight
+        value: ${{ jobs.collect.outputs.deployed_sha }}
+      report_ready:
+        description: Whether this chunk produced a complete sanitized report
+        value: ${{ jobs.collect.outputs.report_ready }}
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  collect:
+    name: T58 chunk ${{ inputs.chunk }}/7
+    runs-on: ubuntu-24.04
+    # The hosted runner has an observed hard stop at 10 minutes for this
+    # repository. Keep collection below it, including setup and handoff.
+    timeout-minutes: 9
+    outputs:
+      deployed_sha: ${{ steps.preflight.outputs.deployed_sha }}
+      report_ready: ${{ steps.prepare.outputs.report_ready }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0, persist-credentials: false }
+      - uses: actions/setup-node@v7
+        with: { node-version: 22 }
+      - name: Prepare private journal directory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t58"
+          chmod 700 "$RUNNER_TEMP/t58"
+
+      - name: Read-only preflight and deployed identity pin
+        id: preflight
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -Eeuo pipefail
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t58/preflight.json"
+          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t58/preflight.json")"
+          resolved_sha="$(git rev-parse --verify "$deployed_sha^{commit}")"
+          git merge-base --is-ancestor e9a9b8354fe1c433b4a3baf406574b9cc3d6f207 "$resolved_sha"
+          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Download previous private checkpoint
+        if: ${{ inputs.previous_chunk > 0 }}
+        uses: actions/download-artifact@v8
+        with:
+          name: t58-journal-${{ github.run_id }}-chunk${{ inputs.previous_chunk }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/t58/resume
+
+      - name: Collect read-only T58 chunk
+        id: collect
+        continue-on-error: ${{ inputs.finalize }}
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
+          T57_TOTAL_SECONDS: "3600"
+          T57_CHUNK_SECONDS: ${{ inputs.chunk_seconds }}
+          T57_INTERVAL_SECONDS: "60"
+          T57_WARMUP_SECONDS: "600"
+          T57_FINALIZE_CHUNK: ${{ inputs.finalize && '1' || '0' }}
+          T57_OUTPUT: ${{ runner.temp }}/t58/soak.ndjson
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          if [[ "${{ inputs.previous_chunk }}" != "0" ]]; then
+            cp "$RUNNER_TEMP/t58/resume/soak.ndjson" "$T57_OUTPUT"
+            chmod 600 "$T57_OUTPUT"
+            export T57_RESUME=1
+            export T57_MEASUREMENT_ID="$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8").split("\\n")[0]).measurementId)' "$T57_OUTPUT")"
+          fi
+          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t58/collector-result.json"
+
+      - name: Validate and compare final report
+        id: prepare
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf 'report_ready=false\n' >> "$GITHUB_OUTPUT"
+          if [[ "${{ inputs.finalize }}" != "true" ]]; then
+            exit 0
+          fi
+          summary="$RUNNER_TEMP/t58/soak.summary.json"
+          markdown="$RUNNER_TEMP/t58/soak.summary.md"
+          if [[ -s "$summary" && -s "$markdown" ]] && \
+             node scripts/t58-report.mjs verify "$summary" && \
+             node scripts/t58-report.mjs comparison "$summary" \
+               "$RUNNER_TEMP/t58/comparison.md" \
+               "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; then
+            sed -i 's/report_ready=false/report_ready=true/' "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/t58/comparison.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "T58 has no complete summary (see chunk logs)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload sanitized T58 report
+        if: ${{ always() && inputs.finalize && steps.prepare.outputs.report_ready == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: t58-sanitized-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t58/soak.summary.json
+            ${{ runner.temp }}/t58/soak.summary.md
+            ${{ runner.temp }}/t58/comparison.md
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Upload private resumable checkpoint
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: t58-journal-${{ github.run_id }}-chunk${{ inputs.chunk }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t58/soak.ndjson
+            ${{ runner.temp }}/t58/collector-result.json
+          retention-days: 7
+          if-no-files-found: warn

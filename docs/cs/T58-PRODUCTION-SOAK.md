@@ -71,13 +71,14 @@ výpadky vzorků se nezamlčují.
 **Do trvalé historie GitHubu se neukládá syrový NDJSON deník, přístupové údaje
 ani identita či souřadnice letadel.** Soukromý krátkodobý checkpoint artefakt
 slouží jen k automatickému předání mezi úlohami a scratch soubory runneru se
-po jobu zahodí. Sběr je automaticky rozdělen do tří po sobě
-jdoucích dvacetiminutových GitHub úloh. Každá je pod pozorovaným
-třicetiminutovým limitem hostovaného jobu a předává soukromý checkpoint NDJSON
-přes krátkodobý Actions artefakt. Poslední úloha ověří a nahraje pouze
-sanitizovaný agregovaný report; ruční pokračování není potřeba. Zpoždění mezi
-úlohami se zaznamená jako nedostupný interval a nikdy se tiše nepřevede na
-nulu.
+po jobu zahodí. Sběr je automaticky rozdělen do sedmi po sobě jdoucích
+GitHub úloh. Každá sbírá nejvýše 540 sekund (přibližně osm minut), má
+devítiminutový timeout a zůstává pod pozorovaným desetiminutovým limitem
+hostovaného jobu. Předává soukromý checkpoint NDJSON přes krátkodobý Actions
+artefakt. Poslední úloha ověří a nahraje pouze sanitizovaný agregovaný report;
+ruční pokračování není potřeba. Logický rozvrh 3 600 sekund se mezi úlohami
+zachovává, ale zpoždění předání se zaznamená jako nedostupný interval a nikdy
+se tiše nepřevede na nulu.
 
 Sběrové úlohy mají oprávnění jen číst; samostatná archivační úloha může
 zapisovat do Git, ale nemá token k administraci AirRadaru.
