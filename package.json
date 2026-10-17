@@ -63,6 +63,7 @@
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill",
     "benchmark:radar": "node scripts/radar-performance-baseline.mjs",
+    "benchmark:radar-frame-read": "JITI_TSCONFIG_PATHS=true node node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-radar-frame-read.ts",
     "benchmark:runtime": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-live-performance.ts",
     "benchmark:twin-event-outcome": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-operational-twin-event-outcome.ts",
     "benchmark:twin-forensics": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-operational-twin-forensics.ts",

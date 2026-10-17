@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { AviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
+import { WeatherRadarArchiveService } from "@/lib/server/map-context";
 import { parseWeatherRadarCatalog, parseWeatherRadarFilename, WeatherRadarProvider } from "@/lib/server/weather-radar/provider";
 import { buildWindGrid, isWindLevel, WindAloftProvider } from "@/lib/server/wind-aloft";
 
@@ -92,5 +95,23 @@ describe("Map Context V1 providers", () => {
     expect(provider.diagnostics()).toMatchObject({ status: "degraded", consecutiveFailures: 1, validTimes: 1 });
     await provider.getWind(300);
     expect(provider.diagnostics()).toMatchObject({ status: "online", consecutiveFailures: 0 });
+  });
+  it("returns the readFile Buffer without an additional frame-sized copy", async () => {
+    const archiveDir = await mkdtemp(path.join(process.cwd(), ".tmp-radar-frame-"));
+    const id = "202610161200";
+    const framePath = path.join(archiveDir, "2026/10/16", `${id}.png`);
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
+    await mkdir(path.dirname(framePath), { recursive: true });
+    await writeFile(framePath, png);
+    vi.stubEnv("WEATHER_RADAR_ARCHIVE_DIR", archiveDir);
+    try {
+      const frame = await new WeatherRadarArchiveService().getFrame(id);
+      expect(frame).not.toBeNull();
+      expect(Buffer.isBuffer(frame)).toBe(true);
+      expect(frame).toEqual(await readFile(framePath));
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(archiveDir, { recursive: true, force: true });
+    }
   });
 });
