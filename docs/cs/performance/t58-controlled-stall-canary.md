@@ -4,8 +4,9 @@ Navazuje na hodinový T58 #38887158312 s maximální prodlevou event-loop 4,94 s
 
 - Spustí se jen po **úspěšném nasazení výslovně označeného commitu** do main.
 - Ověří commit skutečně běžící produkce, aktivní Rust parser a CRC a dosud vypnutou diagnostiku.
+- Pokud byla diagnostika zapnutá již před začátkem, běh skončí **chybou**; cizí konfiguraci nevypíná ani neslibuje rollback.
 - Dočasně přidá systemd override `AIRRADAR_STALL_EVIDENCE_ENABLED=1`, restartuje službu a 15 minut sbírá pouze read-only agregované metriky každých 15 sekund.
-- Po skončení obnoví původní konfiguraci a službu. Při ztrátě GitHub runneru provede nezávislý `systemd-run` watchdog automatický rollback nejpozději po 23 minutách.
+- Po měření se pokusí odebrat dočasné nastavení a obnovit službu. Úspěšný návrat `systemctl` sám o sobě nestačí: poté musí read-only API potvrdit vypnutou diagnostiku, očekávaný commit a zdravý Rust backend. Pokud ověření selže, selže i workflow. Při ztrátě runneru zůstává nezávislý 23minutový `systemd-run` watchdog.
 - Výsledkem je pouze sanitizovaný artefakt s CPU, RSS, event-loop a povolenými názvy operací. Bez identifikátorů letadel, souřadnic, přihlašovacích údajů či heap snapshotů.
 - Časový souběh operací **není důkazem kauzality**.
 
@@ -68,3 +69,17 @@ chybějí data cgroup throttlingu, nelze z toho odvodit nulový throttling.
 Změna je **ve výchozím stavu vypnutá**. Sama nespouští canary ani nemění
 produkci. Aktivace dále vyžaduje samostatně schválený jednorázový release,
 dva řízené restarty a povinný nezávislý rollback.
+
+## Vyhodnocení běhu #39005740397 (17. 10. 2026)
+
+Tento historický běh vstoupil do větve, v níž byla diagnostika aktivní už
+před startem. Ačkoli bylo odebráno 61 vzorků, **neproběhlo řízené zapnutí,
+restartování ani rollback**. Stav `success` tedy nedokládá obnovení konfigurace.
+Oprava kódu zpětně nemění stav produkce; nejdříve je nutné samostatné
+read-only ověření konfigurace služby a watchdogu.
+
+Nový canary v takové situaci skončí chybou bez zásahu do služby. Jen běh,
+který sám vytvořil dočasné nastavení, může spustit vlastní cleanup.
+Úspěch je podmíněn odstraněním override, neaktivním watchdogem a potvrzením
+vypnuté diagnostiky v běžící aplikaci se správným commitem i Rust backendem.
+Samotný soubor s naměřenými daty **není důkazem rollbacku**.
