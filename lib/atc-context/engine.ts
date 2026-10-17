@@ -320,16 +320,21 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
   for (const index of queryGrid(prepared.atcGrid, point)) {
     const entry = prepared.airspaces[index]; if (!entry) continue;
     const sector = entry.sector;
-    const horizontal = entry.boxes.some((box, polygonIndex) => {
+    let h: "inside" | "boundary" | null = null;
+    for (let polygonIndex = 0; polygonIndex < entry.boxes.length; polygonIndex += 1) {
+      const box = entry.boxes[polygonIndex];
       if (diagnostics) diagnostics.atcBboxCandidates += 1;
       const polygon = sector.polygons[polygonIndex];
-      if (!polygon || !bboxContains(box, point)) return false;
+      if (!polygon || !bboxContains(box, point)) continue;
       if (diagnostics) diagnostics.atcExactPolygonTests += 1;
-      const rings = polygon as unknown as [number, number][];
-      return pointInPolygon(point, [rings]) !== null;
-    });
-    if (!horizontal) continue;
-    const h = sector.polygons.some((polygon) => pointInPolygon(point, [polygon as unknown as [number, number][]]) === "boundary") ? "boundary" : "inside";
+      const containment = pointInPolygon(point, [polygon as unknown as [number, number][]]);
+      if (containment === "boundary") {
+        h = "boundary";
+        break;
+      }
+      if (containment === "inside") h = "inside";
+    }
+    if (h === null) continue;
     const vertical = verticalMatch(sector, input).match;
     if (vertical !== "false") matches.push(airspace(sector, h, vertical));
   }

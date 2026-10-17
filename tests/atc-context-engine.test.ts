@@ -32,6 +32,16 @@ describe("ATC Context Engine", () => {
     expect(result.primaryAirspace?.id).toBe("CZ-TMA");
   });
 
+  it("preserves boundary priority across disjoint polygons", () => {
+    const result = computeAtcContext(input({ lat: 49.5, lon: 16 }), dataset([sector({
+      polygons: [
+        [[14, 49], [15, 49], [15, 50], [14, 50], [14, 49]],
+        [[16, 49], [17, 49], [17, 50], [16, 50], [16, 49]],
+      ],
+    })]));
+    expect(result.currentAirspaces[0]?.horizontalMatch).toBe("boundary");
+  });
+
   it("does not show a TMA above its upper limit", () => {
     const result = computeAtcContext(input({ altitude: 36000, baroAltitude: 36000, geomAltitude: 36000 }), dataset([sector({ id: "CZ-TMA", name: "TMA", airspaceType: "TMA", lowerAltitudeFt: 3000, upperAltitudeFt: 12500, lowerAltitudeReference: "AMSL", upperAltitudeReference: "AMSL" })]));
     expect(result.currentAirspaces).toHaveLength(0);
