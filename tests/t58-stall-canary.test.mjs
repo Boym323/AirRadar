@@ -125,7 +125,7 @@ describe("safe read-only evidence contract", () => {
 
 
 describe("T58 canary lifecycle with mocked commands (no production changes)", () => {
-  function runMockCanary(preflight, verificationFails = false) {
+  function runMockCanary(preflight, verificationFails = false, startFails = false) {
     const dir = mkdtempSync(join(tmpdir(), "t58-canary-failclosed-"));
     const trace = join(dir, "trace.log");
     const mock = (name, content) => writeFileSync(join(dir, name), content, { mode: 0o700 });
@@ -140,7 +140,7 @@ case "$2" in
   *) exit 77 ;;
 esac
 `);
-      mock("sudo", '#!/bin/sh\nprintf "sudo %s\\n" "$*" >> "$CANARY_TRACE"\n');
+      mock("sudo", '#!/bin/sh\nprintf "sudo %s\\n" "$*" >> "$CANARY_TRACE"\ncase "$*" in *--t58-canary-start*) if [ "$MOCK_START_FAIL" = 1 ]; then exit 17; fi ;; esac\n');
       mock("curl", '#!/bin/sh\nprintf "curl %s\\n" "$*" >> "$CANARY_TRACE"\n');
       const result = spawnSync("bash", ["scripts/t58-stall-canary.sh"], {
         cwd: fileURLToPath(new URL("../", import.meta.url)),
@@ -150,7 +150,7 @@ esac
           GITHUB_EVENT_NAME: "workflow_run", GITHUB_ACTIONS: "true",
           EXPECTED_SHA: "a".repeat(40), T58_CANARY_OUTPUT: join(dir, "safe.json"),
           CANARY_TRACE: trace, MOCK_PREFLIGHT: preflight,
-          MOCK_VERIFY_FAIL: verificationFails ? "1" : "0" },
+          MOCK_VERIFY_FAIL: verificationFails ? "1" : "0", MOCK_START_FAIL: startFails ? "1" : "0" },
       });
       return { result, trace: existsSync(trace) ? readFileSync(trace, "utf8") : "" };
     } finally {
@@ -173,6 +173,14 @@ esac
     assert.match(trace, /--t58-canary-start/);
     assert.match(trace, /--t58-canary-stop/);
     assert.match(trace, /node scripts\/t58-stall-canary\.mjs verify-restored/);
+  });
+
+  it("does not stop a pre-existing override when privileged activation is rejected", () => {
+    const { result, trace } = runMockCanary("CANARY_DISABLED", false, true);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /::error::Canary activation failed/);
+    assert.match(trace, /--t58-canary-start/);
+    assert.doesNotMatch(trace, /--t58-canary-stop|observe|verify-restored/);
   });
 
   it("succeeds only when a started canary receives an explicit restored-runtime confirmation", () => {
