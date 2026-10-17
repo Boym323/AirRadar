@@ -39,6 +39,8 @@ jobs:
           AIRRADAR_NATIVE_BEAST: '1'
           AIRRADAR_NATIVE_ADDON_PATH: /tmp/airradar_native.node
         run: npx vitest run tests/beast-parser.test.ts tests/beast-decoder.test.ts tests/beast-native-parity.test.ts tests/beast-native-crc-batch.test.ts
+      - name: Benchmark TypeScript fallback buffer under chunk bursts
+        run: npm run benchmark:beast-buffer
       - name: Report synthetic parser comparison
         env:
           AIRRADAR_NATIVE_BEAST: '1'

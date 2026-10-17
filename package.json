@@ -70,6 +70,7 @@
     "benchmark:radar:soak": "RADAR_PERF_SOAK=1 RADAR_PERF_SCENARIOS=1600,3000,5000 RADAR_PERF_MEASURE_MS=90000 node scripts/radar-performance-baseline.mjs",
     "benchmark:rust-crc": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-rust-crc.ts",
     "benchmark:rust-beast": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-rust-beast.ts",
+    "benchmark:beast-buffer": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-beast-parser-buffer.ts",
     "benchmark:route-telemetry": "JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-route-telemetry.ts",
     "benchmark:bounded-enrichment": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-bounded-enrichment.ts",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
