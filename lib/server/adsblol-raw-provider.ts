@@ -6,7 +6,6 @@ import { BeastParser } from "@/lib/server/beast-parser";
 import { parseSbsMlatLine, SbsLineBuffer } from "@/lib/server/sbs-mlat-parser";
 import { logger } from "@/lib/server/logger";
 import { measureRuntime } from "@/lib/server/runtime-performance";
-import { measureRuntime } from "@/lib/server/runtime-performance";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import {
   getAdsbLolBeastHost, getAdsbLolBeastPort, getAdsbLolMlatHost, getAdsbLolMlatPort,
