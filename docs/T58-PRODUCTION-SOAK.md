@@ -73,11 +73,13 @@ sample is recorded and classified. A failed preflight never starts the soak.
   short-retention checkpoint artifact is used only for automatic chunk handoff;
   runner scratch files are discarded after the job.
 
-Collection is automatically divided into three sequential 20-minute GitHub
-jobs. Each job is below the repository's observed 30-minute hosted-job limit
-and hands off a private NDJSON checkpoint through a short-retention Actions
-artifact. The final job validates and uploads only the sanitized aggregate
-report; no manual resume is required. Handoff delays are recorded as
+Collection is automatically divided into seven sequential GitHub jobs. Each
+job collects at most 540 seconds (about eight minutes) and has a nine-minute
+timeout, staying below the repository's observed 10-minute hosted-job limit.
+Each job hands off a private NDJSON checkpoint through a short-retention
+Actions artifact. The final job validates and uploads only the sanitized
+aggregate report; no manual resume is required. The logical 3,600-second
+schedule is preserved across handoffs, while handoff delays are recorded as
 unavailable intervals and never silently converted to zeros.
 
 The collection jobs have read-only GitHub permissions and hold the optional
