@@ -17,6 +17,18 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.501] - 2026-10-17
+
+Changes since v1.0.500.
+
+No user-facing changes.
+
+<details>
+<summary>Technical commits</summary>
+
+- Merge pull request #990 from Boym323/perf/t58-atc-ring-stalls (4c6b9cf8)
+
+</details>
 ## [1.0.500] - 2026-10-17
 
 Changes since v1.0.499.
