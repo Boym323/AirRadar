@@ -15,7 +15,8 @@ on:
         description: Chunk number to resume (1 to 5)
         required: false
         default: "1"
-        type: string
+        type: choice
+        options: ["1", "2", "3", "4", "5"]
       expected_commit:
         description: Production commit pinned by the original run
         required: false
@@ -32,8 +33,22 @@ permissions:
   actions: read
 
 jobs:
+  validate-resume:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate resume chunk
+        env:
+          RESUME_CHUNK: ${{ inputs.resume_chunk || '1' }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$RESUME_CHUNK" =~ ^[1-5]$ ]] || {
+            echo "resume_chunk must be an integer from 1 to 5" >&2
+            exit 1
+          }
+
   chunk_1:
-    if: ${{ inputs.resume_chunk <= '1' }}
+    needs: [validate-resume]
+    if: ${{ needs.validate-resume.result == 'success' && inputs.resume_chunk <= '1' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 1
@@ -46,8 +61,8 @@ jobs:
     secrets: inherit
 
   chunk_2:
-    needs: chunk_1
-    if: ${{ always() && (needs.chunk_1.result == 'success' || needs.chunk_1.result == 'skipped') && inputs.resume_chunk <= '2' }}
+    needs: [validate-resume, chunk_1]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_1.result == 'success' || needs.chunk_1.result == 'skipped') && inputs.resume_chunk <= '2' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 2
@@ -60,8 +75,8 @@ jobs:
     secrets: inherit
 
   chunk_3:
-    needs: chunk_2
-    if: ${{ always() && (needs.chunk_2.result == 'success' || needs.chunk_2.result == 'skipped') && inputs.resume_chunk <= '3' }}
+    needs: [validate-resume, chunk_2]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_2.result == 'success' || needs.chunk_2.result == 'skipped') && inputs.resume_chunk <= '3' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 3
@@ -74,8 +89,8 @@ jobs:
     secrets: inherit
 
   chunk_4:
-    needs: chunk_3
-    if: ${{ always() && (needs.chunk_3.result == 'success' || needs.chunk_3.result == 'skipped') && inputs.resume_chunk <= '4' }}
+    needs: [validate-resume, chunk_3]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_3.result == 'success' || needs.chunk_3.result == 'skipped') && inputs.resume_chunk <= '4' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 4
@@ -88,8 +103,8 @@ jobs:
     secrets: inherit
 
   chunk_5:
-    needs: chunk_4
-    if: ${{ always() && (needs.chunk_4.result == 'success' || needs.chunk_4.result == 'skipped') && inputs.resume_chunk <= '5' }}
+    needs: [validate-resume, chunk_4]
+    if: ${{ always() && needs.validate-resume.result == 'success' && (needs.chunk_4.result == 'success' || needs.chunk_4.result == 'skipped') && inputs.resume_chunk <= '5' }}
     uses: ./.github/workflows/t57-soak-chunk.yml
     with:
       chunk: 5
