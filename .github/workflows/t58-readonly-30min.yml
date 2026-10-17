@@ -49,7 +49,8 @@ jobs:
           deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t58-30m/preflight.json")"
           resolved_sha="$(git rev-parse --verify "$deployed_sha^{commit}")"
           git merge-base --is-ancestor e9a9b8354fe1c433b4a3baf406574b9cc3d6f207 "$resolved_sha"
-          printf 'deployed_sha=%s\n' "$resolved_sha" >> "$GITHUB_OUTPUT"
+          # Public runtime identity is abbreviated; pin exactly that checked prefix.
+          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
           echo "Read-only 30-minute telemetry preflight passed; pinned deployed commit."
 
       - name: Collect 30-minute read-only sample (61 planned polls)
