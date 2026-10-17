@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.489] - 2026-10-17
+
+Changes since v1.0.488.
+
+### Performance
+
+- Attribute unmeasured Beast and MLAT ingest callbacks (#972) (43fca313)
+
+### Maintenance
+
+- Sync generated repository metadata (#973) (ff68ad36)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#973) (ff68ad36)
+- perf: attribute unmeasured Beast and MLAT ingest callbacks (#972) (43fca313)
+
+</details>
 ## [1.0.488] - 2026-10-17
 
 Changes since v1.0.487.
