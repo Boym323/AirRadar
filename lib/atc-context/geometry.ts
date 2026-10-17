@@ -67,7 +67,7 @@ function ringContains(point: LonLat, ring: LonLat[]): "inside" | "boundary" | nu
         if (x >= minX - epsilon && x <= maxX + epsilon) return "boundary";
       }
     }
-    if ((by > y) !== (ay > y) && x < ((a[0] - b[0]) * (y - ay)) / (by - ay) + a[0]) {
+    if ((by > y) !== (ay > y) && x < ((a[0] - b[0]) * (y - by)) / (ay - by) + b[0]) {
       inside = !inside;
     }
   }

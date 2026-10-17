@@ -26,6 +26,13 @@ describe("ATC Context Engine", () => {
     expect(pointInPolygon([14.5, 49.5], [])).toBeNull();
   });
 
+  it("keeps ray casting correct for sloped edges", () => {
+    const triangle = [[[0, 0], [2, 3], [4, 0], [0, 0]]] as [number, number][][];
+    expect(pointInPolygon([2, 1], triangle)).toBe("inside");
+    expect(pointInPolygon([0.5, 2], triangle)).toBeNull();
+    expect(pointInPolygon([2, 3], triangle)).toBe("boundary");
+  });
+
   it("keeps all matching spaces and chooses the most specific display space", () => {
     const result = computeAtcContext(input(), dataset([sector(), sector({ id: "CZ-TMA", name: "TMA PRAHA", airspaceType: "TMA", lowerAltitudeFt: 3000, upperAltitudeFt: 25000, lowerAltitudeReference: "AMSL", upperAltitudeReference: "AMSL" })]));
     expect(result.currentAirspaces.map((value) => value.id)).toEqual(["CZ-TMA", "CZ-FIR"]);
