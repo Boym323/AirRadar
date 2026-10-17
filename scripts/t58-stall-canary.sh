@@ -19,9 +19,17 @@ cleanup() {
   trap - EXIT
   if [[ "$activated" == 1 ]]; then
     if sudo -n "$control" --t58-canary-stop; then
-      echo "[t58-canary] Original service configuration restored."
+      # A successful systemctl command alone does not establish restoration.
+      # Require the pinned production process to report disabled diagnostics
+      # and healthy native acceleration after the controlled restart.
+      if node scripts/t58-stall-canary.mjs verify-restored; then
+        echo "[t58-canary] Rollback verified: original service settings and disabled diagnostics."
+      else
+        echo "::error::Canary rollback unverified: production diagnostics did not return to disabled state on the expected healthy commit." >&2
+        result=1
+      fi
     else
-      echo "::error::Canary rollback failed; independent 23-minute watchdog retained." >&2
+      echo "::error::Canary rollback failed; independent 23-minute watchdog may still be armed." >&2
       result=1
     fi
   fi
@@ -35,16 +43,23 @@ trap 'exit 130' INT TERM HUP
 preflight_status="$(node scripts/t58-stall-canary.mjs preflight)"
 case "$preflight_status" in
   CANARY_ALREADY_ENABLED)
-    echo "[t58-canary] Diagnostics already enabled; collecting without restart or changing the existing configuration."
-    node scripts/t58-stall-canary.mjs observe
-    exit 0
+    # Never claim a controlled enable/restore cycle when the initial state is
+    # already enabled. Do not alter a configuration this job did not create.
+    echo "::error::Canary blocked: diagnostics were enabled before this run. No restart or rollback was attempted; independently verify production configuration." >&2
+    exit 1
     ;;
   CANARY_DISABLED) ;;
   *) echo "canary_invalid_preflight_result" >&2; exit 1 ;;
 esac
 sudo -n "$control" --t58-canary-probe
+# The privileged helper has its own fail-safe rollback on activation error.
+# Do NOT claim ownership or call stop unless it positively confirms start:
+# an already-active canary may belong to a different invocation.
+if ! sudo -n "$control" --t58-canary-start; then
+  echo "::error::Canary activation failed. Runner will not stop an override it did not start; check root-helper rollback/watchdog." >&2
+  exit 1
+fi
 activated=1
-sudo -n "$control" --t58-canary-start
 echo "[t58-canary] Temporary diagnostic enabled via approved deployment entrypoint."
 # Permit the standalone process to finish bootstrap before authenticated probes.
 ready=0

@@ -5,8 +5,9 @@ One-time, bounded follow-up to the 4.94-second stall in T58 #38887158312.
 - Only after an explicitly marked **successful main CI including deploy**.
 - Must run on the production self-hosted runner with its existing sudo rights.
 - Checks pinned live production commit, Rust parser and CRC backends, and disabled diagnostics.
+- **Fails closed** if diagnostics were already enabled: it does not borrow an existing flag, restart the service, or claim a verified rollback.
 - Adds a temporary systemd drop-in for `AIRRADAR_STALL_EVIDENCE_ENABLED=1`, restarts the app and observes authenticated **read-only** metrics every 15 seconds for 15 minutes.
-- Safely restores the original systemd service (and Rust flag state) via an EXIT trap, with a separate 23-minute `systemd-run` watchdog if the runner disappears.
+- Restores the temporary override via an EXIT trap, with a separate 23-minute `systemd-run` watchdog if the runner disappears. A successful stop command is insufficient: the job additionally polls the authenticated production API and requires disabled diagnostics, the pinned commit, and healthy Rust backends before it can report success.
 - Archives only a strictly allowlisted aggregate of event-loop overshoot, CPU, RSS and allowlisted scope names. No ICAOs, payloads, tokens, cookies, paths or heap snapshots.
 - Cannot claim true causal stacks; scope overlap is timing evidence only.
 
@@ -65,3 +66,19 @@ This change is **off by default** and does not trigger the canary or alter
 production configuration. The existing canary still requires a separately
 authorized, one-time marked release with its two controlled restarts, pinned
 commit checks and mandatory independent rollback.
+
+## Interpreting #39005740397 (2026-10-17)
+
+This historical run entered the pre-existing-enabled path. Its 61 samples
+were collected, but **no controlled enable, restart or rollback occurred**.
+The workflow's success conclusion does not prove that diagnostics were
+disabled after the run. The source-code fix here does not change that
+historical production state. Verify the current service environment and
+watchdog read-only before authorizing any further operational action.
+
+For future one-time runs, an already-enabled preflight is a hard error.
+Only a canary that actually activated its own override can enter cleanup.
+Cleanup must verify the override has been removed and the watchdog stopped,
+then independently confirm the read-only authenticated runtime reports
+disabled diagnostics on the expected commit and healthy Rust backends.
+A report artifact alone describes measurement, not rollback evidence.

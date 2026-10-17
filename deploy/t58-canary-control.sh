@@ -32,8 +32,12 @@ if [[ "$action" == "stop" ]]; then
     systemctl restart "$unit"
   fi
   systemctl stop "$timer.timer" >/dev/null 2>&1 || true
+  [[ ! -e "$dropin" && ! -L "$dropin" ]] || { echo "t58_dropin_not_removed" >&2; exit 1; }
+  if systemctl is-active --quiet "$timer.timer"; then
+    echo "t58_watchdog_still_active" >&2; exit 1
+  fi
   systemctl is-active --quiet "$unit"
-  echo "[t58-canary] Restored original service settings."
+  echo "[t58-canary] Canary override absent; service active and watchdog inactive."
   exit 0
 fi
 systemctl is-active --quiet "$unit" || { echo "t58_service_unhealthy" >&2; exit 1; }
