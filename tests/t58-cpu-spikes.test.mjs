@@ -47,6 +47,10 @@ describe("T58 read-only spike correlation",()=>{
    assert.equal(report.cgroup.coverageComplete,false);
    assert.equal(report.cgroup.observedIntervals,0);
    assert.equal(report.cgroup.unavailableIntervals,5);
+   assert.equal(report.cgroup.throttledIntervals,null);
+   assert.equal(report.cgroup.totalNrThrottled,null);
+   assert.equal(report.cgroup.totalThrottledUsec,null);
+   assert.match(cpuSpikeMarkdown(report),/Cgroup throttle events \/ time \(us\) \| N\/A \/ N\/A/);
    assert.match(report.interpretation[0],/cannot rule out throttling/);
  });
  it("fails closed on process counter reset, identity and interval discrepancies",()=>{

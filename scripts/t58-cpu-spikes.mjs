@@ -160,6 +160,7 @@ export function analyzeCpuSpikeSamples(samples) {
   const quota = samples.map(x=>x.quotaCores).find(v=>v!==null) ?? null;
   const cgroupStatuses = [...new Set(samples.map(x => x.cgroupThrottleStatus).filter(Boolean))];
   const spikes = intervals.filter(x=>x.spike);
+  const knownThrottleIntervals = th.length;
   const interpretation = [];
   if (cgroupStatuses.includes("controller_disabled")) interpretation.push(
     "The production cgroup does not expose the CPU controller; throttling counters are unavailable, not zero.");
@@ -185,9 +186,11 @@ export function analyzeCpuSpikeSamples(samples) {
     cgroup: { quotaCores: quota, throttleStatus: cgroupStatuses.length === 1 ? cgroupStatuses[0] : cgroupStatuses.length ? "mixed" : null,
       observedIntervals: th.length,
       unavailableIntervals: intervals.length - th.length,
-      throttledIntervals: throttledIntervals.length,
-      totalNrThrottled: th.reduce((v,x)=>v+x.throttledEvents,0),
-      totalThrottledUsec: th.reduce((v,x)=>v+x.throttledUsec,0),
+      // An entirely unavailable counter set is unknown, not an observed zero.
+      // With partial coverage, sums are valid only for the measured intervals.
+      throttledIntervals: knownThrottleIntervals ? throttledIntervals.length : null,
+      totalNrThrottled: knownThrottleIntervals ? th.reduce((v,x)=>v+x.throttledEvents,0) : null,
+      totalThrottledUsec: knownThrottleIntervals ? th.reduce((v,x)=>v+x.throttledUsec,0) : null,
       coverageComplete: th.length === intervals.length },
     gc: { gcCount: intervals.reduce((v,x)=>v+x.gcCount,0),
       majorGcCount: intervals.reduce((v,x)=>v+x.majorGcCount,0),
@@ -273,7 +276,7 @@ export function cpuSpikeMarkdown(report) {
     `| Cgroup quota (cores) | ${yes(cgroup?.quotaCores)} |`,
     `| Cgroup throttle telemetry | ${yes(cgroup?.throttleStatus)} |`,
     `| Cgroup counters present | ${cgroup?.observedIntervals}/${source.intervals} intervals |`,
-    `| Cgroup throttle events / time (us) | ${cgroup?.totalNrThrottled} / ${cgroup?.totalThrottledUsec} |`,
+    `| Cgroup throttle events / time (us) | ${yes(cgroup?.totalNrThrottled)} / ${yes(cgroup?.totalThrottledUsec)} |`,
     `| GC count (major) | ${gc?.gcCount} (${gc?.majorGcCount}) |`,
     `| GC pause total (ms) | ${gc?.totalPauseMs} |`,
     `| GC paused wall-time share | ${gc?.pauseTimeSharePercent}% |`,
