@@ -31,10 +31,10 @@ describe("bounded T58 V8 profile attribution", () => {
     const result = summarizeT58CpuProfile({
       startTime: 0, endTime: 70_000_000,
       nodes: [{ id: 1, callFrame: { functionName: "blockedLoop", url: "node:internal/test" } }],
-      samples: [1, 1, 1], timeDeltas: [1_200_000, 58_800_000, 1_200_000],
+      samples: [1, 1, 1], timeDeltas: [1_200_000, 30_000_000, 1_200_000],
     }, 0, [
       { ...stall, observedAt: "2026-10-18T12:00:01.200Z", endedMonoMs: 1_200, overshootMs: 200 },
-      { ...stall, observedAt: "2026-10-18T12:01:01.200Z", endedMonoMs: 61_200, overshootMs: 200 },
+      { ...stall, observedAt: "2026-10-18T12:00:31.200Z", endedMonoMs: 31_200, overshootMs: 200 },
     ]);
     expect(result.stalls).toHaveLength(2);
     expect(result.stalls.map((item) => item.sampleCount)).toEqual([1, 1]);
