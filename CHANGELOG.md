@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.519] - 2026-10-18
+
+Changes since v1.0.518.
+
+### Added
+
+- Retire standalone feature pages (292646d8)
+
+### Documentation
+
+- Record approved feature retirement batches and safeguards (ef5f8e83)
+- Unblock independently verifiable feature retirements (ae4832ab)
+
+### Maintenance
+
+- Sync generated repository metadata (#1023) (05ba7df8)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1023) (05ba7df8)
+- docs(agents): record approved feature retirement batches and safeguards (ef5f8e83)
+- docs(agents): unblock independently verifiable feature retirements (ae4832ab)
+- feat: retire standalone feature pages (292646d8)
+
+</details>
 ## [1.0.518] - 2026-10-18
 
 Changes since v1.0.517.
