@@ -357,63 +357,63 @@ migrací ani konfigurace buildu, nevyžadují build ani kompletní sadu testů,
 pokud si je uživatel výslovně nevyžádá. Přesto spusťte relevantní lehké
 kontroly, například validaci odkazů a `git diff --check`.
 
-## Main, worktrees a paralelní agenti
+## Main, vývojové checkouty a paralelní agenti
 
-Kanonický checkout je `/var/www/airradar` na větvi `main`. Změny každého
-úkolu držte izolované a před úpravami zkontrolujte `git status`. V dirty
-worktree nepřepisujte nesouvisející uživatelské změny.
+Provozovatel zvolil **přímý vývoj na `main`** v malých, ověřených
+commitech bez automatického zakládání větví a PR. Používejte
+**oddělený neprodukční vývojový checkout sledující `main`**.
+`/var/www/airradar` je živý produkční checkout: neupravujte tam
+kód ani nespouštějte build za běhu služby. Před úpravou ověřte
+`git status`, synchronizujte upstream pouze bezpečně fast-forward
+a zachovejte cizí rozpracované změny. Pouze **jeden agent smí
+zapisovat a pushovat do `main`**; ostatní mohou souběžně číst
+v samostatných read-only checkoutech.
 
-Paralelní agenti musí používat samostatné Git worktrees a větve. Každý agent
-vlastní svůj worktree, neupravuje checkout jiného agenta a hlásí změněné
-soubory i provedené kontroly. Integrujte práci záměrným merge nebo cherry-pickem
-do `main` a poté znovu spusťte kontroly ovlivněné kombinovaným diffem.
-Vyhněte se tomu, aby dva agenti upravovali stejné řádky nebo spouštěli
-konkurenční buildy nad jedním checkoutem.
+Produkční release skript patří pouze do kanonického checkoutu
+s příslušnými locky, službou a migracemi; ne do vývoje.
 
-Produkční release skript je svázaný s `/var/www/airradar`, stavem služby,
-locky, migracemi a health kontrolami; nespouštějte jej z vývojového worktree.
-Release nikdy není implicitní krok vývoje ani dokumentace.
+## Autonomie agentů, přímé commity a hranice produkce
 
-## Autonomie agentů, pull requesty a hranice produkce
+Běžné vývojové úkoly nyní opravňují k ověřenému přímému pushnutí
+do `main` a ke stávajícímu automatickému CI/CD. Neopravňují k
+ručnímu deployi/restartu, úpravě produkční konfigurace/secrets,
+destruktivním operacím nad DB, zapínání providerů, obcházení kontrol
+ani přepisu sdílené historie.
 
-Požadavek na audit či optimalizaci opravňuje k analýze a izolované implementaci,
-**nikoli** automaticky k merge nebo produkčnímu release.
+1. Ověřte aktuální kód, CI, sanitizované provozní důkazy a přesné SHA.
+2. Proveďte jednu ucelenou změnu na `main` v neprodukčním
+   checkoutu, doplňte testy a EN/CZ dokumentaci.
+3. **Před pushnutím** ověřte `origin/main`, kompletní diff,
+   relevantní lint/typecheck/testy, docs/features a podle změn
+   browser/performance. Klasifikujte změny pomocí
+   `scripts/release-scope.mjs`. Při známém selhání nepushujte.
+4. Pushněte pouze ověřené změny bez force a sledujte CI, CodeQL
+   a případný automatický deploy přesného SHA. Další produkčně
+   významný commit zveřejněte až po vyhodnocení předchozího.
+5. Pokud CI nebo deploy selže, zastavte další push a opravujte
+   novým ověřeným commitem. Nevracejte automaticky schéma DB.
 
-- **Read-only diagnostika:** kontrolujte kód, důkazy CI a povolenou omezenou
-  telemetrii; uvádějte předpoklady a chybějící důkazy. Neměňte konfiguraci,
-  nerestartujte služby, nezapisujte do databáze ani nepřepínejte produkční flagy.
-- **Implementace:** použijte samostatnou větev a worktree. Chraňte práci
-  ostatních agentů, přidejte cílené testy, ponechte bezpečné výchozí flagy a
-  připravte PR (draft při neúplném ověření). Neforce-pushujte sdílené větve.
-- **Integrace:** merge, přímý push do `main`, auto-merge, obcházení kontrol
-  nebo změna ochrany repozitáře vyžadují výslovné oprávnění. Zelené testy
-  samy o sobě nejsou souhlasem. Neprošlý CodeQL/CI nebo nejasná regrese
-  blokují verdikt „připraveno k merge“.
-- **Nasazení:** před schváleným merge klasifikujte úplný diff příkazem
-  `node scripts/release-scope.mjs <changed-paths>` (případně `--stdin0`).
-  Merge do `main` může podle `.github/workflows/ci.yml` automaticky
-  spustit produkční nasazení; ani dokumentační změnu nepovažujte bez ověření
-  za neškodnou. Ruční release se řídí `docs/RELEASE.md` a vyžaduje
-  výslovné schválení. Neměňte bez vědomí uživatele produkční flagy, data,
-  služby ani migrace.
+Veřejné sanitizované diagnostiky přes **GET** (stav systému,
+integrací a omezené výkonové metriky) záměrně nevyžadují login.
+Jejich bezpečná projekce nesmí obsahovat hesla, tokeny, cookies,
+DB URL, surové chyby providerů, privátní ID hostitele ani přesnou
+polohu přijímače. **Administrátorské zápisy** watchlistu, alertů
+a konfigurace však musí mít nezávislou autentizaci/autorizaci
+i při vypnutém starém přepínači auth. Otestujte anonymní bezpečné
+GET i odmítnuté anonymní POST/PATCH/PUT/DELETE. PR #1017 v
+současné podobě nemergujte, uzamykal by i veřejnou diagnostiku.
 
-Každý PR/předávací report musí obsahovat: problém a rozsah, důkazy oproti
-hypotézám, provedené změny a dopad na invarianty, přesný seznam prošlých,
-selhaných a neprovedených kontrol, dostupná výkonnostní měření před/po,
-rizika, feature flagy a rollback, klasifikaci deploye a zbývající blokace.
-Po integraci paralelních změn znovu vyhodnoťte dotčené testy. Bez měření
-netvrďte, že release, výkon nebo produkční zdraví mají stav PASS.
+U každého commitu uveďte změny, PASS/FAIL/NOT RUN kontrol,
+důkazy před/po, SHA na `main`, stav CI/CodeQL, deploye a
+produkční SHA pouze při skutečném ověření.
 
-## Ochrana integrace do hlavní větve
+## Ochrana hlavní větve
 
-Dokumentace nenahrazuje skutečně vynucený GitHub ruleset. Správce by měl v
-nastavení repozitáře Settings > Rules > Rulesets chránit `main`: vyžadovat
-PR a úspěšné použitelné kontroly, zakázat force push a smazání větve a podle
-možností vyžadovat vyřešené review konverzace a nezávislé schválení. Nejprve
-ověřte skutečné názvy status checks pro běžné PR, PR s `release-preview` a
-metadata automatizaci: podmíněně přeskočená povinná kontrola nesmí zablokovat
-veškeré mergování. Vynucování ověřte bezpečným negativním testem.
-Neprezentujte tato pravidla jako aktivní jen proto, že jsou v dokumentaci.
+Tam, kde je to možné, zakažte force-push a smazání `main`,
+ale nevyžadujte běžné PR pro správce s povolením přímého vývoje.
+CI probíhá *po* přímém pushnutí a může zabránit deployi, ale
+neodstraní commit z `main`; proto jsou nezbytné předběžné testy
+a jediný zapisující agent. Stav GitHub pravidel vždy ověřte.
 
 ## Dokládání výkonnostních optimalizací
 

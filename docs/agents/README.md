@@ -7,7 +7,8 @@ Root [AGENTS.md](../../AGENTS.md) is the only global instruction entry point. Us
 ## Canonical task workflow
 
 - [Performance engineering workflow](PERFORMANCE-WORKFLOW.md): short, reusable instructions for CPU, memory, SSE, Rust and T58.
-- [Development rules](../DEVELOPMENT.md): autonomy, PR, measurements, tests and release boundaries.
+- [Development rules](../DEVELOPMENT.md): direct `main` commits, single-writer integration, measurements, tests and release boundaries.
+- [Direct-main consolidation plan](AIRRADAR_KONSOLIDACE_REFAKTOR_CODEX_MAIN_2026-10-18.md): refactor priorities, public diagnostics and verification.
 
 ## Preserved historical briefs
 

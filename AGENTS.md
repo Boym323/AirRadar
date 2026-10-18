@@ -17,7 +17,7 @@ writing or changing documentation.
 - Search `CHANGELOG.md` and generated `docs/FEATURES.md` selectively.
   Record durable rationale in [ADRs](docs/decisions/README.md), rather than
   repeating historical task briefs.
-- Before handing off a PR, consider [documentation impact
+- Before finalizing a commit, consider [documentation impact
   advisories](docs/operations/RUNBOOKS.md). They are heuristic; still run
   `npm run docs:check` and relevant feature checks.
 
@@ -66,15 +66,28 @@ writing or changing documentation.
   Documentation changes must update the corresponding Czech page when one
   exists, and new authoritative documents must add both language links.
 
-- Follow the agent decision boundaries and performance evidence protocol in
-  `docs/DEVELOPMENT.md`: use an isolated branch/PR, report exactly which checks
-  ran, compare measured tails before/after optimization, and never equate a
-  successful microbenchmark with proven production improvement.
-- Do not merge or push directly to `main`, enable auto-merge, bypass failing
-  checks, or modify production configuration/services without explicit user
-  authorization. A merge into `main` can trigger automated deployment;
-  verify the complete diff with `scripts/release-scope.mjs` first. This rule
-  complements the manual-release restrictions in `docs/RELEASE.md`.
+- Follow the performance-evidence protocol in `docs/DEVELOPMENT.md`:
+  use a **separate non-serving development checkout on `main`**, make small
+  independently tested commits directly on `main`; do not create routine
+  task branches or PRs. Measure tails before claiming production speedups.
+- The maintainer has authorized non-force pushes of verified routine changes
+  directly to `main`. Serialize all writes through one agent, fetch and
+  recheck upstream before each push, inspect the full diff, run relevant local
+  tests, and classify it with `scripts/release-scope.mjs`. A push to `main`
+  can trigger the existing **automatic production deploy**; wait for the exact
+  commit's CI/CodeQL/release checks before another deploy-bearing push.
+  Never bypass failing checks, force-push, or rewrite shared history.
+  Manual releases, production configuration/secrets, service restarts and
+  destructive database operations require separate explicit authorization.
+- Public, read-only **sanitized** system/integration/performance diagnostics are
+  intentional developer-facing functionality; their safe GET projections
+  must not require admin login. Never expose tokens, passwords, cookies, DB
+  URLs, raw provider errors, private host IDs or exact receiver coordinates.
+  All administrative mutations (watchlist, alerts, settings, etc.) must
+  independently require authentication and authorization, even when a legacy
+  login opt-out setting is disabled. Test anonymous safe GET and rejected
+  anonymous writes. Do not merge PR #1017 unchanged: it would also protect
+  intended public diagnostics.
 
 `README.md` is the human-facing entry point. The documents above are the
 compact agent context; update `AGENTS.md` only when a durable rule or source

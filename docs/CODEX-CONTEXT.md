@@ -24,7 +24,7 @@ This is a **navigation index, not a second policy file**. Read root [AGENTS.md](
 3. Never treat an old benchmark, commit, PR, tag or report's "currently running" status as live. Verify fresh GitHub/production evidence, with timestamps, only when authorized.
 4. Use `git log -- <path>` or a targeted search instead of reading the full `CHANGELOG.md` (~400 KB); similarly avoid loading the full generated `FEATURES.md` unless necessary.
 5. For performance changes, record baseline and candidate under comparable load, tail latency, regressions and limitations. A microbenchmark is not a production speedup.
-6. Before PR, run targeted checks and [documentation impact review](operations/RUNBOOKS.md); update corresponding `docs/cs/` pages. Follow [development boundaries](DEVELOPMENT.md). Never merge or deploy without explicit authorization.
+6. Before a direct `main` commit, run targeted checks and the [documentation impact review](operations/RUNBOOKS.md); update corresponding Czech pages. Follow [development boundaries](DEVELOPMENT.md). An authorized verified push intentionally starts CI/CD; manual release and production config changes need separate approval.
 
 ## Sources of truth
 

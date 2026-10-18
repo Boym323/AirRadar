@@ -7,7 +7,8 @@ Kořenový [AGENTS.md](../../../AGENTS.md) je jediným vstupem do globálních i
 ## Závazný postup pro úlohy
 
 - [Postup výkonového inženýrství](PERFORMANCE-WORKFLOW.md): krátká opakovaně použitelná pravidla pro CPU, paměť, SSE, Rust a T58.
-- [Pravidla vývoje](../DEVELOPMENT.md): autonomie, PR, měření, testy a omezení nasazení.
+- [Pravidla vývoje](../DEVELOPMENT.md): přímé commity do `main`, jediný zapisující agent, měření, testy a pravidla release.
+- [Plán konsolidace pro přímý vývoj do `main`](AIRRADAR_KONSOLIDACE_REFAKTOR_CODEX_MAIN_2026-10-18.md): priority refaktoru, veřejné diagnostiky a validace.
 
 ## Zachovaná historická zadání
 

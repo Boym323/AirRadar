@@ -24,7 +24,7 @@ Jde o **navigační rozcestník, nikoli další pravidla**. Nejprve čti kořeno
 3. Starý benchmark, commit, PR, tag ani stav „právě probíhá“ nepovažuj za aktuální. Čerstvá GitHub/produkční data ověřuj s časem a jen v povoleném režimu.
 4. Místo celého `CHANGELOG.md` (~400 KB) používej `git log -- <path>` nebo cílené hledání. Stejně tak nenačítej celý generovaný `FEATURES.md`, pokud to není nutné.
 5. U výkonových změn dolož srovnatelný baseline a candidate, koncové percentily, regrese a omezení. Mikrobenchmark není důkaz zrychlení produkce.
-6. Před PR spusť cílené kontroly a [revizi dopadu na dokumentaci](operations/RUNBOOKS.md); aktualizuj odpovídající `docs/cs/`. Dodržuj [hranice vývoje](DEVELOPMENT.md). Bez výslovného povolení neprováděj merge ani deploy.
+6. Před přímým commitem do `main` spusť cílené kontroly a [revizi dopadu na dokumentaci](operations/RUNBOOKS.md); aktualizuj odpovídající české stránky. Dodržuj [hranice vývoje](DEVELOPMENT.md). Ověřený push záměrně spouští CI/CD; ruční release a produkční konfigurace vyžadují zvláštní souhlas.
 
 ## Zdroje pravdy
 

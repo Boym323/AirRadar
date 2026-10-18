@@ -380,64 +380,65 @@ migrations, or build configuration do not require the build/full suite unless
 the user asks for it. Still run relevant lightweight checks such as link
 validation and `git diff --check`.
 
-## Main, worktrees, and parallel agents
+## Main, development checkouts, and parallel agents
 
-The canonical checkout is `/var/www/airradar` on `main`. Keep a task's changes
-isolated and inspect `git status` before editing. Do not overwrite unrelated
-user changes in a dirty worktree.
+The maintainer selects **small, verified direct commits to `main`** as the
+standard workflow; do not create new task branches or PRs routinely.
+Work in a **separate, non-serving development checkout tracking `main`**.
+`/var/www/airradar` is the canonical **live production checkout**:
+never edit/build there while the service is running. Check `git status`,
+fetch/rebase only when safe, use fast-forward-only upstream synchronization,
+and preserve unrelated work. Only one agent may write/push `main` at a
+time; parallel agents may read in isolated checkouts, but must not race
+pushes or edit the same working tree.
 
-Parallel agents must use separate Git worktrees and branches. Each agent owns
-its worktree, does not edit another agent's checkout, and reports the files and
-checks it changed. Integrate work by an intentional merge or cherry-pick into
-`main`, then rerun checks affected by the combined diff. Avoid two agents
-editing the same lines or running competing builds against one checkout.
+The production release script is tied to the serving checkout, locks,
+service and migrations. Do not invoke it from the development checkout.
 
-The production release script is tied to `/var/www/airradar`, service state,
-locks, migrations, and health checks; do not run it from a development
-worktree. A release is never an implicit development or documentation step.
+## Agent autonomy, direct-main commits, and production boundaries
 
-## Agent autonomy, pull requests, and production boundaries
+A routine development instruction now authorizes tested non-force pushes to
+`main` and the repository's existing automatic CI/CD, but it does **not**
+authorize manual deploy/restart, production configuration/secrets changes,
+destructive DB actions, provider activation, bypassing checks, or rewriting
+shared history.
 
-A request to investigate or optimize authorizes analysis and an isolated
-implementation, **not** an implicit merge or production release.
+1. Analyze the current code, CI, privacy-safe runtime evidence and exact SHA.
+2. Implement one coherent change on `main` in the non-serving checkout.
+   Add targeted regression tests and update the matching EN/CZ docs.
+3. Before pushing, confirm `origin/main` is current, review the complete diff,
+   run relevant lint/typecheck/full or targeted tests, docs/features and
+   browser/performance gates for impacted paths. Determine deployment scope
+   with `scripts/release-scope.mjs`. Never push known failures.
+4. Push exactly the validated changes without force. A push to `main` can
+   start automatic production release immediately. Monitor CI, CodeQL,
+   release-validation/performance and deploy for the precise SHA before
+   publishing another deploy-bearing commit.
+5. If CI or release fails, stop; inspect evidence and prepare a **new**
+   verified corrective commit. Do not auto-revert database migrations.
 
-- **Read-only diagnosis:** inspect source, CI evidence, and permitted bounded
-  diagnostics; identify assumptions and missing evidence. Avoid configuration
-  changes, service restarts, database writes, or production feature toggles.
-- **Implementation:** use a task branch and separate worktree. Preserve other
-  agents' changes, add focused tests, keep flags conservative, and publish a
-  PR (draft when validation is incomplete). Never force-push shared branches.
-- **Integration:** require explicit authorization before merging, pushing
-  directly to `main`, enabling auto-merge, bypassing checks, or changing
-  repository protection. Passing tests alone does not grant approval. Failed
-  CodeQL/CI checks and uncertain regressions block a ready-to-merge verdict.
-- **Deployment:** classify the complete diff with
-  `node scripts/release-scope.mjs <changed-paths>` (or its `--stdin0` form)
-  before an authorized merge. A merge into `main` can trigger automatic
-  deployment under `.github/workflows/ci.yml`; do not treat merge as a
-  harmless documentation step. Manual releases follow `docs/RELEASE.md`
-  and require explicit release authorization. Never silently change production
-  flags, data, services, or migrations.
+Public, sanitized **GET** system-status, integration and bounded performance
+diagnostics must remain available without administrator login to aid
+development. Serve only an explicitly safe DTO: no passwords, tokens,
+cookies, database URLs, raw provider failures, private host identifiers or
+exact receiver coordinates. This does **not** authorize mutations.
+Watchlist, alerts and configuration writes must require independent
+authorization even with a legacy admin-auth opt-out; cover both public
+GET redaction and rejected anonymous POST/PATCH/PUT/DELETE in tests.
+Do not merge [PR #1017](https://github.com/Boym323/AirRadar/pull/1017)
+unchanged: its production session requirement would gate public diagnostics.
 
-Every PR/handoff should report: problem and scope; root-cause evidence versus
-hypothesis; changes and invariant impact; exactly which commands/gates passed,
-failed, or were not run; any before/after performance evidence; risk, feature
-flags, and rollback; release-scope classification; and remaining blockers.
-Re-evaluate checks after integrating concurrent changes. Do not declare a
-release, performance improvement, or production health PASS without observed
-evidence.
+Report exact changes, checks that did/did not run, performance measurements
+and limitations, `main` SHA, CI/CodeQL, deploy state and production SHA
+only when directly verified. Successful local tests are not deployment proof.
 
-## Repository merge protection
+## Main-branch protection policy
 
-Documentation is not a substitute for an enforced GitHub branch ruleset.
-A maintainer should configure protection for `main` in GitHub repository
-Settings > Rules > Rulesets: require a PR and passing applicable checks, block
-force pushes and deletion, and consider resolved review conversations and
-independent approval where practicable. First inspect actual check contexts for
-ordinary PRs, `release-preview` PRs, and metadata automation: a conditionally
-skipped check must not accidentally deadlock merges. Verify enforcement with a
-safe rejected-path test. Do not claim these protections are active merely
-because they are documented.
+Prohibit force pushes and deletion where possible; do not require routine
+PRs for maintainer-controlled direct-main work. CI runs *after* direct
+pushes and can block deployment, but cannot erase the commit from `main`:
+pre-push checks and single-writer discipline are essential. Verify
+actual GitHub rules before claiming they are enforced.
 
 ## Performance optimization evidence
 
