@@ -17,6 +17,8 @@ Root [AGENTS.md](../../AGENTS.md) is the only global instruction entry point. Us
 
 - [Round 2 cleanup decisions (2026-10-18)](CLEANUP-ROUND2-2026-10-18.md): verified removals, measured artifact delta, active experimental consumers and remaining benchmark gates; open only for continued cleanup.
 
+- [Round 3 radar map cleanup (2026-10-18)](CLEANUP-ROUND3-2026-10-18.md): deployed ATC/Navigation Integrity optimizations, exact tests and next measured candidates; open only for continued cleanup.
+
 ## Preserved historical briefs
 
 The following detailed prompts are **dated historical task briefs**, not mandatory context for every run: [autonomous performance brief](AIRRADAR_PERFORMANCE_AGENT.md) and [2026-10-17 audit assignment](AirRadar_zadani_kompletniho_vykonnostniho_auditu_a_optimalizaci_2026-10-17.md). Consult a specific section only when revisiting that investigation; verify all versions and claims.
