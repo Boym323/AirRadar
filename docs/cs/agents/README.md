@@ -17,6 +17,8 @@ Kořenový [AGENTS.md](../../../AGENTS.md) je jediným vstupem do globálních i
 
 - [Druhé kolo čištění — výsledky a rozhodnutí (18. 10. 2026)](CLEANUP-ROUND2-2026-10-18.md): ověřená odstranění, změřený rozdíl artefaktů, aktivní experimentální konzumenti a zbývající měření; otevírat jen při pokračování.
 
+- [Třetí kolo čištění radarové mapy (18. 10. 2026)](CLEANUP-ROUND3-2026-10-18.md): nasazené optimalizace ATC/Navigation Integrity, testy a kandidáti na další měření; číst jen při pokračování.
+
 ## Zachovaná historická zadání
 
 Následující dlouhá zadání jsou **datované historické podklady**, ne povinný kontext každého běhu: [autonomní výkonový audit](AIRRADAR_PERFORMANCE_AGENT.md) a [zadání z 17. 10. 2026](AirRadar_zadani_kompletniho_vykonnostniho_auditu_a_optimalizaci_2026-10-17.md). Čti pouze příslušnou část při návratu k danému šetření a ověřuj verze i tvrzení.
