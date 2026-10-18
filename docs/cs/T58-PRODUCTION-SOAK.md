@@ -1,5 +1,7 @@
 # T58 – hodinový read-only test jedním příkazem s historií na GitHubu
 
+Řízený stall canary je samostatně dostupný přes **Actions → T58 Controlled Stall Canary → Run workflow**. Zadejte přesný 40znakový SHA aktuálně nasazeného release; diagnostiku tak lze spustit proti nasazené verzi i tehdy, když `main` obsahuje pouze novější metadata commit.
+
 ## Spuštění
 
 Po sloučení PR s tímto workflow do `main` stačí z libovolného počítače s

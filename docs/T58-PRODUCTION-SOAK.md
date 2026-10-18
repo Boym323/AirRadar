@@ -17,6 +17,8 @@ bash scripts/run-t58.sh
 
 You can also use **Actions → T58 Production Soak → Run workflow → main**.
 
+The controlled stall canary is separately available through **Actions → T58 Controlled Stall Canary → Run workflow**. Supply the exact 40-character SHA of the currently deployed release; this permits diagnostics against a deployed release even when `main` has only newer metadata commits.
+
 No SSH session, local background process, production restart, build, database
 write, environment toggle or synthetic aircraft traffic is involved. The
 60-minute collection runs on an isolated GitHub-hosted runner and makes only
