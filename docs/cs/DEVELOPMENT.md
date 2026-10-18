@@ -400,7 +400,7 @@ DB URL, surové chyby providerů, privátní ID hostitele ani přesnou
 polohu přijímače. **Administrátorské zápisy** watchlistu, alertů
 a konfigurace však musí mít nezávislou autentizaci/autorizaci
 i při vypnutém starém přepínači auth. Otestujte anonymní bezpečné
-GET i odmítnuté anonymní POST/PATCH/PUT/DELETE. PR #1017 v
+GET i odmítnuté anonymní POST/PATCH/PUT/DELETE. [PR #1017](https://github.com/Boym323/AirRadar/pull/1017) v
 současné podobě nemergujte, uzamykal by i veřejnou diagnostiku.
 
 U každého commitu uveďte změny, PASS/FAIL/NOT RUN kontrol,
