@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.515] - 2026-10-18
+
+Changes since v1.0.514.
+
+### Fixed
+
+- Separate public diagnostics from admin access (c580e4f3)
+- Retry transient diagnostic preflight failures (a561f130)
+- Satisfy diagnostics lint gate (134ca5f4)
+
+### Maintenance
+
+- Sync generated repository metadata (#1018) (2fc26fd3)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1018) (2fc26fd3)
+- fix(security): separate public diagnostics from admin access (c580e4f3)
+- fix(t58): retry transient diagnostic preflight failures (a561f130)
+- fix(security): satisfy diagnostics lint gate (134ca5f4)
+
+</details>
 ## [1.0.514] - 2026-10-18
 
 Changes since v1.0.513.
