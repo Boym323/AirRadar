@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.525] - 2026-10-18
+
+Changes since v1.0.524.
+
+### Changed
+
+- Remove legacy aircraft SVG assets and prevent regressions (fa2a15bf)
+
+### Documentation
+
+- Record completed Track Fusion retirement and verified release (e555901d)
+- Retire stale wind timing and invalid API descriptions (c8daf6af)
+
+### Maintenance
+
+- Sync generated repository metadata (#1030) (3e65a977)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1030) (3e65a977)
+- docs(agents): record completed Track Fusion retirement and verified release (e555901d)
+- docs: retire stale wind timing and invalid API descriptions (c8daf6af)
+- cleanup: remove legacy aircraft SVG assets and prevent regressions (fa2a15bf)
+
+</details>
 ## [1.0.524] - 2026-10-18
 
 Changes since v1.0.523.
