@@ -190,23 +190,6 @@ Protected inspection is available at:
 The System page also exposes the same bounded report for authenticated admin
 diagnostics.
 
-## Wind-adjusted Timing Shadow V1
-
-The canonical corridor remains untouched. After Weather Corridor has produced
-its existing ICON-EU along-track wind samples, a separate shadow model infers a
-bounded still-air-speed proxy from the observed groundspeed and the current
-along-track wind, then re-times the same corridor distances.
-
-The shadow reports +5/+15/+30 minute checkpoint timing deltas and waypoint
-timing deltas. It is fail-closed when current wind, enough unique wind samples,
-or a plausible observed groundspeed are unavailable. Stale wind can still
-produce a result, but it is explicitly marked STALE.
-
-This model does not alter corridor geometry, canonical event times, PUBLIC ETA,
-radar position, history, or outcome truth. Its purpose is to establish an
-independent timing candidate that later Event Outcome Validation can compare
-against the canonical baseline before any graduation is considered.
-
 ## Event Outcome Validation V2
 
 Digital Twin now validates predicted future events separately from V1 corridor
@@ -264,52 +247,6 @@ the canonical corridor.
 ## Navigation Integrity Corridor V1
 
 The Digital Twin now intersects its existing sampled 30-minute corridor with already-computed active Navigation Integrity regional anomalies. An intersection requires both grid-cell and altitude-band compatibility. The result preserves severity, confidence, affected-aircraft counts, LOCAL/NETWORK evidence, baseline maturity and audit categories. Zero intersections are not an all-clear, and the feature never claims GNSS jamming, spoofing, or an aircraft navigation fault. It adds no HTTP request, timer, detector pass, database access or persistence.
-
-## Wind Timing Graduation V1
-
-Event Outcome Validation V2 now carries a paired waypoint-timing graduation
-lane for the existing Wind-adjusted Timing Shadow V1. The same captured
-waypoint prediction stores both the canonical event time and the wind-adjusted
-shadow time. When one future LOCAL waypoint truth observation resolves the
-event, AirRadar scores both timings against that exact same truth point.
-
-Only `AVAILABLE` wind shadows are admitted. `STALE` and `INSUFFICIENT`
-wind timing never enter graduation evidence. The comparison is waypoint-only
-because Wind-adjusted Timing Shadow V1 currently re-times waypoint/checkpoint
-distance along the unchanged corridor geometry; it does not independently
-re-time sector, SIGMET, runway or arrival events.
-
-The report exposes:
-
-- paired waypoint samples;
-- unresolved/unpaired outcomes and truth coverage;
-- canonical and shadow mean absolute timing error;
-- mean and relative MAE improvement;
-- shadow wins, canonical wins and ties;
-- shadow win rate;
-- mean absolute wind timing adjustment;
-- meaningful-adjustment sample volume;
-- PASS / WAIT / FAIL graduation state.
-
-The first threshold set requires at least two hours of process-local evidence,
-30 paired waypoint samples, 20 paired samples with at least a 30-second timing
-adjustment, and 60% truth coverage. Once those evidence gates are complete:
-
-- PASS requires at least 5% relative MAE improvement and at least 55% shadow
-  win rate;
-- FAIL requires a material regression of at least 5% MAE or a shadow win rate
-  of 45% or less;
-- intermediate evidence remains WAIT as inconclusive.
-
-PASS is **not** automatic promotion. The report explicitly returns
-`autoPromotion=false`, `manualPromotionEligible=true` only after PASS, and
-`canonicalTimingRemainsActive=true` in all states. Canonical corridor/event
-timing is therefore unchanged by this phase.
-
-The paired comparison is returned inside the existing protected Event Outcome
-report and is also visible on the authenticated System page. It adds no timer,
-poller, database persistence, FlightPosition read, second truth observer or
-second Digital Twin calculation.
 
 ## Regional Situation Graph V1
 
@@ -371,28 +308,6 @@ V1 deliberately reports
 those event classes requires an independent truth universe, so prediction
 captures are not reused as fake truth. No public prediction policy changes as a
 result of this report.
-
-## Wind Timing Promotion V1
-
-Wind Timing Promotion V1 adds the explicit manual transition that the graduation
-gate intentionally did not perform. The default remains
-`AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY=CANONICAL`. An operator may set
-`WIND_GRADUATED`, but it becomes effective only while Wind Timing Graduation
-is `PASS`, manual promotion is eligible and the current wind shadow is
-`AVAILABLE`.
-
-Only Digital Twin `WAYPOINT` presentation times are replaced with their
-graduated wind-adjusted counterparts. Corridor geometry, PUBLIC ETA, runway
-advisories, live state and history are unchanged. If readiness falls back to
-WAIT/FAIL, wind evidence becomes unavailable, or the current waypoint set
-cannot be paired, the effective policy immediately fails closed to
-`CANONICAL`.
-
-Calibration remains deliberately canonical even while presentation is promoted:
-the canonical situation is captured by Outcome/Event Outcome validators before
-the returned response applies wind timing. The response exposes
-`windTimingPromotion` with configured/effective policy, graduation decision,
-promoted waypoint count and fail-closed reason.
 
 ## Calibration Persistence V1
 
@@ -500,7 +415,7 @@ uses one admin-only no-store endpoint,
 calibration engine or background poller.
 
 The center shows corridor outcome quality, event outcome precision/timing,
-Truth-first V2 recall, wind timing graduation evidence, Regional Attention
+Truth-first V2 recall, Regional Attention
 outcome quality, and restart-stable calibration persistence health. Regional
 Attention includes its 5/15/30-minute horizon slices and explicitly reports
 unscored destination clusters.

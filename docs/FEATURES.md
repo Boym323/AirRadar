@@ -643,10 +643,6 @@ The radar renders the selected aircraft's existing situation response as a 30-mi
 
 Each successful existing situation calculation captures +5/+15/+30 minute targets without another polling path. Pending samples are later scored only against future LOCAL receiver truth already in RAM. The report measures position and altitude error, stated uncertainty-envelope coverage, error/uncertainty ratio, expired truth, and slices by horizon, corridor mode and input state source. Evidence is process-local, bounded to 24 hours and starts at WAIT; PASS/FAIL is evaluated only after at least two hours and sufficient truth samples.
 
-## Operational Digital Twin Wind-adjusted Timing Shadow V1
-
-Digital Twin now computes an additive shadow timing over the exact same canonical corridor geometry. It derives only a diagnostic still-air proxy from observed groundspeed and the current ICON-EU along-track wind, then re-times the same future distances using the existing wind samples. The result exposes +5/+15/+30 minute checkpoints and waypoint timing deltas. Canonical corridor, events and ETA remain unchanged.
-
 ## Operational Digital Twin Event Outcome Validation V2
 
 Predicted waypoint, ATC sector-entry, SIGMET-intersection, arrival-ETA and runway-expectation events are now prospectively compared with future LOCAL receiver truth and independent Flight Intelligence LANDING events. The report measures precision, timing error, missing truth and lead-time slices without claiming recall. The lane is process-local, bounded, and adds no polling, persistence or second Digital Twin calculation.
@@ -654,15 +650,6 @@ Predicted waypoint, ATC sector-entry, SIGMET-intersection, arrival-ETA and runwa
 ## Navigation Integrity Corridor V1
 
 The Operational Digital Twin intersects its existing sampled 30-minute corridor with the already-computed process-local Navigation Integrity active anomaly regions. A match requires both grid-cell and altitude-band compatibility; the result preserves severity, confidence, affected-aircraft counts, LOCAL/NETWORK evidence, baseline maturity and audit categories. Zero intersections are not an all-clear, and the feature never claims GNSS jamming, spoofing, or an aircraft navigation fault. No new HTTP request, timer, detector pass, database access or persistence path is added.
-
-## Wind Timing Graduation V1
-
-Event Outcome V2 now compares canonical and wind-adjusted timing for the same waypoint against one identical LOCAL truth observation. The process-local graduation gate is fail-closed: it requires sufficient span, paired sample volume, meaningful wind adjustments and truth coverage; PASS additionally requires at least 5% MAE improvement and a 55% shadow win rate. PASS only marks the model eligible for manual graduation — canonical timing remains active and there is no automatic promotion.
-
-### Explainable Prediction V1
-
-Aircraft predictive advisory cards expose a `Why?` disclosure for ETA, runway, runway-change and trajectory outputs. Evidence comes from the same canonical prediction evaluation and is passed only through the existing readiness-gated advisory builders. A capability-specific whitelist limits public evidence to product-safe inputs such as remaining distance, effective speed, phase, recent runway usage, surface wind, candidate margin and trajectory geometry. No second prediction request or parallel model is introduced.
-
 
 ## Investigation Links V1
 
