@@ -118,7 +118,7 @@ each linked commit diff.
 | D — 3D radar | DONE; 85 targeted tests; browser 70 / 14 | [c595009](https://github.com/Boym323/AirRadar/commit/c5950097296025448404ff0b3cbd759a5c2030ab) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39151990602) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39151990522) | 1.0.521 / `c5950097`; automatic deploy succeeded |
 | A — SondeHub / Space Weather | DONE; `test:changed` 838 passed, 9 skipped; 3 targeted tests; browser 70 / 14 | [03b59c3](https://github.com/Boym323/AirRadar/commit/03b59c34bee2d7a5f40c6043e4869e4a0e203f78) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39152862116) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39152862092) | 1.0.522 / `03b59c34`; automatic deploy succeeded |
 | F — Digital Twin model wind | DONE; `test:changed` 2,796 passed, 15 skipped; 25 targeted tests; browser 70 / 14 | [c347d3b](https://github.com/Boym323/AirRadar/commit/c347d3b93ce1d2cfea12b47b390416c30321752b) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39154137242) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39154137259) | 1.0.523 / `c347d3b9`; automatic deploy and release identity verification succeeded |
-| E — Track Fusion Shadow | BLOCKED only for this batch | No runtime commit | `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` is an independent opt-in consumed by `lib/server/operational-twin.ts` to use `TRACK_FUSION` state. Its effective production state is not available in the approved sanitized public projection. Because this is a non-shadow consumer, deleting the shadow risks changing Operational Twin behavior; other batches proceeded independently. |
+| E — Track Fusion Shadow | DONE; 2,761 tests passed / 15 skipped on PR, full release CI green | [06f55cc9](https://github.com/Boym323/AirRadar/commit/06f55cc927351f39dd5ece905c923654b36f8d45) · [PR #1029](https://github.com/Boym323/AirRadar/pull/1029) · [main CI/deploy](https://github.com/Boym323/AirRadar/actions/runs/39156732162) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39156732183) | v1.0.524 / `06f55cc9`: automatic production deploy, local and public health and artifact identity confirmed; all previous shadow workers/API/UI removed. |
 
 ### Flag and production evidence
 
@@ -128,9 +128,7 @@ each linked commit diff.
   `SONDEHUB_MQTT_ENABLED`, and `SPACE_WEATHER_ENABLED` remain `UNKNOWN`; the
   approved sanitized public diagnostics do not expose them. This is not evidence
   that those providers were active, so no usage or runtime savings are claimed.
-- E: `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` defaults on unless explicitly
-  disabled; the separate Digital Twin consumer flag's effective value remains
-  `UNKNOWN`, which blocks only E.
+- E: The previous `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` and `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` readers were removed with the retired feature. The former production values remain `UNKNOWN` and are not used for claims of measured savings. Digital Twin now selects canonical LOCAL observations independent of both former flags.
 - F: `N/A (no feature-specific server flag for model-wind fetching)`. The former
   `AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY` selected presentation promotion,
   not fetching, and its reader/promotion lane were removed. Source tracing found
@@ -151,3 +149,7 @@ CPU, RAM, database work and network traffic were `NOT_MEASURED` for every
 batch; the CI performance regression gate passed for D and F but does not
 establish those savings. Do not infer savings from deleted lines or unknown
 provider flags.
+
+### Completed batch E — verification
+
+The Track Fusion Shadow implementation, readiness/outcome workers, experimental API endpoints and system UI were removed, and Digital Twin was switched to canonical LOCAL evidence. [PR #1029](https://github.com/Boym323/AirRadar/pull/1029) passed main PR CI (2,761 tests / 15 skipped), CodeQL, T57 benchmark and synthetic runtime load scaling 1×/2×/4×. The squash merge [06f55cc9](https://github.com/Boym323/AirRadar/commit/06f55cc927351f39dd5ece905c923654b36f8d45) passed [main CI](https://github.com/Boym323/AirRadar/actions/runs/39156732162), release validation/browser/performance gates and [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39156732183). Automatic deployment verified public/local health and version 1.0.524 at 06f55cc9; no manual deployment, production configuration change or DB mutation. E runtime CPU/RAM/DB/network savings remain **NOT_MEASURED**.

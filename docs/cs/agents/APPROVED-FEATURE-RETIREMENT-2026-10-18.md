@@ -118,7 +118,7 @@ odstraněných cest je uveden v diffu každého propojeného commitu.
 | D — 3D radar | HOTOVO; 85 cílených testů; browser 70 / 14 | [c595009](https://github.com/Boym323/AirRadar/commit/c5950097296025448404ff0b3cbd759a5c2030ab) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39151990602) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39151990522) | 1.0.521 / `c5950097`; automatický deploy úspěšný |
 | A — SondeHub / Space Weather | HOTOVO; `test:changed` 838 úspěšných, 9 přeskočeno; 3 cílené testy; browser 70 / 14 | [03b59c3](https://github.com/Boym323/AirRadar/commit/03b59c34bee2d7a5f40c6043e4869e4a0e203f78) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39152862116) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39152862092) | 1.0.522 / `03b59c34`; automatický deploy úspěšný |
 | F — modelový vítr Digital Twin | HOTOVO; `test:changed` 2 796 úspěšných, 15 přeskočeno; 25 cílených testů; browser 70 / 14 | [c347d3b](https://github.com/Boym323/AirRadar/commit/c347d3b93ce1d2cfea12b47b390416c30321752b) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39154137242) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39154137259) | 1.0.523 / `c347d3b9`; automatický deploy i ověření identity release úspěšné |
-| E — Track Fusion Shadow | BLOKOVÁNO pouze pro tuto dávku | Bez runtime commitu | Samostatný opt-in `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` používá `lib/server/operational-twin.ts` pro přijetí stavu `TRACK_FUSION`. Efektivní produkční hodnota není dostupná v povolené sanitizované veřejné projekci. Protože jde o konzumenta mimo shadow, odstranění shadow může změnit chování Operational Twin; ostatní dávky pokračovaly samostatně. |
+| E — Track Fusion Shadow | HOTOVO; v PR prošlo 2 761 testů / 15 přeskočeno, release CI zelené | [06f55cc9](https://github.com/Boym323/AirRadar/commit/06f55cc927351f39dd5ece905c923654b36f8d45) · [PR #1029](https://github.com/Boym323/AirRadar/pull/1029) · [CI/deploy](https://github.com/Boym323/AirRadar/actions/runs/39156732162) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39156732183) | v1.0.524 / `06f55cc9`: automatický deploy, lokální i veřejný health a identita artefaktu ověřeny; shadow výpočty/API/UI odstraněny. |
 
 ### Přepínače a produkční evidence
 
@@ -128,9 +128,7 @@ odstraněných cest je uveden v diffu každého propojeného commitu.
   `SONDEHUB_MQTT_ENABLED` a `SPACE_WEATHER_ENABLED` zůstávají `UNKNOWN`;
   povolená sanitizovaná veřejná diagnostika je nezobrazuje. To nedokazuje, že
   byly providery aktivní, proto se neuvádějí žádné úspory z jejich provozu.
-- E: `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` je defaultně zapnutý, pokud není
-  výslovně vypnutý; efektivní hodnota samostatného přepínače konzumenta Digital
-  Twin zůstává `UNKNOWN`, což blokuje pouze E.
+- E: Čtení dřívějších přepínačů `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` a `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` bylo odstraněno společně s funkcí. Jejich bývalé produkční hodnoty zůstávají `UNKNOWN` a nejsou důkazem výkonové úspory. Digital Twin nyní používá kanonické LOCAL pozorování nezávisle na těchto přepínačích.
 - F: `N/A (modelový fetch větru nemá specifický serverový feature flag)`.
   Dřívější `AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY` vybíral prezentační
   promotion, nikoli fetch; jeho čtení i promotion větev byly odstraněny. Analýza
@@ -151,3 +149,7 @@ artefaktu, nikoli o naměřené zrychlení runtime. CPU, RAM, databázová prác
 síťový provoz nebyly u žádné dávky měřeny (`NOT_MEASURED`); CI performance
 regression gate pro D a F prošel, ale tyto úspory neprokazuje. Úsporu nelze
 odvozovat z počtu řádků ani neznámého stavu provider flagů.
+
+### Dokončená dávka E — ověření
+
+Byla odstraněna implementace Track Fusion Shadow, validační výpočty readiness/outcome, experimentální API a karta v systému; Digital Twin používá pouze kanonický LOCAL stav. [PR #1029](https://github.com/Boym323/AirRadar/pull/1029) prošel PR CI (2 761 testů / 15 přeskočeno), CodeQL, T57 benchmarkem a syntetickými škálovacími testy 1×/2×/4×. Squash commit [06f55cc9](https://github.com/Boym323/AirRadar/commit/06f55cc927351f39dd5ece905c923654b36f8d45) prošel [main CI](https://github.com/Boym323/AirRadar/actions/runs/39156732162), release validací, browser a performance gate a [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39156732183). Automatický deploy ověřil lokální a veřejný health i verzi 1.0.524 na 06f55cc9. Žádný ruční deploy, změna konfigurace produkce ani databázový zásah. Úspory CPU/RAM/DB/sítě dávky E zůstávají **NOT_MEASURED**.
