@@ -1,6 +1,6 @@
 # AirRadar – dokumentace česky
 
-Tato složka obsahuje úplné české zrcadlo Markdown dokumentace projektu pod
+Tato složka obsahuje české protějšky anglické Markdown dokumentace pod
 `docs/`. Anglické soubory zůstávají technickým zdrojem pravdy; změna
 anglického dokumentu musí ve stejném commitu aktualizovat také odpovídající
 český soubor.
@@ -14,6 +14,13 @@ oba jazyky.
 `research/`. Zvlášť kontroluje paritu celé EN/CZ wiki. Ověřuje existenci,
 Markdown strukturu, přiměřený rozsah překladu, logickou shodu odkazů, existenci
 lokálních link targets a známé chybové markery po neúspěšném překladu.
+
+## Rychlý start pro agenty
+
+- [Rozcestník kontextu Codexu](CODEX-CONTEXT.md)
+- [Pokyny pro agenty](agents/README.md)
+- [Architektonická rozhodnutí](decisions/README.md)
+- [Provozní postupy](operations/RUNBOOKS.md)
 
 ## Autoritativní dokumentace
 
