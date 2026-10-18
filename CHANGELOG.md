@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.528] - 2026-10-18
+
+Changes since v1.0.527.
+
+**Features touched:** ATC & ATS Intelligence, Live Radar.
+
+### Performance
+
+- Compute ATC sector metadata once per feature group (0eddfcf4)
+
+### Maintenance
+
+- Sync generated repository metadata (#1039) (12507fd3)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1039) (12507fd3)
+- perf(radar): compute ATC sector metadata once per feature group (0eddfcf4)
+
+</details>
 ## [1.0.527] - 2026-10-18
 
 Changes since v1.0.526.
