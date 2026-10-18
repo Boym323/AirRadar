@@ -9,6 +9,7 @@ Kořenový [AGENTS.md](../../../AGENTS.md) je jediným vstupem do globálních i
 - [Postup výkonového inženýrství](PERFORMANCE-WORKFLOW.md): krátká opakovaně použitelná pravidla pro CPU, paměť, SSE, Rust a T58.
 - [Pravidla vývoje](../DEVELOPMENT.md): přímé commity do `main`, jediný zapisující agent, měření, testy a pravidla release.
 - [Plán konsolidace pro přímý vývoj do `main`](AIRRADAR_KONSOLIDACE_REFAKTOR_CODEX_MAIN_2026-10-18.md): priority refaktoru, veřejné diagnostiky a validace.
+- [Aktuální zadání 18. 10. 2026: redukce zbytečné runtime práce](RUNTIME-REDUNDANT-WORK-2026-10-18.md): priority P0–P3 z T58 a ověření na shodné A/B zátěži; otevírat jen pro tento úkol.
 
 ## Zachovaná historická zadání
 
