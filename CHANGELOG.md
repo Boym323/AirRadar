@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.516] - 2026-10-18
+
+Changes since v1.0.515.
+
+### Fixed
+
+- Fail closed without admin diagnostics (ff74c865)
+- Use authenticated admin fixture in predictive browser gate (626f871a)
+
+### Maintenance
+
+- Sync generated repository metadata (#1019) (147bfbd3)
+- Assert authenticated predictive admin fixture (fd19dbdd)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1019) (147bfbd3)
+- fix(t58): fail closed without admin diagnostics (ff74c865)
+- fix(ci): use authenticated admin fixture in predictive browser gate (626f871a)
+- test(ci): assert authenticated predictive admin fixture (fd19dbdd)
+
+</details>
 ## [1.0.515] - 2026-10-18
 
 Changes since v1.0.514.
