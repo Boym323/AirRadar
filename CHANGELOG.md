@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.527] - 2026-10-18
+
+Changes since v1.0.526.
+
+**Features touched:** Live Radar.
+
+### Performance
+
+- Skip hidden ATC index and extract airspace builders (992f636e)
+
+### Documentation
+
+- Capture round 2 cleanup results and risk decisions (2a0f378b)
+
+### Maintenance
+
+- Sync generated repository metadata (#1036) (0c83e238)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1036) (0c83e238)
+- docs(agents): capture round 2 cleanup results and risk decisions (2a0f378b)
+- perf(radar): skip hidden ATC index and extract airspace builders (992f636e)
+
+</details>
 ## [1.0.526] - 2026-10-18
 
 Changes since v1.0.525.
