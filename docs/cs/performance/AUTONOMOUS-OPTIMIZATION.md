@@ -1,5 +1,9 @@
 # Autonomní optimalizace výkonu a spolehlivosti
 
+> **Historický snímek (13. 10. 2026):** Zjištění a stav nasazení platí
+> k uvedenému dni. Tvrzení o probíhajícím měření, verzi či konfiguraci
+> nejsou aktuálním stavem provozu; ověř nové důkazy.
+
 [English version](../../performance/AUTONOMOUS-OPTIMIZATION.md)
 
 Stav: runtime oprava je nasazena; probíhá post-release soak. Poslední

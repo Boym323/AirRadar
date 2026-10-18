@@ -1,10 +1,8 @@
-
-[1m[33mDebian LXC Container[m
-[33m OS: [1;92mDebian GNU/Linux - Version: 13[m
-[33m Hostname: [1;92mlo-dev-airradar[m
-[33m IP Address: [1;92m192.168.1.142[m
-
 # AirRadar — Autonomní výkonové inženýrství
+
+> **Historické rozsáhlé zadání, nikoli povinný kontext nové úlohy.** Používej
+> [stručný výkonový postup](PERFORMANCE-WORKFLOW.md), aktuální kód a čerstvá
+> měření. Zde uvedené verze, PR a výsledky jsou datované.
 
 > **Startovací instrukce pro Codex / ChatGPT Work:** Přečti tento soubor celý, ověř aktuální stav repozitáře `Boym323/AirRadar` a autonomně proveď výkonnostní audit, reprodukovatelné benchmarky, měřením podložené optimalizace, regresní testy a přípravu PR podle níže uvedených pravidel. Do produkce bez samostatného schválení nezasahuj. Tento český dokument zachovává technické názvy, příkazy, odkazy a strukturu anglického zdroje.
 

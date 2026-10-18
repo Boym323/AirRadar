@@ -1,10 +1,8 @@
-
-[1m[33mDebian LXC Container[m
-[33m OS: [1;92mDebian GNU/Linux - Version: 13[m
-[33m Hostname: [1;92mlo-dev-airradar[m
-[33m IP Address: [1;92m192.168.1.142[m
-
 # AirRadar — komplexní výkonový audit a řízený program optimalizací
+
+> **Historické rozsáhlé zadání, nikoli povinný kontext nové úlohy.** Používej
+> [stručný výkonový postup](PERFORMANCE-WORKFLOW.md), aktuální kód a čerstvá
+> měření. Zde uvedené verze, PR a výsledky jsou datované.
 
 **Projekt:** [Boym323/AirRadar](https://github.com/Boym323/AirRadar)  
 **Datum zadání:** 17. října 2026 (Europe/Prague)  

@@ -1,5 +1,9 @@
 # AirRadar — komplexní výkonový audit a řízený program optimalizací
 
+> **Historical long-form task brief; not required context for new runs.** Use
+> the [short performance workflow](PERFORMANCE-WORKFLOW.md), current code and
+> fresh measurements instead. Versions, PRs and results below are dated.
+
 **Projekt:** [Boym323/AirRadar](https://github.com/Boym323/AirRadar)  
 **Datum zadání:** 17. října 2026 (Europe/Prague)  
 **Oblasti:** CPU, Node.js event loop, RAM/V8/GC, diskové a souborové I/O, PostgreSQL/Prisma, síťový ingest, SSE.  

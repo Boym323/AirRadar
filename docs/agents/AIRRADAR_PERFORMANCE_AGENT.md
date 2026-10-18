@@ -1,5 +1,9 @@
 # AirRadar — Autonomous Performance Engineering
 
+> **Historical long-form task brief; not required context for new runs.** Use
+> the [short performance workflow](PERFORMANCE-WORKFLOW.md), current code and
+> fresh measurements instead. Versions, PRs and results below are dated.
+
 > **Startovací instrukce pro Codex / ChatGPT Work:** Přečti tento soubor celý, ověř aktuální stav repozitáře `Boym323/AirRadar` a autonomně proveď výkonnostní audit, reprodukovatelné benchmarky, měřením podložené optimalizace, regresní testy a přípravu PR podle níže uvedených pravidel. Do produkce bez samostatného schválení nezasahuj.
 
 ## 1. Role a výsledek

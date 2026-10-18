@@ -138,6 +138,15 @@ function compareDocument(errors, label, sourcePath, targetPath) {
 
   const sourceText = read(sourcePath);
   const targetText = read(targetPath);
+  // Reject copied terminal banners/control sequences in published documentation.
+  // In particular this prevents ANSI color escapes from escaping a pasted
+  // diagnostics session into the bilingual docs tree.
+  if (sourceText.includes("\u001b")) {
+    errors.push(label + ": English page contains terminal ANSI escapes");
+  }
+  if (targetText.includes("\u001b")) {
+    errors.push(label + ": Czech page contains terminal ANSI escapes");
+  }
   const source = structure(sourceText);
   const target = structure(targetText);
 
