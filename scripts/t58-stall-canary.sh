@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
-if [[ "$GITHUB_EVENT_NAME" != workflow_run || "$GITHUB_ACTIONS" != true ]]; then
+if [[ "$GITHUB_EVENT_NAME" != workflow_run && "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_ACTIONS" != true ]]; then
   echo "canary_requires_trusted_workflow" >&2; exit 1
 fi
 if [[ ! "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ || -z "$T58_CANARY_OUTPUT" ]]; then

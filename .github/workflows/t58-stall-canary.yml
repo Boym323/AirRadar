@@ -1,6 +1,12 @@
 name: T58 Controlled Stall Canary
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "Exact currently deployed release commit (40-char SHA)"
+        required: true
+        type: string
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -19,21 +25,22 @@ jobs:
     # This can only run following the specifically marked, successful main
     # release. Later pushes and PRs never repeat the production canary.
     if: >-
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.head_branch == 'main' &&
-          github.event.workflow_run.head_repository.full_name == 'Boym323/AirRadar' &&
-          contains(github.event.workflow_run.head_commit.message, '[t58-stall-canary]') }}
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.head_branch == 'main' &&
+           github.event.workflow_run.head_repository.full_name == 'Boym323/AirRadar' &&
+           contains(github.event.workflow_run.head_commit.message, '[t58-stall-canary]')) }}
     runs-on: [self-hosted, linux, x64]
     environment: production
     timeout-minutes: 37
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.event.workflow_run.head_sha }}
           persist-credentials: false
       - name: Verify exact tested source and rollback tooling
         env:
-          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.event.workflow_run.head_sha }}
         run: |
           set -Eeuo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
@@ -42,7 +49,7 @@ jobs:
           node --test tests/t58-stall-canary.test.mjs
       - name: Collect 15-minute diagnostic, then automatically restore
         env:
-          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.event.workflow_run.head_sha }}
           WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
           T58_CANARY_OUTPUT: ${{ runner.temp }}/t58-stall-canary.json
         run: bash scripts/t58-stall-canary.sh
@@ -50,7 +57,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: t58-stall-canary-${{ github.event.workflow_run.id }}
+          name: t58-stall-canary-${{ github.run_id }}
           path: ${{ runner.temp }}/t58-stall-canary.json
           retention-days: 90
           if-no-files-found: warn
