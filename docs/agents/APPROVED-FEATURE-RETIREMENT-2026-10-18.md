@@ -27,11 +27,22 @@
 
 A selected feature may be retired even if it is actively consumed; product-level behavior change is approved. **Technical safety remains mandatory.** Do not falsely classify working features as dead code. Remove the external contract only when route ownership and clients have been traced and the acceptance tests have been changed intentionally, rather than weakened. Do not delete shared data or DB history.
 
-## Execution environment prerequisite
+## Execution environment prerequisite and per-candidate production verification
 
-The operator's instruction is to implement each independent batch in a **non-serving, full repository checkout with dependencies**, run all required local checks, then use the repo's **single-writer, verified, non-force direct-main** process. A push to main can cause automatic production deployment. Never push runtime changes when tests cannot run, the checkout is not isolated, current production/environment diagnostics cannot be examined safely, or the single-writer lease is unavailable. Those are BLOCKED prerequisites, **not** justification to weaken the rules or fabricate measurements.
+Implement each independently verified batch in a **non-serving full repository checkout with dependencies**, run relevant local tests and checks, then follow the repo's **single-writer, verified, non-force direct-main** process. A runtime push to main can invoke automatic production deployment. Never push when the appropriate tests cannot run, the checkout is serving traffic, the writer/release state is unsafe, or a change-specific safety precondition remains unresolved. Do not bypass failing gates or fabricate measurements.
 
-Read current code and check live production flags through authorized *sanitized, read-only* surfaces. If inaccessible, state production state **UNKNOWN**; do not guess or retrieve secrets. Historical CI/T58 cannot prove the current deployment.
+**Avoid the circular all-batches BLOCKED condition:** product approval has already been given to retire these features, including currently used UI/API. Verify each feature's **actual** configuration and consumer surface, not an imaginary global feature flag. For a feature without a server-side runtime flag, record `N/A (no feature-specific server flag)`, inspect its routes, UI, runtime triggers and any external API consumers, and verify the currently deployed commit via permitted read-only diagnostics. Missing feature flags in the public health DTO are **not** by themselves a blocker for this independent candidate. Retire it only after ordinary regression/security/browser gates pass.
+
+The source currently identifies these **config-sensitive candidates**:
+- SondeHub: `SONDEHUB_ENABLED` and `SONDEHUB_MQTT_ENABLED`. Both are opt-in; verify the *effective* deployment states from an existing authorized, sanitized read-only method before attributing any active runtime cost or changing integration behavior.
+- NOAA Space Weather: `SPACE_WEATHER_ENABLED`, opt-in. Its endpoint and UI are feature-owned; preserve Navigation Integrity independently.
+- Track Fusion Shadow: `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` defaults to ON unless explicitly false, while `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` is independently opt-in. Trace the latter's non-shadow consumers before deletion.
+- Digital Twin model wind: `AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY` selects canonical versus promotion, **not** whether wind-aloft model fetching runs; follow the actual builder/scheduler, and record the effective policy if safely available.
+- 3D radar and standalone pages: inspect client-side state and route availability; do not assume server feature flags exist. Mobile Spotter has related Saved Spots server API and permission checks that require independent tracing.
+
+**Authorized read-only production evidence:** existing sanitized public diagnostics for build/health, and an operator-authorized inspection of only specifically allowlisted flag **states** on the production host when permitted. Inspect process/service/application configuration through established access, keeping raw environment files, credentials, receiver coordinates, URLs and unrelated settings out of tools' output and commits. A process environment snapshot alone may omit flags loaded later by the application; don't falsely call it the effective state. Never add a new public environment-dump endpoint just to unblock this task. If effective state cannot be verified, write `UNKNOWN`, describe the limitation, and **block only the specific configuration-dependent removal where that uncertainty materially affects regression safety**; continue independent low-risk page removals after their full tests.
+
+Source truth, explicit owner authorization, shared contract parity, full local gates, the exact upstream SHA and single-writer discipline are necessary for each push. Historical CI/T58 cannot establish current production conditions or quantified performance savings.
 
 ## Dependency-aware batches
 
@@ -87,7 +98,7 @@ Read current code and check live production flags through authorized *sanitized,
 ## Stop conditions and outstanding evidence
 
 - No full isolated checkout, dependency install, or local test execution: **runtime deletion BLOCKED**.
-- Production flags/integrations cannot be verified read-only: **production state UNKNOWN**, not a removal proof.
+- Effective production flag not verifiable: report **UNKNOWN/BLOCKED** only for configuration-dependent candidate(s) where safety requires it; do not block independently verifiable flag-free pages.
 - Other agents concurrently writing or unknown auto-deploy status: pause runtime pushes.
 - Public consumers not mapped or test coverage missing: block the specific batch, not unrelated work.
 - Any production database mutation or manual deploy: requires separate explicit authorization.

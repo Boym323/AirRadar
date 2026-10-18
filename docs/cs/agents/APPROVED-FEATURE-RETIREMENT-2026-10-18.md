@@ -27,11 +27,22 @@
 
 Vybraná funkce se smí odstranit i v případě, že má aktivního konzumenta: **změna produktového chování je schválena**. Technická bezpečnost je však povinná. Funkční kód neoznačuj nepravdivě za dead code; veřejné kontrakty vyřazuj až po zmapování klientů a záměrné aktualizaci testů. Sdílená data ani historii DB nemaž.
 
-## Povinné prostředí pro provedení
+## Povinné prostředí a ověření produkce po jednotlivých kandidátech
 
-Pracuj v **samostatném plném neobsluhujícím checkoutu s nainstalovanými závislostmi**, spusť příslušné lokální kontroly, pak dodrž proces **jediného zapisujícího agenta a ověřených neforce commitů přímo do main**. Push do main může automaticky nasadit produkci. Neodesílej runtime změny, pokud nemáš izolovaný checkout, nemůžeš testovat, neumíš bezpečně ověřit produkční stav nebo není dostupný single-writer režim. Označ to BLOCKED; pravidla neobcházej a nevymýšlej měření.
+Pracuj v **samostatném plném neobsluhujícím checkoutu se závislostmi**, spusť relevantní lokální testy a kontroly a pak dodrž **jediného zapisujícího agenta, ověřené neforce commity přímo do main**. Runtime push může spustit automatický produkční deploy. Neodesílej změny, pokud nelze spustit příslušné testy, checkout obsluhuje produkci, není bezpečný single-writer/release stav nebo zůstává nevyřešená podmínka konkrétní změny. Neobcházej testy a nevymýšlej měření.
 
-Produkční flagy ověř pouze z povolené read-only a sanitizované diagnostiky. Nejsou-li dostupné, označ stav **UNKNOWN**. Staré CI/T58 není důkaz dnešního nasazení.
+**Nezablokuj všech šest dávek kruhovou podmínkou:** majitel již schválil produktové odstranění uvedených funkcí, včetně používaného UI/API. Ověřuj **skutečnou** konfiguraci a konzumenty každé funkce, nikoli neexistující společný feature flag. U funkce bez serverového přepínače zapiš `N/A (bez specifického serverového přepínače)`, zkontroluj její routy, UI, runtime spouštění, externí API klienty a aktuálně nasazenou SHA pomocí povolené read-only diagnostiky. To, že veřejné health DTO nevypisuje žádné přepínače, **samo o sobě neblokuje** tuto nezávislou funkci. Bezpečné vyřazení stále vyžaduje běžné regresní, bezpečnostní a browser testy.
+
+V současném kódu jsou tyto **konfiguračně citlivé oblasti**:
+- SondeHub: `SONDEHUB_ENABLED` a `SONDEHUB_MQTT_ENABLED`; obě jsou opt-in. Před tvrzením o aktivní zátěži a změnou integračního chování ověř skutečný stav povolenou sanitizovanou read-only cestou.
+- NOAA Space Weather: `SPACE_WEATHER_ENABLED`, opt-in. Vlastní API/UI lze oddělit od Navigation Integrity, které musí zůstat.
+- Track Fusion Shadow: `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` je defaultně zapnuté, není-li nastaveno false; `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` je samostatně opt-in. Před smazáním dohledávej jeho konzumenty, které nejsou součástí shadow funkce.
+- Modelový vítr Digital Twin: `AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY` vybírá kanonický režim/promotion, **nevypíná načítání modelového větru**. Ověř skutečný builder, plánování kalibrace a případně bezpečně dostupnou efektivní politiku.
+- 3D radar a samostatné stránky: ověř klientský stav a dostupnost rout, nevymýšlej serverové feature flagy. Mobile Spotter navíc obsahuje API Saved Spots a oprávnění, která musí být ověřena zvlášť.
+
+**Povolené read-only důkazy o produkci:** existující sanitizovaná veřejná diagnostika verze/zdraví a případně operátorem schválené zjištění **pouze stavů předem vyjmenovaných přepínačů** přímo na hostu. Konfiguraci procesu/služby/aplikace čti přes zavedená oprávnění, ale nikdy nezveřejňuj kompletní environment, přístupy, polohu přijímače, adresy ani jiné nesouvisející údaje. Prostý snapshot environmentu procesu nemusí zachytit hodnoty načtené aplikací později; neoznačuj jej automaticky za efektivní nastavení. Jen kvůli úkolu nezaváděj nový veřejný endpoint vypisující environment. Pokud skutečný stav nelze ověřit, uveď `UNKNOWN`, popiš omezení a **blokuj pouze konkrétní konfiguračně závislé odstranění, pokud nejistota skutečně brání regresní bezpečnosti**; nezávislé stránky lze po plných testech řešit dál.
+
+Každý push vyžaduje ověřený kód a vlastníka, vědomý produktový souhlas, paritu sdílených kontraktů, lokální gate, aktuální upstream SHA a single-writer režim. Historické CI/T58 nedokazuje současnou produkci ani reálnou výkonnostní úsporu.
 
 ## Dávky v pořadí závislostí
 
@@ -87,7 +98,7 @@ Produkční flagy ověř pouze z povolené read-only a sanitizované diagnostiky
 ## Stop podmínky a neověřená evidence
 
 - Chybí izolovaný plný checkout, závislosti nebo lokální testy: **runtime mazání BLOCKED**.
-- Nelze read-only zkontrolovat produkční flagy: **produkční stav UNKNOWN**.
+- Neověřitelný efektivní produkční přepínač: u konkrétní konfiguračně závislé funkce **UNKNOWN/BLOCKED** podle rizika; neblokuje funkce bez takového přepínače.
 - Nejasný single-writer nebo automatický deploy: pozastav runtime push.
 - Neúplné vazby API či chybějící testy: pozastav jen příslušnou dávku.
 - Destruktivní produkční DB či ruční deploy vyžadují zvláštní souhlas.
