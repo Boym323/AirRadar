@@ -41,7 +41,7 @@ describe("radar airspace map GeoJSON parity", () => {
   });
 
   it("formats shared sector properties once for multiple polygons without changing output", () => {
-    const polygon = [[14, 50], [15, 50], [15, 51]];
+    const polygon: AtcSector["polygons"][number] = [[14, 50], [15, 50], [15, 51]];
     const traffic = new Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; at: string }>();
     traffic.set("LKTRA36", { trafficLevel: "BUSY", traffic: { aircraftCount: 12 }, at: "2026-10-18T19:00:00Z" });
     const get = vi.spyOn(traffic, "get");
