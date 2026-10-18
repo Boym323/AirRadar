@@ -31,7 +31,6 @@ not yet been historically attributed.
 | Statistics & Recaps | production | analytics | Pre-registry | `/heatmap`<br>`/recap/daily`<br>`/recap/weekly`<br>`/statistics`<br>`/records`<br>`/aircraft-types`<br>`/operators`<br>`/traffic/rhythm`<br>`/traffic/geography` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap`<br>`/api/statistics/traffic-profile` | Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/flights/:id/evidence`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/runtime-performance`<br>`/api/system/integrations`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence. |
-| Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex`<br>`/api/admin/track-fusion/readiness`<br>`/api/admin/track-fusion/outcome` | Shadow-only per-field multi-source state estimator with readiness graduation plus bounded prospective canonical-vs-fused outcome validation against future LOCAL truth; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/notifications`<br>`/fleet`<br>`/admin/alerts`<br>`/admin/alerts/delivery-health`<br>`/admin/alerts/simulator`<br>`/admin/alerts/analytics` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/analytics`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/delivery-health`<br>`/api/admin/alerts/simulator`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, server-side paginated filtering/search, rationale, reversible aircraft/rule delivery mutes, delivery health diagnostics, authenticated dry-run alert rule simulation, and bounded alert effectiveness analytics. |
 <!-- feature-registry:end -->
@@ -635,51 +634,6 @@ creating another predictor. Every event retains provenance and confidence. The f
 additional SSE stream or periodic browser polling loop. See
 [`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
 
-
-## Track Fusion Shadow V1
-
-Track Fusion Shadow V1 evaluates a field-level multi-source state estimator
-beside the current local/network canonical merge. It scores position, altitude,
-groundspeed, track and vertical rate independently using source class,
-freshness, protocol provenance and available ADS-B integrity evidence.
-
-The shadow records LOCAL↔NETWORK position residuals, source-transition
-accept/reject decisions, bounded six-second dead-reckoning gap fills, per-field
-source selections and divergence from today's canonical position. It is visible
-through admin-only `/system` diagnostics and
-`GET /api/admin/track-fusion/:hex`.
-
-V1 deliberately does not change public radar state, SSE, trails, alerts,
-Navigation Integrity, predictive inputs, receiver statistics or PostgreSQL
-history. Fused/estimated state is never local receiver evidence. See
-[`TRACK-FUSION-SHADOW.md`](TRACK-FUSION-SHADOW.md).
-
-
-## Track Fusion Readiness / Graduation V1
-
-Track Fusion Shadow now collects bounded 24-hour process-local readiness
-evidence in five-minute buckets and produces a versioned PASS / WAIT / FAIL
-decision. Admin readiness is available on `/system` and through
-`GET /api/admin/track-fusion/readiness`.
-
-The first fail-closed consumer is Operational Digital Twin. Fused input is
-disabled by default and requires an explicit flag, readiness PASS and a GOOD
-observed fused position for the requested aircraft. Canonical radar, SSE and
-receiver persistence remain unchanged.
-
-
-## Track Fusion Outcome Validation V1
-
-Track Fusion now runs a bounded prospective canonical-vs-fused validation lane.
-For eligible freshly evaluated tracks it captures both states, projects them to
-5/15/30-second horizons, and later scores them against a future fresh LOCAL
-receiver position. The result reports FUSED_BETTER / CANONICAL_BETTER / TIE,
-mean position and altitude error, handover-specific outcomes and a separate
-PASS / WAIT / FAIL net-benefit decision.
-
-The validator is process-local and in-memory only. It performs no history scan,
-database write, upstream request, timer or second fusion pass. See
-[`TRACK-FUSION-OUTCOME.md`](TRACK-FUSION-OUTCOME.md).
 
 ## Operational Digital Twin V2 — Map Corridor Visualization
 

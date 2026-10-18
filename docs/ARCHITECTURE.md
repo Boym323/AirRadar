@@ -506,57 +506,6 @@ scan, or paid enrichment call. Provider failure removes only the affected
 context class and must not affect readsb → RAM → SSE.
 
 
-## Track Fusion Shadow V1
-
-Track Fusion Shadow is attached after the existing LOCAL and NETWORK snapshots
-have passed their source-specific normalization, plausibility, continuity and
-retention rules. The engine sees the retained maps but has no ownership of
-either map.
-
-```text
-LOCAL provider ──→ local map ──┐
-                               ├─→ current canonical merge ─→ radar/SSE/history boundaries
-NETWORK provider → network map ┘
-                 │             │
-                 └─────────────┴─→ Track Fusion Shadow
-                                      ├─ per-field quality selection
-                                      ├─ overlap residuals
-                                      ├─ handover validation
-                                      ├─ <=6 s estimated gap
-                                      └─ diagnostics only
-```
-
-Shadow output is not fed back into `localAircraft`, `networkAircraft`,
-`mergeAircraftMaps`, history persistence, receiver statistics, Navigation
-Integrity, alerts or predictive input. This one-way boundary is required for V1.
-
-
-## Track Fusion Readiness / Graduation V1
-
-The shadow estimator now feeds a bounded process-local readiness monitor. The
-monitor samples only cumulative shadow diagnostics, converts them to five-minute
-delta buckets, and retains at most 24 hours in RAM. It owns no timer and performs
-no database I/O. A process restart resets evidence and readiness returns WAIT.
-
-Operational Digital Twin is the first prepared consumer. It can read fused state
-only when the explicit Digital Twin fusion flag is enabled, readiness is PASS,
-and the requested aircraft has a GOOD observed fused position. Public radar,
-canonical Aircraft state, history, receiver statistics and FlightPosition remain
-unchanged.
-
-
-## Track Fusion Outcome Validation V1
-
-Outcome Validation is a shadow consumer of freshly evaluated Track Fusion
-tracks. It captures the existing canonical merge and fused state at one
-timestamp, schedules bounded 5/15/30-second prospective samples, and later
-scores both against a fresh LOCAL receiver observation.
-
-It does not own ingest, scheduling, persistence or a second fusion pass.
-Pending samples and five-minute aggregate buckets are RAM-only and bounded.
-The validator cannot mutate source affinity, canonical Aircraft state, radar
-SSE, receiver history or Track Fusion selection.
-
 ## Operational Digital Twin Outcome Validation V1
 
 The on-demand Digital Twin response now feeds a separate one-way prospective
@@ -566,7 +515,7 @@ those targets against receiver truth already in the local aircraft map.
 
 The validator is RAM-only, owns no timer, has no database path and never
 recomputes a Digital Twin. Its output is diagnostics only and cannot influence
-canonical aircraft state, Track Fusion selection, radar/SSE, history,
+canonical aircraft state, canonical-only selection, radar/SSE, history,
 Navigation Integrity, predictive inputs or alerts.
 
 ## Operational Digital Twin Event Outcome Validation V2
@@ -578,7 +527,7 @@ SIGMET truth, while already-produced Flight Intelligence LANDING events resolve
 arrival ETA and provider-reported runway truth.
 
 The lane is one-way and diagnostic only. It cannot mutate Digital Twin
-corridors, canonical Aircraft state, Track Fusion, radar/SSE, history,
+corridors, canonical Aircraft state, canonical inputs, radar/SSE, history,
 Navigation Integrity, predictive state or alerts. Evidence is process-local and
 a restart returns the outcome state to WAIT.
 
@@ -597,7 +546,7 @@ trigger detector evaluation, persistence or database access.
 → existing situation response and Digital Twin map source.
 
 The result is descriptive evidence only and cannot alter Navigation Integrity
-classification, canonical aircraft state, Track Fusion, predictions, history
+classification, canonical aircraft state, canonical inputs, predictions, history
 or alerts.
 
 The pure `predictivePhase`, `isAirportProximity`, and
