@@ -5,6 +5,10 @@ import { performance } from "node:perf_hooks";
 // A one-shot profiler for the existing T58 canary. It never opens the remote
 // inspector port, persists a raw profile, or accepts request-supplied input.
 const PROFILE_MS = 120_000;
+// The first production stalls appeared during the warmed-up periodic work,
+// outside the startup profile window. Keep the canary bounded while moving the
+// capture to the observed 90s..210s interval after process start.
+const PROFILE_DELAY_MS = 90_000;
 const SAMPLE_US = 20_000;
 const RSS_LIMIT_BYTES = 1_750 * 1_048_576;
 const MAX_SAMPLES = 10_000;
@@ -176,9 +180,17 @@ async function stop(reason: string): Promise<void> {
   }
 }
 
-export async function startT58CpuProfile(): Promise<void> {
+export async function startT58CpuProfile(options: { delayMs?: number } = {}): Promise<void> {
   if (process.env.AIRRADAR_T58_CPU_PROFILE_ENABLED !== "1" || state.summary.status !== "disabled") return;
   state.summary.status = "starting";
+  await new Promise<void>((resolve) => {
+    const delayMs = Number.isFinite(options.delayMs) && options.delayMs! >= 0
+      ? Math.min(options.delayMs!, PROFILE_DELAY_MS) : PROFILE_DELAY_MS;
+    state.timer = setTimeout(resolve, delayMs);
+    state.timer.unref?.();
+  });
+  state.timer = null;
+  if (process.env.AIRRADAR_T58_CPU_PROFILE_ENABLED !== "1" || state.summary.status !== "starting") return;
   if (process.memoryUsage().rss > RSS_LIMIT_BYTES) {
     state.summary = { ...state.summary, status: "discarded", reason: "rss_limit_at_start" }; return;
   }
