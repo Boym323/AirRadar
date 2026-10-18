@@ -547,7 +547,6 @@ SSE a nevzniká nová persistence, migrace, model ani stream.
 | `GET /api/map-context/radar?at=` | Metadata historického radarového snímku vyřešeného v nebo před vybraným okamžikem. | Produkce, když archiv obsahuje odpovídající snímek. |
 | `GET /api/map-context/radar/frame/:id` | Archivovaný validovaný PNG snímek CHMI. | Produkce, když je snímek zachován. |
 | `GET /api/map-context/metar?at=` | Dávková normalizovaná historická METAR pozorování. | Produkce, pokud existují archivovaná pozorování. |
-| `GET /api/map-context/wind?at=&level=` | Historický snapshot ICON-EU s proveniencí běhu modelu a času platnosti. | Produkce, pokud existují archivované snapshoty. |
 | `GET /api/map-context/aup?at=` | Historická plánovaná revize AUP/UUP a kontext platnosti. | Produkce, pokud existuje revize známá k danému okamžiku. |
 | `GET /api/airports` | Katalog letišť PostgreSQL nebo zabalený fallback katalog. | Produkce s importem/fallbackem. |
 | `GET /api/airports/:icao` | Kanonický detail letiště plus lokálně uložené dráhy, komunikační frekvence a přidružené navaid. | Produkce po `airports:sync`; prázdná infrastruktura je platná odpověď. |
@@ -629,7 +628,7 @@ s waypoint, ATC-sector, plánovanými AUP/UUP, SIGMET a readiness-gated PUBLIC
 prediction událostmi. Prediction Timeline V1 zobrazuje stejný canonical seznam
 chronologicky od pozorovaného bodu TEĎ a zachovává source/reference, provenance
 a confidence bez vytváření dalšího prediction enginu. Stejný response obsahuje Weather Corridor Intelligence
-s PIREP/AIREP relevancí podél trasy a ICON-EU wind trendem. Každá událost zachovává provenance a confidence. Funkce
+s PIREP/AIREP relevancí podél trasy. Každá událost zachovává provenance a confidence. Funkce
 nepřidává history scan, persistence, další SSE stream ani periodický browser
 polling loop. Podrobnosti jsou v
 [`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
@@ -643,10 +642,6 @@ Radar nad existujícím situation response vybraného letadla vykresluje 30minut
 
 Úspěšný existující situation výpočet zachytí bez dalšího pollingu projekci +5/+15/+30 minut. Pending sample se později vyhodnotí pouze proti budoucí LOCAL receiver truth v RAM. Report sleduje poziční a výškovou chybu, coverage deklarovaného uncertainty envelope, error/uncertainty ratio, expired truth a slice podle horizontu, corridor režimu a vstupního state source. Evidence je process-local, 24h bounded a začíná ve WAIT; PASS/FAIL se vyhodnotí až po minimálně 2 hodinách a dostatečném počtu truth sample.
 
-## Operational Digital Twin Wind-adjusted Timing Shadow V1
-
-Digital Twin nyní vedle canonical timing počítá samostatný shadow timing nad stejnou geometrií corridoru. Z observed groundspeed a aktuální podélné složky ICON-EU větru odvodí pouze diagnostický still-air proxy a podél existujících wind sample přepočítá čas dosažení stejných bodů. Výstup obsahuje +5/+15/+30min checkpointy a waypoint timing delta. Canonical corridor, eventy ani ETA se shadow výsledkem nemění.
-
 ## Operational Digital Twin Event Outcome Validation V2
 
 Predikované waypoint, ATC sector entry, SIGMET intersection, arrival ETA a runway expectation eventy se nyní prospectively porovnávají s budoucí LOCAL receiver truth a nezávislými Flight Intelligence LANDING eventy. Report měří precision, timing error, missing truth a lead-time slice bez tvrzení o recall. Větev je process-local, bounded a nepřidává polling, persistence ani druhý Digital Twin výpočet.
@@ -654,15 +649,6 @@ Predikované waypoint, ATC sector entry, SIGMET intersection, arrival ETA a runw
 ## Navigation Integrity Corridor V1
 
 The Operational Digital Twin intersects its existing sampled 30-minute corridor with the already-computed process-local Navigation Integrity active anomaly regions. A match requires both grid-cell and altitude-band compatibility; the result preserves severity, confidence, affected-aircraft counts, LOCAL/NETWORK evidence, baseline maturity and audit categories. Zero intersections are not an all-clear, and the feature never claims GNSS jamming, spoofing, or an aircraft navigation fault. No new HTTP request, timer, detector pass, database access or persistence path is added.
-
-## Wind Timing Graduation V1
-
-Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejného waypointu proti jediné LOCAL truth observation. Graduation gate je process-local a fail-closed: vyžaduje dostatečný span, paired sample volume, meaningful wind adjustments a truth coverage; PASS dále vyžaduje alespoň 5% zlepšení MAE a 55% shadow win rate. PASS pouze označí model jako způsobilý k ruční graduaci — canonical timing zůstává aktivní a automatická promotion neexistuje.
-
-### Explainable Prediction V1
-
-Prediktivní karty na detailu letadla mají rozbalovací panel `Proč?` pro ETA, runway, runway-change a trajectory. Evidence pochází ze stejného canonical prediction vyhodnocení a ven prochází pouze přes existující readiness-gated advisory buildery. Capability-specific whitelist dovoluje jen produktově bezpečné vstupy, například zbývající vzdálenost, efektivní rychlost, fázi letu, recent runway usage, povrchový vítr, candidate margin a trajectory geometrii. Nevzniká druhý prediction request ani paralelní model.
-
 
 ## Investigation Links V1
 

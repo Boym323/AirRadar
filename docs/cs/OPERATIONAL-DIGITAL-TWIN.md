@@ -6,8 +6,8 @@ Modelový profil větru podél koridoru, wind-timing shadow, jeho event-outcome
 graduace a promotion byly odstraněny. Aktuální `weatherCorridor` obsahuje pouze
 PIREP/AIREP a SIGMET. Z endpointu byl odebrán fetch větru ve výšce; sdílený
 ICON-EU provider a aircraft wind context nadále používá Weather Fusion.
-Níže uvedené části o wind timing a promotion popisují historické verze, nikoli
-aktuální runtime chování.
+Podrobnosti odstraněných algoritmů jsou uchovány v historii Git,
+nikoli jako součást aktuálního runtime.
 
 Operational Digital Twin V1 je omezená prospektivní situační vrstva AirRadar.
 Spojuje existující živý provoz a publikovaný kontext do jednoho 30minutového
@@ -183,23 +183,6 @@ Chráněný report je dostupný na:
 
 Stejný omezený report zobrazuje autentizovaným adminům také stránka System.
 
-## Wind-adjusted Timing Shadow V1
-
-Canonical corridor zůstává beze změny. Teprve po vytvoření existujících
-ICON-EU along-track wind sample z Weather Corridoru samostatný shadow model
-odvodí omezený still-air-speed proxy z observed groundspeed a aktuální
-podélné složky větru a přepočítá čas dosažení stejných vzdáleností corridoru.
-
-Shadow reportuje timing delta pro +5/+15/+30 minut a pro waypointy. Pokud
-chybí aktuální vítr, dostatek unikátních wind sample nebo použitelný observed
-groundspeed, model fail-closed vrátí INSUFFICIENT. Stará weather data mohou
-vytvořit výsledek, ale výslovně se označí STALE.
-
-Model nemění geometrii corridoru, canonical event times, PUBLIC ETA, radarovou
-pozici, historii ani outcome truth. Jeho účelem je vytvořit nezávislého timing
-kandidáta, kterého pozdější Event Outcome Validation porovná s canonical
-baseline před případnou graduation.
-
 ## Event Outcome Validation V2
 
 Digital Twin nově validuje predikované budoucí události odděleně od V1
@@ -254,50 +237,6 @@ timer, EventSource, druhý Digital Twin výpočet ani změnu canonical corridoru
 ## Navigation Integrity Corridor V1
 
 Digital Twin nově porovnává svůj existující vzorkovaný 30minutový corridor s už vypočtenými aktivními regionálními anomáliemi Navigation Integrity. Průnik vznikne pouze při současné shodě grid cell i altitude bandu. Výsledek zachovává severity, confidence, počet dotčených letadel, LOCAL/NETWORK evidence, baseline maturity a audit categories. Nula průniků neznamená all-clear a funkce nikdy netvrdí GNSS jamming, spoofing ani poruchu navigace konkrétního letadla. Nevzniká nový HTTP request, timer, detector pass, DB přístup ani persistence.
-
-## Wind Timing Graduation V1
-
-Event Outcome Validation V2 nyní obsahuje párovou graduation větev pro waypoint
-timing existujícího Wind-adjusted Timing Shadow V1. Stejný zachycený waypoint
-ukládá canonical čas i wind-adjusted shadow čas. Když budoucí LOCAL waypoint
-truth observation event vyhodnotí, AirRadar porovná oba časy proti přesně téže
-truth observation.
-
-Do graduation evidence se přijímá pouze wind shadow se stavem `AVAILABLE`.
-`STALE` ani `INSUFFICIENT` timing se nezapočítává. Porovnání je pouze pro
-waypointy, protože Wind-adjusted Timing Shadow V1 v této fázi přepočítává
-časování waypoint/checkpoint vzdáleností nad nezměněnou geometrií corridoru a
-samostatně nepřepočítává sector, SIGMET, runway ani arrival eventy.
-
-Report obsahuje:
-
-- paired waypoint samples;
-- unpaired outcomes a truth coverage;
-- canonical a shadow mean absolute timing error;
-- absolutní a relativní zlepšení MAE;
-- shadow wins, canonical wins a ties;
-- shadow win rate;
-- průměrnou absolutní wind timing korekci;
-- počet meaningful adjustment sample;
-- graduation stav PASS / WAIT / FAIL.
-
-První threshold set vyžaduje nejméně dvě hodiny process-local evidence, 30
-paired waypoint sample, 20 paired sample s alespoň 30sekundovou timing korekcí
-a 60% truth coverage. Po naplnění evidence:
-
-- PASS vyžaduje nejméně 5% relativní zlepšení MAE a shadow win rate alespoň 55%;
-- FAIL znamená materiální regresi alespoň 5% MAE nebo shadow win rate 45% a méně;
-- mezilehlý výsledek zůstává WAIT jako neprůkazný.
-
-PASS **neprovádí automatickou promotion**. Report explicitně vrací
-`autoPromotion=false`, `manualPromotionEligible=true` pouze při PASS a ve
-všech stavech `canonicalTimingRemainsActive=true`. Canonical corridor/event
-timing tedy tato fáze nemění.
-
-Párové porovnání je součástí existujícího chráněného Event Outcome reportu a
-zobrazuje se také na autentizované stránce System. Nepřidává timer, polling,
-DB persistence, čtení FlightPosition, druhý truth observer ani druhý Digital
-Twin výpočet.
 
 ## Regional Situation Graph V1
 
@@ -357,27 +296,6 @@ a 20 scoreable truth událostí; potom je recall pod 70 % FAIL.
 V1 záměrně vrací `WAYPOINT_SECTOR_WEATHER_RECALL_UNAVAILABLE`. Pro tyto třídy
 zatím neexistuje nezávislý truth universe, takže predikce nejsou zneužity jako
 falešná pravda. Report sám nemění žádnou veřejnou prediction policy.
-
-## Wind Timing Promotion V1
-
-Wind Timing Promotion V1 přidává explicitní ruční přechod, který graduation
-gate záměrně neprováděl automaticky. Výchozí hodnota zůstává
-`AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY=CANONICAL`. Operátor může nastavit
-`WIND_GRADUATED`, ale politika se projeví pouze tehdy, když je Wind Timing
-Graduation v `PASS`, ruční promotion je povolená a aktuální wind shadow je
-`AVAILABLE`.
-
-Nahrazují se pouze prezentační časy Digital Twin událostí `WAYPOINT`
-graduovanými wind-adjusted časy. Geometrie koridoru, PUBLIC ETA, runway
-advisories, živý stav a historie zůstávají beze změny. Pokud readiness klesne
-na WAIT/FAIL, wind evidence není dostupná nebo aktuální waypointy nelze
-spárovat, efektivní politika se okamžitě fail-closed vrátí na `CANONICAL`.
-
-Kalibrace zůstává canonical i při aktivní promotion: Outcome/Event Outcome
-validátory zachytí původní canonical situaci dříve, než se ve vracené odpovědi
-aplikuje wind timing. Odpověď obsahuje `windTimingPromotion` s nastavenou a
-efektivní politikou, graduation rozhodnutím, počtem upravených waypointů a
-důvodem fail-closed návratu.
 
 ## Calibration Persistence V1
 
@@ -484,7 +402,7 @@ jediný admin-only no-store endpoint
 ani background poller.
 
 Center zobrazuje kvalitu corridor outcome, event outcome precision/timing,
-Truth-first V2 recall, důkazy wind timing graduation, kvalitu Regional
+Truth-first V2 recall, kvalitu Regional
 Attention outcome a stav restart-stable calibration persistence. U Regional
 Attention ukazuje také řezy 5/15/30 minut a výslovně hlásí neskórované
 destination clustery.
