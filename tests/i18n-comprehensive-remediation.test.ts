@@ -98,8 +98,15 @@ describe("Czech/English full-site localization remediation", () => {
     );
     expect(systemDesktop).not.toContain('visualPage.route("**/api/system/status"');
     expect(gates).toContain('visualPage.locator(".system-grid").waitFor');
-    expect(gates).toContain('JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" })');
-    expect(gates).toContain("Predictive visual smoke requires a successful real system status snapshot");
+    expect(gates).toContain("readIsolatedGateAdminStatus");
+    expect(gates).toContain("systemAdminStatusSnapshot = await readIsolatedGateAdminStatus()");
+    expect(gates).toContain("Predictive visual smoke requires an authenticated admin snapshot");
+    expect(gates).toContain('body: JSON.stringify(systemAdminStatusSnapshot)');
+    expect(gates).toContain('const session = await request(base + "/api/watchlist/session"');
+    expect(gates).toContain('if (snapshot?.detailLevel !== "admin")');
+    expect(gates).toContain('const upstream = await get("/api/system/status")');
+    expect(gates).toContain("systemStatusSnapshot = await upstream.json()");
+    expect(gates).not.toContain('JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" })');
   });
 
   it("translates comparison, alert event titles and map layer names without changing data IDs", () => {
