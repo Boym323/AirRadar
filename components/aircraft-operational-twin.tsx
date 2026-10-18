@@ -80,7 +80,6 @@ export function AircraftOperationalTwin({
   const corridor = data.corridor;
   const evidence = data.evidence;
   const weather = data.weatherCorridor ?? null;
-  const windTimingShadow = data.windTimingShadow ?? null;
   const trajectoryQualityV3 = data.trajectoryQualityV3 ?? null;
   const trajectoryQualityPromotion = data.trajectoryQualityPromotion ?? null;
   const navigationIntegrity = data.navigationIntegrityCorridor ?? null;
@@ -220,14 +219,6 @@ export function AircraftOperationalTwin({
         </span>)}
       </div>
 
-      <div className={styles.weatherWind}>
-        <span>{t.operationalTwin.weatherCorridorWind}</span>
-        <strong>{t.operationalTwin.weatherCorridorWindTrend[weather.wind.trend]}</strong>
-        {weather.wind.deltaAlongTrackKt !== null && <small>
-          {t.operationalTwin.weatherCorridorWindDelta(formatNumber(weather.wind.deltaAlongTrackKt, 0))}
-        </small>}
-      </div>
-
       {weather.events.length ? <ol className={styles.weatherTimeline}>
         {weather.events.slice(0, 8).map((event) => <li key={event.id}>
           <div className={styles.weatherTime}>
@@ -248,21 +239,6 @@ export function AircraftOperationalTwin({
         </li>)}
       </ol> : <p className={styles.status}>{t.operationalTwin.weatherCorridorNoEvents}</p>}
     </section>}
-
-    {windTimingShadow && <details className={styles.limitations} data-testid="operational-twin-wind-timing-shadow-v1">
-      <summary>{t.operationalTwin.windTimingShadowTitle} · {t.operationalTwin.windTimingShadowStatus[windTimingShadow.status]}</summary>
-      <p className={styles.status}>{t.operationalTwin.windTimingShadowSummary}</p>
-      {windTimingShadow.status !== "INSUFFICIENT" ? <>
-        <div className={styles.metrics}>
-          <div><span>{t.operationalTwin.windTimingShadowGroundSpeed}</span><strong>{windTimingShadow.observedGroundSpeedKt === null ? "—" : `${formatNumber(windTimingShadow.observedGroundSpeedKt, 0)} kt`}</strong></div>
-          <div><span>{t.operationalTwin.windTimingShadowStillAir}</span><strong>{windTimingShadow.inferredStillAirSpeedKt === null ? "—" : `${formatNumber(windTimingShadow.inferredStillAirSpeedKt, 0)} kt`}</strong></div>
-          <div><span>{t.operationalTwin.windTimingShadowMaxDelta}</span><strong>{windTimingShadow.maxAbsoluteDeltaSeconds === null ? "—" : `${formatNumber(windTimingShadow.maxAbsoluteDeltaSeconds, 0)} s`}</strong></div>
-        </div>
-        <ul>{windTimingShadow.checkpoints.map((checkpoint) => <li key={checkpoint.horizonMinutes}>
-          {t.operationalTwin.windTimingShadowCheckpoint(checkpoint.horizonMinutes, formatNumber(checkpoint.deltaSeconds, 0))}
-        </li>)}</ul>
-      </> : <p className={styles.status}>{t.operationalTwin.windTimingShadowNoData}</p>}
-    </details>}
 
     {trajectoryQualityV3 && <details className={styles.limitations} data-testid="operational-twin-trajectory-quality-v3">
       <summary>

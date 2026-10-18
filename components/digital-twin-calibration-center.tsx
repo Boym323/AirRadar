@@ -11,7 +11,6 @@ import type {
   OperationalTwinTrajectoryQualityOutcomeReport,
   OperationalTwinTrajectoryQualityOutcomeV2Report,
   OperationalTwinTrajectoryQualityV3GraduationReport,
-  OperationalTwinWindTimingGraduationReport,
   RegionalAttentionOutcomeReport,
   RegionalAttentionGraduationReport,
 } from "@/lib/operational-twin";
@@ -48,7 +47,6 @@ type CalibrationCenterReport = {
   event: OperationalTwinEventOutcomeReport;
   focus: AircraftOperationalFocusOutcomeReport;
   truthFirst: OperationalTwinTruthFirstReport;
-  windTiming: OperationalTwinWindTimingGraduationReport;
   regionalAttention: RegionalAttentionOutcomeReport;
   regionalAttentionGraduation: RegionalAttentionGraduationReport;
   persistence: PersistenceStatus;
@@ -478,23 +476,6 @@ export function DigitalTwinCalibrationCenter() {
                 <Metric label={t.calibrationCenter.timingMae} value={seconds(report.truthFirst.overall.meanAbsoluteTimingErrorSeconds)} />
               </div>
               <small>{t.calibrationCenter.truthFirstFootnote}</small>
-            </section>
-
-            <section className="statistics-card" data-testid="calibration-wind-timing">
-              <DecisionHeader
-                title={t.calibrationCenter.windTimingGraduation}
-                decision={report.windTiming.decision}
-                reasons={report.windTiming.reasons}
-              />
-              <div className={styles.metrics}>
-                <Metric label={t.calibrationCenter.pairedSamples} value={report.windTiming.pairedSamples} />
-                <Metric label={t.calibrationCenter.truthCoverage} value={pct(report.windTiming.truthCoverage)} />
-                <Metric label={t.calibrationCenter.shadowWinRate} value={pct(report.windTiming.shadowWinRate)} />
-                <Metric label={t.calibrationCenter.relativeMaeGain} value={pct(report.windTiming.relativeMaeImprovement)} />
-              </div>
-              <small>
-                {t.calibrationCenter.manualPromotionEligible}: {report.windTiming.manualPromotionEligible ? t.common.yes : t.common.no}
-              </small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-regional-attention">

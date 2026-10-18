@@ -19,13 +19,6 @@ function weather(
     corridorMode: "ROUTE_AWARE",
     routePrecision: "PRECISE",
     events,
-    wind: {
-      status: "UNAVAILABLE",
-      model: null,
-      trend: "UNAVAILABLE",
-      deltaAlongTrackKt: null,
-      samples: [],
-    },
     sources: [],
   };
 }

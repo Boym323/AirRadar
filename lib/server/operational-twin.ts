@@ -21,9 +21,7 @@ import {
   buildOperationalTwinSituation,
   buildOperationalTwinTrajectoryQualityV2,
   buildOperationalTwinTrajectoryQualityV3,
-  buildOperationalTwinWindTimingShadow,
   applyOperationalTwinTrajectoryQualityPromotion,
-  applyOperationalTwinWindTimingPromotion,
   OPERATIONAL_TWIN_VERSION,
   type OperationalTwinAircraftState,
   type OperationalTwinApiResponse,
@@ -35,14 +33,11 @@ import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity
 import { getAirspacePlan } from "@/lib/server/airspace-activity";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultPirepProvider } from "@/lib/server/pirep-provider";
-import { defaultWindAloftProvider, type WindLevelHpa } from "@/lib/server/wind-aloft";
 import {
   getOperationalTwinTrajectoryQualityPolicy,
-  getOperationalTwinWindTimingPolicy,
   isAviationWeatherEnabled,
   isTrackFusionDigitalTwinEnabled,
 } from "@/lib/server/config";
-import { windLevelForAltitude } from "@/lib/weather/aircraft-wind-context";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import { loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { loadProcedureRepository } from "@/lib/procedures";
@@ -299,28 +294,11 @@ export async function getOperationalTwinForAircraft(
   const airspacePlan: AirspacePlanSnapshot | null = airspaceResult.value;
   const sigmets: SigmetSnapshot | null = sigmetResult.value;
 
-  const windLevels = [...new Set(
-    corridor.points
-      .map((point) => windLevelForAltitude(point.altitudeFt))
-      .filter((level): level is WindLevelHpa => level !== null),
-  )];
-  const windResults = await Promise.allSettled(
-    windLevels.map((level) => defaultWindAloftProvider.getWind(level)),
-  );
-  const windSnapshots = windResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
-
   const weatherCorridor = buildWeatherCorridorIntelligence({
     corridor,
     pireps: pirepResult.value,
     sigmets,
-    windSnapshots,
     now,
-  });
-
-  const windTimingShadow = buildOperationalTwinWindTimingShadow({
-    corridor,
-    weatherCorridor,
-    observedGroundSpeedKt: state.groundSpeedKt,
   });
 
   const navigationIntegrityCurrent = getNavigationIntegrityService().getCurrent("15m", now);
@@ -350,7 +328,6 @@ export async function getOperationalTwinForAircraft(
     corridor,
     events,
     weatherCorridor,
-    windTimingShadow,
     atcAvailable: preparedDataset !== null,
     airspacePlanAvailable: Boolean(airspacePlan && airspacePlan.status !== "unavailable"),
     sigmetAvailable: Boolean(sigmets && sigmetResult.ok),
@@ -389,16 +366,9 @@ export async function getOperationalTwinForAircraft(
     graduation: service.getOperationalTwinTrajectoryQualityGraduationReport(now),
     configuredPolicy: getOperationalTwinTrajectoryQualityPolicy(),
   });
-  const windPromotion = applyOperationalTwinWindTimingPromotion({
-    events: situation.events,
-    windTimingShadow,
-    graduation: service.getOperationalTwinEventOutcomeReport(now).windTimingGraduation,
-    configuredPolicy: getOperationalTwinWindTimingPolicy(),
-    generatedAt: now,
-  });
   const operationalFocus = buildAircraftOperationalFocus({
     generatedAt: now,
-    events: windPromotion.events,
+    events: situation.events,
     weatherCorridor,
     navigationIntegrityCorridor,
   });
@@ -406,8 +376,7 @@ export async function getOperationalTwinForAircraft(
     ...situation,
     corridor: trajectoryPromotion.corridor,
     trajectoryQualityPromotion: trajectoryPromotion.status,
-    events: windPromotion.events,
-    windTimingPromotion: windPromotion.status,
+    events: situation.events,
     operationalFocus,
   };
   service.captureOperationalFocusOutcome(finalSituation, sigmets);

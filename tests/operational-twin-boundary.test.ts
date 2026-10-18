@@ -41,7 +41,7 @@ describe("Operational Digital Twin V1 boundary", () => {
   it("uses one bounded Weather Corridor enrichment path without client polling", () => {
     expect(serverSource).toContain("defaultPirepProvider.getPireps");
     expect(serverSource).toContain("radiusNm: 300");
-    expect(serverSource).toContain("defaultWindAloftProvider.getWind");
+    expect(serverSource).not.toContain("defaultWindAloftProvider.getWind");
     expect(serverSource).toContain("buildWeatherCorridorIntelligence");
     expect(weatherCorridorSource).not.toContain("fetch(");
     expect(weatherCorridorSource).not.toContain("process.env");

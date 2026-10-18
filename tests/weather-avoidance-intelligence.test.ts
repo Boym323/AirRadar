@@ -46,17 +46,9 @@ function corridor(overrides: Partial<WeatherCorridorIntelligence> = {}): Weather
     corridorMode: "ROUTE_AWARE",
     routePrecision: "PRECISE",
     events: [],
-    wind: {
-      status: "AVAILABLE",
-      model: "ICON-EU",
-      trend: "STABLE",
-      deltaAlongTrackKt: 0,
-      samples: [],
-    },
     sources: [
       { source: "PIREP_AIREP", state: "AVAILABLE", count: 0 },
       { source: "SIGMET", state: "AVAILABLE", count: 1 },
-      { source: "ICON_EU", state: "AVAILABLE", count: 1 },
     ],
     ...overrides,
   };
@@ -147,7 +139,6 @@ describe("Weather Avoidance Intelligence V1", () => {
         sources: [
           { source: "PIREP_AIREP", state: "AVAILABLE", count: 0 },
           { source: "SIGMET", state: "STALE", count: 1 },
-          { source: "ICON_EU", state: "AVAILABLE", count: 1 },
         ],
       }),
     });

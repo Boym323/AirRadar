@@ -1,5 +1,14 @@
 # Operational Digital Twin V1
 
+## Aktuální rozsah (2026-10-18)
+
+Modelový profil větru podél koridoru, wind-timing shadow, jeho event-outcome
+graduace a promotion byly odstraněny. Aktuální `weatherCorridor` obsahuje pouze
+PIREP/AIREP a SIGMET. Z endpointu byl odebrán fetch větru ve výšce; sdílený
+ICON-EU provider a aircraft wind context nadále používá Weather Fusion.
+Níže uvedené části o wind timing a promotion popisují historické verze, nikoli
+aktuální runtime chování.
+
 Operational Digital Twin V1 je omezená prospektivní situační vrstva AirRadar.
 Spojuje existující živý provoz a publikovaný kontext do jednoho 30minutového
 výhledu konkrétního letadla. Nepřidává nový zdroj provozu a nejde o ATC
@@ -86,14 +95,12 @@ V1 používá:
 - horizontální vzdálenost reportu od budoucího corridor bodu a rozdíl
   projektované výšky;
 - časovou, horizontální a vertikální kompatibilitu SIGMET;
-- ICON-EU jen pro unikátní tlakové hladiny, které 30minutová projekce potřebuje.
 
 PIREP/AIREP se nikdy automaticky nepřiřazuje sledovanému letadlu. Report je
 pouze evidence počasí poblíž projektované budoucí trasy. SIGMET vstup/výstup
 je sampled odhad s dvouminutovým rozlišením, nikoli přesný crossing time.
 
-ICON-EU se nevydává za hazard prediction. Weather Corridor ukazuje bounded
-vzorky větru podél corridoru a trend podélné složky. Chybějící provider
+Weather Corridor ukazuje omezenou PIREP/AIREP a SIGMET evidence. Chybějící zdroj
 snižuje stav na PARTIAL/INSUFFICIENT; nikdy nevytváří implicitní „clear“.
 
 ## Datové a runtime hranice
@@ -109,9 +116,9 @@ Server čte už běžící RAM stav letadla. Neprovádí:
 ATC/ATS používá existující dataset loader. Procedures se čtou z validovaného
 lokálního generated datasetu. AUP/UUP používá nový plan-only cache accessor, aby
 se kvůli jednomu letadlu nenačítala delayed historical activation data. SIGMET
-používá existující bounded Aviation Weather provider/cache. Weather Corridor
-navíc používá existující PIREP cache a sdílený ICON-EU wind snapshot; nevytváří
-dotaz pro každý corridor bod. Predikční vstupy
+využívá existující bounded Aviation Weather provider/cache. Weather Corridor
+navíc používá existující PIREP cache; modelový vítr nestahuje. Sdílený ICON-EU
+provider nadále používá samostatná funkce Weather Fusion. Predikční vstupy
 procházejí stejným readiness enforcementem a PUBLIC advisory buildery jako
 ostatní veřejné prediction surfaces.
 
@@ -127,7 +134,7 @@ corridoru.
 Přirozené pokračování:
 
 1. outcome truth pro sector/waypoint/weather crossing timing nad rámec corridor-position V1;
-2. route-aware propagace času se započtením větru;
+2. route-aware zpřesnění se zachováním canonical časování;
 3. průniky s Navigation Integrity regions;
 4. regionální multi-aircraft situation graph a operational alerts.
 

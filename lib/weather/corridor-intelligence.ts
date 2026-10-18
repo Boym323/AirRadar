@@ -1,11 +1,6 @@
 import { haversineDistanceKm } from "@/lib/geo";
 import type { OperationalTwinCorridor, OperationalTwinTrajectoryPoint } from "@/lib/operational-twin/types";
 import {
-  sampleWindAtPosition,
-  windLevelForAltitude,
-  type AircraftWindSnapshot,
-} from "@/lib/weather/aircraft-wind-context";
-import {
   classifyPirepSeverity,
   classifyWeatherHazard,
   type WeatherFusionConfidence,
@@ -18,7 +13,7 @@ import type { PirepSnapshot, SigmetSnapshot } from "@/lib/weather/types";
 export const WEATHER_CORRIDOR_VERSION = "weather-corridor-intelligence-v1" as const;
 
 export type WeatherCorridorEventType = "TURBULENCE" | "ICING" | "SIGMET_ENTRY" | "SIGMET_EXIT";
-export type WeatherCorridorSource = "PIREP_AIREP" | "SIGMET" | "ICON_EU";
+export type WeatherCorridorSource = "PIREP_AIREP" | "SIGMET";
 export type WeatherCorridorSourceState = "AVAILABLE" | "STALE" | "UNAVAILABLE";
 
 export interface WeatherCorridorEvent {
@@ -38,28 +33,6 @@ export interface WeatherCorridorEvent {
   evidence: string[];
 }
 
-export interface WeatherCorridorWindSample {
-  offsetMinutes: number;
-  at: string;
-  distanceAlongCorridorNm: number;
-  altitudeFt: number | null;
-  levelHpa: number;
-  windSpeedKt: number;
-  windFromDeg: number;
-  headwindKt: number;
-  tailwindKt: number;
-  crosswindKt: number;
-  sourceDistanceKm: number;
-}
-
-export interface WeatherCorridorWindProfile {
-  status: "AVAILABLE" | "STALE" | "UNAVAILABLE";
-  model: "ICON-EU" | null;
-  trend: "MORE_HEADWIND" | "MORE_TAILWIND" | "STABLE" | "VARIABLE" | "UNAVAILABLE";
-  deltaAlongTrackKt: number | null;
-  samples: WeatherCorridorWindSample[];
-}
-
 export interface WeatherCorridorSourceSummary {
   source: WeatherCorridorSource;
   state: WeatherCorridorSourceState;
@@ -73,7 +46,6 @@ export interface WeatherCorridorIntelligence {
   corridorMode: OperationalTwinCorridor["mode"];
   routePrecision: string | null;
   events: WeatherCorridorEvent[];
-  wind: WeatherCorridorWindProfile;
   sources: WeatherCorridorSourceSummary[];
 }
 
@@ -81,14 +53,12 @@ export interface WeatherCorridorInput {
   corridor: OperationalTwinCorridor;
   pireps: PirepSnapshot | null;
   sigmets: SigmetSnapshot | null;
-  windSnapshots: readonly AircraftWindSnapshot[];
   now?: Date;
 }
 
 const KM_PER_NM = 1.852;
 const MAX_PIREP_DISTANCE_NM = 40;
 const MAX_PIREP_ALTITUDE_DELTA_FT = 8_000;
-const WIND_SAMPLE_OFFSETS = [0, 10, 20, 30] as const;
 const MAX_EVENTS = 16;
 
 function distanceNm(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
@@ -308,82 +278,11 @@ function buildSigmetEvents(
   return events;
 }
 
-function nearestCorridorPoint(corridor: OperationalTwinCorridor, offsetMinutes: number): OperationalTwinTrajectoryPoint | null {
-  if (!corridor.points.length) return null;
-  return corridor.points.reduce((best, point) =>
-    Math.abs(point.offsetMinutes - offsetMinutes) < Math.abs(best.offsetMinutes - offsetMinutes) ? point : best,
-  );
-}
-
-function buildWindProfile(
-  corridor: OperationalTwinCorridor,
-  distances: readonly number[],
-  snapshots: readonly AircraftWindSnapshot[],
-): WeatherCorridorWindProfile {
-  const byLevel = new Map(snapshots.map((snapshot) => [snapshot.levelHpa, snapshot]));
-  const samples: WeatherCorridorWindSample[] = [];
-
-  for (const requestedOffset of WIND_SAMPLE_OFFSETS) {
-    if (requestedOffset > corridor.horizonMinutes) continue;
-    const point = nearestCorridorPoint(corridor, requestedOffset);
-    if (!point || point.trackDeg === null) continue;
-    const level = windLevelForAltitude(point.altitudeFt);
-    if (level === null) continue;
-    const snapshot = byLevel.get(level);
-    if (!snapshot) continue;
-    const sample = sampleWindAtPosition(point.lat, point.lon, point.trackDeg, snapshot);
-    if (!sample) continue;
-    const pointIndex = corridor.points.indexOf(point);
-    samples.push({
-      offsetMinutes: point.offsetMinutes,
-      at: point.at,
-      distanceAlongCorridorNm: Number((distances[pointIndex] ?? 0).toFixed(1)),
-      altitudeFt: point.altitudeFt,
-      levelHpa: level,
-      windSpeedKt: Number(sample.windSpeedKt.toFixed(1)),
-      windFromDeg: Number(sample.windFromDeg.toFixed(0)),
-      headwindKt: Number(sample.headwindKt.toFixed(1)),
-      tailwindKt: Number(sample.tailwindKt.toFixed(1)),
-      crosswindKt: Number(sample.crosswindKt.toFixed(1)),
-      sourceDistanceKm: Number(sample.sourceDistanceKm.toFixed(1)),
-    });
-  }
-
-  if (!samples.length) {
-    return { status: "UNAVAILABLE", model: null, trend: "UNAVAILABLE", deltaAlongTrackKt: null, samples: [] };
-  }
-
-  const stale = snapshots.some((snapshot) => snapshot.stale);
-  const first = samples[0]!;
-  const last = samples[samples.length - 1]!;
-  const signed = (sample: WeatherCorridorWindSample) => sample.headwindKt - sample.tailwindKt;
-  const delta = signed(last) - signed(first);
-  const deltas = samples.slice(1).map((sample) => signed(sample) - signed(first)).filter((value) => Math.abs(value) >= 8);
-  const positive = deltas.some((value) => value > 0);
-  const negative = deltas.some((value) => value < 0);
-  const trend: WeatherCorridorWindProfile["trend"] = positive && negative
-    ? "VARIABLE"
-    : delta >= 10
-      ? "MORE_HEADWIND"
-      : delta <= -10
-        ? "MORE_TAILWIND"
-        : "STABLE";
-
-  return {
-    status: stale ? "STALE" : "AVAILABLE",
-    model: "ICON-EU",
-    trend,
-    deltaAlongTrackKt: Number(delta.toFixed(1)),
-    samples,
-  };
-}
-
 export function buildWeatherCorridorIntelligence(input: WeatherCorridorInput): WeatherCorridorIntelligence {
   const now = input.now ?? new Date();
   const distances = cumulativeDistances(input.corridor.points);
   const pirepEvents = buildPirepEvents(input.pireps, input.corridor, distances, now);
   const sigmetEvents = buildSigmetEvents(input.sigmets, input.corridor, distances);
-  const wind = buildWindProfile(input.corridor, distances, input.windSnapshots);
 
   const events = [...pirepEvents, ...sigmetEvents]
     .sort((a, b) =>
@@ -404,22 +303,16 @@ export function buildWeatherCorridorIntelligence(input: WeatherCorridorInput): W
       state: input.sigmets ? input.sigmets.stale ? "STALE" : "AVAILABLE" : "UNAVAILABLE",
       count: input.sigmets?.features.length ?? 0,
     },
-    {
-      source: "ICON_EU",
-      state: wind.status,
-      count: wind.samples.length,
-    },
   ];
 
   const available = sources.filter((source) => source.state !== "UNAVAILABLE").length;
   return {
     version: WEATHER_CORRIDOR_VERSION,
-    status: available >= 2 ? "AVAILABLE" : available === 1 ? "PARTIAL" : "INSUFFICIENT",
+    status: available === 2 ? "AVAILABLE" : available === 1 ? "PARTIAL" : "INSUFFICIENT",
     horizonMinutes: input.corridor.horizonMinutes,
     corridorMode: input.corridor.mode,
     routePrecision: input.corridor.routePrecision,
     events,
-    wind,
     sources,
   };
 }

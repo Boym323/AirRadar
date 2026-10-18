@@ -617,6 +617,7 @@ Route Intelligence V2 geometry
        ├─→ ATC/ATS spatial context
        ├─→ AUP/UUP planned windows
        ├─→ SIGMET valid geometry
+       ├─→ PIREP/AIREP corridor evidence
        └─→ PUBLIC ETA/runway/trajectory advisories
                     ↓
        provenance-aware situation timeline
@@ -628,6 +629,8 @@ Route Intelligence V2 geometry
 
 This flow is read-only and on-demand. It neither reads FlightPosition history
 nor persists corridor/event output.
+The Twin's weather corridor does not fetch model wind. The shared ICON-EU wind
+provider remains in the separate Weather Fusion flow.
 
 
 ## Track Fusion Shadow V1 flow

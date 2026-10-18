@@ -58,13 +58,6 @@ function situation(): OperationalTwinSituation {
         sourceReference: "SIG-1",
         evidence: ["test"],
       }],
-      wind: {
-        status: "UNAVAILABLE",
-        model: null,
-        trend: "UNAVAILABLE",
-        deltaAlongTrackKt: null,
-        samples: [],
-      },
       sources: [],
     },
     navigationIntegrityCorridor: {

@@ -7,7 +7,6 @@ import type {
 import { OPERATIONAL_TWIN_VERSION } from "./types";
 import type { OperationalTwinAircraftState } from "./corridor";
 import type { WeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
-import type { OperationalTwinWindTimingShadow } from "./wind-timing-shadow";
 
 export function buildOperationalTwinSituation(input: {
   generatedAt: Date;
@@ -15,7 +14,6 @@ export function buildOperationalTwinSituation(input: {
   corridor: OperationalTwinCorridor;
   events: OperationalTwinEvent[];
   weatherCorridor: WeatherCorridorIntelligence;
-  windTimingShadow?: OperationalTwinWindTimingShadow;
   atcAvailable: boolean;
   airspacePlanAvailable: boolean;
   sigmetAvailable: boolean;
@@ -55,7 +53,6 @@ export function buildOperationalTwinSituation(input: {
     },
     corridor: input.corridor,
     weatherCorridor: input.weatherCorridor,
-    windTimingShadow: input.windTimingShadow,
     events: input.events,
     evidence,
     limitations,
@@ -66,7 +63,6 @@ export * from "./types";
 export * from "./corridor";
 export * from "./events";
 export * from "./outcome";
-export * from "./wind-timing-shadow";
 export * from "./trajectory-quality-v2";
 export * from "./trajectory-quality-v3";
 export * from "./event-outcome";
@@ -74,7 +70,6 @@ export * from "./navigation-integrity-corridor";
 export * from "./aircraft-operational-focus";
 export * from "./aircraft-operational-focus-ui";
 export * from "./truth-first";
-export * from "./wind-timing-promotion";
 export * from "./regional-attention-outcome";
 export * from "./regional-attention-graduation";
 export * from "./trajectory-quality-outcome";

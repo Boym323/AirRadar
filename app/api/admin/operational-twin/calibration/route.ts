@@ -34,7 +34,6 @@ export async function GET(request: Request): Promise<Response> {
     event,
     focus,
     truthFirst: event.truthFirst,
-    windTiming: event.windTimingGraduation,
     regionalAttention,
     regionalAttentionGraduation,
     persistence: event.calibrationPersistence,

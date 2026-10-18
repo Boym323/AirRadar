@@ -56,13 +56,6 @@ function situation(): OperationalTwinSituation {
         sourceReference: "PIREP-1",
         evidence: ["test"],
       }],
-      wind: {
-        status: "AVAILABLE",
-        model: "ICON-EU",
-        trend: "STABLE",
-        deltaAlongTrackKt: 0,
-        samples: [],
-      },
       sources: [],
     },
     events: [{

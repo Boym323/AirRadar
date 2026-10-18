@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { OperationalTwinCorridor } from "@/lib/operational-twin/types";
-import type { AircraftWindSnapshot } from "@/lib/weather/aircraft-wind-context";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import type { PirepSnapshot, SigmetSnapshot } from "@/lib/weather/types";
 
@@ -89,28 +88,12 @@ function sigmets(): SigmetSnapshot {
   };
 }
 
-function wind(): AircraftWindSnapshot {
-  return {
-    model: "ICON-EU",
-    validAt: now.toISOString(),
-    levelHpa: 700,
-    stale: false,
-    points: [
-      { lat: 50, lon: 14, speedKt: 20, directionDeg: 90 },
-      { lat: 50, lon: 15, speedKt: 30, directionDeg: 90 },
-      { lat: 50, lon: 16, speedKt: 40, directionDeg: 90 },
-      { lat: 50, lon: 17, speedKt: 50, directionDeg: 90 },
-    ],
-  };
-}
-
 describe("Weather Corridor Intelligence V1", () => {
   it("places PIREP turbulence on the nearest future corridor point", () => {
     const result = buildWeatherCorridorIntelligence({
       corridor: corridor(),
       pireps: pireps(),
       sigmets: null,
-      windSnapshots: [],
       now,
     });
     const event = result.events.find((item) => item.type === "TURBULENCE");
@@ -132,7 +115,6 @@ describe("Weather Corridor Intelligence V1", () => {
       corridor: corridor(),
       pireps: snapshot,
       sigmets: null,
-      windSnapshots: [],
       now,
     });
     expect(result.events.some((item) => item.source === "PIREP_AIREP")).toBe(false);
@@ -143,7 +125,6 @@ describe("Weather Corridor Intelligence V1", () => {
       corridor: corridor(),
       pireps: null,
       sigmets: sigmets(),
-      windSnapshots: [],
       now,
     });
     expect(result.events.filter((item) => item.source === "SIGMET").map((item) => item.type)).toEqual([
@@ -166,40 +147,39 @@ describe("Weather Corridor Intelligence V1", () => {
       corridor: corridor(),
       pireps: null,
       sigmets: snapshot,
-      windSnapshots: [],
       now,
     });
     expect(result.events).toEqual([]);
   });
 
-  it("samples ICON-EU along the corridor and identifies increasing headwind", () => {
+  it("keeps the corridor projection limited to PIREP and SIGMET evidence", () => {
     const result = buildWeatherCorridorIntelligence({
       corridor: corridor(),
       pireps: null,
       sigmets: null,
-      windSnapshots: [wind()],
       now,
     });
-    expect(result.wind.status).toBe("AVAILABLE");
-    expect(result.wind.samples).toHaveLength(4);
-    expect(result.wind.trend).toBe("MORE_HEADWIND");
-    expect(result.wind.deltaAlongTrackKt).toBeCloseTo(30, 1);
+    expect(result).toMatchObject({ status: "INSUFFICIENT", events: [], sources: [
+      { source: "PIREP_AIREP", state: "UNAVAILABLE", count: 0 },
+      { source: "SIGMET", state: "UNAVAILABLE", count: 0 },
+    ] });
+    expect(result).not.toHaveProperty("wind");
+    expect(JSON.stringify(result)).not.toContain("ICON_EU");
   });
 
-  it("reports partial source coverage without inventing weather events", () => {
+  it("reports partial PIREP/SIGMET coverage without inventing weather events", () => {
     const result = buildWeatherCorridorIntelligence({
       corridor: corridor(),
-      pireps: null,
+      pireps: pireps(),
       sigmets: null,
-      windSnapshots: [wind()],
       now,
     });
     expect(result.status).toBe("PARTIAL");
-    expect(result.events).toEqual([]);
-    expect(result.sources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ source: "ICON_EU", state: "AVAILABLE" }),
-      expect.objectContaining({ source: "PIREP_AIREP", state: "UNAVAILABLE" }),
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]?.source).toBe("PIREP_AIREP");
+    expect(result.sources).toEqual([
+      expect.objectContaining({ source: "PIREP_AIREP", state: "AVAILABLE" }),
       expect.objectContaining({ source: "SIGMET", state: "UNAVAILABLE" }),
-    ]));
+    ]);
   });
 });

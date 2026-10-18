@@ -386,6 +386,8 @@ component that created it.
   graduation/readiness gate; admin/SHADOW previews are forbidden.
 - Missing external context is fail-soft and cannot make the live radar
   unhealthy.
+- Its weather corridor uses PIREP/AIREP and SIGMET evidence only; it does not
+  fetch ICON-EU wind or adjust event timing.
 
 
 ## Track Fusion Shadow invariants

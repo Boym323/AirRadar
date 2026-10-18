@@ -1,5 +1,14 @@
 # Operational Digital Twin V1
 
+## Current scope (2026-10-18)
+
+The model-wind corridor profile, wind-timing shadow, event-outcome graduation
+and timing promotion have been retired. The current `weatherCorridor` contains
+PIREP/AIREP and SIGMET evidence only. This removes the wind-aloft fetch from
+this endpoint; the shared ICON-EU provider and aircraft wind context remain in
+use by Weather Fusion. Later sections that describe wind timing or promotion
+are historical version notes, not current runtime behavior.
+
 Operational Digital Twin V1 is AirRadar's bounded prospective situation layer.
 It combines existing live and published context into one 30-minute aircraft
 outlook. It does not introduce a new traffic source and it is not an ATC
@@ -90,17 +99,14 @@ V1 uses:
 - report distance from future corridor samples plus projected altitude
   difference;
 - temporal, horizontal and vertical SIGMET compatibility;
-- ICON-EU only for the unique pressure levels required by the 30-minute
-  projection.
 
 PIREP/AIREP is never automatically attributed to the tracked aircraft. A report
 is only weather evidence near the projected future path. SIGMET entry/exit is a
 sampled estimate with two-minute resolution, not an exact crossing time.
 
-ICON-EU is not presented as hazard prediction. Weather Corridor exposes bounded
-wind samples along the corridor plus the along-track trend. A missing provider
-degrades the result to PARTIAL/INSUFFICIENT and never becomes an implicit
-all-clear.
+Weather Corridor exposes bounded PIREP/AIREP and SIGMET evidence. A missing
+source degrades the result to PARTIAL/INSUFFICIENT and never becomes an
+implicit all-clear.
 
 ## Data and runtime boundaries
 
@@ -117,10 +123,10 @@ ATC/ATS context uses the existing dataset loader. Procedure data is read from
 the validated local generated procedure repository. AUP/UUP uses a plan-only
 cache accessor, avoiding the delayed historical-activation fetch. SIGMET uses
 the existing bounded Aviation Weather provider/cache. Weather Corridor also
-reuses the existing PIREP cache and shared ICON-EU wind snapshot; it does not
-create one upstream request per corridor point. Predictive inputs use the
-same readiness enforcement and PUBLIC advisory builders as the existing public
-prediction surfaces.
+reuses the existing PIREP cache. It does not fetch model wind. The separate
+Weather Fusion feature continues to use the shared ICON-EU provider. Predictive
+inputs use the same readiness enforcement and PUBLIC advisory builders as the
+existing public prediction surfaces.
 
 Provider failures are fail-soft. Missing ATC, AUP/UUP, SIGMET or PUBLIC
 prediction evidence removes only the affected event classes; a kinematic
@@ -134,7 +140,7 @@ does not yet persist or calibrate corridor outcomes.
 Natural follow-ups are:
 
 1. event-outcome truth for sector/waypoint/weather crossing timing beyond the corridor-position V1;
-2. route-aware wind-adjusted speed/time propagation;
+2. route-aware refinements that retain canonical timing;
 3. navigation-integrity region intersections;
 4. regional multi-aircraft situation graphs and operational alerts.
 

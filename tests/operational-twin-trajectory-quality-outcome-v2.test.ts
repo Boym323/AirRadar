@@ -46,7 +46,6 @@ function situation(): OperationalTwinSituation {
       corridorMode: "ROUTE_AWARE",
       routePrecision: "PRECISE",
       events: [],
-      wind: { status: "AVAILABLE", model: "ICON-EU", trend: "STABLE", deltaAlongTrackKt: 0, samples: [] },
       sources: [],
     },
     trajectoryQualityV2: {

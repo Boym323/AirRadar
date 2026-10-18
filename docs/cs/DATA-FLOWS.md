@@ -592,6 +592,7 @@ Route Intelligence V2 geometry
        ├─→ ATC/ATS spatial context
        ├─→ AUP/UUP planned windows
        ├─→ SIGMET valid geometry
+       ├─→ PIREP/AIREP evidence podél koridoru
        └─→ PUBLIC ETA/runway/trajectory advisories
                     ↓
        provenance-aware situation timeline
@@ -603,6 +604,8 @@ Route Intelligence V2 geometry
 
 Flow je read-only a on-demand. Nečte FlightPosition historii ani nepersistuje
 výstup corridoru nebo událostí.
+Weather corridor dvojčete nestahuje modelový vítr. Sdílený ICON-EU provider
+nadále používá samostatný tok Weather Fusion.
 
 
 ## Track Fusion Shadow V1 flow

@@ -141,7 +141,7 @@ describe("Operational Digital Twin Calibration Persistence V1", () => {
     expect(OPERATIONAL_TWIN_OUTCOME_VERSION).toBe("operational-digital-twin-outcome-validation-v1");
   });
 
-  it("round-trips event and wind-graduation aggregates without raw prediction identity", () => {
+  it("reads legacy event buckets containing retired wind data and omits it on export", () => {
     const validator = new OperationalTwinEventOutcomeValidator();
     const payloadJson = JSON.stringify({
       startMs: START,
@@ -178,7 +178,7 @@ describe("Operational Digital Twin Calibration Persistence V1", () => {
     expect(exported[0]?.payloadJson).not.toMatch(/icao|callsign|latitude|longitude|semanticKey/i);
     const report = validator.report(new Date(NOW));
     expect(report.overall.predictions).toBe(2);
-    expect(report.windTimingGraduation.pairedSamples).toBe(1);
+    expect(exported[0]?.payloadJson).not.toContain("windTimingComparison");
     expect(OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION).toBe("operational-digital-twin-event-outcome-v2");
   });
 

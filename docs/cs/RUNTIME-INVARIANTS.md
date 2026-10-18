@@ -403,6 +403,8 @@ která jej vytvořila.
   graduation/readiness gate; admin/SHADOW preview je zakázáno.
 - Chybějící externí kontext je fail-soft a nesmí způsobit degraded stav live
   radaru.
+- Weather corridor používá pouze PIREP/AIREP a SIGMET; nestahuje ICON-EU vítr
+  ani neupravuje časování událostí.
 
 
 ## Track Fusion Shadow invariants

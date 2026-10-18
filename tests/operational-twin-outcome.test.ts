@@ -45,7 +45,6 @@ function situation(stateSource: "CANONICAL" | "TRACK_FUSION" = "CANONICAL"): Ope
       corridorMode: "ROUTE_AWARE",
       routePrecision: "PRECISE",
       events: [],
-      wind: { status: "AVAILABLE", model: "ICON-EU", trend: "STABLE", deltaAlongTrackKt: 0, samples: [] },
       sources: [],
     },
     events: [],

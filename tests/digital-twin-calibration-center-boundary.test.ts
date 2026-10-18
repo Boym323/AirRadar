@@ -43,7 +43,7 @@ describe("Digital Twin Calibration Center V1 boundary", () => {
     expect(componentSource).toContain('data-testid="calibration-trajectory-quality-graduation"');
     expect(componentSource).toContain('data-testid="calibration-event-outcome"');
     expect(componentSource).toContain('data-testid="calibration-truth-first"');
-    expect(componentSource).toContain('data-testid="calibration-wind-timing"');
+    expect(componentSource).not.toContain('data-testid="calibration-wind-timing"');
     expect(componentSource).toContain('data-testid="calibration-regional-attention"');
     expect(componentSource).toContain('data-testid="calibration-persistence"');
     expect(componentSource).toContain("hydratedTrajectoryQualityOutcomeBuckets");

@@ -1,4 +1,3 @@
-import type { OperationalTwinWindTimingShadow } from "./wind-timing-shadow";
 import type { OperationalTwinTrajectoryQualityV2 } from "./trajectory-quality-v2";
 import type { OperationalTwinTrajectoryQualityV3 } from "./trajectory-quality-v3";
 import type { NavigationIntegrityCorridorIntelligence } from "./navigation-integrity-corridor";
@@ -140,7 +139,6 @@ export interface OperationalTwinSituation {
   };
   corridor: OperationalTwinCorridor;
   weatherCorridor: WeatherCorridorIntelligence;
-  windTimingShadow?: OperationalTwinWindTimingShadow;
   trajectoryQualityV2?: OperationalTwinTrajectoryQualityV2;
   trajectoryQualityV3?: OperationalTwinTrajectoryQualityV3;
   trajectoryQualityPromotion?: {
@@ -156,17 +154,6 @@ export interface OperationalTwinSituation {
     canonicalCalibrationRemainsActive: true;
     downstreamSemanticsRemainCanonical: true;
     horizontalGeometryUnchanged: true;
-  };
-  windTimingPromotion?: {
-    version: "operational-digital-twin-wind-timing-promotion-v1";
-    configuredPolicy: "CANONICAL" | "WIND_GRADUATED";
-    effectivePolicy: "CANONICAL" | "WIND_GRADUATED";
-    graduationDecision: "PASS" | "WAIT" | "FAIL";
-    manualPromotionEligible: boolean;
-    promotedWaypointEvents: number;
-    failClosed: boolean;
-    fallbackReason: "configured_canonical" | "graduation_not_pass" | "wind_shadow_unavailable" | "no_matching_waypoints" | null;
-    canonicalCalibrationRemainsActive: true;
   };
   navigationIntegrityCorridor?: NavigationIntegrityCorridorIntelligence;
   operationalFocus?: AircraftOperationalFocusSummary;

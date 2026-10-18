@@ -139,30 +139,6 @@
 .weatherSources span[data-state="AVAILABLE"] { color: var(--mint); }
 .weatherSources span[data-state="STALE"] { color: var(--amber); }
 
-.weatherWind {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 10px;
-  margin-top: var(--space-3);
-  padding: 8px 0;
-  border-top: 1px solid rgba(153,181,207,.1);
-  border-bottom: 1px solid rgba(153,181,207,.1);
-}
-
-.weatherWind > span,
-.weatherWind > small {
-  color: var(--text-muted);
-  font-size: var(--font-size-2xs);
-}
-
-.weatherWind > strong {
-  color: var(--text-primary);
-  font-size: var(--font-size-xs);
-  text-align: right;
-}
-
-.weatherWind > small { grid-column: 1 / -1; }
-
 .weatherTimeline {
   margin: var(--space-2) 0 0;
   padding: 0;
