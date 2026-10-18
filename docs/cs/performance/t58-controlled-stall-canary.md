@@ -56,7 +56,7 @@ odstranění historických problémů. O výsledku rozhodují naměřená data.
 Při **výslovně zapnuté** diagnostice se nyní u každé zachycené dlouhé
 prodlevy ukládají také omezené číselné delty GC (doba pauz, počet GC a major
 GC) a doby aktivního/neaktivního event-loopu (ELU). Jde o kontext stejného
-monotónního intervalu heartbeat; součástí zůstává CPU a bezpečně omezený název
+monotónního intervalu heartbeat (100 ms); součástí zůstává CPU a bezpečně omezený název
 synchronní operace. Uchovává se maximálně 24 událostí, v reportu pouze 20.
 Nedostupné hodnoty mají `null`, nikoliv nulu.
 

@@ -44,7 +44,7 @@ required. To manually verify the production privilege path without changes:
 
 ## Per-stall interval context (T58 v1.0.483 follow-up)
 
-When the opt-in stall observer is enabled, the 1-second monotonic heartbeat
+When the opt-in stall observer is enabled, the 100 ms monotonic heartbeat
 now retains a **bounded numeric** GC pause/count delta and Node event-loop
 utilization active/idle milliseconds alongside the existing process CPU
 percentage, overshoot and allowlisted synchronous scope. Each value is
