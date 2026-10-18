@@ -37,7 +37,7 @@ export function scheduledPollDelayMs(scheduledAt, now = Date.now()) {
 export function classifyT57Failure(error) {
   const message = error instanceof Error ? error.message : "";
   const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
-  if (/authorization_missing|session_login|HTTP (401|403)/i.test(message)) return "authentication_failure";
+  if (/authorization_missing|admin_auth_unavailable|session_login|HTTP (401|403)/i.test(message)) return "authentication_failure";
   if (name === "TimeoutError" || name === "AbortError" || /timeout/i.test(message)) return "http_timeout";
   if (/^t57_(admin|auxiliary|required|invalid|too_many|empty|report)/.test(message)) return "response_validation_failure";
   if (/Diagnostic request .* HTTP \d+/i.test(message)) return "http_failure";
@@ -202,12 +202,11 @@ async function collect(base, cookie) {
   return projectT57SoakSample(status, metrics);
 }
 
-async function establishSession(base, token) {
-  // Production may intentionally run with open admin diagnostics. In that
-  // mode the GET is the read-only capability check and no synthetic login is
-  // attempted (the POST endpoint correctly returns 503 when auth is off).
+export async function establishSession(base, token) {
   const session = await fetchJson(base, "/api/watchlist/session", null);
-  if (session?.configured === false) return null;
+  // Public diagnostics are intentionally sanitized. T57/T58 requires the
+  // authenticated admin projection and must never silently fall back to it.
+  if (session?.configured !== true) throw new Error("admin_auth_unavailable");
   if (!token) throw new Error("authorization_missing");
   return login(base, token);
 }

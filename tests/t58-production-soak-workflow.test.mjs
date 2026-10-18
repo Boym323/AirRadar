@@ -20,5 +20,7 @@ describe("automatic T58 workflow handoff", () => {
     assert.match(chunkWorkflow, /retention-days: 7/);
     assert.match(chunkWorkflow, /name: t58-sanitized-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/);
     assert.match(workflow, /needs\.chunk_7\.outputs\.report_ready == 'true'/);
+    assert.match(chunkWorkflow, /T58 authentication unavailable: Actions secret T58_WATCHLIST_ADMIN_TOKEN is missing or empty/);
+    assert.match(chunkWorkflow, /verdict !== "PASS_WITH_LIMITATIONS"/);
   });
 });

@@ -52,6 +52,10 @@ jobs:
           T57_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
         run: |
           set -Eeuo pipefail
+          if [[ -z "${WATCHLIST_ADMIN_TOKEN:-}" ]]; then
+            echo "T58 authentication unavailable: Actions secret T58_WATCHLIST_ADMIN_TOKEN is missing or empty."
+            exit 78
+          fi
           node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t58/preflight.json"
           deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t58/preflight.json")"
           resolved_sha="$(git rev-parse --verify "$deployed_sha^{commit}")"
@@ -104,6 +108,7 @@ jobs:
           markdown="$RUNNER_TEMP/t58/soak.summary.md"
           if [[ -s "$summary" && -s "$markdown" ]] && \
              node scripts/t58-report.mjs verify "$summary" && \
+             node -e 'if (JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).verdict !== "PASS_WITH_LIMITATIONS") process.exit(1)' "$summary" && \
              node scripts/t58-report.mjs comparison "$summary" \
                "$RUNNER_TEMP/t58/comparison.md" \
                "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; then
