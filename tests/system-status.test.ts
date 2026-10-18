@@ -112,13 +112,13 @@ function aircraftWeatherDiagnostics(overrides: Partial<AircraftWeatherDiagnostic
 }
 
 describe("Production integration diagnostics boundary", () => {
-  it("requires an existing administrator session and does not start the RXW provider", () => {
+  it("keeps public integration diagnostics read-only and provider-free", () => {
     const source = readFileSync(new URL("../app/api/system/integrations/route.ts", import.meta.url), "utf8");
     const implementation = readFileSync(new URL("../lib/server/integration-diagnostics.ts", import.meta.url), "utf8");
     const presentation = readFileSync(new URL("../components/system-integration-diagnostics.tsx", import.meta.url), "utf8");
-    expect(source).toContain('isWatchlistSessionValid(request)');
-    expect(source).toContain('status: 401');
-    expect(source).toContain('Cache-Control": "private, no-store"');
+    expect(source).toContain('isWatchlistAdminSessionValid(request)');
+    expect(source).toContain('toPublicIntegrationDiagnostics');
+    expect(source).toContain('Cache-Control": "no-store"');
     expect(implementation).not.toContain(".start(");
     expect(implementation).not.toContain("fetch(");
     expect(presentation).toContain("/api/system/integrations");

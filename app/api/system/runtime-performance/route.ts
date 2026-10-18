@@ -1,10 +1,11 @@
-import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { isWatchlistAdminSessionValid } from "@/lib/server/watchlist-auth";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { getRuntimePerformanceDiagnostics } from "@/lib/server/runtime-performance";
 import { getRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 import { getRuntimeStallEvidence } from "@/lib/server/runtime-stall-evidence";
 import { getT58CpuProfileSummary } from "@/lib/server/t58-cpu-profile";
 import { getOperationalTwinForensicsReport } from "@/lib/operational-twin/event-outcome";
+import { toPublicRuntimePerformance } from "@/lib/server/public-diagnostics";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,11 +18,7 @@ const HEALTH_PHASES = [
 export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("runtimeTelemetry", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
-  if (!isWatchlistSessionValid(request)) {
-    return Response.json({ error: "Authentication required", code: "auth_required" }, {
-      status: 401, headers: { "Cache-Control": "no-store" },
-    });
-  }
+  const admin = isWatchlistAdminSessionValid(request);
   const metrics = getRuntimePerformanceDiagnostics();
   const phases = Object.fromEntries(HEALTH_PHASES.map((name) => {
     const item = metrics[name];
@@ -53,7 +50,7 @@ export async function GET(request: Request): Promise<Response> {
   const ingestPaths = paths.filter((path) => path.name.startsWith("ingest.")).slice(0, 3);
   const runtime = getRuntimeHealthObservation();
   const operationalTwinForensics = getOperationalTwinForensicsReport();
-  return Response.json({
+  const response = {
     schemaVersion: 4, scope: "process-local", phases, hotPaths, validatorPaths, ingestPaths, operationalTwinForensics,
     stallEvidence: getRuntimeStallEvidence(),
     t58CpuProfile: getT58CpuProfileSummary(),
@@ -74,5 +71,6 @@ export async function GET(request: Request): Promise<Response> {
       gcMaxPauseMs: runtime.gcMaxPauseMs,
       gcAveragePauseMs: runtime.gcAveragePauseMs,
     },
-  }, { headers: { "Cache-Control": "no-store" } });
+  };
+  return Response.json(admin ? response : toPublicRuntimePerformance(response), { headers: { "Cache-Control": "no-store" } });
 }

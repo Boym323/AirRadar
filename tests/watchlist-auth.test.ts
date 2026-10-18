@@ -16,20 +16,20 @@ describe("optional AirRadar administrator authentication", () => {
     headers: { host: "radar.example", "x-forwarded-proto": "https", ...headers },
   });
 
-  it("defaults to no token even when a legacy token remains configured", () => {
+  it("does not grant administrator access when legacy open mode is active", () => {
     vi.stubEnv("AIRRADAR_ADMIN_AUTH_ENABLED", "");
     vi.stubEnv("WATCHLIST_ADMIN_TOKEN", "old-admin-token");
     expect(isAdminAuthEnabled()).toBe(false);
     expect(isWatchlistAuthConfigured()).toBe(false);
     expect(isWatchlistSessionValid(request())).toBe(true);
-    expect(requireWatchlistMutation(request({ origin: "https://radar.example" }))).toBeNull();
+    expect(requireWatchlistMutation(request({ origin: "https://radar.example" }))?.status).toBe(503);
     expect(verifyWatchlistAdminToken("old-admin-token")).toBe(false);
   });
 
-  it("accepts watchlist writes with no login but still rejects cross-origin mutations", () => {
+  it("rejects watchlist writes without a configured administrator session", () => {
     vi.stubEnv("AIRRADAR_ADMIN_AUTH_ENABLED", "false");
     vi.stubEnv("WATCHLIST_ADMIN_TOKEN", "");
-    expect(requireWatchlistMutation(request({ origin: "https://radar.example" }))).toBeNull();
+    expect(requireWatchlistMutation(request({ origin: "https://radar.example" }))?.status).toBe(503);
     expect(requireWatchlistMutation(request({ origin: "https://attacker.example" }))?.status).toBe(403);
   });
 

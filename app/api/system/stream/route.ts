@@ -1,6 +1,6 @@
 import { getSystemStatusStream } from "@/lib/server/system-status-stream";
 import { toAdminSystemStatus, toPublicSystemStatus } from "@/lib/server/system-status";
-import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { isWatchlistAdminSessionValid } from "@/lib/server/watchlist-auth";
 import { acquireSseClient } from "@/lib/server/sse-capacity";
 import { checkPublicRateLimit, getRateLimitClientKey, rateLimitResponse } from "@/lib/server/rate-limit";
 
@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
-  const admin = isWatchlistSessionValid(request);
+  const admin = isWatchlistAdminSessionValid(request);
   let closed = false;
   let unsubscribe: () => void = () => undefined;
   let heartbeat: ReturnType<typeof setInterval> | null = null;

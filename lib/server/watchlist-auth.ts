@@ -66,16 +66,21 @@ export function isWatchlistSessionValid(request: Request, now = Date.now()): boo
   return Boolean(secret && validSession(request, secret, now));
 }
 
+/** Strict administrator check for privileged reads and every mutation. */
+export function isWatchlistAdminSessionValid(request: Request, now = Date.now()): boolean {
+  if (!isWatchlistAuthConfigured()) return false;
+  const secret = getWatchlistAdminToken();
+  return Boolean(secret && validSession(request, secret, now));
+}
+
 export function requireWatchlistMutation(request: Request): Response | null {
-  // Preserve origin checks for edits even when no admin login is required.
   if (!sameOrigin(request)) {
     return Response.json({ error: "Cross-origin watchlist mutation rejected", code: "csrf_rejected" }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
-  if (!isAdminAuthEnabled()) return null;
   if (!isWatchlistAuthConfigured()) {
     return Response.json({ error: "Watchlist authentication is not configured", code: "auth_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
-  if (!isWatchlistSessionValid(request)) {
+  if (!isWatchlistAdminSessionValid(request)) {
     return Response.json({ error: "Watchlist authentication required", code: "auth_required" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   return null;

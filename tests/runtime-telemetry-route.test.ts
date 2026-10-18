@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/server/watchlist-auth", () => ({
-  isWatchlistSessionValid: () => mocks.authenticated,
+  isWatchlistAdminSessionValid: () => mocks.authenticated,
 }));
 
 vi.mock("@/lib/server/runtime-telemetry", () => ({
@@ -28,11 +28,17 @@ describe("runtime telemetry history route", () => {
     mocks.checkRateLimit.mockClear();
   });
 
-  it("rejects anonymous callers without exposing telemetry", async () => {
+  it("returns a sanitized public projection to anonymous callers", async () => {
+    mocks.getHistory.mockReturnValue({
+      schemaVersion: 1, intervalMs: 60_000, retentionMs: 86_400_000,
+      samples: [{ recordedAt: "2026-09-26T06:00:00.000Z", processId: 99, processRssBytes: 1, heapUsedBytes: 1, cgroupMemoryCurrentBytes: 1, activeSseClients: 0, aircraftCount: 1, listenerCount: 0, databaseState: "ok", databaseLatencyMs: 3, localProviderState: "online", networkProviderState: "online" }],
+      diagnostics: { file: "/private", loadedFromDisk: true, lastLoadError: null, lastSaveAt: null, lastSaveError: null },
+    });
     const response = await GET(new Request("https://airradar.example/api/system/runtime-history"));
-    expect(response.status).toBe(401);
-    expect(await response.json()).toMatchObject({ code: "auth_required" });
-    expect(mocks.getHistory).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.samples[0]).not.toHaveProperty("processId");
+    expect(body).not.toHaveProperty("diagnostics");
   });
 
   it("returns bounded history to an authenticated admin session", async () => {
