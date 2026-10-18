@@ -49,7 +49,6 @@ const FEATURE_TARGETS = {
   watchlist: ["watchlist-empty-desktop", "watchlist-empty-mobile"],
   notifications: ["notifications-empty-desktop", "notifications-empty-mobile"],
   receiver: ["receiver-unavailable-desktop", "receiver-unavailable-mobile"],
-  spotter: ["my-sky-focus-desktop", "my-sky-focus-mobile"],
   recap: ["daily-intelligence-desktop", "daily-intelligence-mobile"],
   operations: ["operations-center-desktop", "operations-center-mobile", "predictive-operations-public-desktop", "predictive-operations-admin-mobile"],
 };
@@ -85,10 +84,6 @@ const RULES = [
   { kind: "watchlist", paths: [/^app\/watchlist\//, /^components\/watchlist-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "notifications", paths: [/^app\/notifications\//, /^components\/notification-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "receiver", paths: [/^app\/receiver\//, /^components\/receiver-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
-  { kind: "spotter", paths: [
-    /^app\/spotter\//,
-    /^components\/(?:mobile-spotter-mode|spotter-camera-ar)[^/]*\.(?:[cm]?[jt]sx?|css)$/,
-  ] },
   { kind: "recap", paths: [/^app\/recap\//, /^components\/recap-page\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "operations", paths: [/^app\/operations\//, /^components\/operations-dashboard[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
 ];

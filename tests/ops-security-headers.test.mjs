@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateSecurityHeaders, validAuditOrigin } from "../scripts/audit-ops-headers.mjs";
 
 describe("read-only operational security probe", () => {
-  it("detects a wrongly denied Spotter permission even if CSP is present", () => {
+  it("detects a wrongly denied same-origin geolocation permission even if CSP is present", () => {
     const responseHeaders = new Headers({
       "Permissions-Policy":"camera=(), geolocation=(), microphone=()",
       "Content-Security-Policy":"object-src 'none'; frame-ancestors 'none'; script-src 'self';",

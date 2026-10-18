@@ -23,7 +23,6 @@ const titles: Record<string, { cs: string; en: string }> = {
   "/navigation": { cs: "Navigační body — AirRadar", en: "Navigation Reference — AirRadar" },
   "/procedures": { cs: "Letové postupy — AirRadar", en: "Procedure Explorer — AirRadar" },
   "/operations": { cs: "Provozní přehled — AirRadar", en: "Operations — AirRadar" },
-  "/spotter": { cs: "Pozorování letadel — AirRadar", en: "Spotter — AirRadar" },
   "/time-machine": { cs: "Historická časová osa — AirRadar", en: "Time Machine — AirRadar" },
   "/traffic/geography": { cs: "Geografie provozu — AirRadar", en: "Traffic Geography — AirRadar" },
   "/traffic/rhythm": { cs: "Rytmus provozu — AirRadar", en: "Traffic Rhythm — AirRadar" },

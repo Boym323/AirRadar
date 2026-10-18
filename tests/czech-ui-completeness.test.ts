@@ -160,6 +160,5 @@ describe("Czech UI localization coverage", () => {
     for (const [path, expectedLabel] of expected) {
       expect(czechCopy(path), path).toContain(expectedLabel);
     }
-    expect(source("components/command-palette.tsx")).toContain("Moje obloha, fotografické příležitosti a uložená místa");
   });
 });

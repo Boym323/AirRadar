@@ -34,7 +34,7 @@ function LogoMark() {
 
 function primaryNavigation() { return [
   { href: "/", label: t.radar.liveAirPicture },
-  { href: "/spotter", label: "Spotter" },
+  { href: "/intelligence", label: t.intelligence.title },
   { href: "/airports", label: t.locale.startsWith("cs") ? "Letiště" : "Airports" },
 ] as const; }
 
@@ -251,7 +251,7 @@ export function MobileBottomNav() {
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
       {item("/", "Radar", "radar", t.radar.liveAirPicture)}
-      {item("/spotter", "Spotter", "aircraft")}
+      {item("/intelligence", t.intelligence.title, "radar")}
       {item("/airports", t.locale.startsWith("cs") ? "Letiště" : "Airports", "airport")}
       {item("/watchlist", t.watchlist.title, "aircraft")}
       <details className="mobile-bottom-more">

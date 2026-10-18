@@ -7,7 +7,7 @@ describe("Product Navigation V2", () => {
 
   it("keeps the remaining primary product workflows on desktop", () => {
     const primary = shell.slice(shell.indexOf("function primaryNavigation()"), shell.indexOf("function moreNavigationGroups()"));
-    for (const href of ["/", "/spotter", "/airports"]) {
+    for (const href of ["/", "/intelligence", "/airports"]) {
       expect(primary).toContain('href: "' + href + '"');
     }
     expect(primary).not.toContain('href: "/statistics"');
@@ -34,10 +34,10 @@ describe("Product Navigation V2", () => {
     expect(grouped).toContain('label: cs ? "Systém" : "System"');
   });
 
-  it("keeps Radar and Spotter as mobile bottom destinations", () => {
+  it("keeps the primary mobile destinations", () => {
     const mobile = shell.slice(shell.indexOf("export function MobileBottomNav"), shell.indexOf("export function AirRadarPageShell"));
     expect(mobile).toContain('item("/",');
-    expect(mobile).toContain('item("/spotter"');
+    expect(mobile).toContain('item("/intelligence"');
     expect(mobile).toContain('item("/airports"');
     expect(mobile).toContain('item("/watchlist"');
     expect(mobile.match(/item\("/g)).toHaveLength(4);
@@ -52,10 +52,8 @@ describe("Product Navigation V2", () => {
     expect(shell).toContain('<Link key={href} href={href} {...attributes}>');
   });
 
-  it("keeps Spotter reachable from the existing command palette", () => {
-    for (const href of ["/spotter"]) {
-      expect(palette).toContain('href: "' + href + '"');
-    }
+  it("keeps the command palette free of retired Spotter routes", () => {
+    expect(palette).not.toContain("/spotter");
     expect(palette.match(/fetch\(/g)).toHaveLength(1);
   });
 });

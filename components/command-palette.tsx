@@ -173,7 +173,6 @@ export function CommandPalette() {
 
   const commands = useMemo<StaticCommand[]>(() => [
     { key: "live", label: t.commandSearch.liveRadar, detail: t.commandSearch.liveRadarDetail, href: "/", icon: "radar", keywords: ["live", "radar", "map"] },
-    { key: "spotter", label: "Spotter", detail: t.locale.startsWith("cs") ? "Moje obloha, fotografické příležitosti a uložená místa" : "My Sky, photo opportunity and Saved Spots", href: "/spotter", icon: "aircraft", keywords: ["spotter", "my sky", "photo"] },
     { key: "today", label: t.commandSearch.today, detail: t.commandSearch.todayDetail, href: "/recap/daily", icon: "time", keywords: ["today", "daily", "recap", "dnes"] },
     { key: "operations-center", label: t.commandSearch.operationsCenter, detail: t.commandSearch.operationsCenterDetail, href: "/?operations=1", icon: "radar", keywords: ["operations center", "now", "events", "události"], action: "operations" },
     { key: "airports", label: t.commandSearch.airports, detail: t.commandSearch.airportsDetail, href: "/airports", icon: "airport", keywords: ["airports", "letiště"] },

@@ -23,7 +23,6 @@ not yet been historically attributed.
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | `/weather` | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics`<br>`/api/weather/radar/echotop/frames`<br>`/api/weather/radar/echotop/frame/:id` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. Optional HGHT Echo Top HDF5 overlay is available only after secure local conversion prerequisites pass. |
 | Mobile / PWA mode | production | platform | Pre-registry | `/`<br>`/airports/:icao` | `/api/push/vapid-public-key`<br>`/api/push/subscribe` | Installable mobile PWA with offline last-state caching, browser-local favorite airports, and optional Web Push notifications for emergency squawks, watchlist aircraft, and geofence events. |
-| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | `/api/admin/spotter/saved-spots` | Mobile-first LOCAL spotter with My Location geometry, Sky Card stories, Visual Acquisition from observer geometry and regional METAR, client-only Sun & Light geometry, explainable Photo Opportunity scoring, bounded My Sky Briefing, PRG Spotting context, Time Machine pass/replay stories, browser-local personal logbook and foreground alerts, explicit opt-in server Saved Spots for iconic-aircraft background alerts, sensor-assisted Sky Finder, local SVG share cards, and visibility/data-saver mobile runtime hardening. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | `/navigation-integrity` | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/navigation-integrity/space-weather`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | NOAA Space Weather Context | optional | navigation / weather | Pre-registry | `/navigation-integrity` | `/api/navigation-integrity/space-weather` | Operator-enabled on-demand NOAA global planetary Kp context in Navigation Integrity with bounded RAM cache and explicit non-GNSS-evidence disclaimer. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
@@ -738,17 +737,3 @@ no polling.
 Unread state is optional browser-local metadata stored under
 `airradar.notifications.v1`. V1 adds no alert engine, push provider, delivery
 worker, scheduler, database table or server-side notification persistence.
-
-
-## Mobile Spotter Mode V1
-
-`/spotter` is a portrait-friendly live surface for aircraft with explicit
-LOCAL receiver evidence. It reuses the existing local SSE stream and
-`/api/logbook/summary` on the existing 30-second Spotter refresh cadence for NEW, RARE
-and RETURNING badges. Aircraft remain fail-closed to LOCAL evidence and are
-sorted by receiver distance, not phone location.
-
-V1 uses no browser geolocation, new stream, receiver-distance backend, history
-scan or social/photo-upload feature. Radar selection, aircraft detail and
-Watchlist actions all use existing canonical product routes. Loss of the LOCAL
-feed is shown explicitly as stale or unavailable.

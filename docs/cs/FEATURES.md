@@ -35,7 +35,6 @@ historicky přiřazený.
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/notifications`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts`<br>`/admin/alerts/delivery-health`<br>`/admin/alerts/simulator`<br>`/admin/alerts/analytics` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/analytics`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/delivery-health`<br>`/api/admin/alerts/simulator`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Serverové watchlisty, activity omezená na pravidla, historie alertů, autentizované preference doručení, úzký cross-lane semantic dedup, pětiminutové timeline, serverově uložený unread stav, serverově stránkované filtry/search, vysvětlení důvodu, reverzibilní delivery mute pro letadlo nebo pravidlo, diagnostiku zdraví doručování, autentizovaný dry-run simulátor alert pravidel a omezenou analytiku efektivity alertů. |
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Panely Proč? pro readiness-gated ETA, runway, runway-change a trajectory advisory používají malý capability-specific whitelist z existující canonical prediction evidence. |
 | Investigation Links | production | productivity | Pre-registry | `/airspace`<br>`/compare/airports`<br>`/compare/flights`<br>`/navigation-integrity`<br>`/time-machine`<br>`/navigation`<br>`/procedures`<br>`/airspace/sectors/:id` | — | Bookmarkovatelný URL stav analytických, porovnávacích, navigačních, procedurálních a sektorových ploch s fail-closed parsováním a obnovou přes browser back/forward bez serverové persistence. |
-| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL Spotter s režimem Moje poloha, Sky Card, Visual Acquisition z geometrie a regionálního METARu, lokálně počítanou polohou Slunce a světla, vysvětlitelným Photo Opportunity skóre, My Sky Briefingem, PRG Spotting kontextem, Time Machine replay příběhy, browser-local osobním logbookem a foreground alerty, explicitně opt-in serverovými Saved Spots, Sky Finderem, lokálními SVG share kartami a mobile runtime hardeningem. Souřadnice zůstávají v prohlížeči kromě výslovně uloženého Saved Spotu. |
 | NOAA Space Weather Context | optional | navigation / weather | Pre-registry | `/navigation-integrity` | `/api/navigation-integrity/space-weather` | Volitelný globální index Kp ze služby NOAA SWPC v sekci integrity navigace. Pouze informativní kontext s omezenou RAM cache; neprokazuje místní rušení GNSS. |
 <!-- feature-registry:end -->
 
@@ -737,17 +736,3 @@ Unread stav je volitelná browser-local metadata pod klíčem
 `airradar.notifications.v1`. V1 nepřidává alert engine, push provider,
 delivery worker, scheduler, databázovou tabulku ani serverovou persistenci
 oznámení.
-
-
-## Mobile Spotter Mode V1
-
-`/spotter` je portrait-friendly živá plocha pro letadla s explicitní LOCAL
-receiver evidencí. Znovu používá existující local SSE stream a
-`/api/logbook/summary` při existující 30sekundové obnově Spotteru pro badge NEW,
-RARE a RETURNING. Letadla zůstávají fail-closed na LOCAL evidenci a řadí se
-podle vzdálenosti od přijímače, nikoli od telefonu.
-
-V1 nepoužívá browser geolocation, nový stream, receiver-distance backend,
-history scan ani social/photo-upload funkce. Výběr na radaru, detail letadla
-a Watchlist používají existující canonical produktové route. Ztráta LOCAL feedu
-je explicitně zobrazena jako stale nebo unavailable.

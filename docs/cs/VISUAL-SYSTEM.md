@@ -379,10 +379,9 @@ Přepínač **Více letadel** na živém radaru přidává lokální výběr až
 Živý radar nabízí tmavý (původní OpenFreeMap), světlý (překreslení pouze barev původního podkladu) a volitelný historický satelitní režim (EOxCloudless Sentinel 2020). Instance MapLibre, živé značky, zdroje tras/počasí/ATC, ovládání a SSE zůstávají zachované. Světlé barvy se aplikují jen na původní podkladové vrstvy. Satelitní WMTS se načte teprve na vyžádání pod leteckými vrstvami s povinnou atribucí. **Snímky z roku 2020 nejsou živé a volná licence je pouze pro nekomerční účely**; komerční provoz vyžaduje odpovídající licenci. Volba se ukládá pouze v prohlížeči.
 
 
-## V6-C — mobilní kamera AR na vyžádání
+## V6-C — vyřazená mobilní kamera AR
 
-Dosavadní mobilní Sky Finder obsahuje volitelné překrytí živého obrazu zadní kamery. Uživatel nejprve povolí Sky Finder a senzory a následně výslovně zapne kameru. Do orientačního zorného pole telefonu na výšku se promítají pouze čerstvé lokálně přijaté ADS-B polohy s použitelnou elevací vůči pozorovateli; zastaralé, mimo záběr nebo bez spolehlivých senzorů se nezobrazují. Ruční korekce náklonu zůstává jen v relaci. Video se neodesílá, neukládá ani nenahrává; mediální stopy se zastaví po vypnutí, skrytí karty a odpojení komponenty. Chyba oprávnění či HTTPS nenaruší původní Sky Finder. Překrytí není certifikovaná navigační pomůcka.
-
+Mobilní Spotter a jeho volitelné kamerové překrytí byly vyřazeny. Sdílený radar nadále kameru zakazuje a zachovává globální zásadu geolokace pouze pro stejný původ; 2D a volitelný 3D radar zůstávají samostatnými funkcemi.
 
 ### V6-D1: volitelný 3D terén
 
