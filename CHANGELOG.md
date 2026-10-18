@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.521] - 2026-10-18
+
+Changes since v1.0.520.
+
+### Added
+
+- Retire optional 3D radar (c5950097)
+
+### Maintenance
+
+- Sync generated repository metadata (#1025) (edad9f5b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1025) (edad9f5b)
+- feat: retire optional 3D radar (c5950097)
+
+</details>
 ## [1.0.520] - 2026-10-18
 
 Changes since v1.0.519.
