@@ -6,8 +6,8 @@ Modelový profil větru podél koridoru, wind-timing shadow, jeho event-outcome
 graduace a promotion byly odstraněny. Aktuální `weatherCorridor` obsahuje pouze
 PIREP/AIREP a SIGMET. Z endpointu byl odebrán fetch větru ve výšce; sdílený
 ICON-EU provider a aircraft wind context nadále používá Weather Fusion.
-Níže uvedené části o wind timing a promotion popisují historické verze, nikoli
-aktuální runtime chování.
+Podrobnosti odstraněných algoritmů jsou uchovány v historii Git,
+nikoli jako součást aktuálního runtime.
 
 Operational Digital Twin V1 je omezená prospektivní situační vrstva AirRadar.
 Spojuje existující živý provoz a publikovaný kontext do jednoho 30minutového

@@ -547,7 +547,6 @@ SSE a nevzniká nová persistence, migrace, model ani stream.
 | `GET /api/map-context/radar?at=` | Metadata historického radarového snímku vyřešeného v nebo před vybraným okamžikem. | Produkce, když archiv obsahuje odpovídající snímek. |
 | `GET /api/map-context/radar/frame/:id` | Archivovaný validovaný PNG snímek CHMI. | Produkce, když je snímek zachován. |
 | `GET /api/map-context/metar?at=` | Dávková normalizovaná historická METAR pozorování. | Produkce, pokud existují archivovaná pozorování. |
-| `GET /api/map-context/wind?at=&level=` | Historický snapshot ICON-EU s proveniencí běhu modelu a času platnosti. | Produkce, pokud existují archivované snapshoty. |
 | `GET /api/map-context/aup?at=` | Historická plánovaná revize AUP/UUP a kontext platnosti. | Produkce, pokud existuje revize známá k danému okamžiku. |
 | `GET /api/airports` | Katalog letišť PostgreSQL nebo zabalený fallback katalog. | Produkce s importem/fallbackem. |
 | `GET /api/airports/:icao` | Kanonický detail letiště plus lokálně uložené dráhy, komunikační frekvence a přidružené navaid. | Produkce po `airports:sync`; prázdná infrastruktura je platná odpověď. |

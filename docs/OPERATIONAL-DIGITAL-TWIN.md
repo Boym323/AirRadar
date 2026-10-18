@@ -6,8 +6,8 @@ The model-wind corridor profile, wind-timing shadow, event-outcome graduation
 and timing promotion have been retired. The current `weatherCorridor` contains
 PIREP/AIREP and SIGMET evidence only. This removes the wind-aloft fetch from
 this endpoint; the shared ICON-EU provider and aircraft wind context remain in
-use by Weather Fusion. Later sections that describe wind timing or promotion
-are historical version notes, not current runtime behavior.
+use by Weather Fusion. Details of the retired timing algorithms remain in Git history,
+not in the current runtime contract.
 
 Operational Digital Twin V1 is AirRadar's bounded prospective situation layer.
 It combines existing live and published context into one 30-minute aircraft

@@ -553,7 +553,6 @@ main radar SSE, and no persistence, migration, model, or new stream is added.
 | `GET /api/map-context/radar?at=` | Historical radar frame metadata resolved at or before the selected instant. | Production when the archive contains a matching frame. |
 | `GET /api/map-context/radar/frame/:id` | Archived validated CHMI PNG frame. | Production when the frame is retained. |
 | `GET /api/map-context/metar?at=` | Batched normalized historical METAR observations. | Production when archived observations exist. |
-| `GET /api/map-context/wind?at=&level=` | Historical ICON-EU snapshot with model-run and valid-time provenance. | Production when archived snapshots exist. |
 | `GET /api/map-context/aup?at=` | Historical planned AUP/UUP revision and validity context. | Production when an as-known revision exists. |
 | `GET /api/airports` | PostgreSQL airport catalog or bundled fallback catalog. | Production with import/fallback. |
 | `GET /api/airports/:icao` | Canonical airport detail plus locally persisted runways, communication frequencies, and associated navaids. | Production after `airports:sync`; empty infrastructure is a valid response. |
