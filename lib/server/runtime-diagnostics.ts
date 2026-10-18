@@ -236,13 +236,23 @@ function cpuCgroupDiagnostics(): Pick<RuntimeDiagnostics, "cgroupCpuQuotaCores" 
   };
 }
 
-export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}): RuntimeDiagnostics {
+export type RuntimeDiagnosticsDetail = "full" | "public";
+
+export function readRuntimeDiagnostics(
+  extra: Partial<RuntimeDiagnostics> = {},
+  detail: RuntimeDiagnosticsDetail = "full",
+): RuntimeDiagnostics {
   const memory = process.memoryUsage();
   const sse = getSseDiagnostics();
   return {
-    transactionAttribution: getDbTransactionDiagnostics(),
-    autocommitOperationAttribution: getDbOperationDiagnostics(),
-    systemStatusRequests: getSystemStatusRequestDiagnostics(),
+    // Public system status deliberately omits process-local database
+    // attribution. The public projection removes it anyway, so collecting
+    // large lane/diagnostic objects here only adds request-time allocations.
+    ...(detail === "public" ? {} : {
+      transactionAttribution: getDbTransactionDiagnostics(),
+      autocommitOperationAttribution: getDbOperationDiagnostics(),
+      systemStatusRequests: getSystemStatusRequestDiagnostics(),
+    }),
     processRssBytes: nonNegative(memory.rss),
     ...readProcMemory(),
     heapUsedBytes: nonNegative(memory.heapUsed),

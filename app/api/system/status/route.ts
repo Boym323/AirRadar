@@ -10,8 +10,9 @@ export async function GET(request: Request): Promise<Response> {
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   try {
-    const status = await readSystemStatus();
-    const response = isWatchlistSessionValid(request) ? toAdminSystemStatus(status) : toPublicSystemStatus(status);
+    const admin = isWatchlistSessionValid(request);
+    const status = await readSystemStatus(undefined, admin ? "full" : "public");
+    const response = admin ? toAdminSystemStatus(status) : toPublicSystemStatus(status);
     return Response.json(response, {
       headers: { "Cache-Control": "no-store" },
     });

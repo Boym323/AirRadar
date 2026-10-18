@@ -912,7 +912,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       aircraftPhotos: configuredSource(isAircraftPhotosEnabled(), "Planespotters photos"),
       ourAirports: configuredSource(airportSource !== "unavailable", "OurAirports / bundled catalog", airportStatus),
     },
-    runtime: readRuntimeDiagnostics(input.runtime?.diagnostics),
+    runtime: readRuntimeDiagnostics(input.runtime?.diagnostics, input.runtime?.diagnosticsDetail),
   };
 }
 
@@ -949,7 +949,10 @@ const unavailableAtcData: AtcDataResponse = {
   metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
 };
 
-export async function readSystemStatus(service: SystemStatusServiceLike = getAircraftStateService()): Promise<SystemStatusResponse> {
+export async function readSystemStatus(
+  service: SystemStatusServiceLike = getAircraftStateService(),
+  detail: "full" | "public" = "full",
+): Promise<SystemStatusResponse> {
   recordSystemStatusRequest();
   await service.waitForReady();
   const ognService = getOgnStateService();
@@ -964,7 +967,10 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
   const weather = isAviationWeatherEnabled()
     ? providerWeather
     : { ...providerWeather, enabled: false, status: "disabled" as const };
-  const serviceDiagnostics = "getDiagnostics" in service && typeof service.getDiagnostics === "function" ? service.getDiagnostics() : null;
+  const serviceDiagnostics = detail === "full" && "getDiagnostics" in service && typeof service.getDiagnostics === "function"
+    ? service.getDiagnostics()
+    : null;
+  const enrichmentDiagnostics = detail === "public" ? service.getEnrichmentDiagnostics?.() : undefined;
   return buildSystemStatus({
     snapshot,
     statistics: service.getStatistics(),
@@ -1020,7 +1026,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       ...(serviceDiagnostics?.regionalAttentionOutcome ? { regionalAttentionOutcome: serviceDiagnostics.regionalAttentionOutcome } : {}),
       ...(serviceDiagnostics?.regionalAttentionGraduation ? { regionalAttentionGraduation: serviceDiagnostics.regionalAttentionGraduation } : {}),
     },
-    adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
+    adsbdb: isAdsbDbEnabled() ? (serviceDiagnostics?.enrichment.adsbdb ?? enrichmentDiagnostics?.adsbdb) : undefined,
     routeEnrichment: serviceDiagnostics?.enrichment.routeMetrics,
     ogn: ognService.getDiagnostics(),
     runtime: {
@@ -1050,6 +1056,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
         coverageAnalytics: serviceDiagnostics.coverageAnalytics,
         retentionAttribution: serviceDiagnostics.retentionAttribution,
       } : undefined,
+      diagnosticsDetail: detail,
     },
   });
 }

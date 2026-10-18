@@ -62,4 +62,12 @@ describe("runtime memory diagnostics", () => {
     expect(["available", "controller_disabled", "unavailable"])
       .toContain(diagnostics.cgroupCpuThrottleStatus);
   });
+
+  it("does not allocate process-local DB attribution for public status", () => {
+    const diagnostics = readRuntimeDiagnostics({}, "public");
+    expect(diagnostics.transactionAttribution).toBeUndefined();
+    expect(diagnostics.autocommitOperationAttribution).toBeUndefined();
+    expect(diagnostics.systemStatusRequests).toBeUndefined();
+    expect(diagnostics.activeSseClients).toBeGreaterThanOrEqual(0);
+  });
 });

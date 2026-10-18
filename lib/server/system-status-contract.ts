@@ -495,6 +495,7 @@ export interface SystemStatusBuildInput {
   runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
     uptimeSeconds?: number;
     startedAt?: string;
+    diagnosticsDetail?: "full" | "public";
     diagnostics?: Partial<RuntimeDiagnostics>;
   };
 }
@@ -506,4 +507,5 @@ export interface SystemStatusServiceLike {
   getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus;
   getAlertStatus(): AlertStatus;
   getNetworkDiagnostics?(): NetworkProviderDiagnostics;
+  getEnrichmentDiagnostics?(): { adsbdb: NonNullable<SystemStatusBuildInput["adsbdb"]> };
 }

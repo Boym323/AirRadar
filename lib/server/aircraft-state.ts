@@ -775,6 +775,10 @@ export class AircraftStateService {
     return this.networkProvider.getDiagnostics();
   }
 
+  getEnrichmentDiagnostics() {
+    return this.enrichment.getDiagnostics();
+  }
+
   /** Optional admin-only, identity-free source-value snapshot; no upstream I/O. */
   getNetworkSourceValueDiagnostics() {
     return this.networkProvider.getSourceValueDiagnostics?.() ?? null;
