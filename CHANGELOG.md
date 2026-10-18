@@ -17,6 +17,34 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.514] - 2026-10-18
+
+Changes since v1.0.513.
+
+### Performance
+
+- Skip admin diagnostics for public GET (5fb92cb7)
+
+### Documentation
+
+- Přidání plánu konsolidace, refaktoru a bezpečného nasazení pro AirRadar (ea4b5a21)
+- Direct-main workflow and safe public diagnostics (13154b4a)
+- Restore Czech localization gate (a212f9e5)
+
+### Maintenance
+
+- Sync generated repository metadata (#1016) (cd15f449)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1016) (cd15f449)
+- docs: přidání plánu konsolidace, refaktoru a bezpečného nasazení pro AirRadar (ea4b5a21)
+- docs(agents): direct-main workflow and safe public diagnostics (13154b4a)
+- docs: restore Czech localization gate (a212f9e5)
+- perf(status): skip admin diagnostics for public GET (5fb92cb7)
+
+</details>
 ## [1.0.513] - 2026-10-18
 
 Changes since v1.0.512.
