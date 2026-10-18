@@ -4,11 +4,12 @@ import { getWatchlistAdminToken } from "@/lib/server/config";
 export const WATCHLIST_SESSION_COOKIE = "airradar_watchlist_session";
 
 /**
- * The private receiver deployment uses open administration by default.
- * Opt in to signed admin sessions explicitly (and configure WATCHLIST_ADMIN_TOKEN).
- * This governs all callers of isWatchlistSessionValid, including /system diagnostics.
+ * Production administration must always use signed sessions. Local/demo
+ * deployments may explicitly opt out when they are not internet-facing.
+ * This governs all callers of isWatchlistSessionValid, including diagnostics.
  */
 export function isAdminAuthEnabled(): boolean {
+  if (process.env.NODE_ENV === "production") return true;
   return process.env.AIRRADAR_ADMIN_AUTH_ENABLED?.trim().toLowerCase() === "true";
 }
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
