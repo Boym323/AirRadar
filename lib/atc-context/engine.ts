@@ -48,7 +48,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 type PreparationOptions = { owned?: boolean };
-type PreparedAirspace = { sector: AtcSector; boxes: Array<Box>; order: number };
+type PreparedAirspace = { sector: AtcSector; boxes: ReadonlyArray<Box>; order: number };
 
 function cloneSectors(sectors: readonly AtcSector[]): AtcSector[] {
   return structuredClone(sectors) as AtcSector[];
@@ -275,6 +275,18 @@ function verticalMatch(sector: AtcSector, input: AtcContextInput): { match: Vert
   if (!lowerInside || !upperInside) return { match: fullyComparable ? "false" : "uncertain", source: lowerRef.includes("FL") || upperRef.includes("FL") ? "baro" : "geom" };
   return { match: fullyComparable ? "true" : "uncertain", source: lowerRef.includes("FL") || upperRef.includes("FL") ? "baro" : "geom" };
 }
+function horizontalMatch(entry: PreparedAirspace, point: [number, number]): "inside" | "boundary" | null {
+  let result: "inside" | "boundary" | null = null;
+  for (let polygonIndex = 0; polygonIndex < entry.boxes.length; polygonIndex += 1) {
+    const polygon = entry.sector.polygons[polygonIndex];
+    const box = entry.boxes[polygonIndex];
+    if (!polygon || !box || !bboxContains(box, point)) continue;
+    const containment = pointInPolygon(point, [polygon as unknown as [number, number][]]);
+    if (containment === "boundary") return "boundary";
+    if (containment === "inside") result = "inside";
+  }
+  return result;
+}
 function airspace(sector: AtcSector, horizontal: "inside" | "boundary", vertical: VerticalMatch): ContextAirspace {
   const type = typeOf(sector); const confidence: ContextConfidence = vertical === "true" ? horizontal === "inside" ? "high" : "medium" : "partial";
   return { id: sector.id, name: sector.name, countryCode: sector.country, airspaceType: type, airspaceClass: sector.airspaceClass ?? null, verticalMatch: vertical, horizontalMatch: horizontal, confidence, lowerLimitFt: sector.lowerAltitudeFt, upperLimitFt: sector.upperAltitudeFt, lowerLimitReference: sector.lowerAltitudeReference ?? null, upperLimitReference: sector.upperAltitudeReference ?? null, publishedUnit: sector.atcCallsign ?? sector.service ?? null, publishedFrequenciesMhz: sector.frequencies.map((f) => f.frequencyMhz), remarks: sector.remarks ?? null, provenance: { source: sector.source, sourceReference: sector.sourceReference, effectiveDate: sector.validFrom, lastVerifiedAt: sector.lastVerifiedAt } };
@@ -320,20 +332,9 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
   for (const index of queryGrid(prepared.atcGrid, point)) {
     const entry = prepared.airspaces[index]; if (!entry) continue;
     const sector = entry.sector;
-    let h: "inside" | "boundary" | null = null;
-    for (let polygonIndex = 0; polygonIndex < entry.boxes.length; polygonIndex += 1) {
-      const box = entry.boxes[polygonIndex];
-      if (diagnostics) diagnostics.atcBboxCandidates += 1;
-      const polygon = sector.polygons[polygonIndex];
-      if (!polygon || !bboxContains(box, point)) continue;
-      if (diagnostics) diagnostics.atcExactPolygonTests += 1;
-      const containment = pointInPolygon(point, [polygon as unknown as [number, number][]]);
-      if (containment === "boundary") {
-        h = "boundary";
-        break;
-      }
-      if (containment === "inside") h = "inside";
-    }
+    if (diagnostics) diagnostics.atcBboxCandidates += entry.boxes.length;
+    const h = horizontalMatch(entry, point);
+    if (diagnostics) diagnostics.atcExactPolygonTests += entry.boxes.filter((box) => bboxContains(box, point)).length;
     if (h === null) continue;
     const vertical = verticalMatch(sector, input).match;
     if (vertical !== "false") matches.push(airspace(sector, h, vertical));
@@ -391,12 +392,13 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
         geomAltitude: input.geomAltitude === null || input.geomAltitude === undefined ? input.geomAltitude : input.geomAltitude + altitudeDelta,
       };
       const candidates = queryGrid(prepared.atcGrid, pointAtTime)
-        .map((index) => prepared.airspaces[index]?.sector)
-        .filter((sector): sector is AtcSector => Boolean(sector) && !currentIds.has(sector.id))
-        .map((sector) => {
-          const horizontal = sector.polygons.some((polygon) => pointInPolygon(pointAtTime, [polygon as unknown as [number, number][]]) !== null);
-          if (!horizontal || verticalMatch(sector, projectedInput).match === "false") return null;
-          return airspace(sector, "inside", verticalMatch(sector, projectedInput).match);
+        .map((index) => prepared.airspaces[index])
+        .filter((entry): entry is PreparedAirspace => Boolean(entry) && !currentIds.has(entry.sector.id))
+        .map((entry) => {
+          const horizontal = horizontalMatch(entry, pointAtTime);
+          const vertical = verticalMatch(entry.sector, projectedInput).match;
+          if (horizontal === null || vertical === "false") return null;
+          return airspace(entry.sector, "inside", vertical);
         })
         .filter((value): value is ContextAirspace => value !== null)
         .sort((a, b) => (ORDER[a.airspaceType] ?? 90) - (ORDER[b.airspaceType] ?? 90) || a.id.localeCompare(b.id));
@@ -415,9 +417,16 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
     for (let nm = 2; nm <= 45; nm += 2) {
       if (diagnostics) diagnostics.aheadProjectedSteps += 1;
       const projected = destination(point, nm, input.track);
-      const candidate = queryGrid(prepared.atcGrid, projected).map((index) => prepared.airspaces[index]?.sector).find((sector) => sector && !currentIds.has(sector.id) && sector.polygons.some((p) => pointInPolygon(projected, [p as unknown as [number, number][]]) !== null) && verticalMatch(sector, input).match !== "false");
+      let candidate: AtcSector | undefined;
+      let candidateVertical: VerticalMatch | undefined;
+      for (const index of queryGrid(prepared.atcGrid, projected)) {
+        const entry = prepared.airspaces[index];
+        if (!entry || currentIds.has(entry.sector.id) || horizontalMatch(entry, projected) === null) continue;
+        const vertical = verticalMatch(entry.sector, input).match;
+        if (vertical !== "false") { candidate = entry.sector; candidateVertical = vertical; break; }
+      }
       if (diagnostics) diagnostics.aheadAirspaceQueries += 1;
-      if (candidate) { const match = airspace(candidate, "inside", verticalMatch(candidate, input).match); ahead = { airspace: match, distanceNm: nm, estimatedMinutes: Number((nm / input.groundSpeed * 60).toFixed(1)), confidence: nm <= 15 ? "medium" : "low" }; break; }
+      if (candidate && candidateVertical) { const match = airspace(candidate, "inside", candidateVertical); ahead = { airspace: match, distanceNm: nm, estimatedMinutes: Number((nm / input.groundSpeed * 60).toFixed(1)), confidence: nm <= 15 ? "medium" : "low" }; break; }
     }
   }
   return { status: "available", position: { lat: input.lat, lon: input.lon, altitude: input.altitude, altitudeSource: input.altitudeSource ?? "none" }, supportedCountry: fir?.countryCode ? SUPPORTED.has(fir.countryCode) : matches.some((m) => m.countryCode !== null && SUPPORTED.has(m.countryCode!)), fir, currentAirspaces: matches, primaryAirspace: matches[0] ?? null, atsRoute, nearestAtsCandidate, nearestPoint, nextPoint, ahead, nextSector, limitation: input.onGround ? "Ground aircraft: en-route ATS route prediction skipped" : ahead ? "Ahead on current track only; no turn or flight-plan prediction" : null, computedAt, dataset: { atcVersion: prepared.sectors.map((s) => s.lastVerifiedAt).sort().at(-1) ?? "none", atsVersion: docs.map((d) => d.source.effectiveDate).sort().at(-1) ?? "none", atcCount: prepared.sectors.length, atsSegmentCount: segments.length } };
