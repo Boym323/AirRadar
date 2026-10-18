@@ -13,6 +13,8 @@ Root [AGENTS.md](../../AGENTS.md) is the only global instruction entry point. Us
 
 - [2026-10-18 active task: retire unused data sources and features](DATA-FEATURE-RETIREMENT-AUDIT-2026-10-18.md): consumer graph, production evidence, deletion safety and measured savings; open only for this task.
 
+- [Approved 2026-10-18 feature retirements — execution plan](APPROVED-FEATURE-RETIREMENT-2026-10-18.md): approved 15-item removal scope, dependency-aware batches and exact safety/verification gates; open only when performing this task.
+
 ## Preserved historical briefs
 
 The following detailed prompts are **dated historical task briefs**, not mandatory context for every run: [autonomous performance brief](AIRRADAR_PERFORMANCE_AGENT.md) and [2026-10-17 audit assignment](AirRadar_zadani_kompletniho_vykonnostniho_auditu_a_optimalizaci_2026-10-17.md). Consult a specific section only when revisiting that investigation; verify all versions and claims.

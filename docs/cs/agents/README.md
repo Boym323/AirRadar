@@ -13,6 +13,8 @@ Kořenový [AGENTS.md](../../../AGENTS.md) je jediným vstupem do globálních i
 
 - [Aktuální zadání 18. 10. 2026: vyřazení nepotřebných dat a funkcí](DATA-FEATURE-RETIREMENT-AUDIT-2026-10-18.md): konzumenti, evidence, bezpečné odstranění a měřené úspory; otevírat jen pro tento úkol.
 
+- [Schválené vyřazení funkcí 18. 10. 2026 — plán realizace](APPROVED-FEATURE-RETIREMENT-2026-10-18.md): schválených 15 položek, dávky podle závislostí a přesná pravidla ověření; čti jen při tomto úkolu.
+
 ## Zachovaná historická zadání
 
 Následující dlouhá zadání jsou **datované historické podklady**, ne povinný kontext každého běhu: [autonomní výkonový audit](AIRRADAR_PERFORMANCE_AGENT.md) a [zadání z 17. 10. 2026](AirRadar_zadani_kompletniho_vykonnostniho_auditu_a_optimalizaci_2026-10-17.md). Čti pouze příslušnou část při návratu k danému šetření a ověřuj verze i tvrzení.
