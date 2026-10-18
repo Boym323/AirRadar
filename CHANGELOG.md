@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.522] - 2026-10-18
+
+Changes since v1.0.521.
+
+### Added
+
+- Retire optional SondeHub and space weather (03b59c34)
+
+### Maintenance
+
+- Sync generated repository metadata (#1026) (a823727c)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1026) (a823727c)
+- feat: retire optional SondeHub and space weather (03b59c34)
+
+</details>
 ## [1.0.521] - 2026-10-18
 
 Changes since v1.0.520.
