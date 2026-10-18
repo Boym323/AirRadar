@@ -1,6 +1,6 @@
 # AirRadar — data-source and feature retirement audit (2026-10-18)
 
-[Česky](../../cs/agents/DATA-FEATURE-RETIREMENT-AUDIT-2026-10-18.md)
+[Česky](../cs/agents/DATA-FEATURE-RETIREMENT-AUDIT-2026-10-18.md)
 
 > **Task-specific brief, not a global policy.** Read [AGENTS.md](../../AGENTS.md) first, then [CODEX-CONTEXT.md](../CODEX-CONTEXT.md). The live implementation and the latest verified commit outrank this dated inventory. Do not preload all docs. This task differs from the [redundant runtime-work brief](RUNTIME-REDUNDANT-WORK-2026-10-18.md): its goal is to identify obsolete data products and genuinely unused functionality, not just speed up existing paths.
 
