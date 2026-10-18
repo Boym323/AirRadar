@@ -54,7 +54,6 @@ export interface RuntimeTelemetrySample {
   localAircraftRetained?: number | null;
   networkAircraftRetained?: number | null;
   trailPointsRetained?: number | null;
-  pendingTrackFusion?: number | null;
 }
 
 export interface RuntimeTelemetryHistory {
@@ -117,7 +116,7 @@ const OPTIONAL_NUMBER_FIELDS = [
   "processId", "processUptimeSeconds", "processCpuPercent", "eventLoopP50Ms", "eventLoopP95Ms", "eventLoopP99Ms", "eventLoopMaxMs",
   "timerCallbackOvershootP95Ms", "majorGcCount", "gcTotalPauseMs", "databaseCallP95Ms", "databaseCallTimeouts", "databaseCallFailures",
   "historyPersistP95Ms", "historyTransactionP95Ms", "networkMetadataP95Ms", "atcResolveP95Ms", "snapshotApplyP95Ms", "operationalTwinP95Ms",
-  "twinEventOutcomeLocalP95Ms", "localAircraftRetained", "networkAircraftRetained", "trailPointsRetained", "pendingTrackFusion",
+  "twinEventOutcomeLocalP95Ms", "localAircraftRetained", "networkAircraftRetained", "trailPointsRetained",
 ] as const;
 const OPTIONAL_STRING_FIELDS = ["applicationVersion", "applicationCommit"] as const;
 
@@ -257,7 +256,6 @@ async function defaultSample(now = Date.now()): Promise<RuntimeTelemetrySample> 
     localAircraftRetained: aircraft.retentionAttribution.aircraft.local.count,
     networkAircraftRetained: aircraft.retentionAttribution.aircraft.network.count,
     trailPointsRetained: aircraft.retentionAttribution.trails.local.points + aircraft.retentionAttribution.trails.network.points,
-    pendingTrackFusion: aircraft.trackFusionOutcome.pending,
   };
 }
 
