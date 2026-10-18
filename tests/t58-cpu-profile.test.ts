@@ -27,6 +27,20 @@ describe("bounded T58 V8 profile attribution", () => {
     expect(JSON.stringify(result)).not.toContain("private/path");
   });
 
+  it("pairs samples by monotonic time for multiple stalls in one minute", () => {
+    const result = summarizeT58CpuProfile({
+      startTime: 0, endTime: 70_000_000,
+      nodes: [{ id: 1, callFrame: { functionName: "blockedLoop", url: "node:internal/test" } }],
+      samples: [1, 1, 1], timeDeltas: [1_200_000, 30_000_000, 1_200_000],
+    }, 0, [
+      { ...stall, observedAt: "2026-10-18T12:00:01.200Z", endedMonoMs: 1_200, overshootMs: 200 },
+      { ...stall, observedAt: "2026-10-18T12:00:31.200Z", endedMonoMs: 31_200, overshootMs: 200 },
+    ]);
+    expect(result.stalls).toHaveLength(2);
+    expect(result.stalls.map((item) => item.sampleCount)).toEqual([1, 1]);
+    expect(result.stalls.map((item) => item.sampledMs)).toEqual([20, 20]);
+  });
+
   it("discards oversized profiler responses before iterating samples", () => {
     const result = summarizeT58CpuProfile({ startTime: 0, endTime: 1,
       nodes: [], samples: Array(10_001).fill(1), timeDeltas: Array(10_001).fill(1) }, 0, []);

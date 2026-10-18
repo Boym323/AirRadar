@@ -9,9 +9,9 @@ limitation. No Rust or SQL rewrite is justified by those observations alone.
 
 Default: OFF. Set `AIRRADAR_STALL_EVIDENCE_ENABLED=1` only for a bounded,
 operator-approved controlled diagnostic and restart through the normal release
-gate. The feature adds **one unref'd 1-second heartbeat** and a bounded ring of
+gate. The feature adds **one unref'd 100 ms heartbeat** (only while opted in) and a bounded ring of
 slow (>25 ms) synchronous, allowlisted code scopes. A heartbeat arriving at
-least 1,000 ms late produces a report: timestamp, overshoot, CPU usage averaged
+least 1,000 ms late *relative to the scheduled heartbeat* produces a report: timestamp, overshoot, CPU usage averaged
 over the heartbeat interval, and at most one completed synchronous scope
 covering at least half the late period. Records are limited to 24 recent stalls
 and 64 recent spans. No payload, aircraft identity, raw URL, coordinate, stack

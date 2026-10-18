@@ -8,7 +8,7 @@ operací neurčují konkrétní příčinu. Rust ani SQL se proto nepřepisují 
 
 Výchozí stav: VYPNUTO. `AIRRADAR_STALL_EVIDENCE_ENABLED=1` aktivuj až pro
 schválenou, časově omezenou diagnostiku standardním release postupem.
-Přibude jediný časovač s intervalem 1 s (`unref`) a omezená evidence
+Přibude jediný časovač s intervalem 100 ms (`unref`, jen při aktivaci) a omezená evidence
 synchronních operací delších než 25 ms s bezpečně omezenými názvy.
 Při zpoždění časovače alespoň o 1000 ms vznikne záznam obsahující čas,
 délku zpoždění, přibližné využití CPU za interval a maximálně jednu časově

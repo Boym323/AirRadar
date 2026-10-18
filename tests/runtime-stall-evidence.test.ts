@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getRuntimeStallEvidence, RuntimeStallEvidenceRecorder,
+  STALL_HEARTBEAT_MS, STALL_THRESHOLD_MS,
   startRuntimeStallEvidence, stopRuntimeStallEvidence,
 } from "@/lib/server/runtime-stall-evidence";
 
@@ -25,11 +26,60 @@ describe("bounded event-loop stall evidence", () => {
     tracker.recordSync("snapshot.invalid/ABC123", 900, 5_900);
     const stall = tracker.tick(6_000, Date.parse("2026-10-16T12:00:00Z"), 5_000, 4_750);
     expect(stall).toMatchObject({
-      overshootMs: 4_000, intervalCpuPercent: 95,
+      overshootMs: 4_900, intervalCpuPercent: 95,
       attribution: "temporal-overlap-only",
-      correlatedScope: { name: "snapshot.operationalTwin", overlapMs: 4_000 },
+      correlatedScope: { name: "snapshot.operationalTwin", overlapMs: 4_900 },
     });
     expect(tracker.snapshot().totalStalls).toBe(1);
+  });
+
+  it.each([
+    [800, false, 0],
+    [1_000, false, 0],
+    [1_005, false, 0],
+    [1_050, false, 0],
+    [1_099, false, 0],
+    [1_100, true, 1_000],
+    [1_200, true, 1_100],
+    [1_600, true, 1_500],
+    [2_200, true, 2_100],
+  ])("classifies %ims elapsed time by actual excess delay", (elapsedMs, detected, overshootMs) => {
+    const tracker = new RuntimeStallEvidenceRecorder();
+    const event = tracker.tick(elapsedMs, Date.parse("2026-10-18T12:00:00Z"), elapsedMs, null);
+    expect(Boolean(event)).toBe(detected);
+    expect(event?.overshootMs ?? 0).toBe(overshootMs);
+    expect(tracker.snapshot().totalStalls).toBe(detected ? 1 : 0);
+  });
+
+  it("uses a bounded opt-in heartbeat below the one-second stall threshold", () => {
+    expect(STALL_HEARTBEAT_MS).toBe(100);
+    expect(STALL_THRESHOLD_MS).toBe(1_000);
+    expect(STALL_HEARTBEAT_MS).toBeLessThan(STALL_THRESHOLD_MS);
+  });
+
+  it("detects a real CPU-bound stall, not an ordinary heartbeat callback", async () => {
+    vi.stubEnv("AIRRADAR_STALL_EVIDENCE_ENABLED", "1");
+    startRuntimeStallEvidence();
+    // First observe healthy callbacks before deliberately blocking Node.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(getRuntimeStallEvidence().totalStalls).toBe(0);
+    const started = performance.now();
+    while (performance.now() - started < 1_250) Math.sqrt(12345);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const evidence = getRuntimeStallEvidence();
+    expect(evidence.totalStalls).toBe(1);
+    expect(evidence.recentStalls[0]?.overshootMs).toBeGreaterThanOrEqual(1_000);
+    expect(evidence.recentStalls[0]?.overshootMs).toBeLessThan(2_500);
+  }, 10_000);
+
+  it("counts individual stalls, not the number of reporting windows", () => {
+    const tracker = new RuntimeStallEvidenceRecorder();
+    const first = tracker.tick(1_200, 1_000, 1_200, null);
+    const second = tracker.tick(61_200, 61_000, 1_200, null);
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(tracker.snapshot().totalStalls).toBe(2);
+    expect(tracker.snapshot().recentStalls).toHaveLength(2);
   });
 
   it("accepts bounded ingest scopes without accepting payload-derived names", () => {
@@ -38,9 +88,9 @@ describe("bounded event-loop stall evidence", () => {
     tracker.recordSync("ingest.network-beast/ABC123", 1_000, 5_000);
     const event = tracker.tick(5_000, Date.parse("2026-10-17T12:00:00Z"), 3_500, 250);
     expect(event).toMatchObject({
-      overshootMs: 2_500,
+      overshootMs: 3_400,
       attribution: "temporal-overlap-only",
-      correlatedScope: { name: "ingest.network-beast", overlapMs: 2_500 },
+      correlatedScope: { name: "ingest.network-beast", overlapMs: 3_400 },
     });
     expect(tracker.snapshot().recentStalls).toHaveLength(1);
   });
@@ -49,7 +99,7 @@ describe("bounded event-loop stall evidence", () => {
     const tracker = new RuntimeStallEvidenceRecorder();
     tracker.recordSync("history.persist", 500, 900);
     expect(tracker.tick(4_000, 1_000, 3_000, 5)).toMatchObject({
-      attribution: "unattributed", correlatedScope: null, overshootMs: 2_000,
+      attribution: "unattributed", correlatedScope: null, overshootMs: 2_900,
     });
     expect(tracker.tick(4_010, 1_001, 10, 2)).toBeNull();
     expect(tracker.tick(4_020, 1_002, -10, 2)).toBeNull();
@@ -102,7 +152,7 @@ describe("bounded event-loop stall evidence", () => {
     expect(first.totalStalls).toBe(40);
     expect(first.recentStalls).toHaveLength(24);
     first.recentStalls[0]!.overshootMs = 999;
-    expect(tracker.snapshot().recentStalls[0]!.overshootMs).toBe(2_000);
+    expect(tracker.snapshot().recentStalls[0]!.overshootMs).toBe(2_900);
   });
 
   it("shares one process observer across startup and route module evaluations", async () => {

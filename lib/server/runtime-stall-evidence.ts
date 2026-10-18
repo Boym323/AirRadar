@@ -4,7 +4,9 @@ import { observeT58CpuProfileInterval } from "@/lib/server/t58-cpu-profile";
 
 // Deliberately not an inspector or profiler: only bounded timing summaries,
 // never payloads, flight identities, stack traces or callback arguments.
-export const STALL_HEARTBEAT_MS = 1_000;
+// This opt-in heartbeat must be well below the minimum stall delay so
+// normal timer jitter never looks like a one-second block.
+export const STALL_HEARTBEAT_MS = 100;
 export const STALL_THRESHOLD_MS = 1_000;
 const SLOW_SCOPE_MS = 25;
 const MAX_SPANS = 64;
@@ -64,6 +66,10 @@ export class RuntimeStallEvidenceRecorder {
         !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null;
     // A monotonic clock prevents NTP or wall-clock adjustments looking like stalls.
     this.spans = this.spans.filter((span) => nowMs - span.endedMs <= SPAN_RETENTION_MS);
+    // Only the delay beyond the planned heartbeat is a stall. Testing total
+    // elapsed time against 1s would flag normal 1005ms timer callbacks when
+    // the heartbeat itself was 1s. A 100ms opt-in cadence makes >=1s delays
+    // observable without lowering the existing threshold.
     const overshootMs = Math.max(0, elapsedMs - STALL_HEARTBEAT_MS);
     if (overshootMs < STALL_THRESHOLD_MS) return null;
 
