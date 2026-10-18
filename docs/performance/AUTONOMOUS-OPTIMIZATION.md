@@ -1,5 +1,9 @@
 # Autonomous performance and reliability optimization
 
+> **Historical snapshot (2026-10-13):** Findings and deployment status are
+> recorded as observed on that date. Statements about an ongoing soak, release
+> or configuration are not live operational status; verify fresh evidence.
+
 [Česká verze](../cs/performance/AUTONOMOUS-OPTIMIZATION.md)
 
 Status: runtime fix deployed; post-release soak in progress. Last updated:

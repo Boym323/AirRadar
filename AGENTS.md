@@ -6,6 +6,21 @@ automatically read the whole `docs/` tree. Verify the current implementation
 in `app/`, `components/`, `lib/`, `scripts/`, `deploy/`, and `prisma/` before
 writing or changing documentation.
 
+## Context budget and navigation
+
+- Use the [task-to-document router](docs/CODEX-CONTEXT.md) and the
+  [agent index](docs/agents/README.md) to find **only** relevant files.
+  Read specific sections, tests and symbols; never preload all documentation
+  or all task prompts.
+- Reports in `artifacts/`, `docs/audits/` and dated performance files are
+  historical evidence, not proof of the current production state.
+- Search `CHANGELOG.md` and generated `docs/FEATURES.md` selectively.
+  Record durable rationale in [ADRs](docs/decisions/README.md), rather than
+  repeating historical task briefs.
+- Before handing off a PR, consider [documentation impact
+  advisories](docs/operations/RUNBOOKS.md). They are heuristic; still run
+  `npm run docs:check` and relevant feature checks.
+
 ## Authoritative documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — ownership and component boundaries

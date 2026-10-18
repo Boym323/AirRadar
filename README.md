@@ -13,6 +13,11 @@ The compact agent entry point is [`AGENTS.md`](AGENTS.md). Read it first and
 then only the linked document relevant to the task; do not assume the whole
 `docs/` tree is required.
 
+For selective Codex tasks, use the [context router](docs/CODEX-CONTEXT.md),
+[agent guidance](docs/agents/README.md), [documentation index](docs/README.md),
+[decision records](docs/decisions/README.md), and [operations index](docs/operations/RUNBOOKS.md).
+Dated audit/performance documents are historical evidence, not live production status.
+
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — ownership and boundaries
 - [`docs/DATA-FLOWS.md`](docs/DATA-FLOWS.md) — live, history, statistics, and enrichment flows
 - [`docs/RUNTIME-INVARIANTS.md`](docs/RUNTIME-INVARIANTS.md) — behavior and safety contracts
