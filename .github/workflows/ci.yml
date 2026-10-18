@@ -71,6 +71,13 @@ jobs:
             echo "v6_assets=false" >> "${GITHUB_OUTPUT}"
           fi
           echo "PR scope: ${scope_json}"
+      - name: Review documentation impact (advisory)
+        env:
+          DOCS_DIFF_BASE: ${{ steps.scope.outputs.base }}
+        run: |
+          node --check scripts/docs-impact-check.mjs
+          node --test tests/docs-impact-check.test.mjs
+          node scripts/docs-impact-check.mjs --base "${DOCS_DIFF_BASE}"
       - name: Validate documentation-only change
         if: steps.scope.outputs.docs_only == 'true'
         run: |
