@@ -14,6 +14,8 @@ describe("System & Receiver Timeline V1 boundary", () => {
 
   it("reuses the existing authenticated runtime-history endpoint only", () => {
     expect(timeline).toContain("/api/system/runtime-history");
+    expect(timeline).toContain("diagnostics?: {");
+    expect(timeline).toContain("history?.diagnostics?.lastSaveError");
     expect(timeline).not.toContain("getPrisma");
     expect(timeline).not.toContain("/api/system/timeline");
     expect(timeline).not.toContain("runtime-telemetry-v1.json");

@@ -45,7 +45,7 @@ interface RuntimeTelemetryHistory {
   intervalMs: number;
   retentionMs: number;
   samples: RuntimeTelemetrySample[];
-  diagnostics: {
+  diagnostics?: {
     file: string;
     loadedFromDisk: boolean;
     lastLoadError: string | null;
@@ -416,7 +416,7 @@ export function SystemRuntimeTimeline({ locale, refreshKey = 0 }: { locale: Loca
       : null}
 
     {events.length > 7 && <button type="button" className={styles.showMore} onClick={() => setShowAll((value) => !value)}>{showAll ? (cs ? "Zobrazit méně" : "Show fewer") : (cs ? `Dalších ${events.length - 7} událostí` : `Show ${events.length - 7} more events`)}</button>}
-    {history?.diagnostics.lastSaveError
+    {history?.diagnostics?.lastSaveError
       ? <p className={styles.warning}>{cs ? "Chyba ukládání telemetrie" : "Telemetry persistence error"}: {history.diagnostics.lastSaveError}</p>
       : null}
   </Card>;
