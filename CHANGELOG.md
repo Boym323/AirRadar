@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.513] - 2026-10-18
+
+Changes since v1.0.512.
+
+**Features touched:** ATC & ATS Intelligence.
+
+### Performance
+
+- Reuse polygon bboxes in projections (#1015) (199df912)
+
+### Documentation
+
+- Selective Codex context, bilingual navigation, archive hygiene and CI impact check (#1014) (d21b25bb)
+
+### Maintenance
+
+- Sync generated repository metadata (#1013) (567fd79f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1013) (567fd79f)
+- docs: selective Codex context, bilingual navigation, archive hygiene and CI impact check (#1014) (d21b25bb)
+- perf(atc): reuse polygon bboxes in projections (#1015) (199df912)
+
+</details>
 ## [1.0.512] - 2026-10-18
 
 Changes since v1.0.511.
