@@ -501,56 +501,6 @@ ani placený enrichment call. Výpadek provideru odstraní pouze danou třídu
 kontextu a nesmí ovlivnit readsb → RAM → SSE.
 
 
-## Track Fusion Shadow V1
-
-Track Fusion Shadow je připojen až za existující LOCAL/NETWORK snapshoty po
-jejich source-specific normalizaci, plausibility, continuity a retention
-kontrolách. Engine vidí retained mapy, ale žádnou z nich nevlastní.
-
-```text
-LOCAL provider ──→ local map ──┐
-                               ├─→ current canonical merge ─→ radar/SSE/history boundaries
-NETWORK provider → network map ┘
-                 │             │
-                 └─────────────┴─→ Track Fusion Shadow
-                                      ├─ per-field quality selection
-                                      ├─ overlap residuals
-                                      ├─ handover validation
-                                      ├─ <=6 s estimated gap
-                                      └─ pouze diagnostics
-```
-
-Shadow output se nevrací do `localAircraft`, `networkAircraft`,
-`mergeAircraftMaps`, history persistence, receiver statistik, Navigation
-Integrity, alerts ani predictive input. Tato jednosměrná hranice je ve V1
-povinná.
-
-
-## Track Fusion Readiness / Graduation V1
-
-Shadow estimator nově napájí omezený process-local readiness monitor. Monitor
-čte pouze kumulativní shadow diagnostiku, převádí ji na pětiminutové delta
-buckety a drží nejvýše 24 hodin v RAM. Nemá vlastní timer ani databázové I/O.
-Restart procesu resetuje evidence a readiness se vrátí na WAIT.
-
-Operational Digital Twin je první připravený consumer. Fused state smí číst jen
-při explicitně zapnutém Digital Twin fusion flagu, readiness PASS a GOOD
-observed fused position konkrétního letadla. Veřejný radar, canonical Aircraft,
-history, receiver statistics i FlightPosition zůstávají beze změny.
-
-
-## Track Fusion Outcome Validation V1
-
-Outcome Validation je shadow consumer čerstvě přepočítaných Track Fusion
-tracků. Ve stejném čase zachytí existující canonical merge i fused stav,
-naplánuje omezené prospektivní sample +5/+15/+30 s a později obě větve
-vyhodnotí proti čerstvé LOCAL receiver observation.
-
-Nevlastní ingest, scheduling, persistence ani druhý fusion pass. Pending samples
-i pětiminutové aggregate buckety jsou pouze v RAM a bounded. Validator nemůže
-měnit source affinity, canonical Aircraft state, radar SSE, receiver history ani
-Track Fusion selection.
-
 ## Operational Digital Twin Outcome Validation V1
 
 On-demand Digital Twin response nově napájí samostatný jednosměrný
@@ -560,7 +510,7 @@ proti receiver truth, která už je v local aircraft mapě.
 
 Validator je pouze v RAM, nemá vlastní timer ani databázovou cestu a Digital
 Twin znovu nepřepočítává. Jeho výstup je pouze diagnostický a nemůže ovlivnit
-canonical aircraft state, Track Fusion selection, radar/SSE, historii,
+canonical aircraft state, canonical-only selection, radar/SSE, historii,
 Navigation Integrity, predictive inputs ani alerts.
 
 ## Operational Digital Twin Event Outcome Validation V2
@@ -572,7 +522,7 @@ SIGMET truth, zatímco už vytvořené Flight Intelligence LANDING eventy
 vyhodnocují arrival ETA a provider-reported runway truth.
 
 Větev je jednosměrná a pouze diagnostická. Nemůže měnit Digital Twin corridor,
-canonical Aircraft state, Track Fusion, radar/SSE, historii, Navigation
+canonical Aircraft state, canonical inputs, radar/SSE, historii, Navigation
 Integrity, predictive state ani alerts. Evidence je process-local a restart
 vrací outcome stav na WAIT.
 
@@ -591,7 +541,7 @@ persistence ani databázové čtení.
 → existující situation response a Digital Twin map source.
 
 Výsledek je pouze popisná evidence a nemůže měnit Navigation Integrity
-klasifikaci, canonical aircraft state, Track Fusion, predikce, historii ani
+klasifikaci, canonical aircraft state, canonical inputs, predikce, historii ani
 alerts.
 
 Čisté projekce `predictivePhase`, `isAirportProximity` a

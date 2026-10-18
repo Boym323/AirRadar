@@ -279,14 +279,12 @@ describe("aircraft state service", () => {
     };
 
     internal.applyNetworkSnapshot({ aircraft: [network], fetchedAt: observedAt.toISOString(), provider: "network-test" });
-    const before = service.getDiagnostics().trackFusionShadow.evaluations;
     const beforeTrail = service.getAircraft("ABC123", "extended")?.trail.length;
 
     internal.applyNetworkInitialMetadata([{ ...network, enrichment: { metadata } }]);
 
     expect(service.getAircraft("ABC123", "extended")?.enrichment?.metadata?.icaoTypeCode).toBe("A320");
     expect(service.getAircraft("ABC123", "extended")?.trail.length).toBe(beforeTrail);
-    expect(service.getDiagnostics().trackFusionShadow.evaluations).toBe(before);
   });
 
   it("continues publishing fresh network positions while initial metadata is pending", async () => {

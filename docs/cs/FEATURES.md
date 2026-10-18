@@ -29,7 +29,6 @@ historicky přiřazený.
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Statistiky přijímače, traffic intelligence, rekordy příjmu a denní/týdenní recapy včetně Daily Aviation Story s letišti, operačními událostmi, zajímavými letadly a quality-controlled aircraft-weather highlights. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Omezené historické přehrávání všech letadel, historický mapový kontext a Event Replay ±10 minut z Flight Intelligence. |
-| Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex` | Shadow-only per-field multi-source state estimator with source-quality scoring, position residuals, bounded handover validation, short gap estimation and admin diagnostics; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/notifications`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts`<br>`/admin/alerts/delivery-health`<br>`/admin/alerts/simulator`<br>`/admin/alerts/analytics` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/analytics`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/delivery-health`<br>`/api/admin/alerts/simulator`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Serverové watchlisty, activity omezená na pravidla, historie alertů, autentizované preference doručení, úzký cross-lane semantic dedup, pětiminutové timeline, serverově uložený unread stav, serverově stránkované filtry/search, vysvětlení důvodu, reverzibilní delivery mute pro letadlo nebo pravidlo, diagnostiku zdraví doručování, autentizovaný dry-run simulátor alert pravidel a omezenou analytiku efektivity alertů. |
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Panely Proč? pro readiness-gated ETA, runway, runway-change a trajectory advisory používají malý capability-specific whitelist z existující canonical prediction evidence. |
@@ -635,50 +634,6 @@ nepřidává history scan, persistence, další SSE stream ani periodický brows
 polling loop. Podrobnosti jsou v
 [`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
 
-
-## Track Fusion Shadow V1
-
-Track Fusion Shadow V1 vyhodnocuje field-level multi-source state estimator
-vedle současného local/network canonical merge. Position, altitude, groundspeed,
-track a vertical rate skóruje odděleně podle source class, freshness, protocol
-provenance a dostupné ADS-B integrity evidence.
-
-Shadow měří LOCAL↔NETWORK position residualy, accepted/rejected source
-transitions, bounded šestisekundové dead-reckoning gap fills, per-field source
-selections a divergence proti dnešní canonical position. Diagnostika je
-admin-only přes `/system` a `GET /api/admin/track-fusion/:hex`.
-
-V1 záměrně nemění veřejný radar state, SSE, trails, alerts, Navigation
-Integrity, predictive inputs, receiver statistiky ani PostgreSQL history.
-Fused/estimated state nikdy není local receiver evidence. Viz
-[`TRACK-FUSION-SHADOW.md`](TRACK-FUSION-SHADOW.md).
-
-
-## Track Fusion Readiness / Graduation V1
-
-Track Fusion Shadow nově sbírá 24hodinovou process-local readiness evidenci v
-pětiminutových bucketech a vrací verzovaný stav PASS / WAIT / FAIL. Admin
-readiness je dostupná na `/system` a přes
-`GET /api/admin/track-fusion/readiness`.
-
-První fail-closed consumer je Operational Digital Twin. Fused vstup je defaultně
-vypnutý a vyžaduje explicitní flag, readiness PASS a GOOD observed fused
-position konkrétního letadla. Canonical radar, SSE a receiver persistence se
-nemění.
-
-
-## Track Fusion Outcome Validation V1
-
-Track Fusion nově provozuje bounded prospektivní canonical-vs-fused validation
-lane. Pro způsobilý čerstvě vyhodnocený track zachytí oba stavy, promítne je do
-horizontů 5/15/30 sekund a později je porovná proti budoucí fresh LOCAL receiver
-position.
-
-Výstup obsahuje FUSED / CANONICAL / TIE, mean position a altitude error,
-handover outcomes a samostatný PASS / WAIT / FAIL net-benefit gate. Validator
-je process-local a pouze v RAM; neprovádí history scan, DB zápis, upstream
-request, timer ani druhý fusion pass. Podrobnosti jsou v
-[`TRACK-FUSION-OUTCOME.md`](TRACK-FUSION-OUTCOME.md).
 
 ## Operational Digital Twin V2 — Map Corridor Visualization
 

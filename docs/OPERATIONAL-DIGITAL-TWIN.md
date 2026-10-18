@@ -145,53 +145,6 @@ Natural follow-ups are:
 4. regional multi-aircraft situation graphs and operational alerts.
 
 
-## Track Fusion graduation input
-
-Operational Digital Twin can optionally consume the Track Fusion state, but the
-integration is fail-closed and disabled by default.
-
-`AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED=true` only becomes effective when
-the process-local Track Fusion readiness report is `PASS` and the requested
-aircraft has a GOOD observed fused position. Dead-reckoned position is excluded
-from this first rollout. Estimated numeric fields also fall back to canonical
-live values.
-
-The situation response identifies the input with
-`aircraft.stateSource = CANONICAL | TRACK_FUSION` and reports the current
-Track Fusion readiness decision. If the per-aircraft fusion gate is not met,
-the endpoint remains local-canonical and does not silently expand to a
-network-only canonical aircraft.
-
-## Map Corridor Visualization V2
-
-The live radar now renders the already-fetched selected-aircraft situation
-response as a dedicated MapLibre projection. V2 does not add another situation
-request, browser timer, EventSource, server route, persistence path, or
-prediction pass.
-
-The map visualization includes:
-
-- the 30-minute projected corridor;
-- a geodesic uncertainty envelope built from each trajectory point's
-  `uncertaintyNm`;
-- a solid route-aware corridor and a dashed kinematic fallback corridor;
-- interpolated +5/+10/+15/+20/+30 minute milestone markers;
-- existing Digital Twin situation events at their projected coordinates;
-- Weather Corridor turbulence, icing and SIGMET entry/exit markers;
-- click popups carrying time offset, evidence type, confidence/provenance and
-  source metadata.
-
-The projection is visible only for the currently selected, visible aircraft and
-only while its existing `/api/aircraft/:hex/situation` response is available.
-Clearing or changing the selection clears the GeoJSON source. The source and
-layers are registered on MapLibre `style.load`, matching the radar's existing
-overlay lifecycle.
-
-The uncertainty polygon is visualization of model uncertainty, not protected
-airspace, containment, separation, or a safety boundary. Weather markers remain
-evidence from Weather Corridor Intelligence and are not hazard clearances or
-avoidance instructions.
-
 ## Outcome Validation V1
 
 Operational Digital Twin now has a bounded prospective calibration lane for the
@@ -215,7 +168,7 @@ The report exposes:
 - mean absolute altitude error when both sides have altitude;
 - 5/15/30 minute slices;
 - route-aware versus kinematic slices;
-- canonical-input versus Track-Fusion-input slices;
+- canonical input provenance slices;
 - missing-truth expiry rate;
 - PASS / WAIT / FAIL calibration state.
 

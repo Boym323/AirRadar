@@ -139,48 +139,6 @@ Přirozené pokračování:
 4. regionální multi-aircraft situation graph a operational alerts.
 
 
-## Track Fusion graduation input
-
-Operational Digital Twin může volitelně používat Track Fusion state, ale
-integrace je fail-closed a defaultně vypnutá.
-
-`AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED=true` začne být účinné až tehdy,
-když process-local Track Fusion readiness vrací `PASS` a konkrétní letadlo má
-GOOD observed fused position. Dead-reckoned position je z prvního rollout
-vyloučená. Estimated numerická pole se rovněž vrací na canonical live hodnotu.
-
-Situation response označuje vstup pomocí
-`aircraft.stateSource = CANONICAL | TRACK_FUSION` a vrací aktuální Track
-Fusion readiness. Pokud per-aircraft fusion gate není splněn, endpoint zůstává
-local-canonical a tiše se nerozšíří na network-only canonical letadlo.
-
-## Map Corridor Visualization V2
-
-Živý radar nyní vykresluje už načtený situation response vybraného letadla jako
-samostatnou MapLibre projekci. V2 nepřidává další situation request, browser
-timer, EventSource, serverovou routu, persistence path ani nový predikční pass.
-
-Mapová vizualizace obsahuje:
-
-- projektovaný 30minutový corridor;
-- geodetický uncertainty envelope z hodnoty `uncertaintyNm` každého
-  trajectory bodu;
-- plnou čáru pro route-aware corridor a přerušovanou pro kinematický fallback;
-- interpolované markery +5/+10/+15/+20/+30 minut;
-- existující Digital Twin situační události v projektovaných souřadnicích;
-- Weather Corridor markery turbulence, námrazy a SIGMET entry/exit;
-- klikací popup s časovým offsetem, typem evidence, confidence/provenance a
-  zdrojem.
-
-Projekce je viditelná pouze pro aktuálně vybrané a viditelné letadlo a pouze
-pokud je dostupný jeho existující `/api/aircraft/:hex/situation` response.
-Zrušení nebo změna výběru vyčistí GeoJSON source. Source a layers se registrují
-na MapLibre `style.load`, stejně jako ostatní radarové overlaye.
-
-Uncertainty polygon je pouze vizualizace nejistoty modelu, nikoli chráněný
-prostor, containment, separace ani bezpečnostní hranice. Weather markery
-zůstávají evidencí Weather Corridor Intelligence a nejsou pokynem k vyhýbání.
-
 ## Outcome Validation V1
 
 Operational Digital Twin má nově omezenou prospektivní kalibrační větev pro
@@ -203,7 +161,7 @@ Report obsahuje:
 - průměrnou absolutní chybu výšky, pokud mají obě strany výšku;
 - slice pro 5/15/30 minut;
 - route-aware versus kinematic slice;
-- canonical-input versus Track-Fusion-input slice;
+- canonical input provenance slice;
 - podíl expirované truth;
 - kalibrační stav PASS / WAIT / FAIL.
 

@@ -36,7 +36,6 @@ import { defaultPirepProvider } from "@/lib/server/pirep-provider";
 import {
   getOperationalTwinTrajectoryQualityPolicy,
   isAviationWeatherEnabled,
-  isTrackFusionDigitalTwinEnabled,
 } from "@/lib/server/config";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import { loadAtcContextDataset } from "@/lib/atc-context/engine";
@@ -45,7 +44,6 @@ import {
   enforcePredictiveReadiness,
   readPredictiveReadinessReport,
 } from "@/lib/server/predictive-readiness";
-import type { TrackFusionReadinessReport, TrackFusionTrack } from "@/lib/track-fusion";
 
 const LIVE_POSITION_STALE_MS = 60_000;
 
@@ -70,67 +68,28 @@ function mergedNetwork(dataset: AtcContextDataset | null): RouteIntelligenceNetw
   };
 }
 
-type EligibleFusionTrack = TrackFusionTrack & {
-  position: NonNullable<TrackFusionTrack["position"]>;
-};
-
-function fusionTrackEligible(
-  fused: TrackFusionTrack | null,
-  readiness: TrackFusionReadinessReport,
-): fused is EligibleFusionTrack {
-  return readiness.rollout.digitalTwinEffective
-    && fused?.quality === "GOOD"
-    && fused.position !== null
-    && !fused.position.estimated
-    && fused.position.confidence !== "LOW";
-}
-
-function observedFusionNumber(
-  estimate: TrackFusionTrack["altitude"] | TrackFusionTrack["groundSpeed"] | TrackFusionTrack["track"] | TrackFusionTrack["verticalRate"],
-  fallback: number | null,
-): number | null {
-  return estimate && !estimate.estimated && estimate.confidence !== "LOW" ? estimate.value : fallback;
-}
-
-function aircraftState(
-  live: ReturnType<ReturnType<typeof getAircraftStateService>["getAircraft"]>,
-  fused: TrackFusionTrack | null,
-  readiness: TrackFusionReadinessReport,
-): OperationalTwinAircraftState | null {
-  if (!live) return null;
-  const fusionEligible = fusionTrackEligible(fused, readiness);
-
-  const lat = fusionEligible ? fused.position.value.lat : live.lat;
-  const lon = fusionEligible ? fused.position.value.lon : live.lon;
-  if (lat === null || lon === null) return null;
-
+/** Operational Twin consumes only canonical LOCAL aircraft evidence. */
+function aircraftState(live: ReturnType<ReturnType<typeof getAircraftStateService>["getAircraft"]>): OperationalTwinAircraftState | null {
+  if (!live || live.lat === null || live.lon === null) return null;
   return {
     icaoHex: live.icaoHex,
     callsign: live.callsign ?? null,
     registration: live.registration ?? null,
-    observedAt: fusionEligible ? fused.position.observedAt : live.lastSeen,
-    lat,
-    lon,
-    altitudeFt: fusionEligible
-      ? observedFusionNumber(fused.altitude, live.baroAltitude ?? live.altitude ?? live.geomAltitude ?? null)
-      : live.baroAltitude ?? live.altitude ?? live.geomAltitude ?? null,
-    groundSpeedKt: fusionEligible
-      ? observedFusionNumber(fused.groundSpeed, live.groundSpeed ?? null)
-      : live.groundSpeed ?? null,
-    trackDeg: fusionEligible
-      ? observedFusionNumber(fused.track, live.track ?? null)
-      : live.track ?? null,
-    verticalRateFpm: fusionEligible
-      ? observedFusionNumber(fused.verticalRate, live.verticalRate ?? live.baroRate ?? live.geomRate ?? null)
-      : live.verticalRate ?? live.baroRate ?? live.geomRate ?? null,
+    observedAt: live.lastSeen,
+    lat: live.lat,
+    lon: live.lon,
+    altitudeFt: live.baroAltitude ?? live.altitude ?? live.geomAltitude ?? null,
+    groundSpeedKt: live.groundSpeed ?? null,
+    trackDeg: live.track ?? null,
+    verticalRateFpm: live.verticalRate ?? live.baroRate ?? live.geomRate ?? null,
     onGround: live.onGround,
     aircraftType: live.enrichment?.metadata?.icaoTypeCode ?? live.aircraftType ?? null,
     aircraftDescription: live.enrichment?.metadata?.aircraftDescription ?? live.aircraftDescription ?? null,
     category: live.category ?? null,
     selectedAltitudeFt: live.targetState?.selectedAltitudeFt ?? null,
     selectedAltitudeSource: live.targetState?.selectedAltitudeSource ?? null,
-    stateSource: fusionEligible ? "TRACK_FUSION" : "CANONICAL",
-    trackFusionReadiness: readiness.decision,
+    stateSource: "CANONICAL",
+    trackFusionReadiness: null,
   };
 }
 
@@ -230,23 +189,17 @@ export async function getOperationalTwinForAircraft(
   now = new Date(),
 ): Promise<OperationalTwinApiResponse> {
   const service = getAircraftStateService();
-  const readiness = service.getTrackFusionReadinessReport(now);
-  const fusionConfigured = isTrackFusionDigitalTwinEnabled();
-  const fused = fusionConfigured && readiness.decision === "PASS"
-    ? service.getTrackFusionShadowTrack(icaoHex)
-    : null;
-  const fusionEligible = fusionTrackEligible(fused, readiness);
-  const live = service.getAircraft(icaoHex, fusionEligible ? "extended" : "local");
+  const live = service.getAircraft(icaoHex, "local");
   if (!live) return unavailable(icaoHex, "aircraft_not_live");
 
-  const state = aircraftState(live, fused, readiness);
+  const state = aircraftState(live);
   if (!state) return unavailable(icaoHex, "invalid_position");
 
   const observedAt = Date.parse(state.observedAt);
   if (
     !Number.isFinite(observedAt)
     || now.getTime() - observedAt > LIVE_POSITION_STALE_MS
-    || (state.stateSource !== "TRACK_FUSION" && live.seenPosSeconds !== null && live.seenPosSeconds > 60)
+    || (live.seenPosSeconds !== null && live.seenPosSeconds > 60)
   ) {
     return unavailable(icaoHex, "stale_position", "stale");
   }
