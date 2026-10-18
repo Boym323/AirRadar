@@ -79,7 +79,7 @@ import type { AircraftWeatherMapObservation } from "@/components/aircraft-weathe
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
-import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
+import { airportVisibilityFilter, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
 import {
@@ -107,6 +107,7 @@ import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
 import { RadarMultiAircraft } from "@/components/radar/radar-multi-aircraft";
 import { addMultiAircraft, removeMultiAircraft, MULTI_AIRCRAFT_LIMIT } from "@/lib/radar/multi-aircraft";
 import { radarWeatherPresentation } from "@/lib/radar/weather-layer-presentation";
+import { createAirportGeoJSON, createMetarGeoJSON, createAircraftWeatherGeoJSON } from "@/lib/radar/map-context-geojson";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
@@ -439,62 +440,6 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivi
         geometry: { type: "Polygon" as const, coordinates: [polygon] },
       }));
     }) : [],
-  };
-}
-
-function createAirportGeoJSON(airports: Airport[], excludedAirportCodes: ReadonlySet<string> = new Set()) {
-  const unique = new Map(airports
-    .filter((airport) => Number.isFinite(airport.latitude) && Number.isFinite(airport.longitude)
-      && airport.latitude >= -90 && airport.latitude <= 90
-      && airport.longitude >= -180 && airport.longitude <= 180
-      && !excludedAirportCodes.has(airport.icaoCode.trim().toUpperCase()))
-    .map((airport) => [airport.icaoCode, airport]));
-  return {
-    type: "FeatureCollection" as const,
-    features: [...unique.values()].map((airport) => ({
-      type: "Feature" as const,
-      properties: {
-        code: airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode,
-        icao: airport.icaoCode,
-        name: airport.name,
-        tier: airportVisibilityTier(airport),
-        important: false,
-      },
-      geometry: { type: "Point" as const, coordinates: [airport.longitude, airport.latitude] },
-    })),
-  };
-}
-
-function createMetarGeoJSON(observations: MetarMapObservation[]) {
-  return {
-    type: "FeatureCollection" as const,
-    features: observations.flatMap((observation) => Number.isFinite(observation.lat) && Number.isFinite(observation.lon) ? [{
-      type: "Feature" as const,
-      properties: observation,
-      geometry: { type: "Point" as const, coordinates: [observation.lon, observation.lat] },
-    }] : []),
-  };
-}
-
-function createAircraftWeatherGeoJSON(observations: AircraftWeatherMapObservation[], field: "temperature" | "wind") {
-  return {
-    type: "FeatureCollection" as const,
-    features: observations.flatMap((observation) => Number.isFinite(observation.lat) && Number.isFinite(observation.lon) ? [{
-      type: "Feature" as const,
-      properties: {
-        key: `${observation.aircraftHex}|${observation.observedAt}`,
-        aircraftHex: observation.aircraftHex,
-        callsign: observation.callsign,
-        altitudeFt: observation.altitudeFt,
-        observedAt: observation.observedAt,
-        field,
-        temperatureC: observation.staticAirTemperatureC,
-        windDirectionDeg: observation.windDirectionDeg,
-        windSpeedKt: observation.windSpeedKt,
-        source: observation.source,
-      },
-      geometry: { type: "Point" as const, coordinates: [observation.lon, observation.lat] as [number, number] },
-    }] : []),
   };
 }
 
