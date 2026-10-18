@@ -104,3 +104,50 @@ Každý push vyžaduje ověřený kód a vlastníka, vědomý produktový souhla
 - Destruktivní produkční DB či ruční deploy vyžadují zvláštní souhlas.
 
 Po skutečném provedení doplň přesné commity a ověřené výsledky. Tento dokument sám o sobě **neodstraňuje žádnou runtime funkci**.
+
+## Ověřené výsledky (18. 10. 2026)
+
+Všechny níže uvedené runtime změny byly samostatně commitnuty přímo do `main`
+z izolovaného neobsluhujícího checkoutu. Přesný seznam přidaných/upravených/
+odstraněných cest je uveden v diffu každého propojeného commitu.
+
+| Dávka | Výsledek | Commit / CI / CodeQL | Ověřená produkce |
+|---|---|---|---|
+| B — samostatné stránky | HOTOVO; `test:changed` 895 úspěšných, 9 přeskočeno; browser 74 cílů / 14 viewportů | [292646d](https://github.com/Boym323/AirRadar/commit/292646d81e51bbb8f77fa3dafb6c318c55499057) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39149603898) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39149603691) | 1.0.519 / `292646d8`; automatický deploy úspěšný |
+| C — Mobile Spotter | HOTOVO; `test:changed` 891 úspěšných, 9 přeskočeno; browser 72 / 14 | [346d7de](https://github.com/Boym323/AirRadar/commit/346d7de85ec7b22a4a89cdf96db5526f21603a43) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39151012143) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39151012125) | 1.0.520 / `346d7de8`; automatický deploy úspěšný |
+| D — 3D radar | HOTOVO; 85 cílených testů; browser 70 / 14 | [c595009](https://github.com/Boym323/AirRadar/commit/c5950097296025448404ff0b3cbd759a5c2030ab) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39151990602) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39151990522) | 1.0.521 / `c5950097`; automatický deploy úspěšný |
+| A — SondeHub / Space Weather | HOTOVO; `test:changed` 838 úspěšných, 9 přeskočeno; 3 cílené testy; browser 70 / 14 | [03b59c3](https://github.com/Boym323/AirRadar/commit/03b59c34bee2d7a5f40c6043e4869e4a0e203f78) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39152862116) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39152862092) | 1.0.522 / `03b59c34`; automatický deploy úspěšný |
+| F — modelový vítr Digital Twin | HOTOVO; `test:changed` 2 796 úspěšných, 15 přeskočeno; 25 cílených testů; browser 70 / 14 | [c347d3b](https://github.com/Boym323/AirRadar/commit/c347d3b93ce1d2cfea12b47b390416c30321752b) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39154137242) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39154137259) | 1.0.523 / `c347d3b9`; automatický deploy i ověření identity release úspěšné |
+| E — Track Fusion Shadow | BLOKOVÁNO pouze pro tuto dávku | Bez runtime commitu | Samostatný opt-in `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` používá `lib/server/operational-twin.ts` pro přijetí stavu `TRACK_FUSION`. Efektivní produkční hodnota není dostupná v povolené sanitizované veřejné projekci. Protože jde o konzumenta mimo shadow, odstranění shadow může změnit chování Operational Twin; ostatní dávky pokračovaly samostatně. |
+
+### Přepínače a produkční evidence
+
+- B, C a D: `N/A (bez specifického serverového feature flagu)`; routy,
+  klienti a konzumenti byly zmapováni a zachované backendy otestovány.
+- A: efektivní produkční hodnoty `SONDEHUB_ENABLED`,
+  `SONDEHUB_MQTT_ENABLED` a `SPACE_WEATHER_ENABLED` zůstávají `UNKNOWN`;
+  povolená sanitizovaná veřejná diagnostika je nezobrazuje. To nedokazuje, že
+  byly providery aktivní, proto se neuvádějí žádné úspory z jejich provozu.
+- E: `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` je defaultně zapnutý, pokud není
+  výslovně vypnutý; efektivní hodnota samostatného přepínače konzumenta Digital
+  Twin zůstává `UNKNOWN`, což blokuje pouze E.
+- F: `N/A (modelový fetch větru nemá specifický serverový feature flag)`.
+  Dřívější `AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY` vybíral prezentační
+  promotion, nikoli fetch; jeho čtení i promotion větev byly odstraněny. Analýza
+  zdrojů nenašla časovaného konzumenta builderu weather corridor v
+  `aircraft-state`.
+- Po deployi F vrátily sanitizované read-only kontroly 200 pro `/`,
+  `/aircraft/4CA9A4`, `/api/aircraft`, `/api/navigation-integrity/current`,
+  `/api/ogn/state`, `/api/aircraft/:hex/situation` a Weather Fusion pro právě
+  sledované letadlo; situation DTO zachovalo corridor/events a seznam zdrojů,
+  ale nemělo `weatherCorridor.wind`. Odstraněná A API vrátila 404. Produkční
+  konfigurace, tajné hodnoty ani databáze se neměnily.
+
+### Změřené úspory
+
+Ověřený ZIP produkčního buildu D se zmenšil ze 76 009 526 B na `346d7de8` na
+75 917 796 B na `c5950097`: naměřeno o 91 730 B méně (0,12 %). Jde o velikost
+artefaktu, nikoli o naměřené zrychlení runtime. CPU, RAM, databázová práce ani
+síťový provoz nebyly u žádné dávky měřeny (`NOT_MEASURED`); CI performance
+regression gate pro D a F prošel, ale tyto úspory neprokazuje. Úsporu nelze
+odvozovat z počtu řádků ani neznámého stavu provider flagů.

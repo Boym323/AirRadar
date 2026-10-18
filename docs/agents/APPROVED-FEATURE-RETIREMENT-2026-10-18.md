@@ -104,3 +104,50 @@ Source truth, explicit owner authorization, shared contract parity, full local g
 - Any production database mutation or manual deploy: requires separate explicit authorization.
 
 Once completed, update this brief with exact commits and verified results; do not leave a future agent to infer that this document itself changed any runtime feature.
+
+## Verified execution record (2026-10-18)
+
+All runtime changes below were committed directly to `main` from the isolated,
+non-serving checkout. File-level added/modified/deleted paths are recorded in
+each linked commit diff.
+
+| Batch | Result | Commit / CI / CodeQL | Verified production |
+|---|---|---|---|
+| B — standalone pages | DONE; `test:changed` 895 passed, 9 skipped; browser 74 targets / 14 viewports | [292646d](https://github.com/Boym323/AirRadar/commit/292646d81e51bbb8f77fa3dafb6c318c55499057) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39149603898) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39149603691) | 1.0.519 / `292646d8`; automatic deploy succeeded |
+| C — Mobile Spotter | DONE; `test:changed` 891 passed, 9 skipped; browser 72 / 14 | [346d7de](https://github.com/Boym323/AirRadar/commit/346d7de85ec7b22a4a89cdf96db5526f21603a43) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39151012143) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39151012125) | 1.0.520 / `346d7de8`; automatic deploy succeeded |
+| D — 3D radar | DONE; 85 targeted tests; browser 70 / 14 | [c595009](https://github.com/Boym323/AirRadar/commit/c5950097296025448404ff0b3cbd759a5c2030ab) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39151990602) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39151990522) | 1.0.521 / `c5950097`; automatic deploy succeeded |
+| A — SondeHub / Space Weather | DONE; `test:changed` 838 passed, 9 skipped; 3 targeted tests; browser 70 / 14 | [03b59c3](https://github.com/Boym323/AirRadar/commit/03b59c34bee2d7a5f40c6043e4869e4a0e203f78) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39152862116) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39152862092) | 1.0.522 / `03b59c34`; automatic deploy succeeded |
+| F — Digital Twin model wind | DONE; `test:changed` 2,796 passed, 15 skipped; 25 targeted tests; browser 70 / 14 | [c347d3b](https://github.com/Boym323/AirRadar/commit/c347d3b93ce1d2cfea12b47b390416c30321752b) · [CI](https://github.com/Boym323/AirRadar/actions/runs/39154137242) · [CodeQL](https://github.com/Boym323/AirRadar/actions/runs/39154137259) | 1.0.523 / `c347d3b9`; automatic deploy and release identity verification succeeded |
+| E — Track Fusion Shadow | BLOCKED only for this batch | No runtime commit | `AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED` is an independent opt-in consumed by `lib/server/operational-twin.ts` to use `TRACK_FUSION` state. Its effective production state is not available in the approved sanitized public projection. Because this is a non-shadow consumer, deleting the shadow risks changing Operational Twin behavior; other batches proceeded independently. |
+
+### Flag and production evidence
+
+- B, C, and D: `N/A (no feature-specific server flag)`; routes, clients and
+  consumers were traced and their preserved backends were tested.
+- A: effective production states for `SONDEHUB_ENABLED`,
+  `SONDEHUB_MQTT_ENABLED`, and `SPACE_WEATHER_ENABLED` remain `UNKNOWN`; the
+  approved sanitized public diagnostics do not expose them. This is not evidence
+  that those providers were active, so no usage or runtime savings are claimed.
+- E: `AIRRADAR_TRACK_FUSION_SHADOW_ENABLED` defaults on unless explicitly
+  disabled; the separate Digital Twin consumer flag's effective value remains
+  `UNKNOWN`, which blocks only E.
+- F: `N/A (no feature-specific server flag for model-wind fetching)`. The former
+  `AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY` selected presentation promotion,
+  not fetching, and its reader/promotion lane were removed. Source tracing found
+  no timed `aircraft-state` caller of the weather corridor builder.
+- After F deployment, sanitized read-only checks returned 200 for `/`,
+  `/aircraft/4CA9A4`, `/api/aircraft`, `/api/navigation-integrity/current`,
+  `/api/ogn/state`, `/api/aircraft/:hex/situation`, and Weather Fusion for a
+  currently observed aircraft; the situation DTO retained its corridor/events
+  and source list and had no `weatherCorridor.wind`. Retired A APIs returned 404.
+  No production configuration, secrets or database were modified.
+
+### Measured savings
+
+The verified D production-build ZIP changed from 76,009,526 bytes at
+`346d7de8` to 75,917,796 bytes at `c5950097`, a measured reduction of 91,730
+bytes (0.12%). This is artifact size, not a measured runtime performance gain.
+CPU, RAM, database work and network traffic were `NOT_MEASURED` for every
+batch; the CI performance regression gate passed for D and F but does not
+establish those savings. Do not infer savings from deleted lines or unknown
+provider flags.
