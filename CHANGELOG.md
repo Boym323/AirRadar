@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.524] - 2026-10-18
+
+Changes since v1.0.523.
+
+**Features touched:** Navigation Integrity.
+
+### Changed
+
+- Retire Track Fusion Shadow; keep canonical Digital Twin (06f55cc9)
+
+### Documentation
+
+- Record verified feature retirement results (c15dc28a)
+
+### Maintenance
+
+- Sync generated repository metadata (#1028) (9c2779a5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1028) (9c2779a5)
+- docs: record verified feature retirement results (c15dc28a)
+- refactor: retire Track Fusion Shadow; keep canonical Digital Twin (06f55cc9)
+
+</details>
 ## [1.0.523] - 2026-10-18
 
 Changes since v1.0.522.
