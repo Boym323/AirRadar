@@ -17,6 +17,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.512] - 2026-10-18
+
+Changes since v1.0.511.
+
+### Fixed
+
+- Profile warmed-up event-loop stalls (#1012) (7d7b6144)
+
+### Maintenance
+
+- Sync generated repository metadata (#1011) (d0452227)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1011) (d0452227)
+- fix(t58): profile warmed-up event-loop stalls (#1012) (7d7b6144)
+
+</details>
 ## [1.0.511] - 2026-10-18
 
 Changes since v1.0.510.
