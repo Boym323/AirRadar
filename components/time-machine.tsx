@@ -113,7 +113,7 @@ export function TimeMachine() {
       ]);
       if (currentGeneration !== contextGeneration.current) return;
       contextRetryAttempt.current = 0;
-      const hasUnavailable = [showRadar && !radar?.available, showMetar && !metar?.available, showWind && !wind?.available, showAup && !aup?.available].some(Boolean);
+      const hasUnavailable = [showRadar && !radar?.available, showMetar && !metar?.available, showWind && wind === null, showAup && !aup?.available].some(Boolean);
       setContext({ manifest, radar, metar, wind, aup, status: hasUnavailable ? "partial" : "ready" });
     })().catch(() => {
       if (controller.signal.aborted || currentGeneration !== contextGeneration.current) return;

@@ -25,7 +25,7 @@ describe("V5-B1/B2 aircraft identity and progressive detail", () => {
     expect(tab.indexOf('<AtcSection')).toBeLessThan(tab.indexOf('<details className="aircraft-quick-deep-context"'));
     expect(tab.indexOf('<NavigationIntegritySection')).toBeGreaterThan(tab.indexOf('<summary>{t.aircraftQuickV5.advancedContext}</summary>'));
     expect(tab).toContain('<SigmetSection');
-    expect(tab).toContain('<WindSection');
+    expect(tab).not.toContain('<WindSection');
     expect(css).toContain('.aircraft-quick-deep-context > summary:focus-visible');
   });
 

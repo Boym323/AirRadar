@@ -26,7 +26,7 @@ describe("system status module boundaries", () => {
     expect(systemSource).not.toContain("function windDiagnostic");
     expect(diagnosticsSource).toContain("function weatherDiagnostic");
     expect(diagnosticsSource).toContain("function radarDiagnostic");
-    expect(diagnosticsSource).toContain("function windDiagnostic");
+    expect(diagnosticsSource).not.toContain("function windDiagnostic");
     expect(diagnosticsSource).not.toContain("getPrisma");
     expect(diagnosticsSource).not.toContain("fetch(");
   });
