@@ -32,6 +32,29 @@ describe("bounded event-loop stall evidence", () => {
     expect(tracker.snapshot().totalStalls).toBe(1);
   });
 
+  it.each([
+    [800, false, 0],
+    [1_200, true, 200],
+    [1_600, true, 600],
+    [2_200, true, 1_200],
+  ])("classifies an isolated %ims heartbeat delay without threshold drift", (elapsedMs, detected, overshootMs) => {
+    const tracker = new RuntimeStallEvidenceRecorder();
+    const event = tracker.tick(elapsedMs, Date.parse("2026-10-18T12:00:00Z"), elapsedMs, null);
+    expect(Boolean(event)).toBe(detected);
+    expect(event?.overshootMs ?? 0).toBe(overshootMs);
+    expect(tracker.snapshot().totalStalls).toBe(detected ? 1 : 0);
+  });
+
+  it("counts individual stalls, not the number of reporting windows", () => {
+    const tracker = new RuntimeStallEvidenceRecorder();
+    const first = tracker.tick(1_200, 1_000, 1_200, null);
+    const second = tracker.tick(61_200, 61_000, 1_200, null);
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(tracker.snapshot().totalStalls).toBe(2);
+    expect(tracker.snapshot().recentStalls).toHaveLength(2);
+  });
+
   it("accepts bounded ingest scopes without accepting payload-derived names", () => {
     const tracker = new RuntimeStallEvidenceRecorder();
     tracker.recordSync("ingest.network-beast", 1_000, 5_000);

@@ -64,8 +64,12 @@ export class RuntimeStallEvidenceRecorder {
         !Number.isFinite(elapsedMs) || elapsedMs <= 0) return null;
     // A monotonic clock prevents NTP or wall-clock adjustments looking like stalls.
     this.spans = this.spans.filter((span) => nowMs - span.endedMs <= SPAN_RETENTION_MS);
+    // `elapsedMs` is the complete delay between heartbeat callbacks.  The
+    // overshoot is only the portion beyond the expected heartbeat period and
+    // must not be used as the detection threshold: doing so silently ignored
+    // every stall from 1,000ms through 1,999ms.
     const overshootMs = Math.max(0, elapsedMs - STALL_HEARTBEAT_MS);
-    if (overshootMs < STALL_THRESHOLD_MS) return null;
+    if (elapsedMs < STALL_THRESHOLD_MS) return null;
 
     // Match the *late* portion of the heartbeat interval, not arbitrary nearby
     // operations. Require at least half the measured overshoot to be covered by
