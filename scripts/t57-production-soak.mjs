@@ -45,6 +45,24 @@ export function classifyT57Failure(error) {
   return "response_validation_failure";
 }
 
+export function isTransientT57Failure(error) {
+  const message = error instanceof Error ? error.message : "";
+  return /TimeoutError|AbortError|operation was aborted|timeout|fetch failed|network|HTTP (408|425|429|5\d\d)\b/i.test(message);
+}
+
+/** Retry only bounded, read-only diagnostic requests after transient failures. */
+export async function fetchJsonWithRetry(base, path, cookie, attempts = 3) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetchJson(base, path, cookie);
+    } catch (error) {
+      if (attempt >= attempts || !isTransientT57Failure(error)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+    }
+  }
+  throw new Error("t57_retry_exhausted");
+}
+
 function trustedBase() {
   const uri = new URL(process.env.T57_BASE_URL ?? "https://airradar.pomykal.cz");
   const prod = uri.protocol === "https:" && uri.hostname === "airradar.pomykal.cz" &&
@@ -178,8 +196,8 @@ export async function analyzeFile(file) {
 
 async function collect(base, cookie) {
   const [status, metrics] = await Promise.all([
-    fetchJson(base, "/api/system/status", cookie),
-    fetchJson(base, "/api/system/runtime-performance", cookie),
+    fetchJsonWithRetry(base, "/api/system/status", cookie),
+    fetchJsonWithRetry(base, "/api/system/runtime-performance", cookie),
   ]);
   return projectT57SoakSample(status, metrics);
 }

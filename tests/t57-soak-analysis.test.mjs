@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeT57Soak, newT57Windows, projectT57SoakSample } from "../scripts/t57-soak-analysis.mjs";
-import { verifyT57ExpectedCommit } from "../scripts/t57-production-soak.mjs";
-import { classifyT57Failure } from "../scripts/t57-production-soak.mjs";
+import { verifyT57ExpectedCommit, classifyT57Failure, isTransientT57Failure } from "../scripts/t57-production-soak.mjs";
 
 const MiB = 1024 * 1024;
 const epoch = Date.parse("2026-10-10T09:00:00Z");
@@ -24,6 +23,13 @@ describe("T5.7C sanitized sample failure categories", () => {
     expect(classifyT57Failure(timeout)).toBe("http_timeout");
     expect(classifyT57Failure(new TypeError("fetch failed"))).toBe("network_failure");
     expect(classifyT57Failure(new Error("t57_required_diagnostic_missing"))).toBe("response_validation_failure");
+  });
+
+  it("retries only transient read-only transport failures", () => {
+    expect(isTransientT57Failure(new Error("The operation was aborted"))).toBe(true);
+    expect(isTransientT57Failure(new Error("Diagnostic request /api/system/status HTTP 503"))).toBe(true);
+    expect(isTransientT57Failure(new Error("Diagnostic request /api/system/status HTTP 401"))).toBe(false);
+    expect(isTransientT57Failure(new Error("t57_required_diagnostic_missing"))).toBe(false);
   });
 });
 
