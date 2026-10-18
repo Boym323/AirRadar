@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.526] - 2026-10-18
+
+Changes since v1.0.525.
+
+**Features touched:** Live Radar.
+
+### Changed
+
+- Extract reusable GeoJSON source builders (17c1afc7)
+
+### Maintenance
+
+- Sync generated repository metadata (#1034) (cff58f9c)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1034) (cff58f9c)
+- refactor(radar): extract reusable GeoJSON source builders (17c1afc7)
+
+</details>
 ## [1.0.525] - 2026-10-18
 
 Changes since v1.0.524.
