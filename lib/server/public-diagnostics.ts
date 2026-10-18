@@ -40,16 +40,26 @@ export function toPublicRuntimeHistory(history: RuntimeTelemetryHistory) {
     schemaVersion: history.schemaVersion,
     intervalMs: history.intervalMs,
     retentionMs: history.retentionMs,
-    samples: history.samples.map(({ processId: _processId, ...sample }) => sample),
+    samples: history.samples.map((sample) => {
+      const publicSample = { ...sample };
+      delete publicSample.processId;
+      return publicSample;
+    }),
   };
 }
 
-export function toPublicIntegrationDiagnostics(value: Record<string, any>) {
-  const rxw = value.rxw ?? {};
-  const adsbhub = value.adsbhub;
-  const route = value.route ?? {};
-  const navigation = value.navigation ?? {};
-  const providers = value.routeProviders?.postgres ?? {};
+type DiagnosticRecord = Record<string, unknown>;
+function object(value: unknown): DiagnosticRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as DiagnosticRecord : {};
+}
+
+export function toPublicIntegrationDiagnostics(value: DiagnosticRecord) {
+  const rxw = object(value.rxw);
+  const adsbhub = object(value.adsbhub);
+  const hasAdsbHub = value.adsbhub !== null && value.adsbhub !== undefined;
+  const route = object(value.route);
+  const navigation = object(value.navigation);
+  const providers = object(object(value.routeProviders).postgres);
   return {
     rxw: {
       enabled: rxw.enabled, fpnEnabled: rxw.fpnEnabled, connection: rxw.connection,
@@ -60,7 +70,7 @@ export function toPublicIntegrationDiagnostics(value: Record<string, any>) {
       connectCount: rxw.connectCount, disconnectCount: rxw.disconnectCount, connectionErrors: rxw.connectionErrors,
       lastEventAt: rxw.lastEventAt, lastAcceptedAt: rxw.lastAcceptedAt,
     },
-    adsbhub: adsbhub ? {
+    adsbhub: hasAdsbHub ? {
       enabled: adsbhub.enabled, status: adsbhub.status, connected: adsbhub.connected,
       lastLineAt: adsbhub.lastLineAt, linesReceived: adsbhub.linesReceived, linesParsed: adsbhub.linesParsed,
       malformedLines: adsbhub.malformedLines, invalidIcao: adsbhub.invalidIcao,
