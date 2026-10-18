@@ -35,7 +35,8 @@ test("historical metadata and paired documentation avoid noisy advisories", () =
   assert.match(formatDocumentationImpact(report), /No mapped documentation impact/);
 });
 
-test("an added Next API route points to the feature registry", () => {
-  const report = analyzeDocumentationImpact(["app/api/new/route.ts"]);
+test("a root page and a nested API route both point to the feature registry", () => {
+  const report = analyzeDocumentationImpact(["app/page.tsx", "app/api/new/route.ts"]);
   assert.ok(report.impacted.some((x) => x.docs.includes("docs/features.registry.json")));
+  assert.equal(report.impacted.find((x) => x.area === "Routes and APIs")?.changedFiles, 2);
 });
