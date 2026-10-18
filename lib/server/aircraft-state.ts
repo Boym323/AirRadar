@@ -16,8 +16,6 @@ import {
   isAircraftMassDropGuardEnabled,
   isAtcResolutionEnabled,
   isAtcShadowPredictionEnabled,
-  isTrackFusionShadowEnabled,
-  isTrackFusionDigitalTwinEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { buildPredictiveShadowInput, isAirportProximity } from "@/lib/server/aircraft-predictive-projection";
@@ -59,7 +57,6 @@ import {
 } from "@/lib/predictive-intelligence";
 import { enforcePredictiveReadiness, readPredictiveReadinessReport } from "@/lib/server/predictive-readiness";
 import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
-import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
 import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeV2Validator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildOperationalTwinTrajectoryQualityGraduation, buildOperationalTwinTrajectoryQualityV3Graduation, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
@@ -168,12 +165,6 @@ export class AircraftStateService {
   /** Start of a preferred-source outage while the alternate observation remains live. */
   private readonly sourcePreferenceMissingSince = new Map<string, number>();
   private readonly continuity = new AircraftContinuityGuard();
-  /** Shadow-only multi-source state estimator. It never mutates canonical live aircraft. */
-  private readonly trackFusionShadow = new TrackFusionShadow(isTrackFusionShadowEnabled());
-  /** Process-local bounded readiness evidence. Restart intentionally resets readiness to WAIT. */
-  private readonly trackFusionReadiness = new TrackFusionReadinessMonitor();
-  /** Prospective canonical-vs-fused outcome validation against future LOCAL observations. */
-  private readonly trackFusionOutcome = new TrackFusionOutcomeValidator();
   /** Request + bounded refresh-sampled Operational Digital Twin calibration against future LOCAL receiver truth. */
   private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
   /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
@@ -233,12 +224,6 @@ export class AircraftStateService {
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
-  // Shadow-only fusion does not need to run for every one-second network
-  // publication. Keep its evaluation cadence bounded independently of live
-  // ingest so the public radar path remains responsive.
-  private lastTrackFusionEvaluationAt = 0;
-  private readonly pendingTrackFusionKeys = new Set<string>();
-  private trackFusionFullEvaluationPending = false;
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
@@ -514,9 +499,6 @@ export class AircraftStateService {
     flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
-    trackFusionShadow: ReturnType<TrackFusionShadow["diagnostics"]>;
-    trackFusionReadiness: ReturnType<TrackFusionReadinessMonitor["report"]>;
-    trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
     operationalTwinTrajectoryQualityOutcome: ReturnType<OperationalTwinTrajectoryQualityOutcomeValidator["report"]>;
@@ -581,9 +563,6 @@ export class AircraftStateService {
         networkRetained: this.networkAircraft.size,
         pendingAffinity: this.sourcePreferenceMissingSince.size,
       }),
-      trackFusionShadow: this.trackFusionShadow.diagnostics(),
-      trackFusionReadiness: this.getTrackFusionReadinessReport(),
-      trackFusionOutcome: this.getTrackFusionOutcomeReport(),
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
       operationalTwinTrajectoryQualityOutcome: this.getOperationalTwinTrajectoryQualityOutcomeReport(),
@@ -659,26 +638,6 @@ export class AircraftStateService {
 
   getPredictiveDiagnostics() {
     return this.predictive.diagnostics();
-  }
-
-  /** Shadow-only fused state for admin validation; never used by SSE or persistence. */
-  getTrackFusionShadowTrack(icaoHex: string) {
-    return this.trackFusionShadow.getTrack(icaoHex);
-  }
-
-  getTrackFusionShadowDiagnostics() {
-    return this.trackFusionShadow.diagnostics();
-  }
-
-  getTrackFusionReadinessReport(now = new Date()) {
-    return this.trackFusionReadiness.report(isTrackFusionShadowEnabled(), {
-      now,
-      digitalTwinConfigured: isTrackFusionDigitalTwinEnabled(),
-    });
-  }
-
-  getTrackFusionOutcomeReport(now = new Date()) {
-    return this.trackFusionOutcome.report(now);
   }
 
   captureOperationalTwinOutcome(situation: OperationalTwinSituation): void {
@@ -831,9 +790,6 @@ export class AircraftStateService {
         this.continuity.observeMembership("local", previousObserved, this.localObservedHexes, now);
         this.reconcileSourcePreferences(now);
         this.removeStaleAircraft(now);
-        const fusionKeys = new Set(previousObserved);
-        for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
-        this.observeTrackFusionShadow(now, fusionKeys);
         this.invalidateSnapshotCache();
       }
 
@@ -1033,10 +989,6 @@ export class AircraftStateService {
     // pruneMissingAircraft performs the only post-prune affinity cleanup
     // needed for identities removed from the last retained source.
     if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, localStaleAfterMs, now);
-    const fusionKeys = new Set(currentHexes);
-    for (const hex of previousObservedHexes) fusionKeys.add(hex);
-    for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
-    this.observeTrackFusionShadow(now, fusionKeys);
     measureRuntime("snapshot.operationalTwin", this.localAircraft.size, () => {
       // Preserve the evaluation order and evidence outputs. Parent and
       // nested measurements overlap and must never be summed.
@@ -1234,57 +1186,8 @@ export class AircraftStateService {
     // Preserve the failover grace decision made before pruning, without a
     // second O(all source affinities) pass after every network snapshot.
     if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, networkStaleAfterMs, now);
-    const fusionKeys = new Set(currentHexes);
-    for (const hex of previousObservedHexes) fusionKeys.add(hex);
-    for (const hex of this.sourcePreferenceMissingSince.keys()) fusionKeys.add(hex);
-    this.observeTrackFusionShadow(now, fusionKeys);
     measureRuntime("snapshot.navigationIntegrity", this.networkAircraft.size, () => this.navigationIntegrity.observe(this.networkAircraft.values(), new Date(snapshot.fetchedAt ?? new Date().toISOString()), "network"));
     this.invalidateSnapshotCache();
-  }
-
-  private observeTrackFusionShadow(now = Date.now(), keys?: Iterable<string>): void {
-    // All current callers provide a Set. It can be consumed directly: cloning
-    // 9k+ ICAO keys into an array on each refresh only increased GC pressure.
-    const count = keys instanceof Set ? keys.size : this.localAircraft.size + this.networkAircraft.size;
-    measureRuntime("snapshot.trackFusion", count, () => this.observeTrackFusionShadowCore(now, keys));
-  }
-
-  private observeTrackFusionShadowCore(now = Date.now(), keys?: Iterable<string>): void {
-    if (keys) {
-      for (const hex of keys) this.pendingTrackFusionKeys.add(hex);
-    } else {
-      this.trackFusionFullEvaluationPending = true;
-    }
-    if (now - this.lastTrackFusionEvaluationAt < 5_000) return;
-
-    this.lastTrackFusionEvaluationAt = now;
-    const evaluationKeys = this.trackFusionFullEvaluationPending
-      ? undefined
-      : new Set(this.pendingTrackFusionKeys);
-    this.pendingTrackFusionKeys.clear();
-    this.trackFusionFullEvaluationPending = false;
-
-    const evaluatedTracks = this.trackFusionShadow.observe({
-      local: this.localAircraft,
-      network: this.networkAircraft,
-      receiver: this.currentReceiver,
-      localStaleAfterMs: getAircraftStaleAfterMs(),
-      networkStaleAfterMs: getAdsbLolStaleAfterMs(),
-      sourcePreferences: this.sourcePreferences,
-      ...(evaluationKeys ? { keys: evaluationKeys } : {}),
-      now,
-    });
-    this.trackFusionReadiness.observe(this.trackFusionShadow.diagnostics(), now);
-    this.trackFusionOutcome.observe({
-      local: this.localAircraft,
-      network: this.networkAircraft,
-      evaluatedTracks,
-      receiver: this.currentReceiver,
-      localStaleAfterMs: getAircraftStaleAfterMs(),
-      networkStaleAfterMs: getAdsbLolStaleAfterMs(),
-      sourcePreferences: this.sourcePreferences,
-      now,
-    });
   }
 
   private logMassDropDecision(origin: AircraftContinuityOrigin, decision: AircraftMassDropDecision): void {

@@ -228,12 +228,6 @@ export function getAdsbLolNetworkRadiusNm(): number { return boundedInteger("ADS
 
 export function getReceiverComparisonRadiusNm(): number { return boundedInteger("RECEIVER_COMPARISON_RADIUS_NM", 175, 1, 500); }
 export function getSourceAffinityFailoverGraceMs(): number { return boundedMilliseconds("SOURCE_AFFINITY_FAILOVER_GRACE_MS", 15_000, 1_000, 120_000); }
-export function isTrackFusionShadowEnabled(): boolean {
-  return process.env.AIRRADAR_TRACK_FUSION_SHADOW_ENABLED?.trim().toLowerCase() !== "false";
-}
-export function isTrackFusionDigitalTwinEnabled(): boolean {
-  return process.env.AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED?.trim().toLowerCase() === "true";
-}
 export function isAtcResolutionEnabled(): boolean {
   return process.env.AIRRADAR_ATC_RESOLUTION_ENABLED?.trim().toLowerCase() !== "false";
 }
