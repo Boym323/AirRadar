@@ -50,7 +50,7 @@ describe("bounded T58 V8 profile attribution", () => {
   it("uses a local inspector session and closes it after a bounded capture", async () => {
     vi.stubEnv("AIRRADAR_T58_CPU_PROFILE_ENABLED", "1");
     try {
-      await startT58CpuProfile();
+      await startT58CpuProfile({ delayMs: 0 });
       expect(getT58CpuProfileSummary().status).toBe("running");
       const until = performance.now() + 100;
       while (performance.now() < until) Math.sqrt(12345);
