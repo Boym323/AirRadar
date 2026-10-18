@@ -518,7 +518,6 @@
         "/api/navigation-integrity/current",
         "/api/navigation-integrity/aircraft/:hex",
         "/api/navigation-integrity/history",
-        "/api/navigation-integrity/space-weather",
         "/api/admin/navigation-integrity/diagnostics",
         "/api/admin/navigation-integrity/candidates"
       ],
@@ -871,51 +870,6 @@
         "VDL2 communications",
         "FPN waypoints",
         "RXW route plan"
-      ]
-    },
-    {
-      "id": "sondehub",
-      "name": "SondeHub Radiosondes",
-      "category": "weather / extended objects",
-      "status": "optional",
-      "introducedVersion": null,
-      "summary": "Opt-in SondeHub radiosonde map overlay with validated altitude, observed track and model-predicted landing; on-demand bounded caches separate from ADS-B/OGN.",
-      "pages": [
-        "/"
-      ],
-      "apis": [
-        "/api/sondes",
-        "/api/sondes/:serial"
-      ],
-      "changelogScopes": [
-        "sondehub"
-      ],
-      "changelogKeywords": [
-        "sondehub",
-        "radiosonde",
-        "weather balloon"
-      ]
-    },
-    {
-      "id": "space-weather-context",
-      "name": "NOAA Space Weather Context",
-      "category": "navigation / weather",
-      "status": "optional",
-      "introducedVersion": null,
-      "summary": "Operator-enabled on-demand NOAA global planetary Kp context in Navigation Integrity with bounded RAM cache and explicit non-GNSS-evidence disclaimer.",
-      "pages": [
-        "/navigation-integrity"
-      ],
-      "apis": [
-        "/api/navigation-integrity/space-weather"
-      ],
-      "changelogScopes": [
-        "space-weather"
-      ],
-      "changelogKeywords": [
-        "NOAA Space Weather",
-        "geomagnetic Kp",
-        "planetary K index"
       ]
     }
   ]

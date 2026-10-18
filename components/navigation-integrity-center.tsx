@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { t } from "@/lib/i18n";
-import { SpaceWeatherContextCard } from "@/components/space-weather-context";
 import type {
   NavigationIntegrityAnomaly,
   NavigationIntegrityAuditCategory,
@@ -27,7 +26,6 @@ import {
   parseNavigationIntegrityInvestigation,
 } from "@/lib/investigation-links";
 import styles from "./navigation-integrity-center.module.css";
-import { NavigationIntegritySpaceWeather } from "@/components/navigation-integrity-space-weather";
 
 type WindowRange = "5m" | "15m" | "30m" | "60m";
 type SourceFilter = "ALL" | "LOCAL" | "NETWORK";
@@ -392,8 +390,6 @@ export function NavigationIntegrityCenter() {
         </div>}
       />
 
-      <SpaceWeatherContextCard />
-
       <Panel className={styles.filters}>
         <div className={styles.filterBlock}>
           <span>{copy.window}</span>
@@ -454,8 +450,6 @@ export function NavigationIntegrityCenter() {
         <MetricCard value={localActive} label={copy.localAnomalies} />
         <MetricCard value={networkActive} label={copy.networkAnomalies} />
       </MetricStrip>
-
-      <NavigationIntegritySpaceWeather />
 
       <Panel className={styles.section}>
         <SectionHeader title={copy.currentTitle} description={copy.currentDescription} />
