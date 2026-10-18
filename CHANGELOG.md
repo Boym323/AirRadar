@@ -17,6 +17,49 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.517] - 2026-10-18
+
+Changes since v1.0.516.
+
+**Features touched:** SondeHub Radiosondes, System Observability, Time Machine.
+
+### Changed
+
+- Remove obsolete wind timing tests and related code (b6ff91e4)
+- Remove SondeHub Meteorological Sondes feature from documentation (c6a25116)
+
+### Fixed
+
+- Align time machine wind type after removal (46cf4f7a)
+- Tolerate public runtime history projection (28f1e5d0)
+
+### Documentation
+
+- Add T58-based redundant runtime work brief (EN/CS) (c3c091a9)
+- Guide safe unused-data and feature retirement audit (4ccdb59c)
+- Correct Czech companion link (afa8c69d)
+
+### Maintenance
+
+- Sync generated repository metadata (#1020) (8bd4b7d4)
+- Sync generated repository metadata (#1021) (f0a4e6d6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1020) (8bd4b7d4)
+- docs(perf): add T58-based redundant runtime work brief (EN/CS) (c3c091a9)
+- refactor: remove obsolete wind timing tests and related code (b6ff91e4)
+- Merge remote-tracking branch 'origin/main' (7ad25a06)
+- docs(agents): guide safe unused-data and feature retirement audit (4ccdb59c)
+- refactor: remove SondeHub Meteorological Sondes feature from documentation (c6a25116)
+- docs(agents): correct Czech companion link (afa8c69d)
+- Merge remote-tracking branch 'origin/main' (9cb052bc)
+- chore(metadata): sync generated repository metadata (#1021) (f0a4e6d6)
+- fix: align time machine wind type after removal (46cf4f7a)
+- fix: tolerate public runtime history projection (28f1e5d0)
+
+</details>
 ## [1.0.516] - 2026-10-18
 
 Changes since v1.0.515.
