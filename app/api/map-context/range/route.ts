@@ -19,7 +19,6 @@ export async function GET(request: Request): Promise<Response> {
       traffic: { minAvailableAt: traffic.min, maxAvailableAt: traffic.max },
       radar: { minAvailableAt: radar[0]?.at ?? null, maxAvailableAt: radar.at(-1)?.at ?? null },
       metar: context.metar,
-      wind: context.wind,
       aup: context.aup,
       retentionFloor: cutoff,
     }, { headers: { "Cache-Control": "no-store" } });

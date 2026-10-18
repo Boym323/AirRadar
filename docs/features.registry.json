@@ -260,7 +260,6 @@
         "/api/map-context/radar",
         "/api/map-context/radar/frame/:id",
         "/api/map-context/range",
-        "/api/map-context/wind",
         "/api/weather/airport",
         "/api/weather/airport/:icao",
         "/api/weather/metar-map",
@@ -268,7 +267,6 @@
         "/api/weather/radar/frame/:id",
         "/api/weather/radar/frames",
         "/api/weather/sigmet",
-        "/api/weather/wind",
         "/api/weather/aircraft/observations",
         "/api/weather/aircraft/profile",
         "/api/admin/weather/diagnostics",
@@ -1122,28 +1120,6 @@
         "NOAA Space Weather",
         "geomagnetic Kp",
         "planetary K index"
-      ]
-    },
-    {
-      "id": "aladin-wind-compare",
-      "name": "ALADIN / ICON-EU Wind Comparison",
-      "category": "weather",
-      "status": "optional",
-      "introducedVersion": null,
-      "summary": "On-demand comparison of CHMI ALADIN Central Europe 2 km and DWD ICON-EU pressure-level winds near the receiver; disabled by default.",
-      "pages": [
-        "/weather"
-      ],
-      "apis": [
-        "/api/weather/wind/compare"
-      ],
-      "changelogScopes": [
-        "aladin-wind"
-      ],
-      "changelogKeywords": [
-        "ALADIN wind",
-        "ICON-EU comparison",
-        "regional wind model"
       ]
     }
   ]

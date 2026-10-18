@@ -28,10 +28,6 @@ interface RadarDrawerDetailsProps {
   sigmetDeviation: AircraftRadarQuickDetailProps["sigmetDeviation"];
   weatherAvoidance: AircraftRadarQuickDetailProps["weatherAvoidance"];
   sigmetStale: boolean;
-  windContext: AircraftRadarQuickDetailProps["windContext"];
-  windAhead: AircraftRadarQuickDetailProps["windAhead"];
-  destinationWind: AircraftRadarQuickDetailProps["destinationWind"];
-  windStatus: AircraftRadarQuickDetailProps["windStatus"];
   routeWeather: AircraftRadarQuickDetailProps["routeWeather"];
   routeCorridor: AircraftRadarQuickDetailProps["routeCorridor"];
   routeConformance: AircraftRadarQuickDetailProps["routeConformance"];
@@ -64,10 +60,6 @@ export function RadarDrawerDetails({
   sigmetDeviation,
   weatherAvoidance,
   sigmetStale,
-  windContext,
-  windAhead,
-  destinationWind,
-  windStatus,
   routeWeather,
   routeCorridor,
   routeConformance,
@@ -105,10 +97,6 @@ export function RadarDrawerDetails({
       sigmetDeviation={sigmetDeviation}
       weatherAvoidance={weatherAvoidance}
       sigmetStale={sigmetStale}
-      windContext={windContext}
-      windAhead={windAhead}
-      destinationWind={destinationWind}
-      windStatus={windStatus}
       routeWeather={routeWeather}
       routeCorridor={routeCorridor}
       routeConformance={routeConformance}

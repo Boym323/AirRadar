@@ -32,13 +32,12 @@ function input(name = "PRG arrivals") {
       showSigmet: true,
       showWeatherRadar: true,
       showMetar: true,
-      showWind: false,
       showAircraftWeather: false,
       showNavigationIntegrity: false,
       showAupUup: true,
       showRangeRings: true,
     },
-    display: { colorMode: "altitude" as const, radarOpacity: 0.65, windLevel: 300 as const },
+    display: { colorMode: "altitude" as const, radarOpacity: 0.65 },
   };
 }
 

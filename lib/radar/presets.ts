@@ -4,7 +4,6 @@ import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 
 export const RADAR_PRESETS_STORAGE_KEY = "airradar.radar-presets.v1";
 export const RADAR_PRESETS_MAX = 8;
@@ -25,7 +24,6 @@ export interface RadarPresetLayers {
   showSigmet: boolean;
   showWeatherRadar: boolean;
   showMetar: boolean;
-  showWind: boolean;
   showAircraftWeather: boolean;
   showNavigationIntegrity: boolean;
   showAupUup: boolean;
@@ -48,7 +46,6 @@ export interface RadarPreset {
   display: {
     colorMode: AircraftColorMode;
     radarOpacity: number;
-    windLevel: WindLevelHpa;
   };
 }
 
@@ -77,10 +74,6 @@ function validColorMode(value: unknown): value is AircraftColorMode {
   return value === "default" || value === "altitude" || value === "speed" || value === "verticalRate";
 }
 
-function validWindLevel(value: unknown): value is WindLevelHpa {
-  return value === 850 || value === 700 || value === 500 || value === 300 || value === 200;
-}
-
 function validMapFilters(value: unknown): value is MapAircraftFilters {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const filters = value as Record<string, unknown>;
@@ -95,7 +88,7 @@ function validLayers(value: unknown): value is RadarPresetLayers {
   return [
     "showAircraft", "showOgn", "showAirports", "showSignificantAirports", "showSmallAirports", "showHeliports",
     "showAtc", "showAtcTraffic", "showAtsRoutes", "showNavData", "showSids", "showStars", "showSigmet",
-    "showWeatherRadar", "showMetar", "showWind", "showAircraftWeather", "showNavigationIntegrity", "showAupUup",
+    "showWeatherRadar", "showMetar", "showAircraftWeather", "showNavigationIntegrity", "showAupUup",
     "showRangeRings",
   ].every((key) => boolean(layers[key]));
 }
@@ -127,7 +120,6 @@ export function parseRadarPreset(value: unknown): RadarPreset | null {
     || !finite(cameraValue.zoom) || cameraValue.zoom < 0 || cameraValue.zoom > 24
     || !validColorMode(displayValue.colorMode)
     || !finite(displayValue.radarOpacity) || displayValue.radarOpacity < 0.2 || displayValue.radarOpacity > 1
-    || !validWindLevel(displayValue.windLevel)
   ) return null;
 
   return {
@@ -146,7 +138,6 @@ export function parseRadarPreset(value: unknown): RadarPreset | null {
     display: {
       colorMode: displayValue.colorMode,
       radarOpacity: displayValue.radarOpacity,
-      windLevel: displayValue.windLevel,
     },
   };
 }

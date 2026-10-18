@@ -16,7 +16,6 @@ import { getBuildMetadata } from "@/lib/server/version";
 import { readRuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { defaultWeatherRadarProvider } from "@/lib/server/weather-radar/provider";
-import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 import {
   adsbDbDiagnostic,
@@ -24,7 +23,6 @@ import {
   radarDiagnostic,
   weatherDiagnostic,
   weatherStatus,
-  windDiagnostic,
 } from "@/lib/server/system-status-diagnostics";
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 import { buildReceiverMonitoring } from "@/lib/server/receiver-monitoring";
@@ -868,15 +866,6 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         lastSuccessAt: safeTimestamp(input.weather?.lastSuccessAt),
         cacheAgeMs: input.weather?.lastSuccessAt ? nonNegativeInteger(Math.max(0, now.getTime() - Date.parse(input.weather.lastSuccessAt)), 7 * 24 * 60 * 60_000) : null,
       },
-      wind: {
-        state: legacyStatus(windDiagnostic(input.mapContext?.wind).operationalState),
-        diagnostic: windDiagnostic(input.mapContext?.wind),
-        model: safeLabel(input.mapContext?.wind?.model, "ICON-EU"),
-        modelRun: safeTimestamp(input.mapContext?.wind?.modelRun),
-        availableValidTimes: nonNegativeInteger(input.mapContext?.wind?.validTimes ?? 0, 1_000),
-        cacheEntries: nonNegativeInteger(input.mapContext?.wind?.cacheEntries ?? 0, 8),
-        lastSuccessAt: safeTimestamp(input.mapContext?.wind?.lastSuccessAt),
-      },
       historicalContext: {
         radar: {
           oldest: safeTimestamp(input.mapContext?.radarArchive?.oldest),
@@ -890,12 +879,6 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
           latest: safeTimestamp(input.mapContext?.archive?.metar.latest),
           entries: nonNegativeInteger(input.mapContext?.archive?.metar.entries ?? 0, 100_000),
           fileBytes: input.mapContext?.archive?.metar.fileBytes === null || input.mapContext?.archive?.metar.fileBytes === undefined ? null : nonNegativeInteger(input.mapContext.archive.metar.fileBytes, 100 * 1024 * 1024),
-        },
-        wind: {
-          oldest: safeTimestamp(input.mapContext?.archive?.wind.oldest),
-          latest: safeTimestamp(input.mapContext?.archive?.wind.latest),
-          entries: nonNegativeInteger(input.mapContext?.archive?.wind.entries ?? 0, 1_024),
-          fileBytes: input.mapContext?.archive?.wind.fileBytes === null || input.mapContext?.archive?.wind.fileBytes === undefined ? null : nonNegativeInteger(input.mapContext.archive.wind.fileBytes, 500 * 1024 * 1024),
         },
         aup: {
           oldest: safeTimestamp(input.mapContext?.archive?.aup.oldest),
@@ -999,7 +982,6 @@ export async function readSystemStatus(
     } satisfies NonNullable<SystemStatusResponse["predictiveValidation"]>) : undefined,
     mapContext: {
       radar: defaultWeatherRadarProvider.getDiagnostics(),
-      wind: defaultWindAloftProvider.diagnostics(),
       archive: await defaultMapContextArchive.diagnostics(),
       radarArchive: await defaultWeatherRadarArchive.diagnostics(),
     },

@@ -152,7 +152,6 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.aircraftWeather.status).toBe("no_data");
     expect(value.status).toBe("ok");
     expect(value.mapLayers.radar.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
-    expect(value.mapLayers.wind.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
     expect(value.alerts).toMatchObject({ status: "ok", enabled: true, ruleCount: 2 });
     expect(value.airportData).toMatchObject({ source: "database", rowCount: 5886, bounded: true });
     expect(value.dataSources).toMatchObject({
@@ -264,11 +263,10 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
         providerStatus: "offline", hasAttempted: true, lastSuccessAt: null, lastFailureAt: checkedAt.toISOString(), consecutiveFailures: 1,
         memory: { metadataEntries: 0, routeEntries: 0 }, persistence: { enabled: false, cacheFile: "/tmp/cache.json", loadedFromDisk: false, loadedMetadataEntries: 0, loadedRouteEntries: 0, rejectedEntries: 0, lastLoadAt: null, lastLoadError: null, dirty: false, lastSaveAt: null, lastSaveError: null, lastSaveEntries: 0, fileSizeBytes: null, writes: 0, checkpointIntervalMs: 0, checkpointMode: "shutdown-only", firstDirtyAt: null, dirtyAgeMs: null, mutationGeneration: 0, persistedGeneration: 0, mutationsSinceCheckpoint: 0, checkpointAttempts: 0, checkpointSuccesses: 0, checkpointFailures: 0, periodicCheckpoints: 0, gracefulCheckpoints: 0, explicitCheckpoints: 0, lastCheckpointAt: null, nextCheckpointAt: null }, hits: { memory: 0, persistent: 0, live: 0, staleFallback: 0 },
       },
-      mapContext: { radar: { status: "offline", operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE", hasAttempted: true, inFlight: false, latestFrameId: null, latestObservedAt: null, catalogAgeMs: null, cachedFrames: 0, failures: 1, consecutiveFailures: 1, lastFailureAt: checkedAt.toISOString(), lastSuccessAt: null }, wind: { status: "offline", operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE", model: "ICON-EU", modelRun: null, validTimes: 0, cacheEntries: 0, lastSuccessAt: null, hasAttempted: true, inFlight: false, attempts: 1, lastAttemptAt: checkedAt.toISOString(), lastFailureAt: checkedAt.toISOString(), consecutiveFailures: 1 } },
+      mapContext: { radar: { status: "offline", operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE", hasAttempted: true, inFlight: false, latestFrameId: null, latestObservedAt: null, catalogAgeMs: null, cachedFrames: 0, failures: 1, consecutiveFailures: 1, lastFailureAt: checkedAt.toISOString(), lastSuccessAt: null } },
     });
     expect(value.adsbdb.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
     expect(value.mapLayers.radar.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
-    expect(value.mapLayers.wind.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
     expect(JSON.stringify(toPublicSystemStatus(value))).not.toContain("timeout");
   });
 

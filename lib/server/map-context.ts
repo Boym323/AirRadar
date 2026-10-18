@@ -5,20 +5,17 @@ import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getAirspaceActivity } from "@/lib/server/airspace-activity";
 import type { AirspacePlanSnapshot } from "@/lib/airspace-activity/types";
 import type { MetarMapObservation } from "@/lib/weather/types";
-import { isWindLevel, defaultWindAloftProvider, type WindAloftResponse, type WindLevelHpa } from "@/lib/server/wind-aloft";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultWeatherRadarProvider, parseWeatherRadarFilename } from "@/lib/server/weather-radar/provider";
 import type { WeatherRadarFrame } from "@/lib/server/weather-radar/types";
 import { getMapContextArchiveFlushEntryLimit, getMapContextArchiveFlushIntervalMs, getMapContextPollIntervalMs, getMapContextRetentionDays, getWeatherRadarArchiveDir, getWeatherRadarArchiveMaxBytes, isAviationWeatherEnabled } from "@/lib/server/config";
-import { resolveIntervalContains, resolveNearestBefore, resolveNearestValid } from "@/lib/map-time/temporal";
+import { resolveIntervalContains, resolveNearestBefore } from "@/lib/map-time/temporal";
 import { normalizeInstant, unavailableResolution, type MapContextSourceKind, type TemporalResolution } from "@/lib/map-time/types";
 
 const PNG_SIGNATURE = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const RADAR_MAX_DELTA_MS = 10 * 60_000;
 const METAR_MAX_AGE_MS = 2 * 60 * 60_000;
-const WIND_MAX_DELTA_MS = 60 * 60_000;
 const MAX_METAR_ENTRIES = 100_000;
-const MAX_WIND_ENTRIES = 1_024;
 const MAX_AUP_ENTRIES = 512;
 const MAX_RADAR_CLEANUP_FILES_PER_PASS = 500;
 
@@ -26,10 +23,6 @@ export interface HistoricalMetarObservation extends Omit<MetarMapObservation, "o
   observedAt: string;
   retrievedAt: string;
   source: "Aviation Weather Center";
-}
-
-export interface HistoricalWindSnapshot extends WindAloftResponse {
-  archivedAt: string;
 }
 
 export interface HistoricalAupSnapshot extends AirspacePlanSnapshot {
@@ -50,7 +43,6 @@ export interface MapContextManifest {
   mode: "LIVE" | "HISTORICAL";
   radar: ResolvedLayer<WeatherRadarFrame>;
   metar: ResolvedLayer<{ stations: number }>;
-  wind: ResolvedLayer<{ model: string; modelRun: string | null; validAt: string; levelHpa: WindLevelHpa }>;
   aup: ResolvedLayer<{ validFrom: string; validTo: string; windows: number }>;
   sigmet: ResolvedLayer<null>;
 }
@@ -148,19 +140,10 @@ function sameMetarObservation(left: HistoricalMetarObservation | undefined, righ
   if (!left) return false;
   return archiveSemanticJson(left) === archiveSemanticJson(right);
 }
-function sameWindSnapshot(left: HistoricalWindSnapshot | undefined, right: HistoricalWindSnapshot): boolean {
-  if (!left) return false;
-  return archiveSemanticJson(left) === archiveSemanticJson(right);
-}
 function isMetarEntry(value: unknown): value is HistoricalMetarObservation {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<HistoricalMetarObservation>;
   return typeof candidate.stationId === "string" && validDateString(candidate.observedAt) && validDateString(candidate.retrievedAt) && typeof candidate.lat === "number" && typeof candidate.lon === "number";
-}
-function isWindEntry(value: unknown): value is HistoricalWindSnapshot {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<HistoricalWindSnapshot>;
-  return validDateString(candidate.validAt) && validDateString(candidate.fetchedAt) && typeof candidate.levelHpa === "number" && Array.isArray(candidate.points);
 }
 function isAupEntry(value: unknown): value is HistoricalAupSnapshot {
   if (!value || typeof value !== "object") return false;
@@ -328,10 +311,8 @@ export class WeatherRadarArchiveService {
 
 export class MapContextArchive {
   private readonly metar = new JsonArchive<HistoricalMetarObservation>(archiveMetadataPath("map-context-metar-v1.json"), MAX_METAR_ENTRIES, isMetarEntry);
-  private readonly wind = new JsonArchive<HistoricalWindSnapshot>(archiveMetadataPath("map-context-wind-v1.json"), MAX_WIND_ENTRIES, isWindEntry);
   private readonly aup = new JsonArchive<HistoricalAupSnapshot>(archiveMetadataPath("map-context-aup-v1.json"), MAX_AUP_ENTRIES, isAupEntry);
   private metarWrite = Promise.resolve();
-  private windWrite = Promise.resolve();
   private aupWrite = Promise.resolve();
 
   async addMetar(observations: readonly MetarMapObservation[], retrievedAt = new Date().toISOString()): Promise<void> {
@@ -351,19 +332,6 @@ export class MapContextArchive {
       await this.metar.replace([...byKey.values()].filter((entry) => Date.parse(entry.observedAt) >= cutoff).sort((left, right) => left.observedAt.localeCompare(right.observedAt)));
     });
     await this.metarWrite;
-  }
-
-  async addWind(snapshot: WindAloftResponse, archivedAt = new Date().toISOString()): Promise<void> {
-    this.windWrite = this.windWrite.then(async () => {
-      const entries = await this.wind.read(); const key = `${snapshot.modelRun}:${snapshot.validAt}:${snapshot.levelHpa}`;
-      const byKey = new Map(entries.map((entry) => [`${entry.modelRun}:${entry.validAt}:${entry.levelHpa}`, entry]));
-      const entry = { ...snapshot, archivedAt };
-      if (sameWindSnapshot(byKey.get(key), entry)) return;
-      byKey.set(key, entry);
-      const cutoff = Date.now() - getMapContextMaxAgeMs();
-      await this.wind.replace([...byKey.values()].filter((entry) => Date.parse(entry.validAt) >= cutoff - 24 * 60 * 60_000).sort((left, right) => left.validAt.localeCompare(right.validAt)));
-    });
-    await this.windWrite;
   }
 
   async addAup(snapshot: AirspacePlanSnapshot, archivedAt = new Date().toISOString()): Promise<void> {
@@ -386,13 +354,6 @@ export class MapContextArchive {
     return latest ? { available: true, source: "OBSERVED", provider: "Aviation Weather Center", resolution, data: { observations } } : { available: false, source: "OBSERVED", provider: "Aviation Weather Center", resolution, data: null, reason: records.length ? "OUTSIDE_TOLERANCE" : "NO_ARCHIVE" };
   }
 
-  async resolveWindAt(at: string, level: WindLevelHpa): Promise<ResolvedLayer<HistoricalWindSnapshot>> {
-    const requestedAt = normalizeInstant(at); const records = (await this.wind.read()).filter((record) => record.levelHpa === level && Boolean(record.modelRun) && Date.parse(record.modelRun!) <= Date.parse(requestedAt));
-    const selected = resolveNearestValid(records.map((record) => ({ ...record, at: record.validAt })), requestedAt, WIND_MAX_DELTA_MS);
-    const record = selected.record as HistoricalWindSnapshot | null;
-    return record ? { available: true, source: "MODEL", provider: record.model, resolution: selected.resolution, data: record } : { available: false, source: "MODEL", provider: "ICON-EU", resolution: selected.resolution, data: null, reason: records.length ? "OUTSIDE_TOLERANCE" : "NO_ARCHIVE" };
-  }
-
   async resolveAupAt(at: string): Promise<ResolvedLayer<HistoricalAupSnapshot>> {
     const requestedAt = normalizeInstant(at); const records = (await this.aup.read()).filter((record) => Boolean(record.issuedAt) && Date.parse(record.issuedAt!) <= Date.parse(requestedAt));
     const candidates = records.filter((record) => record.validityStart && record.validityEnd);
@@ -401,26 +362,24 @@ export class MapContextArchive {
     return record ? { available: true, source: "PLANNED", provider: "Czech AIM AUP/UUP", resolution: selected.resolution, data: record } : { available: false, source: "PLANNED", provider: "Czech AIM AUP/UUP", resolution: selected.resolution, data: null, reason: records.length ? "NO_VALID_REVISION" : "NO_ARCHIVE" };
   }
 
-  async range(): Promise<{ metar: { minAvailableAt: string | null; maxAvailableAt: string | null }; wind: { minAvailableAt: string | null; maxAvailableAt: string | null }; aup: { minAvailableAt: string | null; maxAvailableAt: string | null } }> {
-    const [metar, wind, aup] = await Promise.all([this.metar.diagnostics((entry) => entry.observedAt), this.wind.diagnostics((entry) => entry.validAt), this.aup.diagnostics((entry) => entry.validityStart)]);
-    return { metar: { minAvailableAt: metar.oldest, maxAvailableAt: metar.latest }, wind: { minAvailableAt: wind.oldest, maxAvailableAt: wind.latest }, aup: { minAvailableAt: aup.oldest, maxAvailableAt: aup.latest } };
+  async range(): Promise<{ metar: { minAvailableAt: string | null; maxAvailableAt: string | null }; aup: { minAvailableAt: string | null; maxAvailableAt: string | null } }> {
+    const [metar, aup] = await Promise.all([this.metar.diagnostics((entry) => entry.observedAt), this.aup.diagnostics((entry) => entry.validityStart)]);
+    return { metar: { minAvailableAt: metar.oldest, maxAvailableAt: metar.latest }, aup: { minAvailableAt: aup.oldest, maxAvailableAt: aup.latest } };
   }
 
-  async diagnostics(): Promise<{ metar: Awaited<ReturnType<JsonArchive<HistoricalMetarObservation>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalMetarObservation>["diagnosticsCounters"]>; wind: Awaited<ReturnType<JsonArchive<HistoricalWindSnapshot>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalWindSnapshot>["diagnosticsCounters"]>; aup: Awaited<ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnosticsCounters"]> }> {
-    const [metar, wind, aup] = await Promise.all([
+  async diagnostics(): Promise<{ metar: Awaited<ReturnType<JsonArchive<HistoricalMetarObservation>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalMetarObservation>["diagnosticsCounters"]>; aup: Awaited<ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnosticsCounters"]> }> {
+    const [metar, aup] = await Promise.all([
       this.metar.diagnostics((entry) => entry.observedAt),
-      this.wind.diagnostics((entry) => entry.validAt),
       this.aup.diagnostics((entry) => entry.validityStart),
     ]);
     return {
       metar: { ...metar, ...this.metar.diagnosticsCounters() },
-      wind: { ...wind, ...this.wind.diagnosticsCounters() },
       aup: { ...aup, ...this.aup.diagnosticsCounters() },
     };
   }
 
   async flush(): Promise<void> {
-    await Promise.all([this.metar.flush(), this.wind.flush(), this.aup.flush()]);
+    await Promise.all([this.metar.flush(), this.aup.flush()]);
   }
 }
 
@@ -431,13 +390,12 @@ export class MapContextResolver {
 
   async resolve(at: string): Promise<MapContextManifest> {
     const requestedAt = normalizeInstant(at); const mode = Math.abs(Date.now() - Date.parse(requestedAt)) <= 60_000 ? "LIVE" : "HISTORICAL";
-    const [radar, metar, wind, aup] = await Promise.allSettled([this.radar.resolve(requestedAt), this.archive.resolveMetarAt(requestedAt), this.archive.resolveWindAt(requestedAt, 300), this.archive.resolveAupAt(requestedAt)]);
+    const [radar, metar, aup] = await Promise.allSettled([this.radar.resolve(requestedAt), this.archive.resolveMetarAt(requestedAt), this.archive.resolveAupAt(requestedAt)]);
     const failed = <T>(source: MapContextSourceKind, provider: string): ResolvedLayer<T> => ({ available: false, source, provider, resolution: unavailableResolution(requestedAt), data: null, reason: "NO_ARCHIVE" });
     return {
       requestedAt, mode,
       radar: radar.status === "fulfilled" ? radar.value : failed("OBSERVED", "CHMI"),
       metar: metar.status === "fulfilled" ? { ...metar.value, data: metar.value.data ? { stations: metar.value.data.observations.length } : null } : failed("OBSERVED", "Aviation Weather Center"),
-      wind: wind.status === "fulfilled" ? { ...wind.value, data: wind.value.data ? { model: wind.value.data.model, modelRun: wind.value.data.modelRun, validAt: wind.value.data.validAt, levelHpa: wind.value.data.levelHpa } : null } : failed("MODEL", "ICON-EU"),
       aup: aup.status === "fulfilled" ? { ...aup.value, data: aup.value.data ? { validFrom: aup.value.data.validityStart!, validTo: aup.value.data.validityEnd!, windows: aup.value.data.windows.length } : null } : failed("PLANNED", "Czech AIM AUP/UUP"),
       sigmet: { available: false, source: "OBSERVED", provider: "Aviation Weather Center", resolution: unavailableResolution(requestedAt), data: null, reason: "NO_ARCHIVE" },
     };
@@ -456,7 +414,7 @@ export class MapContextArchiveService {
   async stop(): Promise<void> { if (this.timer) clearInterval(this.timer); this.timer = null; await this.pollInFlight; await defaultMapContextArchive.flush(); }
   async poll(): Promise<void> {
     if (this.pollInFlight) return this.pollInFlight;
-    this.pollInFlight = Promise.allSettled([this.pollMetar(), this.pollWind(), this.pollAup(), defaultWeatherRadarArchive.poll()]).then(() => undefined).finally(() => { this.pollInFlight = null; });
+    this.pollInFlight = Promise.allSettled([this.pollMetar(), this.pollAup(), defaultWeatherRadarArchive.poll()]).then(() => undefined).finally(() => { this.pollInFlight = null; });
     return this.pollInFlight;
   }
   private async pollMetar(): Promise<void> {
@@ -467,7 +425,6 @@ export class MapContextArchiveService {
     const result = await defaultAviationWeatherProvider.getMetarMap(airports.slice(0, 256));
     await defaultMapContextArchive.addMetar(result.observations, result.fetchedAt);
   }
-  private async pollWind(): Promise<void> { for (const level of [850, 700, 500, 300, 200] as const) await defaultMapContextArchive.addWind(await defaultWindAloftProvider.getWind(level)); }
   private async pollAup(): Promise<void> { const result = await getAirspaceActivity(); if (result.planned.status !== "unavailable") await defaultMapContextArchive.addAup(result.planned); }
 }
 
@@ -484,4 +441,3 @@ export function validateMapContextAt(value: string | null): string {
   return instant;
 }
 
-export function isWindLevelParam(value: string | null): value is `${WindLevelHpa}` { const parsed = Number(value); return isWindLevel(parsed) && String(parsed) === value; }

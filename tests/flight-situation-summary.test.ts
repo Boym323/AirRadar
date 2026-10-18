@@ -51,15 +51,13 @@ function routeWeather(): RouteWeatherContext {
 }
 
 describe("flight situation summary", () => {
-  it("combines observed phase, ATC handoff, route weather and wind deterministically", () => {
+  it("combines observed phase, ATC handoff and route weather deterministically", () => {
     const result = buildFlightSituationSummary({
       aircraft: aircraft(),
       atc: atc(),
       sigmets: [],
       routeWeather: routeWeather(),
       sigmetDeviation: null,
-      wind: { levelHpa: 300, representativeAltitudeFt: 30100, model: "ICON-EU", validAt: "2026-09-26T18:00:00Z", stale: false, sourceDistanceKm: 4, windSpeedKt: 45, windFromDeg: 90, headwindKt: 42, tailwindKt: 0, crosswindKt: 16, crosswindFrom: "right" },
-      windAhead: { points: [], trend: "more_headwind", deltaAlongTrackKt: 18, furthestDistanceNm: 100 },
     });
     expect(result).toMatchObject({
       phase: "descent",
@@ -70,10 +68,6 @@ describe("flight situation summary", () => {
       weatherState: "route_sigmet",
       weatherHazard: "SEV TURB",
       weatherDistanceNm: 84,
-      windKind: "headwind",
-      windKt: 42,
-      windTrend: "more_headwind",
-      windTrendDeltaKt: 18,
     });
   });
 
@@ -85,7 +79,7 @@ describe("flight situation summary", () => {
         { id: "P", relation: "projected", estimatedMinutes: 5, distanceNm: 40, hazard: "ICE", phenomenon: null, qualifier: null, firName: null, validTo: null, lowerFt: null, upperFt: null, verticalMatch: "unknown", source: "isigmet" },
         { id: "C", relation: "current", estimatedMinutes: 0, distanceNm: 0, hazard: "TS", phenomenon: null, qualifier: null, firName: null, validTo: null, lowerFt: null, upperFt: null, verticalMatch: "unknown", source: "isigmet" },
       ],
-      routeWeather: routeWeather(), sigmetDeviation: null, wind: null, windAhead: null,
+      routeWeather: routeWeather(), sigmetDeviation: null,
     });
     expect(result.weatherState).toBe("current_sigmet");
     expect(result.weatherHazard).toBe("TS");
@@ -93,9 +87,9 @@ describe("flight situation summary", () => {
 
   it("reports a clear matched route only when route weather is available and fresh", () => {
     const clear = routeWeather(); clear.matches = [];
-    expect(buildFlightSituationSummary({ aircraft: aircraft(), atc: null, sigmets: [], routeWeather: clear, sigmetDeviation: null, wind: null, windAhead: null }).weatherState).toBe("clear");
+    expect(buildFlightSituationSummary({ aircraft: aircraft(), atc: null, sigmets: [], routeWeather: clear, sigmetDeviation: null }).weatherState).toBe("clear");
     clear.stale = true;
-    expect(buildFlightSituationSummary({ aircraft: aircraft(), atc: null, sigmets: [], routeWeather: clear, sigmetDeviation: null, wind: null, windAhead: null }).weatherState).toBe("unknown");
+    expect(buildFlightSituationSummary({ aircraft: aircraft(), atc: null, sigmets: [], routeWeather: clear, sigmetDeviation: null }).weatherState).toBe("unknown");
   });
 
   it("does not present stale SIGMET or route-weather matches as current situation weather", () => {
@@ -108,8 +102,6 @@ describe("flight situation summary", () => {
       sigmetStale: true,
       routeWeather: staleRoute,
       sigmetDeviation: null,
-      wind: null,
-      windAhead: null,
     });
 
     expect(result.weatherState).toBe("unknown");
@@ -121,7 +113,7 @@ describe("flight situation summary", () => {
     const result = buildFlightSituationSummary({
       aircraft: aircraft({ onGround: true }),
       atc: null, sigmets: [], routeWeather: null,
-      sigmetDeviation: {} as never, wind: null, windAhead: null,
+      sigmetDeviation: {} as never,
     });
     expect(result.phase).toBe("ground");
     expect(result.routeDeviationNearSigmet).toBe(true);

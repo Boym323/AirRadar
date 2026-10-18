@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
-import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 
 export type RadarLayerDataStatus = "idle" | "loading" | "ready" | "stale" | "unavailable";
 
@@ -11,16 +10,6 @@ export interface WeatherRadarCatalogResponse {
   frames: Array<{ id: string; observedAt: string; imageUrl: string; latest: boolean; stale: boolean }>;
   latestFrameId: string | null;
   bounds: { west: number; south: number; east: number; north: number };
-}
-
-export interface WindResponse {
-  model: string;
-  modelRun: string | null;
-  validAt: string;
-  availableValidTimes: string[];
-  levelHpa: WindLevelHpa;
-  points: Array<{ lat: number; lon: number; speedKt: number | null; directionDeg: number | null }>;
-  stale: boolean;
 }
 
 export const EMPTY_SIGMET_DATA: SigmetSnapshot = {
@@ -35,9 +24,6 @@ interface UseRadarWeatherContextOptions {
   showWeatherRadar: boolean;
   radarProduct?: "MAX_Z_MASKED" | "PSEUDOCAPPI_2KM";
   showMetar: boolean;
-  showWind: boolean;
-  windLevel: WindLevelHpa;
-  windModel?: "ICON-EU" | "ALADIN-CE";
   onSigmetUnavailable(): void;
 }
 
@@ -46,9 +32,6 @@ export function useRadarWeatherContext({
   showWeatherRadar,
   radarProduct = "MAX_Z_MASKED",
   showMetar,
-  showWind,
-  windLevel,
-  windModel = "ICON-EU",
   onSigmetUnavailable,
 }: UseRadarWeatherContextOptions) {
   const [radarCatalog, setRadarCatalog] = useState<WeatherRadarCatalogResponse | null>(null);
@@ -58,16 +41,12 @@ export function useRadarWeatherContext({
   const [radarStatus, setRadarStatus] = useState<RadarLayerDataStatus>("idle");
   const [metarObservations, setMetarObservations] = useState<MetarMapObservation[]>([]);
   const [metarStatus, setMetarStatus] = useState<RadarLayerDataStatus>("idle");
-  const [windValidAt, setWindValidAt] = useState<string | null>(null);
-  const [windData, setWindData] = useState<WindResponse | null>(null);
-  const [windStatus, setWindStatus] = useState<RadarLayerDataStatus>("idle");
   const [sigmetEnabled, setSigmetEnabled] = useState<boolean | null>(null);
   const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
 
   const radarGenerationRef = useRef(0);
   const radarWasEnabledRef = useRef(false);
   const radarLastProductRef = useRef(radarProduct);
-  const windGenerationRef = useRef(0);
   const sigmetGenerationRef = useRef(0);
   const sigmetUnavailableRef = useRef(onSigmetUnavailable);
   sigmetUnavailableRef.current = onSigmetUnavailable;
@@ -193,37 +172,6 @@ export function useRadarWeatherContext({
   }, [showMetar]);
 
   useEffect(() => {
-    if (!showWind) return;
-    const generation = ++windGenerationRef.current;
-    const controller = new AbortController();
-    setWindStatus("loading");
-    const params = new URLSearchParams({ level: String(windLevel), model: windModel });
-    if (windValidAt) params.set("valid", windValidAt);
-
-    fetch(`/api/weather/wind?${params.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("wind unavailable");
-        return await response.json() as WindResponse;
-      })
-      .then((data) => {
-        if (generation !== windGenerationRef.current || controller.signal.aborted) return;
-        setWindData(data);
-        setWindValidAt(data.validAt);
-        setWindStatus(data.stale ? "stale" : "ready");
-      })
-      .catch(() => {
-        if (!controller.signal.aborted && generation === windGenerationRef.current) {
-          setWindStatus("unavailable");
-        }
-      });
-
-    return () => controller.abort();
-  }, [showWind, windLevel, windValidAt, windModel]);
-
-  useEffect(() => {
     const generation = ++sigmetGenerationRef.current;
     if (!loadSigmet) {
       setSigmetData(EMPTY_SIGMET_DATA);
@@ -282,10 +230,6 @@ export function useRadarWeatherContext({
     radarStatus,
     metarObservations,
     metarStatus,
-    windValidAt,
-    setWindValidAt,
-    windData,
-    windStatus,
     sigmetEnabled,
     sigmetData,
   };

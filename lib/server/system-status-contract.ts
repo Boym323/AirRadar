@@ -15,7 +15,6 @@ import type { ReceiverMonitoring } from "@/lib/server/receiver-monitoring";
 import type { SourceReliability } from "@/lib/server/source-reliability";
 import type { NavigationIntegrityDiagnostics } from "@/lib/navigation-integrity/types";
 import type { FlightPositionPersistenceShadowDiagnostics } from "@/lib/server/flight-position-persistence-shadow";
-import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 import type { NativeAccelerationStatus } from "@/lib/server/native-acceleration";
 
@@ -406,11 +405,9 @@ export interface SystemStatusResponse {
     airspaceActivity: { state: "on_demand"; stale: boolean };
     radar: { state: SystemStatus; diagnostic: DiagnosticState; latestFrameId: string | null; latestObservedAt: string | null; ageMs: number | null; cachedFrames: number; failures: number; consecutiveFailures: number };
     metar: { state: SystemStatus; stations: number; lastSuccessAt: string | null; cacheAgeMs: number | null };
-    wind: { state: SystemStatus; diagnostic: DiagnosticState; model: string; modelRun: string | null; availableValidTimes: number; cacheEntries: number; lastSuccessAt: string | null };
     historicalContext: {
       radar: { oldest: string | null; latest: string | null; frames: number; diskBytes: number | null; status: string };
       metar: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
-      wind: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
       aup: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
     };
   };
@@ -476,7 +473,7 @@ export interface SystemStatusBuildInput {
   flightPositionPersistenceShadow?: FlightPositionPersistenceShadowDiagnostics;
   navigationIntegrity?: NavigationIntegrityDiagnostics & { activeAnomalies?: number };
   predictiveValidation?: SystemStatusResponse["predictiveValidation"];
-  mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
+  mapContext?: { radar?: WeatherRadarDiagnostics; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
   localAdsb?: Record<string, unknown>;
   routeEnrichment?: RouteEnrichmentSnapshot;

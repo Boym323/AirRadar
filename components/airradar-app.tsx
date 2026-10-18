@@ -75,7 +75,6 @@ import {
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
-import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
@@ -115,8 +114,7 @@ import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud
 import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
-import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
-import { useSelectedAircraftWindContext } from "@/components/radar/use-selected-aircraft-wind-context";
+import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
 import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
 import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
@@ -231,7 +229,6 @@ const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, n
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.south],
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.south],
 ];
-const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -487,17 +484,6 @@ function createMetarGeoJSON(observations: MetarMapObservation[]) {
   };
 }
 
-function createWindGeoJSON(data: WindResponse | null) {
-  return {
-    type: "FeatureCollection" as const,
-    features: (data?.points ?? []).flatMap((point) => Number.isFinite(point.lat) && Number.isFinite(point.lon) ? [{
-      type: "Feature" as const,
-      properties: { speedKt: point.speedKt, directionDeg: point.directionDeg },
-      geometry: { type: "Point" as const, coordinates: [point.lon, point.lat] },
-    }] : []),
-  };
-}
-
 function createAircraftWeatherGeoJSON(observations: AircraftWeatherMapObservation[], field: "temperature" | "wind") {
   return {
     type: "FeatureCollection" as const,
@@ -589,15 +575,12 @@ export function AirRadarApp() {
   const [radarProduct, setRadarProduct] = useState<"MAX_Z_MASKED" | "PSEUDOCAPPI_2KM">("MAX_Z_MASKED");
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
-  const [showWind, setShowWind] = useState(false);
   const [showAircraftWeather, setShowAircraftWeather] = useState(false);
   const [showNavigationIntegrity, setShowNavigationIntegrity] = useState(false);
   const [navigationIntegrityCells, setNavigationIntegrityCells] = useState<Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }>>([]);
   const [aircraftWeatherMapObservations, setAircraftWeatherMapObservations] = useState<AircraftWeatherMapObservation[]>([]);
   const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
-  const [windLevel, setWindLevel] = useState<WindLevelHpa>(300);
-  const [windModel, setWindModel] = useState<"ICON-EU" | "ALADIN-CE">("ICON-EU");
   const [showAupUup, setShowAupUup] = useState(false);
   const {
     airspaceDataset,
@@ -626,10 +609,6 @@ export function AirRadarApp() {
     radarStatus,
     metarObservations,
     metarStatus,
-    windValidAt,
-    setWindValidAt,
-    windData,
-    windStatus,
     sigmetEnabled,
     sigmetData,
   } = useRadarWeatherContext({
@@ -637,9 +616,6 @@ export function AirRadarApp() {
     showWeatherRadar,
     radarProduct,
     showMetar,
-    showWind,
-    windLevel,
-    windModel,
     onSigmetUnavailable: () => setShowSigmet(false),
   });
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
@@ -1193,10 +1169,6 @@ export function AirRadarApp() {
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
-      setShowWind(window.localStorage.getItem("airradar-wind-layer") === "true");
-      if (window.localStorage.getItem("airradar-wind-model") === "ALADIN-CE") setWindModel("ALADIN-CE");
-      const storedWindLevel = Number(window.localStorage.getItem("airradar-wind-level"));
-      if (WIND_PRESSURE_LEVELS.includes(storedWindLevel as WindLevelHpa)) setWindLevel(storedWindLevel as WindLevelHpa);
       setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
       setShowNavData(window.localStorage.getItem("airradar-nav-data-layer") === "true");
     } catch {
@@ -1278,9 +1250,6 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
-  useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
-  useEffect(() => { try { window.localStorage.setItem("airradar-wind-level", String(windLevel)); } catch { /* optional */ } }, [windLevel]);
-  useEffect(() => { try { window.localStorage.setItem("airradar-wind-model", windModel); } catch { /* optional */ } }, [windModel]);
   useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
   useEffect(() => { try { window.localStorage.setItem("airradar-nav-data-layer", String(showNavData)); } catch { /* optional */ } }, [showNavData]);
   useEffect(() => {
@@ -1361,13 +1330,12 @@ export function AirRadarApp() {
         showSigmet,
         showWeatherRadar,
         showMetar,
-        showWind,
         showAircraftWeather,
         showNavigationIntegrity,
         showAupUup,
         showRangeRings,
       },
-      display: { colorMode, radarOpacity, windLevel },
+      display: { colorMode, radarOpacity },
     });
     setRadarPresets((current) => {
       const next = addRadarPreset(current, preset);
@@ -1398,8 +1366,6 @@ export function AirRadarApp() {
     showSmallAirports,
     showStars,
     showWeatherRadar,
-    showWind,
-    windLevel,
   ]);
 
   const applyRadarPreset = useCallback((preset: RadarPreset) => {
@@ -1420,14 +1386,12 @@ export function AirRadarApp() {
     setShowSigmet(preset.layers.showSigmet);
     setShowWeatherRadar(preset.layers.showWeatherRadar);
     setShowMetar(preset.layers.showMetar);
-    setShowWind(preset.layers.showWind);
     setShowAircraftWeather(preset.layers.showAircraftWeather);
     setShowNavigationIntegrity(preset.layers.showNavigationIntegrity);
     setShowAupUup(preset.layers.showAupUup);
     setShowRangeRings(preset.layers.showRangeRings);
     setColorMode(preset.display.colorMode);
     setRadarOpacity(preset.display.radarOpacity);
-    setWindLevel(preset.display.windLevel);
     setRadarPlaying(false);
     const map = mapRef.current;
     if (map) {
@@ -2166,8 +2130,6 @@ export function AirRadarApp() {
       map.addSource("metar-airports", { type: "geojson", data: createMetarGeoJSON([]) });
       map.addLayer({ id: "metar-symbols", type: "circle", source: "metar-airports", layout: { visibility: "none" }, paint: { "circle-color": ["match", ["get", "flightCategory"], "VFR", AIRRADAR_MAP_THEME.metar.vfr, "MVFR", AIRRADAR_MAP_THEME.metar.mvfr, "IFR", AIRRADAR_MAP_THEME.metar.ifr, "LIFR", AIRRADAR_MAP_THEME.metar.lifr, AIRRADAR_MAP_THEME.metar.unknown], "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 5, 13, 7], "circle-opacity": ["case", ["get", "stale"], 0.38, 0.9], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.2 } });
       map.addLayer({ id: "metar-labels", type: "symbol", source: "metar-airports", minzoom: 8.5, layout: { visibility: "none", "text-field": ["concat", ["get", "stationId"], ["case", ["get", "stale"], " · STALE", ""]], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.label, "text-opacity": ["case", ["get", "stale"], 0.45, 0.82], "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
-      map.addSource("wind-aloft", { type: "geojson", data: createWindGeoJSON(null) });
-      map.addLayer({ id: "wind-aloft-arrows", type: "symbol", source: "wind-aloft", minzoom: 5.5, layout: { visibility: "none", "text-field": ["case", ["has", "speedKt"], ["concat", "↑ ", ["to-string", ["round", ["get", "speedKt"]]], " kt"], "↑"], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 5.5, 10, 10, 14], "text-rotate": ["coalesce", ["get", "directionDeg"], 0], "text-rotation-alignment": "map", "text-allow-overlap": false }, paint: { "text-color": AIRRADAR_MAP_THEME.weather, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.1 } });
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
       map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": ["match", ["get", "tier"], "significant", AIRRADAR_MAP_THEME.airports.significant, "heliport", AIRRADAR_MAP_THEME.airports.heliport, AIRRADAR_MAP_THEME.airports.small], "circle-opacity": ["match", ["get", "tier"], "significant", 0.82, "heliport", 0.58, 0.52], "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 2.4, 9, 3.3, 13, 4.6], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.15 } });
       map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", minzoom: 6.2, layout: { "text-field": ["get", "code"], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 6.2, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": AIRRADAR_MAP_THEME.airports.label, "text-opacity": ["interpolate", ["linear"], ["zoom"], 6.2, 0.52, 10, 0.72, 13, 0.86], "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 0.8 } });
@@ -3098,13 +3060,6 @@ export function AirRadarApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    (map.getSource("wind-aloft") as GeoJSONSource | undefined)?.setData(createWindGeoJSON(windData));
-    if (map.getLayer("wind-aloft-arrows")) map.setLayoutProperty("wind-aloft-arrows", "visibility", showWind && Boolean(windData) ? "visible" : "none");
-  }, [mapReady, showWind, windData]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
     const sourceId = "aircraft-weather-observations";
     const layerId = "aircraft-weather-observation-points";
     if (showAircraftWeather && !map.getSource(sourceId)) {
@@ -3182,11 +3137,6 @@ export function AirRadarApp() {
       ? selectedOperationalTwin.weatherCorridor
       : null,
   }), [selectedOperationalTwin, selectedRouteCorridor.conformance, selectedSigmetDeviation]);
-  const selectedDestination = selectedAircraft?.enrichment?.route?.destinationAirport ?? null;
-  const selectedWind = useSelectedAircraftWindContext(
-    selectedAircraft,
-    selectedDestination ? { lat: selectedDestination.latitude, lon: selectedDestination.longitude } : null,
-  );
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
@@ -3608,17 +3558,6 @@ export function AirRadarApp() {
                 showMetar={showMetar}
                 onShowMetarChange={setShowMetar}
                 metarStatus={metarStatus}
-                showWind={showWind}
-                onShowWindChange={setShowWind}
-                windLevel={windLevel}
-                windModel={windModel}
-                onWindModelChange={(model) => { setWindModel(model); setWindValidAt(null); }}
-                windPressureLevels={WIND_PRESSURE_LEVELS}
-                onWindLevelChange={setWindLevel}
-                windValidAt={windValidAt}
-                onWindValidAtChange={setWindValidAt}
-                windData={windData}
-                windStatus={windStatus}
                 showAircraftWeather={showAircraftWeather}
                 onShowAircraftWeatherChange={setShowAircraftWeather}
                 showNavigationIntegrity={showNavigationIntegrity}
@@ -3790,10 +3729,6 @@ export function AirRadarApp() {
             sigmetDeviation={selectedSigmetDeviation}
             weatherAvoidance={selectedWeatherAvoidance}
             sigmetStale={sigmetData.stale}
-            windContext={selectedWind.context}
-            windAhead={selectedWind.ahead}
-            destinationWind={selectedWind.destination}
-            windStatus={selectedWind.status}
             routeWeather={selectedRouteWeather}
             routeCorridor={selectedRouteCorridor.corridor}
             routeConformance={selectedRouteCorridor.conformance}

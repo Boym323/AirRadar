@@ -108,7 +108,7 @@ export function TimeMachine() {
       const [radar, metar, wind, aup] = await Promise.all([
         showRadar ? load<ContextLayer<{ id: string; observedAt: string; imageUrl: string }>>("/api/map-context/radar") : Promise.resolve(null),
         showMetar ? load<ContextLayer<{ observations: HistoricalMetar[] }>>("/api/map-context/metar") : Promise.resolve(null),
-        showWind ? load<ContextLayer<{ points: HistoricalWind[]; validAt: string; modelRun: string | null; model: string }>>("/api/map-context/wind?level=300") : Promise.resolve(null),
+        Promise.resolve(null),
         showAup ? load<ContextLayer<{ windows: Array<{ startsAt: string; endsAt: string; designator: string; lowerLimit: string; upperLimit: string }>; sectors: Array<{ id: string; name: string; polygons: Array<Array<[number, number]>> }> }>>("/api/map-context/aup") : Promise.resolve(null),
       ]);
       if (currentGeneration !== contextGeneration.current) return;

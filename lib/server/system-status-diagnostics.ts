@@ -7,7 +7,6 @@ import type {
   SystemStatusBuildInput,
 } from "@/lib/server/system-status-contract";
 
-type WindDiagnostics = ReturnType<(typeof import("@/lib/server/wind-aloft"))["defaultWindAloftProvider"]["diagnostics"]>;
 
 export function diagnostic(
   operationalState: OperationalState,
@@ -94,12 +93,3 @@ export function radarDiagnostic(value: WeatherRadarDiagnostics | undefined): Dia
   return diagnostic("ok", null);
 }
 
-export function windDiagnostic(value: WindDiagnostics | undefined): DiagnosticState {
-  if (!value || !value.hasAttempted) return diagnostic("on_demand", "NOT_INITIALIZED");
-  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
-  if (value.status === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
-  if (value.status === "degraded") {
-    return diagnostic("degraded", value.validTimes ? "STALE_CACHE" : "NO_VALID_TIMES");
-  }
-  return diagnostic("ok", null);
-}

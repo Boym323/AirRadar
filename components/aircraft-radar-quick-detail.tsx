@@ -11,7 +11,6 @@ import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/histo
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import type { WeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
-import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin/types";
@@ -19,7 +18,6 @@ import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-tw
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
-import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -60,10 +58,6 @@ export interface AircraftRadarQuickDetailProps {
   sigmetDeviation: SigmetTrajectoryDeviation | null;
   weatherAvoidance: WeatherAvoidanceIntelligence | null;
   sigmetStale: boolean;
-  windContext: AircraftWindContext | null;
-  windAhead: AircraftWindAheadProfile | null;
-  destinationWind: AircraftDestinationWindContext | null;
-  windStatus: RadarLayerDataStatus;
   routeWeather: RouteWeatherContext | null;
   routeCorridor?: RouteCorridorSnapshot | null;
   routeConformance?: TrajectoryConformanceSnapshot | null;
@@ -323,78 +317,6 @@ function RouteWeatherSection({ context }: { context: RouteWeatherContext | null 
   </QuickSection>;
 }
 
-function WindSection({ context, ahead, destination, status }: { context: AircraftWindContext | null; ahead: AircraftWindAheadProfile | null; destination: AircraftDestinationWindContext | null; status: RadarLayerDataStatus }) {
-  if (!context && status !== "loading" && status !== "unavailable") return null;
-
-  const alongTrack = context
-    ? context.headwindKt >= context.tailwindKt
-      ? `${t.weather.windHeadwind} ${formatNumber(context.headwindKt, 0)} kt`
-      : `${t.weather.windTailwind} ${formatNumber(context.tailwindKt, 0)} kt`
-    : null;
-  const crosswind = context
-    ? context.crosswindKt < 1
-      ? t.weather.windCrosswindCalm
-      : `${formatNumber(context.crosswindKt, 0)} kt · ${context.crosswindFrom === "right" ? t.weather.windFromRight : t.weather.windFromLeft}`
-    : null;
-  const trend = ahead
-    ? ahead.trend === "more_headwind"
-      ? t.weather.windAheadMoreHeadwind(formatNumber(Math.abs(ahead.deltaAlongTrackKt), 0), formatNumber(ahead.furthestDistanceNm, 0))
-      : ahead.trend === "more_tailwind"
-        ? t.weather.windAheadMoreTailwind(formatNumber(Math.abs(ahead.deltaAlongTrackKt), 0), formatNumber(ahead.furthestDistanceNm, 0))
-        : ahead.trend === "variable"
-          ? t.weather.windAheadVariable
-          : t.weather.windAheadStable
-    : null;
-
-  return <QuickSection id="aircraft-quick-wind-title" title={t.weather.windAircraftTitle} className="aircraft-quick-wind">
-    {context ? <>
-      <div className="aircraft-quick-detail-grid" data-testid="aircraft-wind-context">
-        <DetailValue label={t.weather.windModelLevel} value={`${context.model} · ${context.levelHpa} hPa (~${formatNumber(context.representativeAltitudeFt, 0)} ft)`} />
-        <DetailValue label={t.weather.windVector} value={`${formatTrack(context.windFromDeg)} · ${formatNumber(context.windSpeedKt, 0)} kt`} />
-        <DetailValue label={t.weather.windAlongTrack} value={alongTrack} />
-        <DetailValue label={t.weather.windCrosswind} value={crosswind} />
-        <DetailValue label={t.weather.windGridDistance} value={`~${formatNumber(context.sourceDistanceKm, 0)} km`} />
-        <DetailValue label={t.weather.windValidAt} value={formatTime(context.validAt)} />
-      </div>
-      {ahead && <div className="aircraft-quick-wind-ahead" data-testid="aircraft-wind-ahead">
-        <strong>{t.weather.windAheadTitle}</strong>
-        {trend && <span>{trend}</span>}
-        <div className="aircraft-quick-wind-ahead-grid">
-          {ahead.points.map((point) => {
-            const component = point.headwindKt >= point.tailwindKt
-              ? `${t.weather.windHeadwind} ${formatNumber(point.headwindKt, 0)} kt`
-              : `${t.weather.windTailwind} ${formatNumber(point.tailwindKt, 0)} kt`;
-            const lateral = point.crosswindKt < 1
-              ? t.weather.windCrosswindCalm
-              : `${formatNumber(point.crosswindKt, 0)} kt ${point.crosswindFrom === "right" ? t.weather.windFromRight : t.weather.windFromLeft}`;
-            return <div key={point.distanceNm} className="aircraft-quick-wind-ahead-point">
-              <b>{formatNumber(point.distanceNm, 0)} NM</b>
-              <span>{component}</span>
-              <small>{lateral}</small>
-            </div>;
-          })}
-        </div>
-        <p>{t.weather.windAheadDisclaimer}</p>
-      </div>}
-      {destination && <div className="aircraft-quick-wind-destination" data-testid="aircraft-destination-wind">
-        <strong>{t.weather.windDestinationTitle}</strong>
-        <div className="aircraft-quick-detail-grid">
-          <DetailValue label={t.weather.windDestinationBearing} value={formatTrack(destination.bearingDeg)} />
-          <DetailValue label={t.weather.windDestinationDistance} value={`~${formatNumber(destination.distanceNm, 0)} NM`} />
-          <DetailValue label={t.weather.windAlongTrack} value={destination.headwindKt >= destination.tailwindKt
-            ? `${t.weather.windHeadwind} ${formatNumber(destination.headwindKt, 0)} kt`
-            : `${t.weather.windTailwind} ${formatNumber(destination.tailwindKt, 0)} kt`} />
-          <DetailValue label={t.weather.windCrosswind} value={destination.crosswindKt < 1
-            ? t.weather.windCrosswindCalm
-            : `${formatNumber(destination.crosswindKt, 0)} kt · ${destination.crosswindFrom === "right" ? t.weather.windFromRight : t.weather.windFromLeft}`} />
-        </div>
-        <p>{t.weather.windDestinationDisclaimer}</p>
-      </div>}
-      <p className="aircraft-quick-disclaimer">{context.stale || status === "stale" || status === "unavailable" ? t.weather.windStaleWarning : t.weather.windAircraftDisclaimer}</p>
-    </> : <p className="aircraft-quick-disclaimer">{status === "loading" ? t.weather.windLoading : t.weather.windUnavailable}</p>}
-  </QuickSection>;
-}
-
 function AircraftIdentitySection({ aircraft, databaseAircraft }: { aircraft: AircraftView; databaseAircraft: AircraftDetailMetadata | null }) {
   const metadata = aircraft.enrichment?.metadata;
   const entries = [
@@ -470,8 +392,6 @@ function SituationSummarySection({ summary }: { summary: FlightSituationSummary 
     summary.currentSector
       || summary.nextSector
       || summary.weatherState !== "unknown"
-      || summary.windKind !== "unknown"
-      || summary.windTrend
       || summary.routeDeviationNearSigmet,
   );
   if (!hasMeaningfulContext) return null;
@@ -492,26 +412,10 @@ function SituationSummarySection({ summary }: { summary: FlightSituationSummary 
         : summary.weatherState === "clear"
           ? t.intelligence.situationWeatherClear
           : t.intelligence.situationWeatherUnknown;
-  const wind = summary.windKind === "headwind" && summary.windKt !== null
-    ? t.intelligence.situationHeadwind(formatNumber(summary.windKt, 0))
-    : summary.windKind === "tailwind" && summary.windKt !== null
-      ? t.intelligence.situationTailwind(formatNumber(summary.windKt, 0))
-      : summary.windKind === "calm"
-        ? t.intelligence.situationWindCalm
-        : t.intelligence.situationWindUnknown;
-  const windTrend = summary.windTrend === "more_headwind" && summary.windTrendDeltaKt !== null
-    ? t.intelligence.situationWindTrendHead(formatNumber(summary.windTrendDeltaKt, 0))
-    : summary.windTrend === "more_tailwind" && summary.windTrendDeltaKt !== null
-      ? t.intelligence.situationWindTrendTail(formatNumber(summary.windTrendDeltaKt, 0))
-      : summary.windTrend === "variable"
-        ? t.intelligence.situationWindTrendVariable
-        : null;
-
   return <QuickSection id="aircraft-situation-summary-title" title={t.intelligence.situationTitle} className="aircraft-quick-situation">
     <div className="aircraft-quick-detail-grid" data-testid="flight-situation-summary">
       <DetailValue label={t.intelligence.situationAtc} value={next ? `${atc} · ${next}` : atc} />
       <DetailValue label={t.intelligence.situationWeather} value={weather} />
-      <DetailValue label={t.intelligence.situationWind} value={windTrend ? `${wind} ${windTrend}` : wind} />
     </div>
     {summary.routeDeviationNearSigmet && <p className="aircraft-quick-situation-signal">{t.intelligence.situationDeviation}</p>}
     <p className="aircraft-quick-disclaimer">{t.intelligence.situationDisclaimer}</p>
@@ -754,10 +658,6 @@ export function AircraftRadarQuickDetail({
   sigmetDeviation,
   weatherAvoidance,
   sigmetStale,
-  windContext,
-  windAhead,
-  destinationWind,
-  windStatus,
   routeWeather,
   routeCorridor = null,
   routeConformance = null,
@@ -801,8 +701,6 @@ export function AircraftRadarQuickDetail({
     sigmetStale,
     routeWeather,
     sigmetDeviation,
-    wind: windContext,
-    windAhead,
   });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
   const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
@@ -912,7 +810,6 @@ export function AircraftRadarQuickDetail({
           <NavigationIntegritySection aircraft={aircraft} />
           <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
           <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
-          <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
         </>}
       </details>
     </div>}

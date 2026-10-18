@@ -1192,9 +1192,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               ["**/api/weather/sigmet", { available: hasData, type: "FeatureCollection", features: [], fetchedAt: fixtureTime, stale: false }],
               ["**/api/weather/radar/frames", { available: hasData, provider: "CHMI", product: "CZRAD", frames: hasData ? [{ id: "fixture-frame", observedAt: fixtureTime, latest: true, stale: false }] : [], latestFrameId: hasData ? "fixture-frame" : null, generatedAt: fixtureTime }],
               ["**/api/weather/pirep?*", { available: hasData, reports: [], fetchedAt: fixtureTime, stale: false }],
-              ["**/api/weather/wind?*", { provider: "fixture", model: "ICON-EU", modelRun: null, validAt: fixtureTime,
-                levelHpa: 500, points: hasData ? [{ lat: 50.1, lon: 14.4, speedKt: 22, directionDeg: 240 }] : [],
-                fetchedAt: fixtureTime, stale: false }],
             ];
             for (const [pattern, body] of fixtures) {
               await visualPage.route(pattern, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }));

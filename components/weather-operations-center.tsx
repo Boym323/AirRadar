@@ -6,8 +6,6 @@ import { formatNumber, t } from "@/lib/i18n";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
 import styles from "./weather-operations-center.module.css";
 
-type WindLevelHpa = 700 | 500 | 300;
-
 interface MetarMapResponse {
   enabled?: boolean;
   available?: boolean;
@@ -22,24 +20,6 @@ interface SigmetResponse extends SigmetSnapshot {
   enabled?: boolean;
   available?: boolean;
   source?: string;
-}
-
-interface WindPoint {
-  lat: number;
-  lon: number;
-  speedKt: number | null;
-  directionDeg: number | null;
-}
-
-interface WindResponse {
-  provider: string;
-  model: string;
-  modelRun: string | null;
-  validAt: string;
-  levelHpa: WindLevelHpa;
-  points: WindPoint[];
-  fetchedAt: string;
-  stale: boolean;
 }
 
 interface RadarFrame {
@@ -66,12 +46,6 @@ interface PirepResponse {
   stale?: boolean;
   source?: string;
 }
-
-const WIND_LEVELS: Array<{ level: WindLevelHpa; label: string }> = [
-  { level: 700, label: "FL100" },
-  { level: 500, label: "FL180" },
-  { level: 300, label: "FL300" },
-];
 
 const AIRPORT_PRIORITY = ["LKPR", "LKTB", "LKMT", "LKKV", "LKPD", "LKVO", "LKNA", "LKPO"];
 
@@ -110,7 +84,7 @@ export function WeatherOperationsCenter() {
   const cs = t.locale.startsWith("cs");
   const copy = cs ? {
     title: "Provozní přehled počasí",
-    subtitle: "Souhrn dostupných meteorologických údajů z METAR, SIGMET, výškového větru, radaru a pilotních hlášení.",
+    subtitle: "Souhrn dostupných meteorologických údajů z METAR, SIGMET, radaru a pilotních hlášení.",
     airportReports: "Letištní hlášení",
     activeSigmets: "Aktivní SIGMET",
     thunderstormAreas: "Bouřkové oblasti",
@@ -120,8 +94,6 @@ export function WeatherOperationsCenter() {
     airportsDescription: "Aktuální stanice METAR v regionální meteorologické oblasti.",
     sigmets: "SIGMET",
     sigmetsDescription: "Aktivní letecké výstrahy ze služby Aviation Weather Center.",
-    wind: "Výškový vítr",
-    windDescription: "ICON-EU regionální vítr; úrovně jsou zobrazeny jako praktické přibližné FL.",
     radar: "Meteorologický radar",
     radarDescription: "Stav CHMI radarového katalogu a poslední dostupný snímek.",
     reports: "Hlášení pilotů",
@@ -132,15 +104,13 @@ export function WeatherOperationsCenter() {
     updated: "Aktualizováno",
     latestFrame: "Poslední snímek",
     frames: "Snímky",
-    averageWind: "Průměrný vítr",
-    maxWind: "Maximum",
     valid: "Platnost",
     stale: "ZASTARALÉ",
     live: "DOSTUPNÉ",
     urgent: "NALÉHAVÉ",
   } : {
     title: "Weather Operations",
-    subtitle: "One operational view over AirRadar's existing METAR, SIGMET, wind-aloft, radar and PIREP sources.",
+    subtitle: "One operational view over AirRadar's existing METAR, SIGMET, radar and PIREP sources.",
     airportReports: "Airport reports",
     activeSigmets: "Active SIGMETs",
     thunderstormAreas: "Thunderstorm areas",
@@ -150,8 +120,6 @@ export function WeatherOperationsCenter() {
     airportsDescription: "Current METAR stations inside the regional weather grid.",
     sigmets: "SIGMET",
     sigmetsDescription: "Active aviation advisories from the existing AWC feed.",
-    wind: "Wind aloft",
-    windDescription: "ICON-EU regional wind; pressure levels are presented as practical approximate FL bands.",
     radar: "Weather radar",
     radarDescription: "CHMI radar catalog state and latest available frame.",
     reports: "Pilot reports",
@@ -162,8 +130,6 @@ export function WeatherOperationsCenter() {
     updated: "Updated",
     latestFrame: "Latest frame",
     frames: "Frames",
-    averageWind: "Average wind",
-    maxWind: "Maximum",
     valid: "Valid",
     stale: "STALE",
     live: "AVAILABLE",
@@ -172,8 +138,6 @@ export function WeatherOperationsCenter() {
 
   const [metar, setMetar] = useState<MetarMapResponse | null>(null);
   const [sigmet, setSigmet] = useState<SigmetResponse | null>(null);
-  const [windLevel, setWindLevel] = useState<WindLevelHpa>(500);
-  const [wind, setWind] = useState<WindResponse | null>(null);
   const [radar, setRadar] = useState<RadarCatalog | null>(null);
   const [pirep, setPirep] = useState<PirepResponse | null>(null);
   const [failedSources, setFailedSources] = useState(0);
@@ -214,24 +178,6 @@ export function WeatherOperationsCenter() {
     };
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let alive = true;
-    void fetch(`/api/weather/wind?level=${windLevel}`, { cache: "no-store", signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("wind unavailable");
-        return response.json() as Promise<WindResponse>;
-      })
-      .then((payload) => { if (alive) setWind(payload); })
-      .catch((error) => {
-        if (alive && (error as Error).name !== "AbortError") setWind(null);
-      });
-    return () => {
-      alive = false;
-      controller.abort();
-    };
-  }, [windLevel]);
-
   const airports = useMemo(() => [...(metar?.observations ?? [])].sort((a, b) => {
     const ai = AIRPORT_PRIORITY.indexOf(a.stationId);
     const bi = AIRPORT_PRIORITY.indexOf(b.stationId);
@@ -242,9 +188,6 @@ export function WeatherOperationsCenter() {
   const strongWind = airports.filter((item) => (item.windSpeed ?? 0) >= 20 || (item.windGust ?? 0) >= 25);
   const sigmets = sigmet?.features ?? [];
   const thunderstormCount = sigmets.filter((feature) => isThunderstorm(feature.properties)).length;
-  const windSpeeds = (wind?.points ?? []).map((point) => point.speedKt).filter((value): value is number => value !== null && Number.isFinite(value));
-  const averageWind = windSpeeds.length ? windSpeeds.reduce((sum, value) => sum + value, 0) / windSpeeds.length : null;
-  const maxWind = windSpeeds.length ? Math.max(...windSpeeds) : null;
   const latestFrame = radar?.frames.find((frame) => frame.id === radar.latestFrameId) ?? radar?.frames[0] ?? null;
 
   return <main className={styles.page} data-testid="weather-operations-center-v1">
@@ -295,26 +238,6 @@ export function WeatherOperationsCenter() {
             <small>{timeLabel(feature.properties.validFrom)}–{timeLabel(feature.properties.validTo)} · {feature.properties.lowerFt === null ? "SFC" : `${Math.round(feature.properties.lowerFt / 100)}`}–{feature.properties.upperFt === null ? "TOP" : `${Math.round(feature.properties.upperFt / 100)}`}</small>
           </article>)}
         </div> : <EmptyState title={sigmet ? copy.noData : copy.loading} />}
-      </Panel>
-
-      <Panel>
-        <SectionHeader
-          kicker="ICON-EU"
-          title={copy.wind}
-          description={copy.windDescription}
-          actions={<div className={styles.windTabs} role="group" aria-label={copy.wind}>
-            {WIND_LEVELS.map((item) => <button key={item.level} type="button" aria-pressed={windLevel === item.level} onClick={() => setWindLevel(item.level)}>{item.label}</button>)}
-          </div>}
-        />
-        {wind ? <div className={styles.windBody}>
-          <div className={styles.windHero}><strong>{WIND_LEVELS.find((item) => item.level === wind.levelHpa)?.label}</strong><span>{wind.levelHpa} hPa</span></div>
-          <dl className={styles.windMetrics}>
-            <div><dt>{copy.averageWind}</dt><dd>{averageWind === null ? t.common.emptyValue : `${averageWind.toLocaleString(t.locale, { maximumFractionDigits: 0 })} kt`}</dd></div>
-            <div><dt>{copy.maxWind}</dt><dd>{maxWind === null ? t.common.emptyValue : `${Math.round(maxWind)} kt`}</dd></div>
-            <div><dt>{copy.valid}</dt><dd>{timeLabel(wind.validAt)}</dd></div>
-          </dl>
-          <small className={styles.muted}>{wind.provider} · {wind.model}{wind.modelRun ? ` · ${wind.modelRun}` : ""}</small>
-        </div> : <EmptyState title={copy.loading} />}
       </Panel>
 
       <Panel>

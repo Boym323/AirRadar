@@ -105,7 +105,6 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       historicalContext: {
         radar: { ...status.mapLayers.historicalContext.radar, diskBytes: null },
         metar: { ...status.mapLayers.historicalContext.metar, fileBytes: null },
-        wind: { ...status.mapLayers.historicalContext.wind, fileBytes: null },
         aup: { ...status.mapLayers.historicalContext.aup, fileBytes: null },
       },
     },

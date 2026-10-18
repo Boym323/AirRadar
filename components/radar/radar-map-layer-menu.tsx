@@ -6,7 +6,6 @@ import { MapControl, UiIcon } from "@/components/ui-primitives";
 import type { DatasetState } from "@/components/use-dataset-query";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
-import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
 import type { Radar3dMode } from "@/lib/radar/terrain-v6-d";
 import { Radar3dDeviceCheck } from "@/components/radar/radar-3d-device-check";
@@ -15,13 +14,6 @@ interface AtsRoutesSummary {
   available: boolean;
   source?: { reference: string; effectiveDate: string };
   counts?: { routes: number; segments: number };
-}
-
-interface WindLayerData {
-  model: string;
-  modelRun: string | null;
-  validAt: string;
-  availableValidTimes: string[];
 }
 
 interface RadarFrameSummary {
@@ -90,17 +82,6 @@ interface RadarMapLayerMenuProps {
   showMetar: boolean;
   onShowMetarChange: (value: boolean) => void;
   metarStatus: "idle" | "loading" | "ready" | "stale" | "unavailable";
-  showWind: boolean;
-  onShowWindChange: (value: boolean) => void;
-  windLevel: WindLevelHpa;
-  windModel: "ICON-EU" | "ALADIN-CE";
-  onWindModelChange: (value: "ICON-EU" | "ALADIN-CE") => void;
-  windPressureLevels: readonly WindLevelHpa[];
-  onWindLevelChange: (value: WindLevelHpa) => void;
-  windValidAt: string | null;
-  onWindValidAtChange: (value: string | null) => void;
-  windData: WindLayerData | null;
-  windStatus: "idle" | "loading" | "ready" | "stale" | "unavailable";
   showAircraftWeather: boolean;
   onShowAircraftWeatherChange: (value: boolean) => void;
   showNavigationIntegrity: boolean;
@@ -183,17 +164,6 @@ export function RadarMapLayerMenu({
   showMetar,
   onShowMetarChange,
   metarStatus,
-  showWind,
-  onShowWindChange,
-  windLevel,
-  windModel,
-  onWindModelChange,
-  windPressureLevels,
-  onWindLevelChange,
-  windValidAt,
-  onWindValidAtChange,
-  windData,
-  windStatus,
   showAircraftWeather,
   onShowAircraftWeatherChange,
   showNavigationIntegrity,
@@ -251,17 +221,8 @@ export function RadarMapLayerMenu({
         <label data-testid="map-layer-echo-top"><input type="checkbox" checked={showEchoTop} onChange={(event) => onShowEchoTopChange(event.target.checked)} /> {t.locale.startsWith("cs") ? "Výška radarových odrazů (Echo Top)" : "Radar echo top height"}</label>
         {showEchoTop && <div className="map-layer-sublevel"><small>ČHMÚ · 4 dBZ · m AMSL · {echoTopStatus === "loading" ? t.common.loading : echoTopStatus === "unavailable" ? t.layers.radarUnavailable : echoTopStatus === "stale" ? t.layers.radarStale : t.locale.startsWith("cs") ? "Aktuální radarový snímek" : "Latest radar frame"}<br />{t.locale.startsWith("cs") ? "Výška detekovaného radarového echa, nikoli vrchol oblačnosti." : "Height of detected radar echo, not a cloud-top measurement."}</small></div>}
         <label data-testid="map-layer-metar"><input type="checkbox" checked={showMetar} onChange={(event) => onShowMetarChange(event.target.checked)} /> {t.layers.metar}</label>
-        <label data-testid="map-layer-wind"><input type="checkbox" checked={showWind} onChange={(event) => onShowWindChange(event.target.checked)} /> {t.layers.windAloft}</label>
         <label data-testid="map-layer-aircraft-weather"><input type="checkbox" checked={showAircraftWeather} onChange={(event) => onShowAircraftWeatherChange(event.target.checked)} /> {t.locale.startsWith("cs") ? "Počasí z letadel" : "Aircraft Weather"}</label>
         <label data-testid="map-layer-navigation-integrity"><input type="checkbox" checked={showNavigationIntegrity} onChange={(event) => onShowNavigationIntegrityChange(event.target.checked)} /> {t.layers.navigationIntegrity}</label>
-        {showWind && <div className="map-layer-sublevel wind-controls">
-          <label className="map-layer-mode"><span>{t.layers.windModelSelection}</span><select value={windModel} aria-label={t.layers.windModelSelection} onChange={(event) => onWindModelChange(event.target.value as "ICON-EU" | "ALADIN-CE")}><option value="ICON-EU">ICON-EU · DWD</option><option value="ALADIN-CE">ALADIN · ČHMÚ (2 km)</option></select></label>
-          {windModel === "ALADIN-CE" && <small>{t.layers.aladinModelNote}</small>}
-          <label className="map-layer-mode"><span>{t.layers.pressureLevel}</span><select value={windLevel} aria-label={t.layers.pressureLevel} onChange={(event) => { onWindLevelChange(Number(event.target.value) as WindLevelHpa); onWindValidAtChange(null); }}>{windPressureLevels.map((level) => <option key={level} value={level}>{level} hPa</option>)}</select></label>
-          {windData && <label className="map-layer-mode"><span>{t.layers.valid}</span><select value={windValidAt ?? windData.validAt} aria-label={t.layers.valid} onChange={(event) => onWindValidAtChange(event.target.value)}>{windData.availableValidTimes.map((valid) => <option key={valid} value={valid}>{formatDateTime(valid, t)}</option>)}</select></label>}
-          {windData && <span>{windData.model} · {t.layers.windModelForecast}{windData.modelRun ? ` · ${t.layers.modelRun}: ${formatDateTime(windData.modelRun, t)}` : ""} · {t.layers.valid}: {formatDateTime(windData.validAt, t)}</span>}
-          {windStatus === "unavailable" && <span>{t.layers.windUnavailable}</span>}
-        </div>}
         {showMetar && metarStatus === "unavailable" && <div className="map-layer-sublevel">{t.layers.metarUnavailable}</div>}
         {showMetar && <div className="map-layer-sublevel metar-legend"><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span><span><i className="metar-dot lifr" /> {t.layers.lifr}</span></div>}
       </div>
