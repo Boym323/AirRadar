@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { WeatherRadarArchiveService } from "@/lib/server/map-context";
@@ -18,7 +18,7 @@ try {
       const runRoot = path.join(root, String(count));
       await mkdir(runRoot, { recursive: true });
       for (let index = 0; index < count; index += 1) {
-        const date = new Date(Date.UTC(index < stale ? 2026 : 2026, index < stale ? 8 : 9, index < stale ? 1 : 16, 0, index));
+        const date = new Date(Date.UTC(2026, index < stale ? 8 : 9, index < stale ? 1 : 16, 0, index));
         const id = date.toISOString().slice(0, 16).replace(/[-T:]/g, "");
         const destination = path.join(runRoot, id.slice(0, 4), id.slice(4, 6), id.slice(6, 8), `${id}.png`);
         await mkdir(path.dirname(destination), { recursive: true });

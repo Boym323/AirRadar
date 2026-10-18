@@ -89,10 +89,10 @@ describe("Digital Twin Trajectory Quality Promotion V1", () => {
       downstreamSemanticsRemainCanonical: true,
       horizontalGeometryUnchanged: true,
     });
-    expect(result.corridor.points.map((point) => point.altitudeFt))
-      .toEqual([30000, 25000, 21000, 18000]);
-    expect(result.corridor.points.map(({ altitudeFt: _altitudeFt, ...point }) => point))
-      .toEqual(corridor.points.map(({ altitudeFt: _altitudeFt, ...point }) => point));
+    const promotedAltitudes = result.corridor.points.map((point) => point.altitudeFt);
+    expect(promotedAltitudes).toEqual([30000, 25000, 21000, 18000]);
+    expect(result.corridor.points)
+      .toEqual(corridor.points.map((point, index) => ({ ...point, altitudeFt: promotedAltitudes[index] })));
   });
 
   it("fails closed to canonical when graduation is not PASS", () => {

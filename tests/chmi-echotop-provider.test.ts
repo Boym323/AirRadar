@@ -34,7 +34,7 @@ describe("CHMI Echo Top HDF5/ODIM product",()=>{
       }
       return new Response(Uint8Array.of(137,72,68,70,13,10,26,10,1,2));
     });
-    const converter=vi.fn(async (_raw:Uint8Array)=>Uint8Array.of(137,80,78,71,13,10,26,10));
+    const converter=vi.fn(async ()=>Uint8Array.of(137,80,78,71,13,10,26,10));
     const probe=vi.fn(async()=>true);
     const provider=new EchoTopProvider(fetcher as typeof fetch,()=>NOW,converter,probe);
     const catalog=await provider.getFrames();

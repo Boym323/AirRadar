@@ -122,7 +122,7 @@ export function RouteNetworkDetail({ origin, destination }: { origin: string; de
     };
   }, [origin, destination]);
 
-  const flights = history?.flights ?? [];
+  const flights = useMemo(() => history?.flights ?? [], [history]);
   const routeAggregate = traffic?.topRoutes.find((route) => route.origin === origin && route.destination === destination) ?? null;
   const oldest = flights.at(-1) ?? null;
   const newest = flights[0] ?? null;

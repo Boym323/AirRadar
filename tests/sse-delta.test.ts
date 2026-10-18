@@ -260,7 +260,8 @@ describe("SSE Delta V2", () => {
       distanceKm: 10_000 - index,
       groundSpeed: 430,
     }));
-    const { aircraft: _aircraft, ...metadata } = snapshot(initialAircraft);
+    const { aircraft: baselineAircraft, ...metadata } = snapshot(initialAircraft);
+    expect(baselineAircraft).toHaveLength(initialAircraft.length);
     const applied = applySseV2Event(initialized.state, "delta", {
       ...metadata,
       protocol: SSE_V2_PROTOCOL,

@@ -36,14 +36,15 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
     if (!active || !visible) return;
     let canceled = false;
     let stream: MediaStream | null = null;
+    const video = videoRef.current;
     if (!navigator.mediaDevices?.getUserMedia) return;
     navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } } })
       .then(async (media) => {
         if (canceled) { media.getTracks().forEach((track) => track.stop()); return; }
         stream = media;
-        if (videoRef.current) {
-          videoRef.current.srcObject = media;
-          try { await videoRef.current.play(); } catch { /* Autoplay may be blocked. */ }
+        if (video) {
+          video.srcObject = media;
+          try { await video.play(); } catch { /* Autoplay may be blocked. */ }
         }
         if (!canceled) setState("ready");
       })
@@ -55,7 +56,7 @@ export function SpotterCameraAR({ available, visible, observer, heading, elevati
     return () => {
       canceled = true;
       stream?.getTracks().forEach((track) => track.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
+      if (video) video.srcObject = null;
     };
   }, [active, visible]);
 

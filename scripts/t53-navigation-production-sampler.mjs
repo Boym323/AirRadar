@@ -131,7 +131,7 @@ async function main() {
     const at = new Date().toISOString();
     try {
       rows.push({ at, value: await takeSample(base, cookie) });
-    } catch (error) {
+    } catch {
       // Deliberately never print request headers, body, token, cookie, or
       // external error objects with potentially sensitive context.
       errors.push({ at, issue: "diagnostic_sample_unavailable" });
