@@ -20,10 +20,11 @@ test("backend changes use fast browser smoke but retain core gates", () => {
   assert.deepEqual(plan.visualTargets.split(","), FAST_VISUAL_TARGETS);
 });
 test("radar rendering changes require complete performance baseline", () => {
-  const plan = planReleaseGates(["components/radar/radar-3d.tsx"]);
+  const plan = planReleaseGates(["components/radar/radar-map-layer-menu.tsx"]);
   assert.equal(plan.browser, "targeted");
   assert.equal(plan.performance, "full");
-  assert.match(plan.visualTargets, /radar-v6-d-3d-mobile/);
+  assert.match(plan.visualTargets, /radar-desktop-selected/);
+  assert.doesNotMatch(plan.visualTargets, /radar-v6-d-3d/);
 });
 test("airport-only changes have expanded airport coverage", () => {
   const plan = planReleaseGates(["app/airports/[icao]/page.tsx"]);
@@ -50,7 +51,7 @@ test("each targeted screenshot name exists in the real production capture list",
   assert.ok(start > 0 && end > start, "visual target registry missing");
   const declared = new Set([...source.slice(start, end).matchAll(/name:\s*"([^"]+)"/g)].map((match) => match[1]));
   const examples = [
-    "components/radar/radar-3d.tsx", "components/airport-map.tsx", "app/aircraft/896139/page.tsx",
+    "components/radar/radar-map-layer-menu.tsx", "components/airport-map.tsx", "app/aircraft/896139/page.tsx",
     "app/statistics/page.tsx", "components/weather-operations-center.tsx",
     "components/system-status-page.tsx", "components/receiver-explorer.module.css",
     "components/watchlist-page.tsx", "components/notification-center.tsx",
@@ -91,7 +92,7 @@ test("isolated ATC context and Operational Twin evaluation use radar-targeted UI
     assert.equal(plan.browser, "targeted", file);
     assert.equal(plan.performance, "full", file);
     assert.match(plan.visualTargets, /radar-desktop-selected/, file);
-    assert.match(plan.visualTargets, /radar-v6-d-3d-mobile/, file);
+    assert.match(plan.visualTargets, /radar-desktop-selected/, file);
   }
   assert.equal(planReleaseGates(["lib/operational-twin/map.ts"]).browser, "full");
   assert.equal(planReleaseGates(["lib/atc-context/types.ts"]).browser, "full");

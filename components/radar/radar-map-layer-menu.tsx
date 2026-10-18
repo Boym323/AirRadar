@@ -7,8 +7,6 @@ import type { DatasetState } from "@/components/use-dataset-query";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
-import type { Radar3dMode } from "@/lib/radar/terrain-v6-d";
-import { Radar3dDeviceCheck } from "@/components/radar/radar-3d-device-check";
 
 interface AtsRoutesSummary {
   available: boolean;
@@ -22,13 +20,6 @@ interface RadarFrameSummary {
 }
 
 interface RadarMapLayerMenuProps {
-  radar3dMode: Radar3dMode;
-  radar3dLicensedModels: boolean;
-  onRadar3dLicensedModelsChange: (enabled: boolean) => void;
-  radar3dCamera: "free" | "follow";
-  radar3dCameraAvailable: boolean;
-  onRadar3dCameraChange: (mode: "free" | "follow") => void;
-  onRadar3dModeChange: (mode: Radar3dMode) => void;
   mapAppearance: RadarMapAppearance;
   onMapAppearanceChange: (value: RadarMapAppearance) => void;
   showAircraft: boolean;
@@ -104,13 +95,6 @@ function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countL
 }
 
 export function RadarMapLayerMenu({
-  radar3dMode,
-  radar3dLicensedModels,
-  onRadar3dLicensedModelsChange,
-  radar3dCamera,
-  radar3dCameraAvailable,
-  onRadar3dCameraChange,
-  onRadar3dModeChange,
   mapAppearance,
   onMapAppearanceChange,
   showAircraft,
@@ -241,25 +225,6 @@ export function RadarMapLayerMenu({
             <option value="satellite">{t.locale.startsWith("en") ? "Satellite · 2020" : "Satelitní · 2020"}</option>
           </select>
         </label>
-        <label className="map-layer-mode" data-testid="radar-v6-d-terrain"><span>{t.locale.startsWith("en") ? "Map perspective" : "Perspektiva mapy"}</span>
-          <select value={radar3dMode} onChange={(event) => onRadar3dModeChange(event.target.value as Radar3dMode)}>
-            <option value="2d">2D</option>
-            <option value="3d">{t.locale.startsWith("en") ? "3D terrain (beta)" : "3D terén (beta)"}</option>
-          </select>
-        </label>
-        {radar3dMode === "3d" && <label className="map-layer-mode" data-testid="radar-v6-d-camera"><span>{t.locale.startsWith("en") ? "3D camera" : "3D kamera"}</span>
-          <select value={radar3dCamera} onChange={(event) => onRadar3dCameraChange(event.target.value as "free" | "follow")}>
-            <option value="free">{t.locale.startsWith("en") ? "Free / map" : "Volná / mapa"}</option>
-            <option value="follow" disabled={!radar3dCameraAvailable}>{t.locale.startsWith("en") ? "Follow selected aircraft" : "Sledovat vybrané letadlo"}</option>
-          </select>
-        </label>}
-        {radar3dMode === "3d" && <label data-testid="radar-v6-glb-detail"><input type="checkbox" checked={radar3dLicensedModels} onChange={(event) => onRadar3dLicensedModelsChange(event.target.checked)} />
-          {t.locale.startsWith("en") ? "Detailed aircraft models (online GLB)" : "Detailní modely letadel (online GLB)"}
-        </label>}
-        {radar3dMode === "3d" && <small>{t.locale.startsWith("en") ? "Altitude-aware low-poly 3D, maximum 12 aircraft. Detailed Airbus/Boeing GLBs load for up to two priority aircraft when enabled; others use local silhouettes." : "Výškově umístěné 3D modely, nejvýše 12 letadel. Detailní GLB Airbus/Boeing se načtou jen po zapnutí, nejvýše pro dvě prioritní letadla; ostatní zobrazí lokální siluety."}
-        {radar3dLicensedModels && <> · <a href="https://github.com/amvlab/aircraft-models" target="_blank" rel="noopener noreferrer">amvlab</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> ({t.locale.startsWith("en")?"normalized for AirRadar":"normalizováno pro AirRadar"})</>}
-        </small>}
-        {radar3dMode === "3d" && <Radar3dDeviceCheck />}
         {mapAppearance === "satellite" && <small>{t.locale.startsWith("en") ? "2020 non-live satellite mosaic · EOxCloudless · personal non-commercial use" : "Historický satelitní podklad 2020 · EOxCloudless · pouze nekomerční použití"}</small>}
         {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => onShowRangeRingsChange(event.target.checked)} /> {t.layers.rangeRings}</label>}
         <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => onColorModeChange(event.target.value as AircraftColorMode)}>

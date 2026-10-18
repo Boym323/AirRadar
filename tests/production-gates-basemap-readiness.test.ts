@@ -35,7 +35,7 @@ describe("production browser gate basemap evidence", () => {
     expect(baseline).toContain('await visualPage.reload({ waitUntil: "domcontentloaded" })');
     expect(baseline).toContain('if (target.v6Appearance) {');
     expect(baseline).toContain('selectOption(target.v6Appearance)');
-    expect(baseline).toContain('!target.v6Terrain && !target.v6Presentation && !target.enableV6Multi');
+    expect(baseline).toContain('!target.v6Presentation && !target.enableV6Multi');
     expect(baseline).toContain('map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer))');
     expect(baseline).toContain("failed after one retry");
     expect(baseline).not.toContain("catch { /*ignore*/ }");

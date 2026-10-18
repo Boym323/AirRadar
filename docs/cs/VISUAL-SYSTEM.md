@@ -381,12 +381,11 @@ Přepínač **Více letadel** na živém radaru přidává lokální výběr až
 
 ## V6-C — vyřazená mobilní kamera AR
 
-Mobilní Spotter a jeho volitelné kamerové překrytí byly vyřazeny. Sdílený radar nadále kameru zakazuje a zachovává globální zásadu geolokace pouze pro stejný původ; 2D a volitelný 3D radar zůstávají samostatnými funkcemi.
+Mobilní Spotter a jeho volitelné kamerové překrytí byly vyřazeny. Sdílený radar nadále kameru zakazuje a zachovává globální zásadu geolokace pouze pro stejný původ.
 
-### V6-D1: volitelný 3D terén
+### V6-D — vyřazený volitelný 3D radar
 
-Mapa nabízí **2D (výchozí)** a **3D terén (beta)**. Stávající mapa MapLibre zůstává zachována; výšková data Mapterhorn (DEM) se načítají až po výslovném zapnutí. Vypnutí obnoví plochý pohled bez výměny mapového stylu. Zdroj je uveden v atribuci. Nedostupnost externího DEM nesmí ovlivnit výchozí radar. Ikony letadel jsou zatím mapové značky, **nikoli 3D modely ve skutečné výšce**. Před nasazením ověřit desktop, mobil a výkon GPU.
-
+Volitelný 3D terén, 3D vrstva a modely letadel, stahování GLB i kontrola GPU zařízení byly vyřazeny. Hlavní radar MapLibre zůstává ve 2D se standardními značkami letadel, mapovými styly a vrstvami, běžným sledováním letadla a SSE. Prezentační režim je samostatný a zůstává dostupný.
 
 ### V6-G: prezentační režim (první verze)
 
@@ -398,14 +397,8 @@ Ovládací prvek přepne radar na celou obrazovku, ale používá stávající �
 Detail letadla už zobrazuje na vyžádání načtená data FlightAware (stav, plánované/odhadované/skutečné časy, zpoždění, brány). V6-E přidává označení zdroje AeroAPI, čas získání a konzervativní hodnocení stáří (do 60 minut, starší, neznámé), případně jasnou informaci o nedostupnosti externích údajů. Polohy ADS-B ani odvozené trasy se nevydávají za oficiální letový plán či FIDS. Nové UI nevytváří žádné placené dotazy ani polling na pozadí.
 
 
-### V6-D2–D5: omezené 3D siluety a sledovací kamera
-
-Volitelný 3D terén vykreslí nejvýše 12 jednoduchých prostorových siluet letadel ve skutečných zeměpisných souřadnicích a přibližné výšce. Použije čerstvá pozorování a přednostně geometrickou výšku; barometrická výška je méně přesná náhrada. Jde o **schematický 3D tvar**, nikoli ověřený model konkrétního typu ve formátu GLTF. V menu je volná kamera nebo volitelná kamera sledující vybrané letadlo s omezenou frekvencí pohybů. Vrstva WebGL2 vzniká pouze při zapnutém 3D a při návratu do 2D se odstraní. Počet objektů i geometrie jsou omezené, skrytá záložka se neanimuje. Plné realistické modely a pohled z kabiny vyžadují další GPU testy na skutečných zařízeních.
 
 
-### V6-D6: omezené modely podle konstrukčního typu
-
-Volitelná 3D vrstva používá lokálně vytvářené nízkopolygonové tvary s odlišnými rozměry trupu, rozpětím, polohou křídel, ocasními plochami a motory podle vybraných ICAO kódů (Airbus, Boeing, regionální letadla, všeobecné letectví a vrtulníky). Neznámý typ má obecný náhradní model. Jde o **vizuálně rozlišitelné přibližné tvary**, nikoli přesné licencované modely GLTF/CAD. Geometrie se sdílí podle konečného katalogu typů, nikoli podle identifikátorů letadel; limit zůstává 12 objektů, výchozí režim je 2D a nevznikají další síťové dotazy ani procesy. Pro fotorealistické zobrazení bude nutné ověření na skutečných GPU a mobilech.
 
 
 ## Stav systému V4: jasná hierarchie diagnostiky (2026-10-10)
@@ -432,7 +425,3 @@ seznamu, mobilní ovládání zůstává dotykové. Mění se pouze vzhled a cho
 nabídek, nikoli data mapy, SSE, kamera ani pravidla FlightAware.
 Regresní test: `tests/radar-overlay-visual-polish-v1.test.ts`.
 Před produkčním nasazením ověřit desktopové a mobilní browser testy i snímky.
-
-### V6-D8 – detailní modely a ověření GPU
-Základní 3D terén i ohraničená vrstva až 12 lokálně zachycených letadel zůstává dostupná offline jako jednoduchá vektorová geometrie. Volitelné **Detailní modely letadel (online GLB)** jsou vypnuté ve výchozím stavu; načítají se pouze po uživatelském zapnutí 3D a tohoto přepínače. Používají veřejnou sadu [amvlab/aircraft-models](https://github.com/amvlab/aircraft-models) (bez firemních log), autor **amvlab**, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), normalizovanou do souřadnic a fyzických rozměrů pro AirRadar. Podporované rodiny: A320, A350, A380, B737 a B787. Ostatní typy, chyby dekódování, síťové výpadky nebo nekompatibilní GPU pokračují původními typově odstupňovanými low-poly siluetami. Zdroj assetů je připnut na konkrétní upstream commit; max 1,5 MB/soubor, 5 000 trojúhelníků na detailní model, nejvýše dvě detailní letadla a 12 letadel celkem, žádný nový SSE/serverový dotaz.
-Přepínač 3D poskytuje **Ověřit 3D na tomto zařízení** a export JSON důkazu: WebGL2, identita rendereru (pokud ji prohlížeč zveřejní), limit textur a vzorkovaná cadence requestAnimationFrame. Jde o měření prohlížeče a orientační snímkové odezvy, nikoli o certifikovaný benchmark GPU. Uživatel musí fyzicky ověřit alespoň desktopovou diskrétní/integr. GPU, iOS Safari a Android Chrome, ověřit 2D návrat při selhání WebGL, přepínání stylu, skutečně používané modely, výdrž a teplotu zařízení. Chromium CI test běží softwarově a fyzický telefon nenahrazuje.

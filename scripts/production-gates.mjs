@@ -1095,8 +1095,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-v6-multiview-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableV6Multi: true },
         { name: "radar-v6-light-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "light" },
         { name: "radar-v6-satellite-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "satellite" },
-        { name: "radar-v6-d-3d-terrain", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Terrain: true },
-        { name: "radar-v6-d-3d-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, v6Terrain: true },
         { name: "radar-v6-g-presentation", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Presentation: true },
         { name: "airport-v6-h-authorized-media", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 1366, height: 900 }, fullPage: false, v6Media: true },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
@@ -1582,26 +1580,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await permission.uncheck();
             await media.getByTestId("airport-v6-authorized-player").waitFor({ state: "detached", timeout: 5_000 });
           }
-          if (target.v6Terrain) {
-            const layers = visualPage.locator(".map-layers");
-            // A native <details> interaction must not wait for unrelated SSE-driven navigation.
-            await layers.evaluate((element) => { element.open = true; });
-            await visualPage.getByTestId("radar-v6-d-terrain").locator("select").selectOption("3d");
-            await visualPage.waitForFunction(() => {
-              const map = window.__airradarMapForDiagnostics;
-              return Boolean(map && map.getTerrain() && map.getPitch() >= 50 && map.getSource("radar-v6-d-terrain") && map.getLayer("radar-v6-d-aircraft-3d"));
-            }, null, { timeout: 15_000 });
-            if (process.env.AIRRADAR_V6_ASSET_QA === "1") {
-              const modelToggle=visualPage.getByTestId("radar-v6-glb-detail").locator("input");
-              await modelToggle.evaluate(element => { element.click(); });
-              if (!(await modelToggle.isChecked())) throw new Error("GLB opt-in failed");
-              const credit=visualPage.getByTestId("radar-v6-glb-detail").locator("..");
-              if (!(await credit.textContent())?.includes("GLB")) throw new Error("Missing licensed model toggle");
-              await visualPage.getByTestId("radar-v6-device-qa").getByRole("button", { name:/3D/i }).first().evaluate(element => { element.click(); });
-              await visualPage.getByTestId("radar-v6-device-qa").getByRole("status").waitFor({state:"visible",timeout:20_000});
-            }
-            await layers.evaluate((element) => { element.open = false; });
-          }
           if (target.v6Media) {
             const root = visualPage.getByTestId("airport-media-v6-h");
             const permission = root.locator(".airport-v6-media-permission input");
@@ -1821,7 +1799,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                   styleLoaded: map.isStyleLoaded(),
                   tilesLoaded: map.areTilesLoaded(),
                   renderedVectorFeatures,
-                  terrain: Boolean(map.getTerrain()),
                   pitch: map.getPitch(),
                 };
               }).catch(() => ({ diagnosticsUnavailable: true }));
@@ -1831,7 +1808,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               // vector features. The second attempt must satisfy the same
               // strict nonblank basemap evidence; never turn a blank map green.
               if (evidence.styleEventLoaded === true && evidence.renderedVectorFeatures === 0 && evidence.tilesLoaded === false
-                && !target.v6Terrain && !target.v6Presentation && !target.enableV6Multi
+                && !target.v6Presentation && !target.enableV6Multi
                 && !target.enableMapFocus && !target.selectAircraft && !target.openMapCredits) {
                 console.warn(`[production-gates] transient vector tile readiness on ${target.name}; one strict fresh-navigation retry`);
                 await visualPage.reload({ waitUntil: "domcontentloaded" });
@@ -1898,7 +1875,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         } finally {
           await closePage(visualPage);
         }
-      }, { isExclusive: (target) => target.v6Terrain === true });
+      }, { isExclusive: (target) => target.v6Presentation === true });
       console.log(`[production-gates] visual batch finished durationMs=${Math.round(performance.now() - visualBatchStartedAt)} targets=${selectedTargets.length}`);
     };
     const runResponsiveSweep = configuredViewport ? async () => {} : async () => {

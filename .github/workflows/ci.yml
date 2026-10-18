@@ -60,15 +60,10 @@ jobs:
           echo "critical=${critical}" >> "${GITHUB_OUTPUT}"
           # V6 acceptance is scoped by code changes, not a special branch name.
           changed_paths="$(git diff --name-only "${base}" HEAD)"
-          if grep -Eq '^(lib/radar/(licensed-aircraft-glb-v6|aircraft-3d[^/]*)\.ts|lib/aviation-media[^/]*\.ts|components/(airport-media-links|radar/radar-3d[^/]*)\.tsx?|scripts/v6-media-acceptance\.mjs|tests/(licensed-aircraft-glb-v6|v6-media-acceptance)\.test\.[cm]?[jt]s)$' <<< "${changed_paths}"; then
+          if grep -Eq '^(lib/aviation-media[^/]*\.ts|components/airport-media-links\.tsx?|scripts/v6-media-acceptance\.mjs|tests/v6-media-acceptance\.test\.[cm]?[jt]s)$' <<< "${changed_paths}"; then
             echo "v6_browser=true" >> "${GITHUB_OUTPUT}"
           else
             echo "v6_browser=false" >> "${GITHUB_OUTPUT}"
-          fi
-          if grep -Eq '^(lib/radar/licensed-aircraft-glb-v6\.ts|tests/licensed-aircraft-glb-v6\.test\.ts)$' <<< "${changed_paths}"; then
-            echo "v6_assets=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "v6_assets=false" >> "${GITHUB_OUTPUT}"
           fi
           echo "PR scope: ${scope_json}"
       - name: Review documentation impact (advisory)
@@ -155,29 +150,22 @@ jobs:
       - name: PR critical runtime smoke
         if: github.event_name == 'pull_request' && steps.scope.outputs.critical == 'true'
         run: npm run test:production -- --core
-      - name: Verify pinned CC BY Airbus/Boeing GLB sources
-        if: github.event_name == 'pull_request' && steps.scope.outputs.v6_assets == 'true'
-        env:
-          RUN_LIVE_GLB_ASSET_AUDIT: "1"
-        run: npm run test:targeted -- tests/licensed-aircraft-glb-v6.test.ts
-      # GPU paths need a real browser in addition to typecheck/Vitest/core smoke.
-      - name: Install Chromium for V6 3D browser QA
+      # Media consent and presentation interactions retain their browser coverage.
+      - name: Install Chromium for V6 media browser QA
         if: github.event_name == 'pull_request' && steps.scope.outputs.v6_browser == 'true'
         run: npx playwright install --with-deps chromium
-      - name: V6 3D desktop/mobile browser gate
+      - name: V6 presentation/media browser gate
         if: github.event_name == 'pull_request' && steps.scope.outputs.v6_browser == 'true'
         env:
-          AIRRADAR_VISUAL_TARGETS: radar-v6-d-3d-terrain,radar-v6-d-3d-mobile,radar-v6-g-presentation,airport-v6-h-authorized-media
-          AIRRADAR_V6_ASSET_QA: "1"
+          AIRRADAR_VISUAL_TARGETS: radar-v6-g-presentation,airport-v6-h-authorized-media
         run: npm run test:production:browser
-      - name: Upload V6 3D visual evidence
+      - name: Upload V6 visual evidence
         if: always() && github.event_name == 'pull_request' && steps.scope.outputs.v6_browser == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: v6-3d-browser-${{ github.sha }}
+          name: v6-visual-${{ github.sha }}
           path: |
             artifacts/visual-smoke/radar-v6-*.png
-            artifacts/visual-smoke/radar-v6-*-gpu.json
             artifacts/visual-smoke/airport-v6-media-embed-*.png
           if-no-files-found: ignore
           retention-days: 3

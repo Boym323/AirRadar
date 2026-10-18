@@ -411,12 +411,11 @@ The live radar provides dark (existing OpenFreeMap), light (paint-only recolorin
 
 ## V6-C — retired mobile camera AR
 
-Mobile Spotter and its opt-in camera overlay were retired. The shared radar continues to deny camera access and retain the global same-origin geolocation policy; the 2D and optional 3D radar remain separate features.
+Mobile Spotter and its opt-in camera overlay were retired. The shared radar continues to deny camera access and retain the global same-origin geolocation policy.
 
-### V6-D1: opt-in 3D terrain
+### V6-D — retired optional 3D radar
 
-Radar appearance controls offer **2D (default)** and **3D terrain (beta)**. The existing MapLibre map is unchanged: the Mapterhorn raster DEM is loaded lazily only after opt-in. Switching off disables terrain and restores a flat pitch. Attribution remains visible. DEM requires an external tile provider; the default 2D radar stays independent. Aircraft glyphs are map-projected, **not yet 3D aircraft models at true altitude**. Verify the browser gate, GPU impact, and mobile layout before release.
-
+The optional 3D terrain, 3D aircraft layer and models, GLB downloads, and device GPU check were retired. The primary MapLibre radar remains 2D with its standard aircraft markers, map styles, map layers, normal aircraft follow behavior, and SSE updates. Presentation Mode is separate and remains available.
 
 ### V6-G: Presentation Mode (first delivery)
 
@@ -428,14 +427,9 @@ A dedicated map control enters fullscreen on user action and keeps the existing 
 Aircraft details already show on-demand FlightAware status, actual/estimated/scheduled flight phases, delays, gates and operational context when a paid, rate-limited provider lookup yields data. V6-E adds an explicit AeroAPI provenance/fetch-time banner and conservative freshness assessment (within 60 minutes versus older/unknown), and a clear unavailable state when no provider record exists. ADS-B positions and inferred routes are never relabeled as an airline schedule or official FIDS. No additional paid calls or background polling are introduced by this UI.
 
 
-### V6-D2–D5: bounded 3D airplane silhouettes and follow camera
-
-The optional 3D terrain mode can render up to 12 lightweight, geographic, altitude-anchored 3D airplane silhouettes. Meshes use confirmed positions, fresh observations and geometry altitude when available; barometric altitude is a less precise fallback. This is **not a verified type-specific GLTF model**; wing/fuselage shapes are schematic. In 3D mode the map menu also offers free camera or an optional selected-aircraft follow camera; the latter throttles movement to avoid constant animation. The extra WebGL2 custom layer is created only when 3D is enabled and is removed completely on return to 2D. No backend/stream queries or writes are added. The budget caps geometry/objects, skips offscreen playback and respects reduced-motion. True realistic GLTF fleet models, occlusion and camera-from-cockpit await separate physical-device GPU QA.
 
 
-### V6-D6: finite type-profiled low-poly airframes
 
-The optional 3D custom layer now uses bounded, locally generated airframe geometry with recognizably different fuselage lengths, spans, wing placements, fins and engine placements for selected ICAO aircraft types (Airbus, Boeing, regional aircraft, general aviation and helicopters). Unknown types retain an explicitly generic fallback; observations and positions are never invented. Dimensions are approximate visual profiles, **not manufacturer-approved, type-faithful GLTF or CAD models**. Geometry is cached by a finite static catalog (not aircraft IDs), the limit stays at 12 objects, 2D remains the default and there are no new network requests or background processes. Physical GPU and mobile testing remains required before claiming photorealism.
 
 ## Radar popover / selected-aircraft visual polish (2026-10-10)
 
@@ -452,7 +446,3 @@ on MapLibre source data, trajectories, SSE, map camera, or the on-demand
 FlightAware policy. Regression: `tests/radar-overlay-visual-polish-v1.test.ts`.
 Verify the desktop and mobile visual browser gate and inspect screenshots prior
 to production deployment.
-
-### V6-D8 – licensed aircraft detail and physical GPU QA
-The radar keeps its built-in bounded 3D low-poly geometry (up to 12 aircraft). Optional online **GLB detailed aircraft** mode is off by default and requires explicit 3D + model opt-in. Models: A320, A350, A380, B737, B787 from [amvlab/aircraft-models](https://github.com/amvlab/aircraft-models), © amvlab [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified by normalization to AirRadar coordinates and family lengths/spans. The URL is pinned to a source commit; max 1.5 MB per GLB and 5,000 triangles per detailed model, at most two detailed airframes, no new SSE/server polling. Unknown types and failed assets keep the existing local models.
-The **Check 3D on this device** control exports browser WebGL2, renderer, texture and requestAnimationFrame cadence evidence. This is not GPU certification: test real Windows/macOS graphics, iOS Safari, Android Chrome for performance, battery, thermal effects, map-style changes and WebGL failure recovery. CI Chromium GPU may be software-rendered.
