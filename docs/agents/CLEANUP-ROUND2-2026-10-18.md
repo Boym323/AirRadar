@@ -1,6 +1,6 @@
 # AirRadar cleanup round 2 — decisions and evidence (2026-10-18)
 
-[Česky](../../cs/agents/CLEANUP-ROUND2-2026-10-18.md)
+[Česky](../cs/agents/CLEANUP-ROUND2-2026-10-18.md)
 
 > Dated, task-specific handoff. Read [AGENTS.md](../../AGENTS.md) first. Fresh code, current deployed SHA, CI and measured evidence supersede this snapshot. This document is not permission to delete database history, public contracts, useful resilience/fallback, or to manually deploy.
 
