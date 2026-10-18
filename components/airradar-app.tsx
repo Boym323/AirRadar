@@ -8,7 +8,6 @@ import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEven
 import type { FeatureCollection } from "geojson";
 import {
   formatAtcFrequency,
-  formatAtcLimit,
   formatAtcNote,
   formatAtcService,
   formatDateTime,
@@ -22,10 +21,8 @@ import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import { aircraftMapLabelLevel, aircraftMapLabelText, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
-import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
+import type { AtcDataResponse } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
-import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
@@ -107,6 +104,7 @@ import { RadarQuickActions } from "@/components/radar/radar-quick-actions";
 import { RadarMultiAircraft } from "@/components/radar/radar-multi-aircraft";
 import { addMultiAircraft, removeMultiAircraft, MULTI_AIRCRAFT_LIMIT } from "@/lib/radar/multi-aircraft";
 import { radarWeatherPresentation } from "@/lib/radar/weather-layer-presentation";
+import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/airspace-geojson";
 import { createAirportGeoJSON, createMetarGeoJSON, createAircraftWeatherGeoJSON } from "@/lib/radar/map-context-geojson";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
@@ -201,17 +199,6 @@ const EMPTY_NAVIGATION_INTEGRITY_GEOJSON = { type: "FeatureCollection" as const,
 const OGN_LABEL_SOURCE_ID = "ogn-traffic-labels";
 const OGN_LABEL_LAYER_ID = "ogn-traffic-labels-symbol";
 
-function createNavigationIntegrityGeoJSON(cells: Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }>): FeatureCollection {
-  const size = 0.2;
-  return {
-    type: "FeatureCollection",
-    features: cells.filter((cell) => cell.state !== "NORMAL").map((cell) => {
-      const lat = cell.latCell * size;
-      const lon = cell.lonCell * size;
-      return { type: "Feature", properties: { state: cell.state, affectedAircraftCount: cell.affectedAircraftCount }, geometry: { type: "Polygon", coordinates: [[[lon, lat], [lon + size, lat], [lon + size, lat + size], [lon, lat + size], [lon, lat]]] } };
-    }),
-  };
-}
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
 const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
@@ -390,57 +377,6 @@ function formatAirspaceUtc(value: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
   return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 16)} UTC`;
-}
-
-function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivity: AirspaceActivityResponse | null = null, traffic = new Map<string, SectorTrafficView>()) {
-  const planIndex = buildAirspacePlanMapIndex(airspaceActivity);
-  return {
-    type: "FeatureCollection" as const,
-    features: visible ? sectors.flatMap((sector) => {
-      const plan = matchAirspacePlanForSector(sector, planIndex);
-      const planLabel = plan?.state === "planned-now" ? activityT.plannedNow : plan?.state === "upcoming" ? activityT.upcoming : null;
-      return sector.polygons.filter((polygon) => polygon.length >= 3 && polygon.every(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90)).map((polygon) => ({
-        type: "Feature" as const,
-        properties: {
-          id: sector.id,
-          countryCode: sector.country,
-          name: sector.name,
-          label: planLabel ? `${sector.name} · ${planLabel}` : sector.name,
-          service: formatAtcService(sector.service ?? sector.atcCallsign),
-          airspaceType: sector.airspaceType ?? null,
-          airspaceClass: sector.airspaceClass ?? null,
-          lowerAltitudeFt: sector.lowerAltitudeFt,
-          upperAltitudeFt: sector.upperAltitudeFt,
-          lowerAltitude: formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited),
-          upperAltitude: formatAtcLimit(sector.upperAltitudeFt, sector.upperAltitudeReference, t.common.unlimited),
-          primaryFrequency: formatAtcFrequency((sector.frequencies.find((frequency) => frequency.isPrimary) ?? sector.frequencies[0])?.frequencyMhz),
-          alternateFrequencies: sector.frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", "),
-          source: sector.source,
-          sourceReference: sector.sourceReference,
-          validFrom: sector.validFrom,
-          validTo: sector.validTo,
-          lastVerifiedAt: sector.lastVerifiedAt,
-          activationStatus: sector.activationStatus ?? "UNKNOWN",
-          trafficLevel: traffic.get(sector.id)?.trafficLevel ?? "NO_DATA",
-          trafficAircraftCount: traffic.get(sector.id)?.traffic.aircraftCount ?? null,
-          trafficAt: traffic.get(sector.id)?.at ?? null,
-          airspacePlanState: plan?.state ?? "none",
-          airspacePlanStale: plan?.stale ?? false,
-          airspacePlanSource: plan?.source ?? "",
-          airspacePlanSequence: plan?.sequence ?? 0,
-          airspacePlanSourceReference: plan?.sourceReference ?? "",
-          airspacePlanStartsAt: plan?.startsAt ?? "",
-          airspacePlanEndsAt: plan?.endsAt ?? "",
-          airspacePlanLowerLimit: plan?.lowerLimit ?? "",
-          airspacePlanUpperLimit: plan?.upperLimit ?? "",
-          airspacePlanResponsibleUnit: plan?.responsibleUnit ?? "",
-          airspacePlanActivity: plan?.activity ?? "",
-          airspacePlanDesignator: plan?.canonicalDesignator ?? "",
-        },
-        geometry: { type: "Polygon" as const, coordinates: [polygon] },
-      }));
-    }) : [],
-  };
 }
 
 function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id: string; lat: number; lon: number } | null {
