@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error The production gate helper is runtime-only ESM consumed by Node.
-import { assertMigrationSource, assertProductionReleaseMetadata, isProductionGateFullSmokeViewport, isProductionGateMarkerSmokeViewport, resolveProductionGateChannel } from "../scripts/production-gates.mjs";
+import { assertMigrationSource, assertProductionReleaseMetadata, isProductionGateFullSmokeViewport, isProductionGateMarkerSmokeViewport, resolveProductionGateChannel, readIsolatedGateAdminStatus } from "../scripts/production-gates.mjs";
 
 describe("production release metadata gate", () => {
   it("accepts only the stable production pair", () => {
@@ -319,4 +319,45 @@ describe("production release metadata gate", () => {
     expect(source).toContain("drawer-closed intentionally delays visibility:hidden");
   });
 
+});
+
+describe("isolated production browser-gate admin fixture", () => {
+  it("obtains an authenticated admin projection instead of relabeling public status", async () => {
+    const calls: Array<{ url: string; options?: RequestInit }> = [];
+    const request = async (url: string, options?: RequestInit): Promise<Response> => {
+      calls.push({ url, options });
+      return calls.length === 1
+        ? new Response("{}", { status: 200, headers: { "Set-Cookie": "airradar_watchlist_session=test-cookie; HttpOnly" } })
+        : Response.json({ detailLevel: "admin", localAdsb: { status: "healthy" } });
+    };
+    const result = await readIsolatedGateAdminStatus(request, "http://127.0.0.1:3199", "fixture-token");
+    expect(result.detailLevel).toBe("admin");
+    expect(result.localAdsb.status).toBe("healthy");
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.url).toBe("http://127.0.0.1:3199/api/watchlist/session");
+    expect(calls[0]?.options?.method).toBe("POST");
+    expect(calls[1]?.url).toBe("http://127.0.0.1:3199/api/system/status");
+    expect(calls[1]?.options?.headers).toEqual({ Cookie: "airradar_watchlist_session=test-cookie" });
+  });
+
+  it("fails closed when login does not succeed", async () => {
+    const denied = async (): Promise<Response> => new Response("{}", { status: 401 });
+    await expect(readIsolatedGateAdminStatus(denied, "http://127.0.0.1:3199", "invalid"))
+      .rejects.toThrow("admin login failed (HTTP 401)");
+  });
+
+  it("does not accept missing session cookies or public status projections", async () => {
+    const noCookie = async (): Promise<Response> => Response.json({ authenticated: true });
+    await expect(readIsolatedGateAdminStatus(noCookie, "http://127.0.0.1:3199", "fixture"))
+      .rejects.toThrow("admin session cookie unavailable");
+    let calls = 0;
+    const publicStatus = async (): Promise<Response> => {
+      calls += 1;
+      return calls === 1
+        ? new Response("{}", { status: 200, headers: { "Set-Cookie": "airradar_watchlist_session=opaque" } })
+        : Response.json({ detailLevel: "public" });
+    };
+    await expect(readIsolatedGateAdminStatus(publicStatus, "http://127.0.0.1:3199", "fixture"))
+      .rejects.toThrow("not an authenticated admin projection");
+  });
 });

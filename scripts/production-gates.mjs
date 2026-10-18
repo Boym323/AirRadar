@@ -161,6 +161,8 @@ export function assertMigrationSource(root = process.cwd()) {
 const host = "127.0.0.1";
 const port = Number(process.env.PRODUCTION_GATE_PORT || 3199);
 const baseUrl = `http://${host}:${port}`;
+// This credential is used only by the loopback CI gate server, not production.
+const isolatedGateAdminToken = "production-gate-token";
 
 function urlHasHostname(value, expectedHostname) {
   try {
@@ -189,6 +191,34 @@ async function get(path, options = {}) {
   return fetch(`${baseUrl}${path}`, options);
 }
 
+/** Obtain a genuine admin snapshot from the isolated browser-gate server.
+ * Never promote an anonymous public status to admin by overwriting detailLevel.
+ * Neither the cookie nor the test credential is written into CI diagnostics.
+ */
+export async function readIsolatedGateAdminStatus(request = fetch, base = baseUrl, token = isolatedGateAdminToken) {
+  const session = await request(base + "/api/watchlist/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!session.ok) throw new Error("Isolated browser-gate admin login failed (HTTP " + session.status + ")");
+  const cookie = session.headers.get("set-cookie")?.split(";", 1)[0];
+  if (!cookie?.startsWith("airradar_watchlist_session=")) {
+    throw new Error("Isolated browser-gate admin session cookie unavailable");
+  }
+  const response = await request(base + "/api/system/status", {
+    headers: { Cookie: cookie },
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error("Isolated browser-gate admin status failed (HTTP " + response.status + ")");
+  const snapshot = await response.json();
+  if (snapshot?.detailLevel !== "admin") {
+    throw new Error("Isolated browser-gate snapshot is not an authenticated admin projection");
+  }
+  return snapshot;
+}
 async function waitForHealthyServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -1108,6 +1138,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       // Snapshot must be fetched once, before parallel screenshot workers start.
       // Predictive readiness fixtures depend on this real system response.
       let systemStatusSnapshot = null;
+      let systemAdminStatusSnapshot = null;
       // PR 3D GPU validation may target a small explicit visual subset; releases always run all.
       const requestedVisualTargets = (process.env.AIRRADAR_VISUAL_TARGETS ?? "")
         .split(",").map((name) => name.trim()).filter(Boolean);
@@ -1118,6 +1149,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const upstream = await get("/api/system/status");
         if (!upstream.ok) throw new Error(`System visual smoke status returned HTTP ${upstream.status}`);
         systemStatusSnapshot = await upstream.json();
+      }
+      if (selectedTargets.some((target) => target.mockPredictiveReadiness)) {
+        // Fetch the full authorized status once, before the screenshot workers.
+        systemAdminStatusSnapshot = await readIsolatedGateAdminStatus();
       }
       const visualConcurrency = boundedConcurrency(process.env.AIRRADAR_VISUAL_CONCURRENCY);
       console.log(`[production-gates] visual targets=${selectedTargets.length} concurrency=${visualConcurrency}`);
@@ -1261,12 +1296,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           // System status is fetched before worker startup, never mutated per target.
           if (target.mockPredictiveReadiness) {
-            if (!systemStatusSnapshot) throw new Error("Predictive visual smoke requires a successful real system status snapshot");
+            if (!systemAdminStatusSnapshot) throw new Error("Predictive visual smoke requires an authenticated admin snapshot");
             await visualPage.route("**/api/system/status", async (route) => {
               await route.fulfill({
                 status: 200,
                 contentType: "application/json",
-                body: JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" }),
+                body: JSON.stringify(systemAdminStatusSnapshot),
               });
             });
             await visualPage.route("**/api/system/stream", async (route) => { await route.abort(); });
@@ -2931,7 +2966,7 @@ async function main() {
       OGN_ENABLED: "false",
       FLIGHTAWARE_API_KEY: "",
       AIRRADAR_ADMIN_AUTH_ENABLED: "true",
-      WATCHLIST_ADMIN_TOKEN: "production-gate-token",
+      WATCHLIST_ADMIN_TOKEN: isolatedGateAdminToken,
       AIRRADAR_CHANNEL: gateChannel === "rc" ? "release-candidate" : "production",
       AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
       AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json"),
