@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/airspace-geojson";
 import type { AtcSector } from "@/lib/atc/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
@@ -38,6 +38,33 @@ describe("radar airspace map GeoJSON parity", () => {
       },
       geometry: { type: "Polygon", coordinates: [[[14, 50], [15, 50], [15, 51]]] },
     });
+  });
+
+  it("formats shared sector properties once for multiple polygons without changing output", () => {
+    const polygon: AtcSector["polygons"][number] = [[14, 50], [15, 50], [15, 51]];
+    const traffic = new Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; at: string }>();
+    traffic.set("LKTRA36", { trafficLevel: "BUSY", traffic: { aircraftCount: 12 }, at: "2026-10-18T19:00:00Z" });
+    const get = vi.spyOn(traffic, "get");
+    let frequencyReads = 0;
+    const repeatedSector = { ...sector, polygons: [polygon, polygon, polygon] };
+    Object.defineProperty(repeatedSector, "frequencies", {
+      get() {
+        frequencyReads += 1;
+        return [{ frequencyMhz: 123.45, isPrimary: true }, { frequencyMhz: 124.5, isPrimary: false }];
+      },
+    });
+    const result = createAtcGeoJSON([repeatedSector], true, null, traffic as never);
+    expect(result.features).toHaveLength(3);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(frequencyReads).toBe(1);
+    const first = result.features[0]?.properties;
+    for (const feature of result.features) {
+      expect(feature.properties).toEqual(first);
+      expect(feature.properties).toMatchObject({
+        id: "LKTRA36", trafficLevel: "BUSY", trafficAircraftCount: 12,
+        trafficAt: "2026-10-18T19:00:00Z",
+      });
+    }
   });
 
   it("preserves non-NORMAL Navigation Integrity cells and 0.2-degree geometry", () => {

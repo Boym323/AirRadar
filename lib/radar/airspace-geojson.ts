@@ -26,33 +26,44 @@ export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspac
   return {
     type: "FeatureCollection" as const,
     features: sectors.flatMap((sector) => {
+      const polygons = sector.polygons.filter((polygon) => polygon.length >= 3 && polygon.every(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90));
+      if (!polygons.length) return [];
+      // All polygons of one sector share these values. Avoid repeating lookups,
+      // formatting and planned-activity matching for every polygon.
       const plan = matchAirspacePlanForSector(sector, planIndex);
       const planLabel = plan?.state === "planned-now" ? activityT.plannedNow : plan?.state === "upcoming" ? activityT.upcoming : null;
-      return sector.polygons.filter((polygon) => polygon.length >= 3 && polygon.every(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90)).map((polygon) => ({
+      const sectorTraffic = traffic.get(sector.id);
+      const frequencies = sector.frequencies;
+      const service = formatAtcService(sector.service ?? sector.atcCallsign);
+      const lowerAltitude = formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited);
+      const upperAltitude = formatAtcLimit(sector.upperAltitudeFt, sector.upperAltitudeReference, t.common.unlimited);
+      const primaryFrequency = formatAtcFrequency((frequencies.find((frequency) => frequency.isPrimary) ?? frequencies[0])?.frequencyMhz);
+      const alternateFrequencies = frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", ");
+      return polygons.map((polygon) => ({
         type: "Feature" as const,
         properties: {
           id: sector.id,
           countryCode: sector.country,
           name: sector.name,
           label: planLabel ? `${sector.name} · ${planLabel}` : sector.name,
-          service: formatAtcService(sector.service ?? sector.atcCallsign),
+          service,
           airspaceType: sector.airspaceType ?? null,
           airspaceClass: sector.airspaceClass ?? null,
           lowerAltitudeFt: sector.lowerAltitudeFt,
           upperAltitudeFt: sector.upperAltitudeFt,
-          lowerAltitude: formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited),
-          upperAltitude: formatAtcLimit(sector.upperAltitudeFt, sector.upperAltitudeReference, t.common.unlimited),
-          primaryFrequency: formatAtcFrequency((sector.frequencies.find((frequency) => frequency.isPrimary) ?? sector.frequencies[0])?.frequencyMhz),
-          alternateFrequencies: sector.frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", "),
+          lowerAltitude,
+          upperAltitude,
+          primaryFrequency,
+          alternateFrequencies,
           source: sector.source,
           sourceReference: sector.sourceReference,
           validFrom: sector.validFrom,
           validTo: sector.validTo,
           lastVerifiedAt: sector.lastVerifiedAt,
           activationStatus: sector.activationStatus ?? "UNKNOWN",
-          trafficLevel: traffic.get(sector.id)?.trafficLevel ?? "NO_DATA",
-          trafficAircraftCount: traffic.get(sector.id)?.traffic.aircraftCount ?? null,
-          trafficAt: traffic.get(sector.id)?.at ?? null,
+          trafficLevel: sectorTraffic?.trafficLevel ?? "NO_DATA",
+          trafficAircraftCount: sectorTraffic?.traffic.aircraftCount ?? null,
+          trafficAt: sectorTraffic?.at ?? null,
           airspacePlanState: plan?.state ?? "none",
           airspacePlanStale: plan?.stale ?? false,
           airspacePlanSource: plan?.source ?? "",
