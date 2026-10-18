@@ -33,12 +33,9 @@ function LogoMark() {
 }
 
 function primaryNavigation() { return [
-  { href: "/my-airradar", label: t.myAirRadar.title },
   { href: "/", label: t.radar.liveAirPicture },
   { href: "/spotter", label: "Spotter" },
-  { href: "/events", label: t.locale.startsWith("cs") ? "Události" : "Events" },
   { href: "/airports", label: t.locale.startsWith("cs") ? "Letiště" : "Airports" },
-  { href: "/journeys", label: t.locale.startsWith("cs") ? "Cesty" : "Journeys" },
 ] as const; }
 
 function moreNavigationGroups() {
@@ -54,7 +51,6 @@ function moreNavigationGroups() {
         { href: "/watchlist", label: t.watchlist.title },
         { href: "/alerts", label: t.alerts.title },
         { href: "/notifications", label: cs ? "Oznámení" : "Notifications" },
-        { href: "/workspaces", label: cs ? "Uložená pracoviště" : "Workspaces" },
       ],
     },
     {
@@ -64,7 +60,6 @@ function moreNavigationGroups() {
         { href: "/history", label: t.history.title },
         { href: "/time-machine", label: t.timeMachine.title },
         { href: "/statistics", label: t.statistics.title },
-        { href: "/baselines", label: cs ? "Historické referenční hodnoty" : "Baselines" },
         { href: "/recap/daily", label: t.recap.daily },
         { href: "/recap/weekly", label: t.recap.weekly },
         { href: "/intelligence", label: t.intelligence.title },
@@ -75,7 +70,6 @@ function moreNavigationGroups() {
       label: cs ? "Letecká data" : "Aviation data",
       items: [
         { href: "/fleet", label: t.fleet.title },
-        { href: "/routes", label: cs ? "Trasy" : "Routes" },
         { href: "/navigation", label: cs ? "Navigace" : "Navigation" },
         { href: "/procedures", label: cs ? "Procedury" : "Procedures" },
       ],
@@ -94,7 +88,6 @@ function MoreNavigationGroups({ pathname, mobile = false }: { pathname: string; 
       <div className="navigation-more-group-title" aria-hidden="true">{group.label}</div>
       {mobile && group.id === "operations" ? <>
         <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
-        <a href="/journeys" aria-current={pathMatches(pathname, "/journeys") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Journeys"}</a>
       </> : null}
       {group.items.map(({ href, label }) => {
         const active = pathMatches(pathname, href);
@@ -246,7 +239,7 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const moreActive = isMorePath(pathname) || pathMatches(pathname, "/airports") || pathMatches(pathname, "/journeys");
+  const moreActive = isMorePath(pathname);
 
   const item = (href: Route, label: string, icon: Parameters<typeof UiIcon>[0]["name"], accessibleLabel = label) => {
     const active = pathMatches(pathname, href);
@@ -257,10 +250,10 @@ export function MobileBottomNav() {
   };
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
-      {item("/my-airradar", t.myAirRadar.title, "home")}
       {item("/", "Radar", "radar", t.radar.liveAirPicture)}
       {item("/spotter", "Spotter", "aircraft")}
-      {item("/events", t.locale.startsWith("cs") ? "Události" : "Events", "time")}
+      {item("/airports", t.locale.startsWith("cs") ? "Letiště" : "Airports", "airport")}
+      {item("/watchlist", t.watchlist.title, "aircraft")}
       <details className="mobile-bottom-more">
         <summary className={moreActive ? "active" : undefined}>
           <span className="mobile-bottom-nav-icon" aria-hidden="true"><UiIcon name="more" /></span>

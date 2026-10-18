@@ -218,6 +218,13 @@ ověřte kompatibilitu s Prisma migracemi a validací schématu.
 
 ## Hranice prohlížeče a API
 
+Samostatné stránky Uložená pracoviště, Historické baseline, Přehled leteckých
+událostí, Můj AirRadar, Objevování letadel, Průzkumník sítě tras a sledované
+cesty byly vyřazeny. Jejich modely prohlížeče nejsou sdílené služby. Kanonické
+API událostí Flight Intelligence, souhrn logbooku, statistiky provozu
+přijímače, watchlist, oblíbená letiště, alerty a historické agregáty zůstávají
+dostupné pro ostatní konzumenty.
+
 ### Map Context V1/V2
 
 Map Context je volitelná enrichment hranice s nezávislými providery pro radar

@@ -54,7 +54,7 @@ test("each targeted screenshot name exists in the real production capture list",
     "app/statistics/page.tsx", "components/weather-operations-center.tsx",
     "components/system-status-page.tsx", "components/receiver-explorer.module.css",
     "components/watchlist-page.tsx", "components/notification-center.tsx",
-    "components/my-airradar-home.tsx", "components/recap-page.tsx", "components/operations-dashboard.tsx",
+    "components/recap-page.tsx", "components/operations-dashboard.tsx",
   ];
   for (const path of examples) {
     const planned = planReleaseGates([path]);

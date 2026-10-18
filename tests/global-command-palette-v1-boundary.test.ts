@@ -16,8 +16,6 @@ describe("Global Command Palette V1 boundary", () => {
     for (const href of [
       'href: "/"',
       'href: "/airports"',
-      'href: "/routes"',
-      'href: "/discover"',
       'href: "/weather"',
       'href: "/airspace"',
       'href: "/operations"',

@@ -800,45 +800,6 @@
       ]
     },
     {
-      "id": "route-network-explorer",
-      "name": "Route Network Explorer",
-      "category": "analytics / routes",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans.",
-      "pages": [
-        "/routes",
-        "/routes/:origin/:destination"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "route-network-explorer"
-      ],
-      "changelogKeywords": [
-        "route network",
-        "route explorer"
-      ]
-    },
-    {
-      "id": "aircraft-discovery",
-      "name": "Aircraft Discovery",
-      "category": "discovery / spotting",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded discovery page for notable aircraft.",
-      "pages": [
-        "/discover"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "aircraft-discovery"
-      ],
-      "changelogKeywords": [
-        "aircraft discovery",
-        "discover aircraft"
-      ]
-    },
-    {
       "id": "explainable-prediction",
       "name": "Explainable Prediction",
       "category": "intelligence / prediction",
@@ -888,26 +849,6 @@
       ]
     },
     {
-      "id": "saved-workspaces",
-      "name": "Saved Workspaces",
-      "category": "productivity",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Browser-local named collections of canonical AirRadar links and safe URL/query context, bounded to 12 workspaces with 12 entries each.",
-      "pages": [
-        "/workspaces"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "workspaces"
-      ],
-      "changelogKeywords": [
-        "saved workspaces",
-        "browser-local workspace",
-        "workspace links"
-      ]
-    },
-    {
       "id": "mobile-spotter-mode",
       "name": "Mobile Spotter Mode",
       "category": "mobile / radar",
@@ -944,112 +885,6 @@
         "prg spotting",
         "sighting story",
         "mobile hardening"
-      ]
-    },
-    {
-      "id": "my-airradar-home",
-      "name": "My AirRadar",
-      "category": "personal / productivity",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Personal home surface that composes canonical LOCAL traffic, favorite-airport operations, watchlist matches, bounded alert history, explicit Saved Spots, and browser-local Spotter logbook state without creating a parallel intelligence engine or requesting observer GPS.",
-      "pages": [
-        "/my-airradar"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "my-airradar",
-        "personal-home"
-      ],
-      "changelogKeywords": [
-        "my airradar",
-        "personal home",
-        "personal dashboard"
-      ]
-    },
-    {
-      "id": "aviation-event-feed",
-      "name": "Aviation Event Feed",
-      "category": "intelligence / productivity",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded chronological composition of existing Flight Intelligence, alert history, Navigation Integrity anomalies, and notable favorite-airport operations without a new detector or persistence layer.",
-      "pages": [
-        "/events"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "aviation-event-feed"
-      ],
-      "changelogKeywords": [
-        "aviation event feed",
-        "event timeline",
-        "unified events"
-      ]
-    },
-    {
-      "id": "followed-journeys",
-      "name": "Follow Flight / Journey",
-      "category": "personal / flights",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Browser-local following of a specific journey using durable Flight Intelligence flight/lifecycle identity when available, explicit provisional identity otherwise, canonical event timelines, and automatic landing completion without turning an aircraft watchlist into a journey tracker.",
-      "pages": [
-        "/journeys",
-        "/aircraft/:hex"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "follow-flight",
-        "journeys"
-      ],
-      "changelogKeywords": [
-        "follow flight",
-        "followed journey",
-        "journey timeline"
-      ]
-    },
-    {
-      "id": "historical-baselines",
-      "name": "Historical Baselines",
-      "category": "analytics / intelligence",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Descriptive today-so-far comparison against the median of at least seven completed days from the existing 30-day receiver statistics aggregate, explicitly avoiding raw FlightPosition scans and statistical-significance claims.",
-      "pages": [
-        "/baselines"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "historical-baselines"
-      ],
-      "changelogKeywords": [
-        "historical baseline",
-        "today vs baseline",
-        "30 day median"
-      ]
-    },
-    {
-      "id": "trust-provenance-ui",
-      "name": "Trust & Provenance UI",
-      "category": "platform / trust",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Shared evidence presentation for observed, inferred, predicted, system, and browser-local context with explicit source, freshness and optional confidence; it never changes underlying evidence or creates a data source.",
-      "pages": [
-        "/my-airradar",
-        "/events",
-        "/journeys",
-        "/baselines"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "trust-provenance"
-      ],
-      "changelogKeywords": [
-        "trust provenance",
-        "evidence stamp",
-        "source freshness"
       ]
     },
     {

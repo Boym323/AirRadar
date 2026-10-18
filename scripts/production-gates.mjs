@@ -1078,7 +1078,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "my-sky-focus-desktop", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "my-sky-focus-mobile", path: "/spotter", selector: '[data-testid="my-sky-focus-v2"]', viewport: { width: 390, height: 844 }, fullPage: false },
-        { name: "my-airradar-personal-mobile", path: "/my-airradar", selector: '[data-testid="my-airradar-favorite-aircraft"]', viewport: { width: 390, height: 844 }, fullPage: false, mockSkyFavorites: true },
         // Visual V3.3: reproducible data, empty, unavailable, locale and menu states.
         { name: "weather-data-desktop", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockWeather: "data" },
         { name: "weather-empty-mobile", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 390, height: 844 }, fullPage: true, mockWeather: "empty" },
@@ -1169,9 +1168,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               window.localStorage.setItem("airradar-v6-h-media:LKPR", JSON.stringify([{ kind:"camera", title:"QA YouTube embed", url:"https://www.youtube.com/watch?v=M7lc1UVf-VE" }]));
             });
             await visualPage.route("**/embed/M7lc1UVf-VE?*", async route => route.fulfill({ status:200, contentType:"text/html", body:"<html></html>" }));
-          }
-          if (target.mockSkyFavorites) {
-            await visualPage.addInitScript(() => window.localStorage.setItem("airradar.my-sky-favorites.v1", JSON.stringify({ version: 1, icaoHexes: ["896139"] })));
           }
           if (target.mockAviationEmbed) {
             await visualPage.addInitScript(() => window.localStorage.setItem("airradar-v6-h-media:LKPR", JSON.stringify([{
@@ -1328,11 +1324,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.name.startsWith("my-sky-focus-")) {
             await visualPage.locator('[data-testid="my-sky-focus-v2"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("Ukázat moje nebe", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-          }
-          if (target.mockSkyFavorites) {
-            const favoritesPanel = visualPage.locator('[data-testid="my-airradar-favorite-aircraft"]');
-            await favoritesPanel.getByText("Uložených oblíbených", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
-            await favoritesPanel.getByText("896139", { exact: false }).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.name === "system-desktop") {
             // The public status must load successfully before we reuse its

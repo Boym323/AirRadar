@@ -16,7 +16,6 @@ import { PredictiveAircraftAdvisories } from "@/components/predictive-aircraft-a
 import { AircraftWeatherFusion } from "@/components/aircraft-weather-fusion";
 import { AircraftOperationalTwin } from "@/components/aircraft-operational-twin";
 import { AircraftCommunications } from "@/components/aircraft-communications";
-import { FollowJourneyButton } from "@/components/follow-journey-button";
 import {
   AircraftAltitudeChart,
   AircraftHistorySummaryCard,
@@ -437,16 +436,6 @@ export function AircraftDetailV3({
       <div className={styles.primaryColumn}>
         {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations || (flightAwareEnabled && Boolean(liveAircraft?.callsign))) && <section id="aircraft-flight" className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
           <h2 id="aircraft-current-flight-title">{t.aircraft.currentFlightTitle}</h2>
-          <div className={styles.journeyFollow}>
-            <FollowJourneyButton
-              icaoHex={icaoHex}
-              callsign={liveAircraft?.callsign ?? null}
-              registration={registration ?? null}
-              origin={route?.origin ?? null}
-              destination={route?.destination ?? null}
-            />
-            <Link href={"/journeys"}>{t.locale.startsWith("cs") ? "Sledované cesty" : "Followed journeys"} →</Link>
-          </div>
           {flightAwareEnabled && liveAircraft?.callsign && !flightPlan && <div className="aircraft-trail-actions">
             <button type="button" className="primary-button" disabled={flightAwareLoading} onClick={() => void loadFlightAware()}>
               {flightAwareLoading ? (t.locale.startsWith("cs") ? "Načítání…" : "Loading…") : (t.locale.startsWith("cs") ? "Načíst podrobnosti letu (FlightAware)" : "Load flight details (FlightAware)")}

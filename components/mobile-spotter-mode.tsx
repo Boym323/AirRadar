@@ -32,7 +32,6 @@ import { buildSpotterBriefing } from "@/lib/spotter-briefing";
 import { buildMySkyFocus, selectMySkyFocus } from "@/lib/spotter-focus";
 import { useSpotterObserver } from "@/components/use-spotter-observer";
 import { MY_SKY_FAVORITES_CHANGED_EVENT, MY_SKY_FAVORITES_STORAGE_KEY, parseMySkyFavorites, serializeMySkyFavorites, toggleMySkyFavorite, type MySkyFavorites } from "@/lib/spotter-personalization";
-import { FollowJourneyButton } from "@/components/follow-journey-button";
 import { buildPrgSpottingMode } from "@/lib/spotter-prg-mode";
 import { browserConnectionHints, spotterRuntimeBudget, type SpotterRuntimeBudget } from "@/lib/spotter-runtime-budget";
 import styles from "./mobile-spotter-mode.module.css";
@@ -955,17 +954,6 @@ export function MobileSpotterMode() {
                       ...(focusItem.aircraft.registration ? { registration: focusItem.aircraft.registration } : {}),
                     },
                   }}>{copy.mySkyFocusFollow}</Link>
-                </div>
-                <div className={styles.focusJourney}>
-                  <FollowJourneyButton
-                    key={focusItem.aircraft.icaoHex}
-                    icaoHex={focusItem.aircraft.icaoHex}
-                    callsign={focusItem.aircraft.callsign ?? null}
-                    registration={focusItem.aircraft.registration ?? null}
-                    origin={focusItem.aircraft.enrichment?.route?.origin ?? null}
-                    destination={focusItem.aircraft.enrichment?.route?.destination ?? null}
-                  />
-                  <Link href={"/my-airradar" as Route}>{copy.mySkyMyAirRadar} →</Link>
                 </div>
               </article>
               {mySkyFocus && mySkyFocus.items.length > 1 ? <div className={styles.focusChoices} aria-label={copy.mySkyFocusChoices}>

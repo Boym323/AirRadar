@@ -295,6 +295,13 @@ must be checked before installing the separately managed table.
 
 ## Browser and API boundary
 
+Standalone Saved Workspaces, Historical Baselines, Aviation Event Feed, My
+AirRadar, Aircraft Discovery, Route Network Explorer, and followed-journey
+pages have been retired. Their page-specific browser models are not shared
+services. The canonical Flight Intelligence events API, logbook summary,
+receiver traffic statistics, watchlist, favorite-airport data, alerts, and
+historical aggregates remain available to their other consumers.
+
 ### Map Context V1/V2
 
 Map Context is an optional enrichment boundary with independent providers for

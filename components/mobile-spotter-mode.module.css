@@ -796,23 +796,15 @@
 }
 
 /* B2–B4: personal evidence and opt-in notifications. */
-.focusPersonal,
-.focusJourney {
+.focusPersonal {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-.focusPersonal small,
-.focusJourney a {
+.focusPersonal small {
   color: var(--muted);
   font-size: var(--font-size-xs);
-}
-.focusJourney a {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  text-decoration: underline;
 }
 .favoriteAlertsOptIn {
   display: flex;

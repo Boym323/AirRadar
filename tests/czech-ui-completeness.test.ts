@@ -113,13 +113,9 @@ describe("Czech UI localization coverage", () => {
     expect(simulator).not.toContain('<button className="primary-button" type="submit">Simulate</button>');
   });
 
-  it("keeps historical baselines and predictive explanations readable in Czech", () => {
-    const baseline = source("components/historical-baselines.tsx");
+  it("keeps predictive explanations readable in Czech", () => {
     const predictive = source("components/predictive-aircraft-advisories.tsx");
 
-    expect(baseline).toContain('title: "Historické referenční hodnoty"');
-    expect(baseline).toContain('medianKicker: "MEDIÁN ZA 30 DNÍ"');
-    expect(baseline).toContain("kicker={copy.medianKicker}");
     expect(predictive).toContain('subtitle: "Podklady použité hlavním predikčním modelem"');
     expect(predictive).toContain('adminGate: "Administrátorský náhled"');
     expect(predictive).toContain('readiness: "Důvody hodnocení připravenosti"');
@@ -151,15 +147,11 @@ describe("Czech UI localization coverage", () => {
 
   it("keeps the Czech branches of feature-local dictionaries readable", () => {
     const expected = new Map([
-      ["components/aviation-event-feed.tsx", 'title: "Přehled leteckých událostí"'],
-      ["components/saved-workspaces.tsx", 'title: "Uložená pracoviště"'],
       ["components/navigation-integrity-center.tsx", 'title: "Integrita navigačních dat"'],
       ["components/weather-operations-center.tsx", 'title: "Provozní přehled počasí"'],
-      ["components/route-network-explorer.tsx", 'routeNetwork: "Síť tras"'],
       ["components/traffic-geography.tsx", 'title: "Geografie provozu"'],
       ["components/flight-compare.tsx", 'distance: "Délka zaznamenané stopy"'],
       ["components/airport-compare.tsx", 'title: "Porovnání letišť"'],
-      ["components/aircraft-discovery.tsx", 'sourceUnavailable: "Údaje o objevovaných letadlech jsou dočasně nedostupné."'],
       ["components/aircraft-type-explorer.tsx", 'title: "Typy letadel"'],
       ["components/operator-explorer.tsx", 'topAirline: "Nejčastější společnost"'],
       ["components/flight-intelligence-analytics.tsx", 'title: "Analýza událostí letů"'],
@@ -169,6 +161,5 @@ describe("Czech UI localization coverage", () => {
       expect(czechCopy(path), path).toContain(expectedLabel);
     }
     expect(source("components/command-palette.tsx")).toContain("Moje obloha, fotografické příležitosti a uložená místa");
-    expect(source("components/airradar-shell.tsx")).toContain("Historické referenční hodnoty");
   });
 });
