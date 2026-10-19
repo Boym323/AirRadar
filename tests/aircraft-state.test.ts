@@ -49,6 +49,71 @@ describe("aircraft state service", () => {
     return { sector, confidence: "inside" };
   }
 
+  it("reuses the already parsed network timestamp for trail age pruning", () => {
+    const at = new Date("2026-10-19T09:00:00.000Z");
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const normalized = normalizeAircraft(
+      { hex: "ABC123", flight: "NET123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 10 },
+      receiver, at,
+    );
+    if (!normalized) throw new Error("missing normalized aircraft");
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    services.push(service);
+    const internal = service as unknown as {
+      updateTrail: (previous: Aircraft | undefined, incoming: Aircraft, maxAge?: number, maxPoints?: number, parsedAt?: number) => Aircraft["trail"];
+    };
+
+    // A fresh network poll already validates lastSeen before calling updateTrail.
+    // Only trailPointFromAircraft should still need to parse this lastSeen.
+    const parseSpy = vi.spyOn(Date, "parse");
+    try {
+      const trail = internal.updateTrail(undefined, { ...normalized, origin: "adsblol" }, 60_000, 50, at.getTime());
+      expect(trail).toHaveLength(1);
+      expect(trail[0]?.recordedAt).toBe(new Date(at.getTime() - 10_000).toISOString());
+      const incomingParses = parseSpy.mock.calls.filter(([value]) => value === normalized.lastSeen);
+      expect(incomingParses).toHaveLength(1);
+    } finally {
+      parseSpy.mockRestore();
+    }
+  });
+
+  it("does not rewrite an existing source preference on unchanged network membership", () => {
+    vi.useFakeTimers();
+    const at = new Date("2026-10-19T09:00:00.000Z");
+    vi.setSystemTime(at);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const normalized = normalizeAircraft(
+      { hex: "ABC123", flight: "NET123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 },
+      receiver, at,
+    );
+    if (!normalized) throw new Error("missing normalized aircraft");
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    services.push(service);
+    const internal = service as unknown as {
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+      sourcePreferences: Map<string, "local" | "network">;
+    };
+    const network = { ...normalized, origin: "adsblol" as const };
+    const snapshot = { aircraft: [network], fetchedAt: at.toISOString(), provider: "network-test" };
+    internal.applyNetworkSnapshot(snapshot);
+    expect(internal.sourcePreferences.get("ABC123")).toBe("network");
+
+    const preferenceSet = vi.spyOn(internal.sourcePreferences, "set");
+    try {
+      internal.applyNetworkSnapshot(snapshot);
+      expect(preferenceSet).not.toHaveBeenCalled();
+      // Respect an existing local affinity even when an alternate network
+      // observation arrives; failover remains governed by its grace timer.
+      internal.sourcePreferences.set("ABC123", "local");
+      preferenceSet.mockClear();
+      internal.applyNetworkSnapshot(snapshot);
+      expect(internal.sourcePreferences.get("ABC123")).toBe("local");
+      expect(preferenceSet).not.toHaveBeenCalled();
+    } finally {
+      preferenceSet.mockRestore();
+    }
+  });
+
   it("resolves the network trail limit per snapshot and preserves live config changes", () => {
     vi.useFakeTimers();
     vi.stubEnv("NETWORK_TRAIL_MAX_POINTS", "1");
