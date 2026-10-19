@@ -22,14 +22,10 @@ import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import { aircraftMapLabelLevel, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
-import type { AtcContextResult } from "@/lib/atc-context/types";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
-import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
-import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
 import {
   createOperationalTwinMapGeoJSON,
   emptyOperationalTwinMapGeoJSON,
@@ -43,11 +39,6 @@ import {
   OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
   OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
 } from "@/lib/operational-twin/map";
-import {
-  compareAircraftOperationalFocus,
-  type AircraftOperationalFocusChangeSummary,
-} from "@/lib/operational-twin/aircraft-operational-focus-change";
-import type { AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
 import {
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
@@ -108,6 +99,7 @@ import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud
 import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
+import { useRadarAircraftContext } from "@/components/radar/use-radar-aircraft-context";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
 import { useRadarAtcMapContext } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
@@ -277,13 +269,7 @@ export function AirRadarApp() {
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
   const [followSelected, setFollowSelected] = useState(false);
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
-  const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
-  const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
-  const [selectedOperationalTwin, setSelectedOperationalTwin] = useState<OperationalTwinApiResponse | null>(null);
-  const [selectedOperationalFocusChanges, setSelectedOperationalFocusChanges] = useState<AircraftOperationalFocusChangeSummary | null>(null);
-  const operationalFocusSnapshotsRef = useRef<Map<string, AircraftOperationalFocusSummary>>(new Map());
   const [operationalFocusRevealVersion, setOperationalFocusRevealVersion] = useState(0);
-  const [selectedIntelligenceEvents, setSelectedIntelligenceEvents] = useState<FlightIntelligenceEvent[]>([]);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -2719,6 +2705,17 @@ export function AirRadarApp() {
     selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
     sigmetData,
   ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
+  const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
+  const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
+  const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
+  const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
+  const {
+    atcContext: selectedAtcContext,
+    routeWeather: selectedRouteWeather,
+    operationalTwin: selectedOperationalTwin,
+    operationalFocusChanges: selectedOperationalFocusChanges,
+    intelligenceEvents: selectedIntelligenceEvents,
+  } = useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition });
   const selectedWeatherAvoidance = useMemo(() => buildWeatherAvoidanceIntelligence({
     deviation: selectedSigmetDeviation,
     conformance: selectedRouteCorridor.conformance,
@@ -2726,117 +2723,6 @@ export function AirRadarApp() {
       ? selectedOperationalTwin.weatherCorridor
       : null,
   }), [selectedOperationalTwin, selectedRouteCorridor.conformance, selectedSigmetDeviation]);
-  const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
-  const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
-  const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
-  const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
-
-  useEffect(() => {
-    setSelectedIntelligenceEvents([]);
-    if (!contextAircraftHex) return;
-    const controller = new AbortController();
-    void fetch(`/api/intelligence/events?aircraft=${encodeURIComponent(contextAircraftHex)}&limit=8`, { cache: "no-store", signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ events?: FlightIntelligenceEvent[] }> : null)
-      .then((value) => { if (value?.events) setSelectedIntelligenceEvents(value.events); })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [contextAircraftHex]);
-
-  useEffect(() => {
-    setSelectedAtcContext(null);
-    if (!contextAircraftHex || !contextHasPosition) {
-      return;
-    }
-    let active = true;
-    let timer: number | null = null;
-    let controller: AbortController | null = null;
-    const refresh = async () => {
-      // One in-flight request at a time; the sector estimate is advisory, not real-time ATC.
-      controller = new AbortController();
-      try {
-        const response = await fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/context`, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("ATC context unavailable");
-        const value = await response.json() as AtcContextResult;
-        if (active) setSelectedAtcContext(value);
-      } catch (error) {
-        if (active && !(error instanceof DOMException && error.name === "AbortError")) {
-          setSelectedAtcContext(null);
-        }
-      } finally {
-        controller = null;
-        if (active) timer = window.setTimeout(() => { void refresh(); }, 30_000);
-      }
-    };
-    void refresh();
-    return () => {
-      active = false;
-      if (timer !== null) window.clearTimeout(timer);
-      controller?.abort();
-    };
-  }, [contextAircraftHex, contextHasPosition]);
-
-  useEffect(() => {
-    setSelectedRouteWeather(null);
-    if (!contextAircraftHex || !contextHasPosition || selectedAtcContext?.status !== "available") return;
-    let active = true;
-    let timer: number | null = null;
-    const refresh = () => {
-      void fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/route-weather`, { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok && response.status >= 500) throw new Error("route-weather unavailable");
-          return await response.json() as RouteWeatherContext;
-        })
-        .then((value) => { if (active) setSelectedRouteWeather(value); })
-        .catch(() => { if (active) setSelectedRouteWeather(null); });
-    };
-    refresh();
-    const schedule = () => {
-      timer = window.setTimeout(() => { refresh(); schedule(); }, 120_000);
-    };
-    schedule();
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [contextAircraftHex, contextHasPosition, selectedAtcContext?.status]);
-
-  useEffect(() => {
-    setSelectedOperationalTwin(null);
-    setSelectedOperationalFocusChanges(null);
-    if (!contextAircraftHex || !contextHasPosition) return;
-    let active = true;
-    let timer: number | null = null;
-    const refresh = () => {
-      void fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/situation`, { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok && response.status >= 500) throw new Error("operational twin unavailable");
-          return await response.json() as OperationalTwinApiResponse;
-        })
-        .then((value) => {
-          if (!active) return;
-          setSelectedOperationalTwin(value);
-          if (value.status !== "available" || !value.operationalFocus) {
-            setSelectedOperationalFocusChanges(null);
-            return;
-          }
-          const hex = value.aircraft.icaoHex.toUpperCase();
-          const previous = operationalFocusSnapshotsRef.current.get(hex) ?? null;
-          setSelectedOperationalFocusChanges(compareAircraftOperationalFocus(previous, value.operationalFocus));
-          operationalFocusSnapshotsRef.current.set(hex, value.operationalFocus);
-        })
-        .catch(() => {
-          if (!active) return;
-          setSelectedOperationalTwin(null);
-          setSelectedOperationalFocusChanges(null);
-        });
-    };
-    refresh();
-    const schedule = () => {
-      timer = window.setTimeout(() => { refresh(); schedule(); }, 60_000);
-    };
-    schedule();
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [contextAircraftHex, contextHasPosition]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
   const activeOperationalFocusItem = useMemo(() => {
