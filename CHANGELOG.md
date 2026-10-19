@@ -17,6 +17,29 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.541] - 2026-10-19
+
+Changes since v1.0.540.
+
+**Features touched:** Live Radar, OGN / FLARM.
+
+### Changed
+
+- Isolate OGN stream subscription (52aa222d)
+
+### Maintenance
+
+- Sync generated repository metadata (#1092) (14f0f0f0)
+- Follow extracted OGN stream hook (7782aa0c)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1092) (14f0f0f0)
+- refactor(radar): isolate OGN stream subscription (52aa222d)
+- test(radar): follow extracted OGN stream hook (7782aa0c)
+
+</details>
 ## [1.0.540] - 2026-10-19
 
 Changes since v1.0.539.
