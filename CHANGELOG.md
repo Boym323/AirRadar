@@ -17,6 +17,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.537] - 2026-10-19
+
+Changes since v1.0.536.
+
+**Features touched:** Map Context & Weather.
+
+### Changed
+
+- Remove disabled Echo Top layer and HDF5 conversion (#1075) (17ab4814)
+
+### Documentation
+
+- Record measured options to reduce AirRadar source below 100k LOC (#1074) (613c2fa8)
+
+### Maintenance
+
+- Sync generated repository metadata (#1073) (5cbe37d9)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1073) (5cbe37d9)
+- docs(refactor): record measured options to reduce AirRadar source below 100k LOC (#1074) (613c2fa8)
+- refactor(weather): remove disabled Echo Top layer and HDF5 conversion (#1075) (17ab4814)
+
+</details>
 ## [1.0.536] - 2026-10-19
 
 Changes since v1.0.535.
