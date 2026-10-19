@@ -16,7 +16,6 @@ export interface RadarPresetLayers {
   showSmallAirports: boolean;
   showHeliports: boolean;
   showAtc: boolean;
-  showAtcTraffic: boolean;
   showAtsRoutes: boolean;
   showNavData: boolean;
   showSids: boolean;
@@ -87,7 +86,7 @@ function validLayers(value: unknown): value is RadarPresetLayers {
   const layers = value as Record<string, unknown>;
   return [
     "showAircraft", "showOgn", "showAirports", "showSignificantAirports", "showSmallAirports", "showHeliports",
-    "showAtc", "showAtcTraffic", "showAtsRoutes", "showNavData", "showSids", "showStars", "showSigmet",
+    "showAtc", "showAtsRoutes", "showNavData", "showSids", "showStars", "showSigmet",
     "showWeatherRadar", "showMetar", "showAircraftWeather", "showNavigationIntegrity", "showAupUup",
     "showRangeRings",
   ].every((key) => boolean(layers[key]));
@@ -134,7 +133,10 @@ export function parseRadarPreset(value: unknown): RadarPreset | null {
     },
     coverage: preset.coverage,
     mapFilters: { ...DEFAULT_MAP_AIRCRAFT_FILTERS, ...preset.mapFilters },
-    layers: preset.layers,
+    // Older V1 presets may contain the retired ATC traffic flag.
+    // Drop it while preserving every supported layer and the V1 format.
+    layers: Object.fromEntries(Object.entries(preset.layers as Record<string, unknown>)
+      .filter(([key]) => key !== "showAtcTraffic")) as unknown as RadarPresetLayers,
     display: {
       colorMode: displayValue.colorMode,
       radarOpacity: displayValue.radarOpacity,
