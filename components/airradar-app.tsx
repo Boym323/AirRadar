@@ -450,7 +450,6 @@ export function AirRadarApp() {
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
   const [showAupUup, setShowAupUup] = useState(false);
   const { airspaceDataset, airspaceActivity } = useRadarAtcMapContext({
-    showAtc,
     showAupUup,
   });
   const {
@@ -2711,7 +2710,7 @@ export function AirRadarApp() {
   }, [mapReady, procedures, showSids, showStars]);
 
   useEffect(() => {
-    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup, airspaceActivity);
+    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup, showAupUup ? airspaceActivity : null);
     const transmitterGeoJson: FeatureCollection = {
       type: "FeatureCollection",
       features: showAtc ? atcData.transmitters.filter((transmitter) => Number.isFinite(transmitter.longitude) && Number.isFinite(transmitter.latitude)
@@ -3239,7 +3238,6 @@ export function AirRadarApp() {
                 showAtc={showAtc}
                 onShowAtcChange={setShowAtc}
                 atcDataset={atcDataset}
-                airspaceActivity={airspaceActivity}
                 showAtsRoutes={showAtsRoutes}
                 onShowAtsRoutesChange={(value) => {
                   setShowAtsRoutes(value);
