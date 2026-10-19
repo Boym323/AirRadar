@@ -1,7 +1,7 @@
 # Lightweight ATC in the AirRadar main map (2026-10-19)
 
 ## Scope
-The main radar map displays **published ATC sectors** and essential metadata: names, service, provenance, effective dates, frequencies, vertical limits and transmitter locations. Planned AUP/UUP activity remains an independent optional map layer. Selected aircraft still have published ATC/ATS context and a handoff estimate; these are neither confirmed radio communications nor an authoritative real-time ATC sector configuration.
+The main radar map displays **published ATC sectors** and essential metadata: names, service, provenance, effective dates, frequencies, vertical limits and transmitter locations. Planned AUP/UUP activity loads only when its independent map layer is enabled. Selected aircraft still have published ATC/ATS context and a handoff estimate; these are neither confirmed radio communications nor an authoritative real-time ATC sector configuration.
 
 ## What the main map no longer does
 - Does not poll `/api/atc/sectors/traffic` every 12 seconds.
