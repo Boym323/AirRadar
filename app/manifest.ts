@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Soukromý radar pro přehled leteckého provozu v okolí.",
     start_url: "/",
     display: "standalone",
-    background_color: "#08111d",
-    theme_color: "#08111d",
+    background_color: "#080f1b",
+    theme_color: "#080f1b",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],

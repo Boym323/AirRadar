@@ -5,6 +5,7 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const css = read("app/visual-refactor.css");
 const layout = read("app/layout.tsx");
+const manifest = read("app/manifest.ts");
 const shell = read("components/airradar-shell.tsx");
 
 const color = (name: string) => css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1]?.toLowerCase();
@@ -17,6 +18,13 @@ describe("2026 shared visual refactor", () => {
     expect(css).toContain(".map-overlay-primary");
     expect(css).not.toContain(".maplibregl-canvas");
     expect(css).not.toContain(".maplibregl-ctrl-attrib");
+  });
+
+  it("uses consistent browser chrome and PWA background colors", () => {
+    expect(layout).toContain('themeColor: "#080f1b"');
+    expect(manifest).toContain('background_color: "#080f1b"');
+    expect(manifest).toContain('theme_color: "#080f1b"');
+    expect(css).toContain("--background: #080f1b;");
   });
 
   it("preserves color identity between the UI and map rendering", () => {
