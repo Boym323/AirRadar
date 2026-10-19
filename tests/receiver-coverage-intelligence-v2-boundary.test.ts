@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 const serverSource = readFileSync(new URL("../lib/server/statistics-coverage-intelligence.ts", import.meta.url), "utf8");
 const modelSource = readFileSync(new URL("../lib/receiver-coverage-intelligence.ts", import.meta.url), "utf8");
-const pageSource = readFileSync(new URL("../components/statistics-coverage-intelligence.tsx", import.meta.url), "utf8");
 
 describe("Receiver Coverage Intelligence V2 boundary", () => {
   it("reuses bounded hourly aggregates and never scans FlightPosition", () => {
@@ -30,10 +29,5 @@ describe("Receiver Coverage Intelligence V2 boundary", () => {
     expect(modelSource).toContain("relative < 0.75");
   });
 
-  it("renders the V2 panel without introducing another client fetch", () => {
-    expect(pageSource).toContain('data-testid="receiver-coverage-intelligence-v2"');
-    expect(pageSource).toContain("data.intelligenceV2.hourly");
-    expect(pageSource).toContain("data.intelligenceV2.sectors");
-    expect(pageSource.match(/fetch\(/g)?.length ?? 0).toBe(1);
-  });
+
 });

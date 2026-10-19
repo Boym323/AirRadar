@@ -118,7 +118,7 @@ describe("radar UI polish helpers", () => {
     const mobile = shellSource.slice(shellSource.indexOf("export function MobileBottomNav"), shellSource.indexOf("export function AirRadarPageShell"));
     expect(shellSource).toContain("mobile-bottom-nav");
     expect(grouped).toContain('href: "/alerts"');
-    expect(grouped).toContain('href: "/recap/daily"');
+    expect(grouped).toContain('href: "/history"');
     expect(shellSource).toContain('mobile && group.id === "operations"');
     expect(mobile).toContain("<MoreNavigationGroups pathname={pathname} mobile />");
     expect(globalCss).toContain(".mobile-bottom-more > div");

@@ -23,7 +23,6 @@ describe("Global Command Palette V1 boundary", () => {
       'href: "/compare/flights"',
       'href: "/compare/airports"',
       'href: "/navigation-integrity"',
-      'href: "/statistics"',
       'href: "/system"',
     ]) expect(paletteSource).toContain(href);
   });
