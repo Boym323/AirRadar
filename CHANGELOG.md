@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.531] - 2026-10-19
+
+Changes since v1.0.530.
+
+### Changed
+
+- Remove redundant global status-request counter (#1059) (fc45aba5)
+
+### Maintenance
+
+- Sync generated repository metadata (#1055) (8e8a0d54)
+- Retire one-off T50 health probe and unused perf gate helper (#1060) (9500204d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1055) (8e8a0d54)
+- chore(scripts): retire one-off T50 health probe and unused perf gate helper (#1060) (9500204d)
+- refactor(status): remove redundant global status-request counter (#1059) (fc45aba5)
+
+</details>
 ## [1.0.530] - 2026-10-19
 
 Changes since v1.0.529.
