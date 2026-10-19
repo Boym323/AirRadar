@@ -15,6 +15,7 @@ const radarSource = readFileSync(new URL("../components/airradar-app.tsx", impor
 const radarLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
+const ognStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
 const searchTriggerSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
 const commandPaletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
 const serverSearchSource = readFileSync(new URL("../lib/server/search.ts", import.meta.url), "utf8");
@@ -102,7 +103,7 @@ describe("feature integration", () => {
   it("keeps global search in the header without changing map transport", () => {
     expect(shellSource).toContain('import { GlobalSearch } from "@/components/global-search";');
     expect(shellSource).toContain("<GlobalSearch />");
-    expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
+    expect(`${radarSource}\n${ognStreamSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     expect(streamSource.match(/\/api\/stream/g)).toHaveLength(1);
     // Presentation Mode and RXW waypoint overlays use bounded auxiliary timers; SSE transport is verified above.
     expect(radarSource).not.toContain("new EventSource(\"/api/trail");
@@ -118,7 +119,7 @@ describe("feature integration", () => {
     expect(radarSource).toContain("showRangeRings");
     expect(radarSource).toContain("snapshot.receiver.lat === null || snapshot.receiver.lon === null");
     expect(radarLayerMenuSource).toContain("receiverPositionAvailable && <label>");
-    expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
+    expect(`${radarSource}\n${ognStreamSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
   });
 
   it("keeps aircraft and airport result navigation canonical", () => {

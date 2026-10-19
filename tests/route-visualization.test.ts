@@ -32,6 +32,7 @@ import {
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
+const ognStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
 
 const origin: Airport = {
   icaoCode: "lkpr",
@@ -153,7 +154,7 @@ describe("route visualization V2", () => {
   });
 
   it("does not add a route network loop or FlightPosition query", () => {
-    expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
+    expect(`${radarSource}\n${ognStreamSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     expect(streamSource.match(/\/api\/stream/g)).toHaveLength(1);
     expect(radarSource).not.toContain("FlightPosition");
     expect(radarSource).toContain("createRouteGeoJSON(");

@@ -5,6 +5,7 @@ import { GET as getAirports } from "@/app/api/airports/route";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const trafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
+const ognStreamHook = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
 const intelligenceHook = readFileSync(new URL("../components/use-intelligence-stream.ts", import.meta.url), "utf8");
 const airportsRoute = readFileSync(new URL("../app/api/airports/route.ts", import.meta.url), "utf8");
 const historyRoute = readFileSync(new URL("../app/api/history/[hex]/route.ts", import.meta.url), "utf8");
@@ -22,7 +23,8 @@ describe("secondary data loading", () => {
   it("loads OGN only after the layer is explicitly enabled and closes its stream when hidden", () => {
     expect(appSource).toContain("if (!showOgn) {");
     expect(appSource).toContain("if (ognLoadStartedRef.current) return;");
-    expect(appSource).toContain("if (ognEnabled !== true || !showOgn) return;");
+    expect(ognStreamHook).toContain("if (enabled !== true || !showOgn) return;");
+    expect(ognStreamHook).toContain("source.close()");
     expect(appSource).toContain('fetch("/api/ogn/state"');
   });
 
