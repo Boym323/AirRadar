@@ -57,7 +57,7 @@ export function LogbookSummary() {
         <h2 id="dashboard-logbook-title">{t.dashboard.logbookTitle}</h2>
         <p>{t.dashboard.logbookDescription}</p>
       </div>
-      <div className="logbook-summary-links"><Link href="/fleet">{t.dashboard.openFleet}</Link><Link href="/statistics">{t.dashboard.openStatistics}</Link></div>
+      <div className="logbook-summary-links"><Link href="/fleet">{t.dashboard.openFleet}</Link><Link href="/receiver/coverage">{t.locale.startsWith("cs") ? "Pokrytí přijímače" : "Receiver coverage"}</Link></div>
     </div>
     {failed ? <p className="logbook-summary-message">{t.dashboard.unavailable}</p> : !data ? <p className="logbook-summary-message">{t.dashboard.loading}</p> : <>
       <div className="dashboard-logbook-metrics">

@@ -173,7 +173,6 @@ export function CommandPalette() {
 
   const commands = useMemo<StaticCommand[]>(() => [
     { key: "live", label: t.commandSearch.liveRadar, detail: t.commandSearch.liveRadarDetail, href: "/", icon: "radar", keywords: ["live", "radar", "map"] },
-    { key: "today", label: t.commandSearch.today, detail: t.commandSearch.todayDetail, href: "/recap/daily", icon: "time", keywords: ["today", "daily", "recap", "dnes"] },
     { key: "operations-center", label: t.commandSearch.operationsCenter, detail: t.commandSearch.operationsCenterDetail, href: "/?operations=1", icon: "radar", keywords: ["operations center", "now", "events", "události"], action: "operations" },
     { key: "airports", label: t.commandSearch.airports, detail: t.commandSearch.airportsDetail, href: "/airports", icon: "airport", keywords: ["airports", "letiště"] },
     { key: "weather", label: t.locale.startsWith("cs") ? "Otevřít počasí" : "Open Weather", detail: t.locale.startsWith("cs") ? "Provozní meteorologický přehled" : "Operational weather overview", href: "/weather", icon: "radar", keywords: ["weather", "metar", "sigmet", "počasí"] },
@@ -183,7 +182,6 @@ export function CommandPalette() {
     { key: "compare-flights", label: t.locale.startsWith("cs") ? "Porovnat lety" : "Compare Flights", detail: t.locale.startsWith("cs") ? "Porovnání dvou historických letů" : "Compare two historical flights", href: "/compare/flights", icon: "flight", keywords: ["compare flights", "flight compare", "porovnat lety"] },
     { key: "compare-airports", label: t.locale.startsWith("cs") ? "Porovnat letiště" : "Compare Airports", detail: t.locale.startsWith("cs") ? "Porovnání provozu dvou letišť" : "Compare two airports", href: "/compare/airports", icon: "airport", keywords: ["compare airports", "airport compare", "porovnat letiště"] },
     { key: "navigation-integrity", label: t.locale.startsWith("cs") ? "Otevřít integritu navigačních dat" : "Open Navigation Integrity", detail: t.locale.startsWith("cs") ? "Integrita navigačních dat" : "Navigation data integrity", href: "/navigation-integrity", icon: "system", keywords: ["navigation integrity", "integrity", "gnss"] },
-    { key: "statistics", label: t.statistics.title, detail: t.commandSearch.statisticsDetail, href: "/statistics", icon: "statistics", keywords: ["statistics", "stats", "statistiky"] },
     { key: "alerts", label: t.alerts.title, detail: t.commandSearch.alertsDetail, href: "/alerts", icon: "system", keywords: ["alerts", "warnings", "alerty"] },
     { key: "time-machine", label: t.timeMachine.title, detail: t.commandSearch.timeMachineDetail, href: "/time-machine", icon: "time", keywords: ["time machine", "history", "replay"] },
     { key: "system", label: t.system.title, detail: t.commandSearch.systemDetail, href: "/system", icon: "system", keywords: ["system", "health", "status"] },

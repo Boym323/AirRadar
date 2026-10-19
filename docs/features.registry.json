@@ -302,18 +302,8 @@
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights.",
-      "pages": [
-        "/heatmap",
-        "/recap/daily",
-        "/recap/weekly",
-        "/statistics",
-        "/records",
-        "/aircraft-types",
-        "/operators",
-        "/traffic/rhythm",
-        "/traffic/geography"
-      ],
+      "summary": "Legacy receiver statistics and recap APIs retained for internal consumers and compatibility; all standalone statistics, chart, records, airline/type explorer, and daily/weekly recap pages have been retired.",
+      "pages": [],
       "apis": [
         "/api/logbook/summary",
         "/api/recap",
