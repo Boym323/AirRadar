@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.539] - 2026-10-19
+
+Changes since v1.0.538.
+
+**Features touched:** Airport Intelligence.
+
+### Performance
+
+- Index correlated movement history and share V9 demand aggregation (#1079) (03574e81)
+
+### Maintenance
+
+- Sync generated repository metadata (#1078) (28e9b72f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1078) (28e9b72f)
+- perf(airport): index correlated movement history and share V9 demand aggregation (#1079) (03574e81)
+
+</details>
 ## [1.0.538] - 2026-10-19
 
 Changes since v1.0.537.
