@@ -88,11 +88,7 @@
       "introducedVersion": null,
       "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories.",
       "pages": [
-        "/aircraft/:hex",
-        "/flights/:id",
-        "/history",
-        "/flights",
-        "/compare/flights"
+        "/aircraft/:hex"
       ],
       "apis": [
         "/api/aircraft/:hex/context",
@@ -150,8 +146,7 @@
       "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion.",
       "pages": [
         "/airports",
-        "/airports/:icao",
-        "/compare/airports"
+        "/airports/:icao"
       ],
       "apis": [
         "/api/airports",
@@ -201,9 +196,7 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence.",
-      "pages": [
-        "/time-machine"
-      ],
+      "pages": [],
       "apis": [
         "/api/time-machine/range",
         "/api/time-machine/window"
@@ -335,16 +328,7 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, server-side paginated filtering/search, rationale, reversible aircraft/rule delivery mutes, delivery health diagnostics, authenticated dry-run alert rule simulation, and bounded alert effectiveness analytics.",
-      "pages": [
-        "/watchlist",
-        "/alerts",
-        "/notifications",
-        "/fleet",
-        "/admin/alerts",
-        "/admin/alerts/delivery-health",
-        "/admin/alerts/simulator",
-        "/admin/alerts/analytics"
-      ],
+      "pages": [],
       "apis": [
         "/api/alerts",
         "/api/watchlist",
@@ -384,10 +368,7 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events.",
-      "pages": [
-        "/intelligence",
-        "/intelligence/analytics"
-      ],
+      "pages": [],
       "apis": [
         "/api/intelligence/events",
         "/api/intelligence/stream",
@@ -412,10 +393,7 @@
       "introducedVersion": null,
       "summary": "ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data.",
       "pages": [
-        "/airspace",
-        "/airspace/sectors/:id",
-        "/navigation",
-        "/procedures"
+        "/navigation"
       ],
       "apis": [
         "/api/airspace/activity",
@@ -600,8 +578,7 @@
       "summary": "Bounded 30-minute aircraft situation projection with route, PIREP/SIGMET corridor evidence, Navigation Integrity, a canonical Prediction Timeline V1 on aircraft detail, readiness-gated PUBLIC predictive context, prospective outcome validation, regional multi-aircraft attention with LOCAL outcome calibration and graduation-gated 5/15/30-minute map context, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates.",
       "pages": [
         "/aircraft/:hex",
-        "/",
-        "/admin/operational-twin/calibration"
+        "/"
       ],
       "apis": [
         "/api/admin/operational-twin/calibration",
@@ -696,29 +673,6 @@
       ]
     },
     {
-      "id": "operations-dashboard",
-      "name": "Operations Dashboard",
-      "category": "operations",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Live operational dashboard combining canonical local traffic, airport flow, bounded next-30-minute arrival context, Regional Attention, and Flight Intelligence without creating a parallel intelligence engine.",
-      "pages": [
-        "/operations"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "operations-dashboard"
-      ],
-      "changelogKeywords": [
-        "operations dashboard",
-        "live traffic",
-        "airport flow",
-        "next 30 minutes",
-        "notable events",
-        "attention dashboard"
-      ]
-    },
-    {
       "id": "live-airport-network",
       "name": "Live Airport Network",
       "category": "airports",
@@ -769,14 +723,8 @@
       "introducedVersion": null,
       "summary": "Bookmarkable URL state across analytical, comparison, navigation, procedure and sector-detail surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
       "pages": [
-        "/airspace",
-        "/compare/airports",
-        "/compare/flights",
         "/navigation-integrity",
-        "/time-machine",
-        "/navigation",
-        "/procedures",
-        "/airspace/sectors/:id"
+        "/navigation"
       ],
       "apis": [],
       "changelogScopes": [

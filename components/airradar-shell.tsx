@@ -34,48 +34,21 @@ function LogoMark() {
 
 function primaryNavigation() { return [
   { href: "/", label: t.radar.liveAirPicture, icon: "radar" },
-  { href: "/intelligence", label: t.intelligence.title, icon: "statistics" },
   { href: "/airports", label: t.locale.startsWith("cs") ? "Letiště" : "Airports", icon: "airport" },
+  { href: "/weather", label: t.locale.startsWith("cs") ? "Počasí" : "Weather", icon: "system" },
 ] as const; }
 
 function moreNavigationGroups() {
   const cs = t.locale.startsWith("cs");
   return [
-    {
-      id: "operations",
-      label: cs ? "Provoz a radar" : "Operations & radar",
-      items: [
-        { href: "/operations", label: t.operations.title },
-        { href: "/airspace", label: cs ? "Vzdušný prostor" : "Airspace" },
-        { href: "/weather", label: cs ? "Počasí" : "Weather" },
-        { href: "/watchlist", label: t.watchlist.title },
-        { href: "/alerts", label: t.alerts.title },
-        { href: "/notifications", label: cs ? "Oznámení" : "Notifications" },
-      ],
-    },
-    {
-      id: "history",
-      label: cs ? "Historie a analýza" : "History & analysis",
-      items: [
-        { href: "/history", label: t.history.title },
-        { href: "/time-machine", label: t.timeMachine.title },
-        { href: "/intelligence", label: t.intelligence.title },
-      ],
-    },
-    {
-      id: "aviation",
-      label: cs ? "Letecká data" : "Aviation data",
-      items: [
-        { href: "/fleet", label: t.fleet.title },
-        { href: "/navigation", label: cs ? "Navigace" : "Navigation" },
-        { href: "/procedures", label: cs ? "Procedury" : "Procedures" },
-      ],
-    },
-    {
-      id: "system",
-      label: cs ? "Systém" : "System",
-      items: [{ href: "/system", label: t.system.title }],
-    },
+    { id: "aviation", label: cs ? "Letecká data" : "Aviation data", items: [
+      { href: "/navigation", label: cs ? "Navigace" : "Navigation" },
+      { href: "/navigation-integrity", label: cs ? "Integrita navigace" : "Navigation integrity" },
+      { href: "/receiver/coverage", label: cs ? "Pokrytí přijímače" : "Receiver coverage" },
+    ] },
+    { id: "system", label: cs ? "Systém" : "System", items: [
+      { href: "/system", label: t.system.title },
+    ] },
   ] as const;
 }
 
@@ -83,9 +56,6 @@ function MoreNavigationGroups({ pathname, mobile = false }: { pathname: string; 
   return moreNavigationGroups().map((group) => (
     <div className="navigation-more-group" role="group" aria-label={group.label} key={group.id}>
       <div className="navigation-more-group-title" aria-hidden="true">{group.label}</div>
-      {mobile && group.id === "operations" ? <>
-        <Link href="/airports" prefetch={false} aria-current={pathMatches(pathname, "/airports") ? "page" : undefined}>{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
-      </> : null}
       {group.items.map(({ href, label }) => {
         const active = pathMatches(pathname, href);
         const attributes = { "aria-current": active ? "page" as const : undefined, className: active ? "active" : undefined };
@@ -103,7 +73,7 @@ function pathMatches(pathname: string, href: string): boolean {
 
 function isMorePath(pathname: string): boolean {
   return moreNavigationGroups().some(({ items }) => items.some(({ href }) => pathMatches(pathname, href)))
-    || ["/aircraft", "/flights"].some((prefix) => pathname.startsWith(prefix));
+    || pathname.startsWith("/aircraft");
 }
 
 export function UtcClock() {
@@ -121,10 +91,19 @@ export function UtcClock() {
 
 function radarRailNavigation() { return [
   { href: "/", label: t.radar.liveAirPicture, icon: "radar", active: true },
-  { href: "/history", label: t.airportTraffic.flights, icon: "flight", active: false },
-  { href: "/time-machine", label: t.timeMachine.title, icon: "time", active: false },
   { href: "/system", label: t.system.title, icon: "system", active: false },
 ] as const; }
+
+export function UtcClock() {
+  const [utc, setUtc] = useState<Date | null>(null);
+  useEffect(() => {
+    const update = () => setUtc(new Date());
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <time className="topbar-utc" dateTime={utc?.toISOString()} aria-label="UTC"><span>UTC</span>{utc ? utc.toISOString().slice(11, 19) : "--:--:--"}</time>;
+}
 
 export function RadarNavRail({
   showAtc,
@@ -148,8 +127,10 @@ export function RadarNavRail({
               <span className="radar-rail-icon" aria-hidden="true"><UiIcon name={icon} /></span>
               <span className="radar-rail-label">{label}</span>
             </Link>;
-          return href === "/history" ? <>{link}<button type="button" className={`radar-rail-link ${showAirports ? "active" : ""}`} aria-pressed={showAirports} onClick={() => onShowAirportsChange(!showAirports)}><span className="radar-rail-icon" aria-hidden="true"><UiIcon name="airport" /></span><span className="radar-rail-label">{t.layers.airports}</span></button></> : href === "/time-machine" ? <>{link}<button type="button" className={`radar-rail-link ${showAtc ? "active" : ""}`} aria-pressed={showAtc} onClick={() => onShowAtcChange(!showAtc)}><span className="radar-rail-icon" aria-hidden="true"><UiIcon name="atc" /></span><span className="radar-rail-label">{t.layers.atc}</span></button></> : link;
+          return link;
         })}
+        <button type="button" className={`radar-rail-link ${showAirports ? "active" : ""}`} aria-pressed={showAirports} onClick={() => onShowAirportsChange(!showAirports)}><span className="radar-rail-icon" aria-hidden="true"><UiIcon name="airport" /></span><span className="radar-rail-label">{t.layers.airports}</span></button>
+        <button type="button" className={`radar-rail-link ${showAtc ? "active" : ""}`} aria-pressed={showAtc} onClick={() => onShowAtcChange(!showAtc)}><span className="radar-rail-icon" aria-hidden="true"><UiIcon name="atc" /></span><span className="radar-rail-label">{t.layers.atc}</span></button>
       </nav>
     </aside>
   );
@@ -223,8 +204,8 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
           <summary aria-label={t.common.more}><UiIcon name="more" /></summary>
           <div>
             <Link href="/system">{t.system.title}</Link>
-            <Link href="/watchlist">{t.watchlist.title}</Link>
-            <Link href="/history">{t.history.title}</Link>
+            <Link href="/airports">{t.locale.startsWith("cs") ? "Letiště" : "Airports"}</Link>
+            <Link href="/weather">{t.locale.startsWith("cs") ? "Počasí" : "Weather"}</Link>
             <div className="mobile-language-switch"><LanguageSwitch /></div>
           </div>
         </details>
@@ -247,9 +228,9 @@ export function MobileBottomNav() {
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
       {item("/", "Radar", "radar", t.radar.liveAirPicture)}
-      {item("/intelligence", t.intelligence.title, "radar")}
+      {item("/weather", t.locale.startsWith("cs") ? "Počasí" : "Weather", "system")}
       {item("/airports", t.locale.startsWith("cs") ? "Letiště" : "Airports", "airport")}
-      {item("/watchlist", t.watchlist.title, "aircraft")}
+      {item("/navigation-integrity", t.locale.startsWith("cs") ? "Integrita" : "Integrity", "system")}
       <details className="mobile-bottom-more">
         <summary className={moreActive ? "active" : undefined}>
           <span className="mobile-bottom-nav-icon" aria-hidden="true"><UiIcon name="more" /></span>
