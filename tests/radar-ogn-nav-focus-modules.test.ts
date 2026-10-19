@@ -20,15 +20,15 @@ describe("Radar OGN label and navigation focus modules", () => {
       labelText: null, labelPrimary, labelSecondary, label,
       labelWidth: 90, labelHeight: 25,
     } as unknown as OgnMarkerHandle;
-    expect(setOgnDomLabel(handle, "OK-ABC\\n1200 m")).toBe(true);
-    expect(handle.labelText).toBe("OK-ABC\\n1200 m");
+    expect(setOgnDomLabel(handle, "OK-ABC\n1200 m")).toBe(true);
+    expect(handle.labelText).toBe("OK-ABC\n1200 m");
     expect(labelPrimary.textContent).toBe("OK-ABC");
     expect(labelSecondary.textContent).toBe("1200 m");
     expect(labelSecondary.hidden).toBe(false);
     expect(label.dataset.contentEmpty).toBe("false");
     expect(handle.labelWidth).toBeNull();
     expect(handle.labelHeight).toBeNull();
-    expect(setOgnDomLabel(handle, "OK-ABC\\n1200 m")).toBe(false);
+    expect(setOgnDomLabel(handle, "OK-ABC\n1200 m")).toBe(false);
     expect(setOgnDomLabel(handle, null)).toBe(true);
     expect(labelSecondary.hidden).toBe(true);
     expect(label.dataset.contentEmpty).toBe("true");
