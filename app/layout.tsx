@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import "./language-switch.css";
 import "./radar-aircraft-panel.css";
+import "./visual-refactor.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { AirRadarQueryProvider } from "@/components/query-provider";
 import { CommandPalette } from "@/components/command-palette";

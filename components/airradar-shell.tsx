@@ -33,9 +33,9 @@ function LogoMark() {
 }
 
 function primaryNavigation() { return [
-  { href: "/", label: t.radar.liveAirPicture },
-  { href: "/intelligence", label: t.intelligence.title },
-  { href: "/airports", label: t.locale.startsWith("cs") ? "Letiště" : "Airports" },
+  { href: "/", label: t.radar.liveAirPicture, icon: "radar" },
+  { href: "/intelligence", label: t.intelligence.title, icon: "statistics" },
+  { href: "/airports", label: t.locale.startsWith("cs") ? "Letiště" : "Airports", icon: "airport" },
 ] as const; }
 
 function moreNavigationGroups() {
@@ -203,9 +203,9 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
       <GlobalSearch />
       {!radarPage ? <>
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
-          {primaryNavigation().map(({ href, label }) => {
+          {primaryNavigation().map(({ href, label, icon }) => {
             const active = pathMatches(pathname, href);
-            return <Link key={href} className={`topbar-nav-primary ${active ? "active" : ""}`} href={href} aria-current={active ? "page" : undefined}>{label}</Link>;
+            return <Link key={href} className={`topbar-nav-primary ${active ? "active" : ""}`} href={href} aria-current={active ? "page" : undefined}><UiIcon name={icon} /><span>{label}</span></Link>;
           })}
           <details className="topbar-nav-more">
             <summary className={isMorePath(pathname) ? "active" : undefined}>{t.common.more}</summary>
@@ -220,7 +220,7 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
         <div className="desktop-language-switch"><LanguageSwitch /></div>
         {meta ? <div className="topbar-meta">{meta}</div> : null}
         <details className="topbar-menu">
-          <summary aria-label={t.common.more}><span aria-hidden="true">•••</span></summary>
+          <summary aria-label={t.common.more}><UiIcon name="more" /></summary>
           <div>
             <Link href="/system">{t.system.title}</Link>
             <Link href="/watchlist">{t.watchlist.title}</Link>
@@ -239,10 +239,10 @@ export function MobileBottomNav() {
 
   const item = (href: Route, label: string, icon: Parameters<typeof UiIcon>[0]["name"], accessibleLabel = label) => {
     const active = pathMatches(pathname, href);
-    return <a className={active ? "active" : ""} href={href} aria-label={accessibleLabel} aria-current={active ? "page" : undefined}>
+    return <Link prefetch={false} className={active ? "active" : ""} href={href} aria-label={accessibleLabel} aria-current={active ? "page" : undefined}>
       <span className="mobile-bottom-nav-icon" aria-hidden="true"><UiIcon name={icon} /></span>
       <span>{label}</span>
-    </a>;
+    </Link>;
   };
   return (
     <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
@@ -267,8 +267,9 @@ export function MobileBottomNav() {
 export function AirRadarPageShell({ children }: { children: ReactNode }) {
   return (
     <div className="radar-shell airradar-page-shell">
+      <a className="skip-to-content" href="#main-content">{t.locale.startsWith("cs") ? "Přejít na obsah" : "Skip to content"}</a>
       <AirRadarTopbar />
-      <div className="secondary-page-content">{children}</div>
+      <main id="main-content" className="secondary-page-content" tabIndex={-1}>{children}</main>
       <MobileBottomNav />
     </div>
   );
