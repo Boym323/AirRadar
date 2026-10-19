@@ -12,24 +12,24 @@
   --surface-elevated: #101d2c;
   --surface-interactive: #1a3044;
   --surface-hover: #213e52;
-  --surface-selected: rgba(74, 225, 195, .13);
+  --surface-selected: rgba(67, 216, 194, .13);
   --border-subtle: rgba(184, 215, 229, .10);
   --border-default: rgba(184, 215, 229, .17);
   --border-strong: rgba(184, 215, 229, .29);
   --text-primary: #f1f8fb;
   --text-secondary: #bfceda;
   --text-muted: #91a8ba;
-  --accent: #4ee2c4;
-  --selected: #ffce80;
-  --success: #4ee2c4;
-  --warning: #ffce80;
+  --accent: #43d8c2;
+  --selected: #f5bd62;
+  --success: #43d8c2;
+  --warning: #f5bd62;
   --danger: #ff8296;
   --emergency: #ff8296;
-  --atc: #c1a7ff;
-  --weather: #79c6fc;
+  --atc: #b39bff;
+  --weather: #66b9ff;
   --bg-secondary: #0e1b2a;
   --surface-3: #20394e;
-  --accent-hover: #88f2d9;
+  --accent-hover: #75e6d5;
   --surface-card: #122335;
   --surface-card-strong: #192e42;
   --surface-glass: rgba(10, 23, 36, .93);
@@ -376,7 +376,7 @@ body { font-feature-settings: "ss01" on; }
   .mobile-bottom-more > div {
     border-color: var(--border-strong);
     border-radius: var(--radius-lg);
-    background: var(--surface-overlay);
+    background: var(--surface-elevated);
     box-shadow: var(--shadow-floating);
   }
   .mobile-bottom-more > div a[aria-current="page"] {

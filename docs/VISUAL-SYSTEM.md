@@ -446,3 +446,25 @@ on MapLibre source data, trajectories, SSE, map camera, or the on-demand
 FlightAware policy. Regression: `tests/radar-overlay-visual-polish-v1.test.ts`.
 Verify the desktop and mobile visual browser gate and inspect screenshots prior
 to production deployment.
+
+## 2026 shared visual refresh (October 19)
+
+The final shared presentation layer is `app/visual-refactor.css`, loaded after
+`globals.css`, `language-switch.css` and `radar-aircraft-panel.css` in
+`app/layout.tsx`. Legacy feature selectors remain functional while their
+common surfaces, typography, navigation, focus states and responsive rules use
+the refreshed design. Do not add competing overrides to the end of
+`globals.css`; progressively move isolated feature styles into CSS modules.
+
+The *effective* semantic CSS palette must match `lib/map-theme.ts` for
+accent, selection, ATC and weather. The live MapLibre map, attribution,
+geometry, data requests and presentation mode are not visually repainted by
+the shared stylesheet. The mobile navigation keeps a solid elevated menu
+surface, touch targets and safe-area padding. Secondary-page users get a
+keyboard-accessible Skip to content link.
+
+**Validation before release:** run the visual CSS audit, targeted
+`tests/visual-refactor-2026.test.ts`, typecheck, complete CI and the existing
+browser production gate at desktop/tablet/320 px mobile. Review generated
+screenshots and check for clipping, drawer collisions, contrast and menu
+readability. CSS/static checks do not replace a browser review.

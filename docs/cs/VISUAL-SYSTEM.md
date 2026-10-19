@@ -425,3 +425,26 @@ seznamu, mobilní ovládání zůstává dotykové. Mění se pouze vzhled a cho
 nabídek, nikoli data mapy, SSE, kamera ani pravidla FlightAware.
 Regresní test: `tests/radar-overlay-visual-polish-v1.test.ts`.
 Před produkčním nasazením ověřit desktopové a mobilní browser testy i snímky.
+
+## Sdílený vizuální refaktor 2026 (19. října)
+
+Koncová sdílená vizuální vrstva je `app/visual-refactor.css`; v
+`app/layout.tsx` se načítá až po `globals.css`, `language-switch.css` a
+`radar-aircraft-panel.css`. Stávající selektory funkčních částí zůstávají
+kompatibilní, jejich společné povrchy, typografie, navigace, stav fokusu a
+responzivní pravidla dostaly jednotný základ. Nové konkurenční přepisy
+nepřidávejte na konec `globals.css`; izolované styly postupně převádějte
+do CSS modulů.
+
+**Výsledné** sémantické barvy CSS musí odpovídat `lib/map-theme.ts` pro
+accent, selected, ATC a weather. Sdílená vrstva nepřekresluje živou mapu
+MapLibre, atribuce, geometrii, datové požadavky ani režim prezentace.
+Mobilní nabídka používá neprůhledný zvýšený povrch, ovládací prvky pro dotyk
+a safe-area odsazení. Vedlejší stránky mají klávesnicí dostupný odkaz
+pro přeskočení navigace.
+
+**Kontrola před nasazením:** audit vizuálních stylů, cílený test
+`tests/visual-refactor-2026.test.ts`, typecheck, celé CI a existující
+produkční browser gate pro desktop, tablet a mobil 320 px. Zkontrolujte
+snímky obrazovky, přetečení, kolize drawerů, kontrast a čitelnost menu.
+Statické testy nenahrazují kontrolu v prohlížeči.
