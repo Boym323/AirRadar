@@ -134,7 +134,7 @@ export function AlertHistoryPage() {
   return <main className="history-page alert-history-page">
     <header className="history-page-header">
       <div><Link className="back-link" href="/">{dictionary.alerts.backToRadar}</Link><h1>{dictionary.alerts.title}</h1><p className="statistics-subtitle">{dictionary.alerts.subtitle}</p></div>
-      <nav className="system-nav" aria-label={dictionary.alerts.navigation}><Link href="/watchlist">{dictionary.watchlist.title}</Link><Link href="/statistics">{dictionary.statistics.title}</Link></nav>
+      <nav className="system-nav" aria-label={dictionary.alerts.navigation}><Link href="/watchlist">{dictionary.watchlist.title}</Link><Link href="/history">{dictionary.history.title}</Link></nav>
     </header>
     <p className="alert-history-intro">{dictionary.alerts.description}</p>
     <div className="watchlist-editor-actions" role="group" aria-label={locale === "cs" ? "Filtr upozornění" : "Alert filter"}>
