@@ -134,7 +134,9 @@ import {
   type AircraftMarkerHandle,
 } from "@/lib/radar/aircraft-marker-controller";
 import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
-import { applyAircraftLabelCollisionLayout, type AircraftLabelCollisionHandle } from "@/lib/radar/aircraft-label-controller";
+import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
+import { setOgnDomLabel, type OgnMarkerHandle } from "@/lib/radar/ogn-marker-controller";
+import { parseNavPointFocus } from "@/lib/radar/navigation-focus";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
@@ -228,37 +230,10 @@ function trailEndpointKey(point: TrailPoint | undefined): string {
   return point ? `${point.recordedAt}|${point.lat}|${point.lon}` : "";
 }
 
-function setOgnDomLabel(handle: OgnMarkerHandle, value: string | null): boolean {
-  if (handle.labelText === value) return false;
-  handle.labelText = value;
-  const [primary = "", secondary = ""] = value?.split("\n", 2) ?? [];
-  handle.labelPrimary.textContent = primary;
-  handle.labelSecondary.textContent = secondary;
-  handle.labelSecondary.hidden = !secondary;
-  handle.label.dataset.contentEmpty = value ? "false" : "true";
-  handle.labelWidth = null;
-  handle.labelHeight = null;
-  return true;
-}
-
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-
-interface OgnMarkerHandle extends AircraftLabelCollisionHandle {
-  marker: maplibregl.Marker;
-  root: HTMLElement;
-  icon: HTMLElement;
-  rotator: HTMLElement;
-  labelPrimary: HTMLElement;
-  labelSecondary: HTMLElement;
-  label: HTMLElement;
-  labelText: string | null;
-  labelPriority: "selected" | "normal" | "stale";
-  labelWidth: number | null;
-  labelHeight: number | null;
-}
 
 // OpenFreeMap keeps the basemap open and no-key while providing a dark vector
 // hierarchy that remains usable when the public OSM raster host is unavailable.
@@ -277,16 +252,6 @@ function formatAirspaceUtc(value: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
   return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 16)} UTC`;
-}
-
-function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id: string; lat: number; lon: number } | null {
-  if (!value) return null;
-  const [kind, id, latText, lonText, ...extra] = value.split(":");
-  if (extra.length || (kind !== "NAVAID" && kind !== "FIX") || !/^[A-Z0-9]{2,8}$/.test(id ?? "")) return null;
-  const lat = Number(latText);
-  const lon = Number(lonText);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
-  return { kind, id, lat, lon };
 }
 
 function relativeTwinMapOffset(minutes: number): string {
