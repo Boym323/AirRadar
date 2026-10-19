@@ -65,6 +65,35 @@ export async function ensureRadarTrafficRowVisible(page, viewportWidth, targetNa
   }
 }
 
+export async function waitForCompactRadarTrafficDrawer(page, viewportWidth) {
+  const sidebar = page.locator('[data-testid="radar-sidebar"]');
+  try {
+    await page.locator('[data-testid="radar-sidebar"].drawer-traffic.compact')
+      .waitFor({ state: "visible", timeout: 15_000 });
+  } catch (error) {
+    const diagnostic = await sidebar.evaluate((element, width) => {
+      const trigger = document.querySelector('[data-testid="traffic-trigger"]');
+      const bounds = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        className: element.className,
+        ariaHidden: element.getAttribute("aria-hidden"),
+        triggerExpanded: trigger?.getAttribute("aria-expanded") ?? null,
+        compactButtonExpanded: element.querySelector(".mobile-collapse")?.getAttribute("aria-expanded") ?? null,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+        visibility: style.visibility,
+        display: style.display,
+        viewportWidth: width,
+        mediaCompact: matchMedia("(max-width: 820px)").matches,
+      };
+    }, viewportWidth).catch(() => ({ sidebar: "unavailable", viewportWidth }));
+    throw new Error(
+      `Mobile compact traffic drawer did not open: ${JSON.stringify(diagnostic)}; ${String(error)}`,
+      { cause: error },
+    );
+  }
+}
+
 function validReleaseVersion(value) {
   return typeof value === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/.test(value);
 }
@@ -2798,7 +2827,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
 
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
         await trafficTrigger.click();
-        await page.locator('[data-testid="radar-sidebar"].drawer-traffic.compact').waitFor({ state: "visible" });
+        await waitForCompactRadarTrafficDrawer(page, viewport.width);
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
 
         const atcPanel = page.getByTestId("atc-relevance-panel");
@@ -2880,7 +2909,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (!await mobileTrafficTrigger.isVisible()) throw new Error("Mobile map-only Traffic trigger is unavailable");
 
         await mobileTrafficTrigger.click();
-        await page.locator('[data-testid="radar-sidebar"].drawer-traffic.compact').waitFor({ state: "visible" });
+        await waitForCompactRadarTrafficDrawer(page, viewport.width);
         await page.locator(".mobile-collapse").click();
         await page.locator('[data-testid="radar-sidebar"]:not(.compact)').waitFor({ state: "visible" });
         await mobileSidebar.locator(".aircraft-row").first().click();

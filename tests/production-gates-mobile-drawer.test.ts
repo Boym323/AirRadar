@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Production-gates is a runtime-only ESM file consumed by Node.
-import { ensureRadarTrafficRowVisible } from "../scripts/production-gates.mjs";
+import { ensureRadarTrafficRowVisible, waitForCompactRadarTrafficDrawer } from "../scripts/production-gates.mjs";
+
+afterEach(() => vi.unstubAllGlobals());
 
 function fixture({ open = false, expanded = false, viewportWidth = 390 } = {}) {
   const steps: string[] = [];
@@ -65,6 +67,38 @@ function fixture({ open = false, expanded = false, viewportWidth = 390 } = {}) {
 }
 
 describe("mobile traffic drawer production smoke synchronization", () => {
+  it("waits for the compact traffic drawer", async () => {
+    const waitFor = vi.fn(async () => undefined);
+    const page = {
+      locator: vi.fn(() => ({ waitFor })),
+    };
+
+    await waitForCompactRadarTrafficDrawer(page as never, 375);
+
+    expect(page.locator).toHaveBeenCalledWith('[data-testid="radar-sidebar"].drawer-traffic.compact');
+    expect(waitFor).toHaveBeenCalledWith({ state: "visible", timeout: 15_000 });
+  });
+
+  it("includes drawer state in the compact traffic timeout diagnostic", async () => {
+    vi.stubGlobal("document", { querySelector: () => ({ getAttribute: () => "true" }) });
+    vi.stubGlobal("getComputedStyle", () => ({ visibility: "hidden", display: "block" }));
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const sidebarElement = {
+      className: "sidebar drawer-closed compact",
+      getAttribute: () => "true",
+      querySelector: () => ({ getAttribute: () => "false" }),
+      getBoundingClientRect: () => ({ x: 0, y: 0, width: 0, height: 0 }),
+    };
+    const page = {
+      locator: vi.fn((selector: string) => selector.includes(".drawer-traffic.compact")
+        ? { waitFor: async () => { throw new Error("drawer missing"); } }
+        : { evaluate: async (callback: (element: typeof sidebarElement, width: number) => unknown, width: number) => callback(sidebarElement, width) }),
+    };
+
+    await expect(waitForCompactRadarTrafficDrawer(page as never, 375))
+      .rejects.toThrow(/Mobile compact traffic drawer did not open:.*375.*drawer missing/);
+  });
+
   it("waits for traffic drawer to open before expanding the initially hidden mobile list", async () => {
     const { page, steps, trigger, collapse, aircraftRow } = fixture();
     const row = await ensureRadarTrafficRowVisible(page, 390, "radar-mobile-selected-expanded");
