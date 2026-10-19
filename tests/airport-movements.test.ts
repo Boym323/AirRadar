@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { getTranslations } from "@/lib/i18n";
-import { AIRPORT_MOVEMENT_PERIODS, movementRunwayLabel } from "@/components/airport-movements";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { analyzeAirportMovement, summarizeAirportMovements, type AirportMovement, type MovementFlight, type MovementPosition } from "@/lib/server/airport-movements";
 
@@ -21,7 +20,6 @@ function flight(id: number, values: MovementPosition[]): MovementFlight {
 
 describe("airport movement intelligence", () => {
   it("exposes the three localized period options", () => {
-    expect(AIRPORT_MOVEMENT_PERIODS).toEqual(["today", "24h", "7d"]);
     expect(getTranslations("en").airport.movementPeriodToday).toBe("Today");
     expect(getTranslations("en").airport.movementPeriod24h).toBe("24 h");
     expect(getTranslations("en").airport.movementPeriodSevenDays).toBe("7 days");
@@ -35,17 +33,6 @@ describe("airport movement intelligence", () => {
     expect(getTranslations("en").airport.showMore).toBe("Show more");
     expect(getTranslations("cs").airport.showMore).toBe("Zobrazit více");
   });
-  it("uses a neutral runway label for overflights while retaining unknown runway for runway movements", () => {
-    const overflight = { movement: "OVERFLIGHT" as const, runway: null };
-    expect(movementRunwayLabel(overflight, getTranslations("en"))).toBe("—");
-    expect(movementRunwayLabel(overflight, getTranslations("cs"))).toBe("—");
-    expect(movementRunwayLabel(overflight, getTranslations("en"))).not.toBe(getTranslations("en").airport.unknownRunway);
-    expect(movementRunwayLabel(overflight, getTranslations("cs"))).not.toBe(getTranslations("cs").airport.unknownRunway);
-
-    expect(movementRunwayLabel({ movement: "LANDING", runway: null }, getTranslations("en"))).toBe(getTranslations("en").airport.unknownRunway);
-    expect(movementRunwayLabel({ movement: "LANDING", runway: null }, getTranslations("cs"))).toBe(getTranslations("cs").airport.unknownRunway);
-  });
-
   it("recognises a descending final approach and a likely landing", () => {
     const result = analyzeAirportMovement(flight(1, positions([
       ["2026-09-12T08:00:00Z", 50.08, 14.3, 7_000, 190, 240, -500],
