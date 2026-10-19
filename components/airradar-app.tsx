@@ -100,6 +100,7 @@ import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { useRadarAircraftContext } from "@/components/radar/use-radar-aircraft-context";
+import { useRadarOgnStream } from "@/components/radar/use-radar-ogn-stream";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
 import { useRadarAtcMapContext } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
@@ -1214,25 +1215,7 @@ export function AirRadarApp() {
     return () => { active = false; };
   }, [selectedHex]);
 
-  useEffect(() => {
-    if (ognEnabled !== true || !showOgn) return;
-    let active = true;
-    const source = new EventSource("/api/ogn/stream");
-    const onSnapshot = (event: Event) => {
-      try {
-        const next = JSON.parse((event as MessageEvent<string>).data) as OgnStateSnapshot;
-        if (active && next.enabled) setOgnSnapshot(next);
-      } catch {
-        // Ignore malformed events and allow EventSource to reconnect.
-      }
-    };
-    source.addEventListener("snapshot", onSnapshot);
-    return () => {
-      active = false;
-      source.removeEventListener("snapshot", onSnapshot);
-      source.close();
-    };
-  }, [ognEnabled, showOgn]);
+  useRadarOgnStream(ognEnabled, showOgn, setOgnSnapshot);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;

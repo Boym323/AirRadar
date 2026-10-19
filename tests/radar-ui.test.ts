@@ -25,6 +25,7 @@ const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar
 const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const radarOperationsCenterSource = readFileSync(new URL("../components/radar/radar-operations-center.tsx", import.meta.url), "utf8");
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
+const radarOgnStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
 const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
 const radarAtcMapContextSource = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
 const routeCorridorSource = readFileSync(new URL("../components/radar/use-route-corridor-intelligence.ts", import.meta.url), "utf8");
@@ -364,7 +365,7 @@ describe("radar UI polish helpers", () => {
   });
 
   it("keeps independent bounded SSE streams and does not add trail polling", () => {
-    expect(`${appSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
+    expect(`${appSource}\n${radarOgnStreamSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     // Legitimate RXW/FPN overlay timers must not be mistaken for trail polling.
     expect(appSource).not.toMatch(/setInterval\(\s*(?:loadSelectedTrail|fetchSelectedTrail)/);
     expect(appSource).toContain("selected-trail-line");
