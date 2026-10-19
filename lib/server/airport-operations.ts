@@ -54,11 +54,21 @@ export function buildAirportOperations(
   runways: readonly AirportRunway[] = [],
   metar: { windDirectionDeg: number | null; windSpeedKt: number | null; windCalm?: boolean; windVariable?: boolean } | null = null,
 ): AirportOperationsResponse {
-  const arrivals = movements.movements.filter((item) => item.movement === "APPROACH" || item.movement === "LANDING");
-  const departures = movements.movements.filter((item) => item.movement === "TAKEOFF" || item.movement === "DEPARTURE");
-  const approaches = movements.movements.filter((item) => item.movement === "APPROACH");
+  const arrivals: AirportMovement[] = [];
+  const departures: AirportMovement[] = [];
+  const approaches: AirportMovement[] = [];
+  const goArounds: AirportMovement[] = [];
+  const holding: AirportMovement[] = [];
   const runwayUsage = new Map<string, { arrivals: number; departures: number }>();
+  let activityCount = 0;
+  // One pass over the historical movements serves every operations summary.
   for (const item of movements.movements) {
+    if (item.movement === "APPROACH" || item.movement === "LANDING") arrivals.push(item);
+    if (item.movement === "TAKEOFF" || item.movement === "DEPARTURE") departures.push(item);
+    if (item.movement === "APPROACH") approaches.push(item);
+    if (item.movement === "GO_AROUND") goArounds.push(item);
+    if (item.movement === "HOLDING") holding.push(item);
+    if (item.movement !== "OVERFLIGHT") activityCount += 1;
     if (!item.runway || item.movement === "OVERFLIGHT" || item.movement === "HOLDING") continue;
     const current = runwayUsage.get(item.runway.designator) ?? { arrivals: 0, departures: 0 };
     if (item.movement === "APPROACH" || item.movement === "LANDING" || item.movement === "GO_AROUND") current.arrivals += 1;
@@ -77,11 +87,11 @@ export function buildAirportOperations(
   return {
     airport: movements.airport, generatedAt: movements.generatedAt, window: movements.period,
     provenance: "INFERRED", complete: movements.complete, truncated: movements.truncated,
-    activity: activity(movements.movements.filter((item) => item.movement !== "OVERFLIGHT").length), likelyRunway,
+    activity: activity(activityCount), likelyRunway,
     arrivals, departures, approaches, recentMovements: movements.movements.slice(0, 20),
     eventEvidence: movements.eventEvidence ?? [], eventEvidenceTruncated: movements.eventEvidenceTruncated ?? false,
     runwayUsage: usage,
-    wind, goArounds: movements.movements.filter((item) => item.movement === "GO_AROUND"),
-    holding: movements.movements.filter((item) => item.movement === "HOLDING"), diagnostics: movements.diagnostics,
+    wind, goArounds,
+    holding, diagnostics: movements.diagnostics,
   };
 }

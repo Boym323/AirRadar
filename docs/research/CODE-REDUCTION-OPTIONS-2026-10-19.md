@@ -39,3 +39,5 @@
 - CI/CodeQL/production browser and 1×/2×/4× synthetic scaling; T58 before/after for ingest or event-loop-sensitive changes.
 - Record old/new production LOC on *the exact SHA*, not just estimated candidate size.
 - Deploy via normal release CI only; verify deployed release identity and Integration Health before another deploy-bearing change.
+
+Follow-on optimization: airport operations reports use one history scan and a shared timestamp ordering; no extra history store is introduced, and core airports/METAR stay unchanged.
