@@ -44,7 +44,6 @@ describe("Command Search V1 UI boundary", () => {
   const paletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
   const triggerSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
   const layoutSource = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  const operationsSource = readFileSync(new URL("../components/radar/radar-operations-center.tsx", import.meta.url), "utf8");
 
   it("mounts one global palette in the root layout and makes topbar search a trigger", () => {
     expect(layoutSource).toContain("<CommandPalette />");
@@ -75,11 +74,9 @@ describe("Command Search V1 UI boundary", () => {
     expect(paletteSource).toContain('role="combobox"');
   });
 
-  it("keeps recents browser-local and deep-links the real Operations Center", () => {
+  it("keeps recents browser-local while excluding retired operations links", () => {
     expect(paletteSource).toContain("window.localStorage");
-    expect(paletteSource).toContain('href: "/?operations=1"');
-    expect(paletteSource).toContain("requestOperationsCenterOpen");
-    expect(operationsSource).toContain('searchParams.get("operations") === "1"');
-    expect(operationsSource).toContain("OPEN_OPERATIONS_CENTER_EVENT");
+    expect(paletteSource).not.toContain('href: "/?operations=1"');
+    expect(paletteSource).toContain('href: "/weather"');
   });
 });

@@ -7,38 +7,30 @@ describe("Product Navigation V2", () => {
 
   it("keeps the remaining primary product workflows on desktop", () => {
     const primary = shell.slice(shell.indexOf("function primaryNavigation()"), shell.indexOf("function moreNavigationGroups()"));
-    for (const href of ["/", "/intelligence", "/airports"]) {
+    for (const href of ["/", "/airports", "/weather"]) {
       expect(primary).toContain('href: "' + href + '"');
     }
     expect(primary).not.toContain('href: "/statistics"');
     expect(primary).not.toContain('href: "/time-machine"');
   });
 
-  it("preserves the remaining overflow routes in localized thematic groups", () => {
+  it("lists only selected aviation and system destinations", () => {
     const grouped = shell.slice(shell.indexOf("function moreNavigationGroups()"), shell.indexOf("function MoreNavigationGroups("));
-    for (const id of ["operations", "history", "aviation", "system"]) {
-      expect(grouped).toContain(`id: "${id}"`);
-    }
-    for (const href of [
-      "/operations", "/airspace", "/weather", "/watchlist", "/alerts",
-      "/notifications", "/history", "/time-machine",
-      "/intelligence", "/fleet", "/navigation", "/procedures", "/system",
-    ]) {
+    for (const id of ["aviation", "system"]) expect(grouped).toContain(`id: "${id}"`);
+    for (const href of ["/navigation", "/navigation-integrity", "/receiver/coverage", "/system"]) {
       expect(grouped).toContain(`href: "${href}"`);
     }
-    expect(grouped.match(/href: "\/[^"]+"/g)).toHaveLength(13);
-    expect(grouped).toContain('label: cs ? "Provoz a radar" : "Operations & radar"');
-    expect(grouped).toContain('label: cs ? "Historie a analýza" : "History & analysis"');
-    expect(grouped).toContain('label: cs ? "Letecká data" : "Aviation data"');
-    expect(grouped).toContain('label: cs ? "Systém" : "System"');
+    for (const href of ["/watchlist", "/history", "/intelligence", "/airspace"]) {
+      expect(grouped).not.toContain(`href: "${href}"`);
+    }
   });
 
   it("keeps the primary mobile destinations", () => {
     const mobile = shell.slice(shell.indexOf("export function MobileBottomNav"), shell.indexOf("export function AirRadarPageShell"));
     expect(mobile).toContain('item("/",');
-    expect(mobile).toContain('item("/intelligence"');
+    expect(mobile).toContain('item("/weather"');
     expect(mobile).toContain('item("/airports"');
-    expect(mobile).toContain('item("/watchlist"');
+    expect(mobile).toContain('item("/navigation-integrity"');
     expect(mobile.match(/item\("/g)).toHaveLength(4);
     expect(mobile).not.toContain('item("/statistics"');
     expect(mobile).not.toContain('item("/time-machine"');

@@ -12,12 +12,9 @@ function source(path: string): string {
 }
 
 describe("Czech/English full-site localization remediation", () => {
-  it("uses one persistent locale for system, watchlist, fleets and alerts", () => {
+  it("uses one persistent locale for the retained system dashboard", () => {
     for (const path of [
       "components/system-status-page.tsx",
-      "components/watchlist-page.tsx",
-      "components/fleet-page.tsx",
-      "components/alert-history-page.tsx",
     ]) {
       const component = source(path);
       expect(component, path).toContain("useLocale()");
@@ -61,14 +58,6 @@ describe("Czech/English full-site localization remediation", () => {
     expect(source("components/receiver-coverage-polar.tsx")).toContain("receiverPolarCellAria");
   });
 
-  it("maintains both languages for server-fed flight intelligence", () => {
-    const intelligence = source("components/intelligence-page-content.tsx");
-    expect(intelligence).toContain("pageExtrasCopy(t.locale).intelligence");
-    expect(intelligence).toContain("t.intelligence.types[event.type]");
-    expect(source("app/intelligence/page.tsx")).toContain("getFlightIntelligenceService().query({ limit: 50 })");
-    expect(source("app/intelligence/page.tsx")).toContain("<IntelligencePageContent events={events}");
-  });
-
   it("keeps document metadata aligned with the selected language", () => {
     expect(localizedPageMetadata("/system", "en").title).toBe("System Status — AirRadar");
     expect(localizedPageMetadata("/system", "cs").title).toBe("Stav systému — AirRadar");
@@ -107,14 +96,5 @@ describe("Czech/English full-site localization remediation", () => {
     expect(gates).not.toContain('JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" })');
   });
 
-  it("translates comparison, alert event titles and map layer names without changing data IDs", () => {
-    const compare = source("components/airport-compare.tsx");
-    const notifications = source("components/notification-center.tsx");
-    const layers = source("components/radar/radar-map-layer-menu.tsx");
-    expect(compare).toContain('cs ? "Chybí údaje o využití drah" : "No runway sample"');
-    expect(notifications).toContain('cs ? "Rekord příjmu" : "Reception record"');
-    expect(notifications).toContain("t.intelligence.types[label as keyof typeof t.intelligence.types]");
-    expect(layers).toContain('t.locale.startsWith("cs") ? "Počasí z letadel" : "Aircraft Weather"');
-    expect(layers).toContain("data-testid");
-  });
+
 });

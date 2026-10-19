@@ -23,7 +23,6 @@ const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-t
 const radarTrafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
 const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
 const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
-const radarOperationsCenterSource = readFileSync(new URL("../components/radar/radar-operations-center.tsx", import.meta.url), "utf8");
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
 const radarOgnStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
 const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
@@ -116,16 +115,15 @@ describe("radar UI polish helpers", () => {
     expect(aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false, stale: true })).toContain("stale");
   });
 
-  it("keeps secondary routes reachable from the canonical mobile overflow", () => {
+  it("keeps selected navigation and safe mobile overflow", () => {
     const grouped = shellSource.slice(shellSource.indexOf("function moreNavigationGroups()"), shellSource.indexOf("function MoreNavigationGroups("));
     const mobile = shellSource.slice(shellSource.indexOf("export function MobileBottomNav"), shellSource.indexOf("export function AirRadarPageShell"));
     expect(shellSource).toContain("mobile-bottom-nav");
-    expect(grouped).toContain('href: "/alerts"');
-    expect(grouped).toContain('href: "/history"');
-    expect(shellSource).toContain('mobile && group.id === "operations"');
+    expect(grouped).toContain('href: "/navigation-integrity"');
+    expect(grouped).toContain('href: "/receiver/coverage"');
+    expect(grouped).not.toContain('href: "/alerts"');
     expect(mobile).toContain("<MoreNavigationGroups pathname={pathname} mobile />");
     expect(globalCss).toContain(".mobile-bottom-more > div");
-    expect(globalCss).toContain("max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px)");
   });
 
   it("keeps the five-item mobile navigation and compact source counters", () => {

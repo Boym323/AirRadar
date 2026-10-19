@@ -19,8 +19,6 @@ const ognStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-
 const searchTriggerSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
 const commandPaletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
 const serverSearchSource = readFileSync(new URL("../lib/server/search.ts", import.meta.url), "utf8");
-const flightPageSource = readFileSync(new URL("../app/flights/[id]/page.tsx", import.meta.url), "utf8");
-const flightDetailSource = readFileSync(new URL("../components/flight-detail.tsx", import.meta.url), "utf8");
 const rangeRingsSource = readFileSync(new URL("../lib/range-rings.ts", import.meta.url), "utf8");
 
 const origin = {
@@ -129,12 +127,5 @@ describe("feature integration", () => {
     expect(commandPaletteSource).toContain("href: item.result.href");
   });
 
-  it("exposes a bounded standalone flight detail route with shared playback", () => {
-    expect(flightPageSource).toContain("getHistoryFlight(id)");
-    expect(flightPageSource).toContain("id <= 2_147_483_647");
-    expect(flightDetailSource).toContain("HISTORY_MAP_STYLE");
-    expect(flightDetailSource).toContain("<FlightDetailPanel detail={detail} />");
-    expect(flightDetailSource).toContain("aircraftAirportHref(code)");
-    expect(flightDetailSource).toContain("detail.truncated");
-  });
+
 });
