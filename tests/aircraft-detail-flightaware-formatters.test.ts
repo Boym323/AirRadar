@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatFiledAltitude, formatFiledAirspeed, formatFiledEte, formatRouteDistance, hasFiniteFlightPlanValue } from "@/components/aircraft-detail-v2";
+import { formatFiledAltitude, formatFiledAirspeed, formatFiledEte, formatRouteDistance, hasFiniteFlightPlanValue } from "@/lib/aircraft/flight-plan-format";
 
 describe("FlightAware flight-plan formatters", () => {
   it("formats filed altitude in flight levels when appropriate", () => {
