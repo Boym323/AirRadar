@@ -175,7 +175,6 @@ export default function ReceiverCoveragePage() {
         description={copy.headerDescription}
         actions={
           <div className={styles.headerActions}>
-            <Link className={styles.headerLink} href="/statistics">{copy.statistics}</Link>
             <Link className={styles.headerLink} href="/">Radar</Link>
           </div>
         }
