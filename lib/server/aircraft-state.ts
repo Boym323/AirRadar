@@ -510,39 +510,37 @@ export class AircraftStateService {
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
     retentionAttribution: MemoryRetentionDiagnostics;
   } {
-    let localTrailPointCount = 0, localTrailMaxPointsPerAircraft = 0;
-    let localTrailAtLimitAircraftCount = 0, localTrailOverLimitAircraftCount = 0;
-    for (const aircraft of this.localAircraft.values()) {
-      const points = aircraft.trail.length;
-      localTrailPointCount += points;
-      localTrailMaxPointsPerAircraft = Math.max(localTrailMaxPointsPerAircraft, points);
-      if (points === SERVER_LOCAL_TRAIL_MAX_POINTS) localTrailAtLimitAircraftCount++;
-      if (points > SERVER_LOCAL_TRAIL_MAX_POINTS) localTrailOverLimitAircraftCount++;
-    }
-    const networkMax = getNetworkTrailMaxPoints();
-    let networkTrailPointCount = 0, networkTrailMaxPointsPerAircraft = 0;
-    let networkTrailAtLimitAircraftCount = 0, networkTrailOverLimitAircraftCount = 0;
-    for (const aircraft of this.networkAircraft.values()) {
-      const points = aircraft.trail.length;
-      networkTrailPointCount += points;
-      networkTrailMaxPointsPerAircraft = Math.max(networkTrailMaxPointsPerAircraft, points);
-      if (points === networkMax) networkTrailAtLimitAircraftCount++;
-      if (points > networkMax) networkTrailOverLimitAircraftCount++;
-    }
+    const { limitCounters, ...retentionAttribution } = getMemoryRetentionDiagnostics({
+        localAircraft: this.localAircraft,
+        localTrailLimitPoints: SERVER_LOCAL_TRAIL_MAX_POINTS,
+        networkAircraft: this.networkAircraft,
+        networkTrailLimitPoints: getNetworkTrailMaxPoints(),
+        localStaleAfterMs: getAircraftStaleAfterMs(),
+        networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+        networkTrailMaxAgeMs: getNetworkTrailMaxAgeMs(),
+        sourcePreferences: this.sourcePreferences,
+        sourcePreferenceMissingSince: this.sourcePreferenceMissingSince,
+        lastHistorySample: this.lastHistorySample,
+        predictiveEvaluatedAt: this.predictiveEvaluatedAt,
+        atcResolutionKeys: this.atcResolutionKeys,
+        atcShadowPredictionKeys: this.atcShadowPredictionKeys,
+        snapshotCacheEntries: this.snapshotCache.size,
+        listeners: this.listeners.size,
+    });
     return {
       aircraftCount: this.aircraft.size,
       localTrailAircraftCount: this.localAircraft.size,
       networkTrailAircraftCount: this.networkAircraft.size,
-      localTrailPointCount,
-      networkTrailPointCount,
-      localTrailMaxPointsPerAircraft,
-      networkTrailMaxPointsPerAircraft,
-      localTrailAtLimitAircraftCount,
-      networkTrailAtLimitAircraftCount,
-      localTrailOverLimitAircraftCount,
-      networkTrailOverLimitAircraftCount,
+      localTrailPointCount: retentionAttribution.trails.local.points,
+      networkTrailPointCount: retentionAttribution.trails.network.points,
+      localTrailMaxPointsPerAircraft: retentionAttribution.trails.local.maxPointsPerAircraft,
+      networkTrailMaxPointsPerAircraft: retentionAttribution.trails.network.maxPointsPerAircraft,
+      localTrailAtLimitAircraftCount: limitCounters?.local.atLimitAircraftCount ?? 0,
+      networkTrailAtLimitAircraftCount: limitCounters?.network.atLimitAircraftCount ?? 0,
+      localTrailOverLimitAircraftCount: limitCounters?.local.overLimitAircraftCount ?? 0,
+      networkTrailOverLimitAircraftCount: limitCounters?.network.overLimitAircraftCount ?? 0,
       // Practical estimate for one retained TrailPoint including V8 object/array overhead.
-      trailEstimatedBytes: (localTrailPointCount + networkTrailPointCount) * 96,
+      trailEstimatedBytes: (retentionAttribution.trails.local.points + retentionAttribution.trails.network.points) * 96,
       listenerCount: this.listeners.size,
       running: this.running,
       enrichment: this.enrichment.getDiagnostics(),
@@ -571,21 +569,7 @@ export class AircraftStateService {
       regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
       operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
       runtimePerformance: getRuntimePerformanceDiagnostics(),
-      retentionAttribution: getMemoryRetentionDiagnostics({
-        localAircraft: this.localAircraft,
-        networkAircraft: this.networkAircraft,
-        localStaleAfterMs: getAircraftStaleAfterMs(),
-        networkStaleAfterMs: getAdsbLolStaleAfterMs(),
-        networkTrailMaxAgeMs: getNetworkTrailMaxAgeMs(),
-        sourcePreferences: this.sourcePreferences,
-        sourcePreferenceMissingSince: this.sourcePreferenceMissingSince,
-        lastHistorySample: this.lastHistorySample,
-        predictiveEvaluatedAt: this.predictiveEvaluatedAt,
-        atcResolutionKeys: this.atcResolutionKeys,
-        atcShadowPredictionKeys: this.atcShadowPredictionKeys,
-        snapshotCacheEntries: this.snapshotCache.size,
-        listeners: this.listeners.size,
-      }),
+      retentionAttribution,
     };
   }
 
