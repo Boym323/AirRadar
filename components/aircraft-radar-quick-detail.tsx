@@ -18,7 +18,8 @@ import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-tw
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
-import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
+import { AircraftAltitudeChart } from "@/components/aircraft-detail-shared";
+import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";

@@ -21,13 +21,9 @@ import {
   AircraftHistorySummaryCard,
   AircraftLifetimeStatsCard,
   AircraftRecentFlights,
-  aircraftAirportHref,
-  formatFiledAirspeed,
-  formatFiledAltitude,
-  formatFiledEte,
-  formatRouteDistance,
-  hasFiniteFlightPlanValue,
-} from "@/components/aircraft-detail-v2";
+} from "@/components/aircraft-detail-shared";
+import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
+import { formatFiledAirspeed, formatFiledAltitude, formatFiledEte, formatRouteDistance, hasFiniteFlightPlanValue } from "@/lib/aircraft/flight-plan-format";
 import styles from "@/components/aircraft-detail-v3.module.css";
 
 function valueOrEmpty(value: string | null | undefined): string {

@@ -2,12 +2,11 @@ import { buildOperationalHealthV2, type OperationalHealthV2 } from "@/lib/server
 import type { SystemStatusResponse } from "@/lib/server/system-status-contract";
 
 export type SystemStatusDetailLevel = "public" | "admin";
-export type SystemStatusApiResponse = Omit<SystemStatusResponse, "flightPositionPersistenceShadow"> & { detailLevel: SystemStatusDetailLevel; operationalHealth?: OperationalHealthV2 };
+export type SystemStatusApiResponse = SystemStatusResponse & { detailLevel: SystemStatusDetailLevel; operationalHealth?: OperationalHealthV2 };
 
 export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
-  const publicStatus = { ...status, flightPositionPersistenceShadow: undefined };
   return {
-    ...publicStatus,
+    ...status,
     predictiveValidation: undefined,
     routeEnrichment: undefined,
     detailLevel: "public",

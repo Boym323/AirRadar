@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReceiverCoverageIntelligenceV2, type ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence-v2";
+import { buildReceiverCoverageIntelligenceV2, type ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence";
 
 const now = new Date("2026-10-04T20:00:00.000Z");
 

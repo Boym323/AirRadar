@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReceiverCoverageIntelligenceV1 } from "@/lib/receiver-coverage-intelligence-v1";
+import { buildReceiverCoverageIntelligenceV1 } from "@/lib/receiver-coverage-intelligence";
 
 const coverageForDay = (date: string, distance: number, sectors = 36) =>
   Array.from({ length: sectors }, (_, azimuthBucket) => ({ date, azimuthBucket, maxDistanceKm: distance + azimuthBucket / 10 }));

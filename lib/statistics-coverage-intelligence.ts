@@ -1,5 +1,9 @@
-import { buildReceiverCoverageIntelligenceV1, type ReceiverCoverageIntelligenceV1 } from "@/lib/receiver-coverage-intelligence-v1";
-import { buildReceiverCoverageIntelligenceV2, type ReceiverCoverageHourlyEvidenceRow, type ReceiverCoverageIntelligenceV2 } from "@/lib/receiver-coverage-intelligence-v2";
+import {
+  buildReceiverCoverageIntelligence,
+  type ReceiverCoverageIntelligenceV1,
+  type ReceiverCoverageIntelligenceV2,
+  type ReceiverCoverageHourlyEvidenceRow,
+} from "@/lib/receiver-coverage-intelligence";
 import { MAX_PLAUSIBLE_GROUND_SPEED_KT, plausibleReceiverDistanceKm } from "@/lib/receiver-sanity";
 
 export type CoverageIntelligenceRange = "7d" | "30d";
@@ -299,6 +303,19 @@ export function aggregateCoverageIntelligence(options: {
     .map((row) => finiteNonNegative(row.receiverMessagesCount))
     .filter((value): value is number => value !== null);
 
+  const coverageIntelligence = buildReceiverCoverageIntelligence({
+    daily: {
+      currentDate: options.to,
+      statsRows: options.statsRows,
+      coverageRows: options.coverageRows,
+      historyDays: periodDays,
+    },
+    rolling: {
+      now: new Date(options.generatedAt),
+      rows: options.hourlyCoverageRows ?? [],
+    },
+  });
+
   return {
     source: "postgres",
     range: options.range,
@@ -332,16 +349,8 @@ export function aggregateCoverageIntelligence(options: {
       bins: options.flightRowsComplete ? hourOfDay : [],
       busiestHour: busiestEntry ? { localHour: busiestEntry[0], count: busiestEntry[1] } : null,
     },
-    intelligence: buildReceiverCoverageIntelligenceV1({
-      currentDate: options.to,
-      statsRows: options.statsRows,
-      coverageRows: options.coverageRows,
-      historyDays: periodDays,
-    }),
-    intelligenceV2: buildReceiverCoverageIntelligenceV2({
-      now: new Date(options.generatedAt),
-      rows: options.hourlyCoverageRows ?? [],
-    }),
+    intelligence: coverageIntelligence.daily,
+    intelligenceV2: coverageIntelligence.rolling,
     records: {
       peakConcurrent: peak ? { date: peak.date, count: Math.max(0, Math.trunc(peak.maxConcurrentAircraft)) } : null,
       farthestReception: farthest ? {
