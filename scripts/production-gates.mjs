@@ -2531,6 +2531,22 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       });
         logViewportPhase("marker", markerStartedAt);
       }
+      if (fullSmoke) {
+        // Selection must never be required to reach the Layers menu.
+        const layersToggle = page.locator('details.map-layers > summary');
+        await layersToggle.waitFor({ state: "visible", timeout: 15_000 });
+        const layersClickable = await layersToggle.evaluate((summary) => {
+          const bounds = summary.getBoundingClientRect();
+          if (bounds.width < 1 || bounds.height < 1) return false;
+          const x = bounds.left + bounds.width / 2;
+          const y = bounds.top + bounds.height / 2;
+          return x >= 0 && y >= 0 && x < innerWidth && y < innerHeight
+            && summary.contains(document.elementFromPoint(x, y));
+        });
+        if (!layersClickable) {
+          throw new Error(`Unselected radar Map Layers toggle is clipped or covered at ${viewport.width}px`);
+        }
+      }
       if (fullSmoke && viewport.width >= 821) {
         const desktopStartedAt = performance.now();
         const trafficTrigger = page.getByTestId("traffic-trigger");

@@ -19,7 +19,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
-import { aircraftMapLabelLevel, aircraftMapLabelText, trafficMapLabelText } from "@/lib/aircraft/map-labels";
+import { aircraftMapLabelLevel, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -27,7 +27,6 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
-import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
@@ -73,9 +72,8 @@ import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
-import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
+import type { OgnStateSnapshot } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
-import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
@@ -106,7 +104,6 @@ import { radarWeatherPresentation } from "@/lib/radar/weather-layer-presentation
 import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/airspace-geojson";
 import { createAirportGeoJSON, createMetarGeoJSON, createAircraftWeatherGeoJSON } from "@/lib/radar/map-context-geojson";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
-import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
 import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
@@ -115,7 +112,7 @@ import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/us
 import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
 import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
-import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
+import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { createAviationNavGeoJSON } from "@/lib/navigation-data/map";
@@ -148,7 +145,9 @@ import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBase
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
 import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
 import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
-import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
+import { RadarMapHud } from "@/components/radar/radar-map-hud";
+import { aircraftWebglLabelFeature, ognMapLabelFeature, labelForAircraft, aircraftSearchText, ognTargetLabel, ognGlyphMarkup } from "@/lib/radar/map-label-presentation";
+import { parseAirportDataset, parseAtcDataset, parseAtsDataset, parseJsonDataset, type AtsRoutesResponse } from "@/lib/radar/dataset-validation";
 import type { RxwWaypointAvailability, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 import {
   createRxwFpnBadges,
@@ -161,8 +160,7 @@ import {
   RXW_FPN_ROUTE_POINTS,
   RXW_FPN_ROUTE_LABEL,
 } from "@/lib/radar/rxw-fpn-visual";
-import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
-import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
+import { radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
 import { aircraftColor } from "@/lib/aircraft/color-mode";
 import { addRadarPreset, createRadarPreset, readRadarPresets, writeRadarPresets, type RadarPreset } from "@/lib/radar/presets";
@@ -208,39 +206,6 @@ const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, n
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.south],
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.south],
 ];
-interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseAirportDataset(value: unknown): value is Airport[] {
-  return Array.isArray(value) && value.every((airport) => isRecord(airport)
-    && typeof airport.icaoCode === "string"
-    && typeof airport.name === "string"
-    && typeof airport.latitude === "number"
-    && Number.isFinite(airport.latitude)
-    && typeof airport.longitude === "number"
-    && Number.isFinite(airport.longitude));
-}
-
-function parseAtcDataset(value: unknown): value is AtcDataResponse {
-  return isRecord(value)
-    && Array.isArray(value.sectors)
-    && Array.isArray(value.transmitters)
-    && isRecord(value.metadata);
-}
-
-function parseAtsDataset(value: unknown): value is AtsRoutesResponse {
-  return isRecord(value) && typeof value.available === "boolean";
-}
-
-async function parseJsonDataset<T>(response: Response, validator: (value: unknown) => value is T): Promise<T> {
-  const value: unknown = await response.json();
-  if (!validator(value)) throw new SyntaxError("malformed dataset response");
-  return value;
-}
-
 interface PublicAlertStatus {
   enabled: boolean;
 }
@@ -263,51 +228,6 @@ const EMPTY_TRAIL: TrailPoint[] = [];
 
 function trailEndpointKey(point: TrailPoint | undefined): string {
   return point ? `${point.recordedAt}|${point.lat}|${point.lon}` : "";
-}
-
-function aircraftWebglLabelFeature(
-  aircraft: AircraftView,
-  zoom: number,
-  renderedPosition?: { lon: number; lat: number } | null,
-) {
-  return {
-    type: "Feature" as const,
-    id: aircraft.icaoHex,
-    properties: {
-      icaoHex: aircraft.icaoHex,
-      label: aircraftMapLabelText(aircraft, zoom, {
-        suppressTelemetry: aircraftPositionIsStale(aircraft),
-      }) ?? "",
-      source: classifyAircraftSource(aircraft),
-      stale: aircraftPositionIsStale(aircraft),
-      labelOpacity: aircraftLabelOpacity(aircraft),
-    },
-    geometry: {
-      type: "Point" as const,
-      coordinates: [renderedPosition?.lon ?? aircraft.lon!, renderedPosition?.lat ?? aircraft.lat!] as [number, number],
-    },
-  };
-}
-
-function ognMapLabelFeature(target: OgnTargetView, zoom: number, selected: boolean) {
-  const presentation = toOgnTrafficPresentation(target);
-  return {
-    type: "Feature" as const,
-    id: target.id,
-    properties: {
-      targetId: target.id,
-      label: selected ? "" : trafficMapLabelText({
-        identity: presentation.primaryLabel,
-        altitudeFt: presentation.altitudeFt,
-        speedKt: presentation.speedKt,
-      }, zoom, { suppressTelemetry: target.stale }) ?? "",
-      stale: target.stale,
-    },
-    geometry: {
-      type: "Point" as const,
-      coordinates: [target.longitude, target.latitude] as [number, number],
-    },
-  };
 }
 
 function setOgnDomLabel(handle: OgnMarkerHandle, value: string | null): boolean {
@@ -355,23 +275,6 @@ function collapseNarrowRadarAttribution(map: maplibregl.Map): void {
   credits.classList.remove("maplibregl-compact-show");
 }
 
-function labelForAircraft(aircraft: AircraftView): string {
-  return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
-}
-
-const aircraftSearchTextCache = new WeakMap<AircraftView, string>();
-
-function aircraftSearchText(aircraft: AircraftView): string {
-  const cached = aircraftSearchTextCache.get(aircraft);
-  if (cached !== undefined) return cached;
-  const value = [aircraft.callsign, aircraft.registration, aircraft.enrichment?.metadata?.registration, aircraft.icaoHex]
-    .filter(Boolean)
-    .join(" ")
-    .toUpperCase();
-  aircraftSearchTextCache.set(aircraft, value);
-  return value;
-}
-
 function formatAirspaceUtc(value: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
@@ -391,14 +294,6 @@ function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id:
 function relativeTwinMapOffset(minutes: number): string {
   if (minutes <= 0.05) return "NOW";
   return `+${formatNumber(minutes, minutes < 10 ? 1 : 0)} min`;
-}
-
-function ognTargetLabel(target: OgnTargetView): string {
-  return ognPrimaryLabel(target);
-}
-
-function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
-  return `<svg class="aircraft-glyph aircraft-glyph-${ognIconKind(aircraftType)}" viewBox="0 0 32 32" aria-hidden="true"><path d="${canonicalAircraftGlyphPath(ognIconKind(aircraftType))}"></path></svg>`;
 }
 
 export function AirRadarApp() {
@@ -3217,31 +3112,17 @@ export function AirRadarApp() {
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
             {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
-            <div className="map-overlay-primary" data-testid="radar-map-hud">
-              <Panel className="map-overlay-card map-summary-card">
-                <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
-                {activeCoverage === "extended" && snapshot.sourceStats && <details className="source-counter-details">
-                  <summary aria-label={t.radar.trafficSourceLabel} title={t.radar.trafficSourceLabel}>
-                    <UiIcon name="statistics" />
-                    <span className="source-counter-label">{t.aircraft.source}</span>
-                  </summary>
-                  <div className="source-counter-strip" aria-label={t.radar.trafficSourceLabel}>
-                    <span><strong>{formatNumber(snapshot.sourceStats.local)}</strong><small>LOCAL</small></span>
-                    <span><strong>{formatNumber(snapshot.sourceStats.network)}</strong><small>NETWORK</small></span>
-                    <span><strong>{formatNumber(snapshot.sourceStats.overlap)}</strong><small>OVERLAP</small></span>
-                    <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
-                  </div>
-                </details>}
-              </Panel>
-              <RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />
-              <MapControlGroup className="map-control-group-primary">
-              <RadarOperationsCenter />
-              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" aria-label={t.radar.trafficNearby} data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
-                <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
-                <strong>{formatNumber(activeTrafficCount)}</strong>
-              </button>
-              </MapControlGroup>
-              <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
+            <RadarMapHud
+              aircraftCount={displayedAircraftCount}
+              activeTrafficCount={activeTrafficCount}
+              showSourceBreakdown={activeCoverage === "extended"}
+              sourceStats={snapshot.sourceStats}
+              drawerOpen={drawerState !== "closed"}
+              trafficTriggerRef={trafficTriggerRef}
+              onOpenTraffic={openTrafficDrawer}
+              presentationControls={<RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />}
+              presetMenu={<RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />}
+            >
               <RadarMapLayerMenu
                 mapAppearance={mapAppearance}
                 onMapAppearanceChange={chooseMapAppearance}
@@ -3309,7 +3190,7 @@ export function AirRadarApp() {
                 colorMode={colorMode}
                 onColorModeChange={setColorMode}
               />
-            </div>
+            </RadarMapHud>
             <RadarQuickActions
               weatherEnabled={showWeatherRadar}
               weatherState={weatherView.state}
