@@ -30,7 +30,9 @@ npm-debug.log*
 data/flightaware-usage.json
 artifacts/radar-performance-baseline.json
 artifacts/radar-performance-baseline.md
-\nartifacts/radar-performance-soak.json\nartifacts/radar-performance-soak.md\n
+artifacts/radar-performance-soak.json
+artifacts/radar-performance-soak.md
+
 artifacts/visual-system-audit.json
 artifacts/visual-smoke/
 artifacts/aircraft-icon-audit.json
@@ -41,3 +43,11 @@ artifacts/predictive-validation-prospective-v2.*
 
 # Local deterministic performance reports (GitHub Actions uploads them instead)
 /.benchmarks/
+
+# Generated development diagnostics and runtime archives (not source fixtures)
+/scripts/.debug-*.ts
+/flightaware-route-audit.json
+/data/runtime-telemetry-v1.json
+/data/map-context-metar-v1.json
+/data/map-context-aup-v1.json
+/data/weather-radar/
