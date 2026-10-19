@@ -22,12 +22,11 @@ describe("Product Navigation V2", () => {
     for (const href of [
       "/operations", "/airspace", "/weather", "/watchlist", "/alerts",
       "/notifications", "/history", "/time-machine",
-      "/statistics", "/recap/daily", "/recap/weekly",
       "/intelligence", "/fleet", "/navigation", "/procedures", "/system",
     ]) {
       expect(grouped).toContain(`href: "${href}"`);
     }
-    expect(grouped.match(/href: "\/[^"]+"/g)).toHaveLength(16);
+    expect(grouped.match(/href: "\/[^"]+"/g)).toHaveLength(13);
     expect(grouped).toContain('label: cs ? "Provoz a radar" : "Operations & radar"');
     expect(grouped).toContain('label: cs ? "Historie a analýza" : "History & analysis"');
     expect(grouped).toContain('label: cs ? "Letecká data" : "Aviation data"');

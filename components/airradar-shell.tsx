@@ -59,9 +59,6 @@ function moreNavigationGroups() {
       items: [
         { href: "/history", label: t.history.title },
         { href: "/time-machine", label: t.timeMachine.title },
-        { href: "/statistics", label: t.statistics.title },
-        { href: "/recap/daily", label: t.recap.daily },
-        { href: "/recap/weekly", label: t.recap.weekly },
         { href: "/intelligence", label: t.intelligence.title },
       ],
     },
@@ -125,7 +122,6 @@ export function UtcClock() {
 function radarRailNavigation() { return [
   { href: "/", label: t.radar.liveAirPicture, icon: "radar", active: true },
   { href: "/history", label: t.airportTraffic.flights, icon: "flight", active: false },
-  { href: "/statistics", label: t.statistics.title, icon: "statistics", active: false },
   { href: "/time-machine", label: t.timeMachine.title, icon: "time", active: false },
   { href: "/system", label: t.system.title, icon: "system", active: false },
 ] as const; }
