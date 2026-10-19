@@ -17,6 +17,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.542] - 2026-10-19
+
+Changes since v1.0.541.
+
+**Features touched:** Live Radar, Map Context & Weather.
+
+### Changed
+
+- Isolate ATC, METAR and airport MapLibre layer registration (0793e399)
+
+### Maintenance
+
+- Sync generated repository metadata (#1093) (6f95a93f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1093) (6f95a93f)
+- refactor(radar): isolate ATC, METAR and airport MapLibre layer registration (0793e399)
+
+</details>
 ## [1.0.541] - 2026-10-19
 
 Changes since v1.0.540.
