@@ -431,3 +431,84 @@ body { font-feature-settings: "ss01" on; }
     outline-offset: -2px;
   }
 }
+
+/* V5 consistency pass: shared information density and comfortable interaction.
+ * Scoped to secondary pages so map tiles, hit targets, HUD stacking and
+ * MapLibre's own interactive overlays remain untouched. */
+.airradar-page-shell .secondary-page-content {
+  --content-readable: min(100%, 76ch);
+  padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
+}
+.secondary-page-content :is(.ui-page-header, .browse-page-header, .intelligence-header) {
+  margin-bottom: var(--space-5);
+}
+.secondary-page-content :is(.ui-page-header, .browse-page-header, .intelligence-header) p {
+  max-width: var(--content-readable);
+  text-wrap: pretty;
+}
+.secondary-page-content :is(.ui-panel, .ui-card, .ui-metric-card) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.secondary-page-content :is(.ui-panel, .ui-card) :is(h2, h3) {
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.secondary-page-content :is(button, [role="button"], select, input:not([type="checkbox"]):not([type="radio"])) {
+  min-height: 40px;
+}
+.secondary-page-content :is(button, [role="button"], a):focus-visible {
+  outline-offset: 3px;
+}
+.secondary-page-content :is(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.secondary-page-content :is(th, td) {
+  padding-block: max(9px, var(--space-2));
+  vertical-align: middle;
+}
+.secondary-page-content :is(th) {
+  font-weight: 700;
+  text-align: start;
+}
+.secondary-page-content :is(tbody tr) {
+  transition: background-color var(--motion-fast) ease;
+}
+.secondary-page-content :is(.ui-metric-value, .sidebar-count, .map-summary-item strong) {
+  font-variant-numeric: tabular-nums;
+}
+.secondary-page-content :is(.ui-empty-state) {
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+  color: var(--text-secondary);
+}
+.secondary-page-content :is(.ui-button, .ui-segmented-control button) {
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+@media (hover: hover) {
+  .secondary-page-content :is(a, button):not(:disabled):hover {
+    text-decoration-thickness: from-font;
+  }
+}
+@media (max-width: 820px) {
+  .airradar-page-shell .secondary-page-content {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  .secondary-page-content :is(.ui-page-header, .browse-page-header, .intelligence-header) {
+    margin-bottom: var(--space-4);
+  }
+  .secondary-page-content :is(.ui-button, button, [role="button"]) {
+    min-height: var(--control-height-touch);
+  }
+}
+@media (max-width: 380px) {
+  .secondary-page-content :is(.ui-page-header h1, .browse-page-header h1, .intelligence-header h1) {
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .secondary-page-content :is(tbody tr, .ui-button, .ui-segmented-control button) {
+    transition: none;
+  }
+}
