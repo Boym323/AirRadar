@@ -86,6 +86,9 @@ jobs:
       - name: Audit production dependencies
         if: steps.scope.outputs.docs_only != 'true'
         run: npm audit --omit=dev --audit-level=high
+      - name: Audit source footprint and unreachable candidates (advisory)
+        if: steps.scope.outputs.docs_only != 'true'
+        run: node scripts/audit-code-footprint.mjs
       - name: Restore ESLint cache
         if: steps.scope.outputs.docs_only != 'true'
         uses: actions/cache@v6
