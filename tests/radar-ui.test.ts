@@ -13,6 +13,8 @@ import {
 import { aircraftLabelOpacity, aircraftMarkerClassNames, aircraftPositionIsStale, aircraftVisualOpacity } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const mapLabelsSource = readFileSync(new URL("../lib/radar/map-label-presentation.ts", import.meta.url), "utf8");
+const radarHudSource = readFileSync(new URL("../components/radar/radar-map-hud.tsx", import.meta.url), "utf8");
 const timeMachineSource = readFileSync(new URL("../components/time-machine.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftMotionRuntimeSource = readFileSync(new URL("../lib/radar/aircraft-motion-runtime.ts", import.meta.url), "utf8");
@@ -118,7 +120,7 @@ describe("radar UI polish helpers", () => {
     const mobile = shellSource.slice(shellSource.indexOf("export function MobileBottomNav"), shellSource.indexOf("export function AirRadarPageShell"));
     expect(shellSource).toContain("mobile-bottom-nav");
     expect(grouped).toContain('href: "/alerts"');
-    expect(grouped).toContain('href: "/recap/daily"');
+    expect(grouped).toContain('href: "/history"');
     expect(shellSource).toContain('mobile && group.id === "operations"');
     expect(mobile).toContain("<MoreNavigationGroups pathname={pathname} mobile />");
     expect(globalCss).toContain(".mobile-bottom-more > div");
@@ -211,7 +213,7 @@ describe("radar UI polish helpers", () => {
 
   it("bounds React and layout work for dense live traffic", () => {
     expect(appSource).not.toContain('from "zod"');
-    expect(appSource).toContain("aircraftSearchTextCache");
+    expect(mapLabelsSource).toContain("aircraftSearchTextCache");
     expect(appSource).toContain("watchlistedHexes");
     expect(appSource).toContain("default view avoids a redundant O(n log n) sort");
     expect(radarTrafficBrowserSource).toContain("<AircraftTrafficList");
@@ -249,7 +251,7 @@ describe("radar UI polish helpers", () => {
   });
 
   it("keeps Operations Center in a focused read-only intelligence boundary", () => {
-    expect(appSource).toContain("<RadarOperationsCenter />");
+    expect(radarHudSource).toContain("<RadarOperationsCenter />");
     expect(radarOperationsCenterSource).toContain("useIntelligenceStream(open)");
     expect(radarOperationsCenterSource).toContain('"/api/alerts?page=0&pageSize=50&filter=all"');
     expect(radarOperationsCenterSource).toContain('"/api/logbook/summary"');
@@ -431,9 +433,10 @@ describe("radar UI polish helpers", () => {
 
   it("keeps contextual map controls in an explicit second overlay row", () => {
     expect(appSource).toContain('className="map-overlay-context-row"');
-    expect(globalCss).toMatch(/\.map-overlay-primary\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto auto/);
+    expect(globalCss).toMatch(/\.map-overlay-primary\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/);
     expect(globalCss).toContain(".map-overlay-context-row .weather-radar-timeline");
-    const primaryStart = appSource.indexOf('className="map-overlay-primary" data-testid="radar-map-hud"');
+    expect(radarHudSource).toContain('className="map-overlay-primary" data-testid="radar-map-hud"');
+    const primaryStart = appSource.indexOf("<RadarMapHud");
     const contextRow = appSource.indexOf('className="map-overlay-context-row"');
     expect(primaryStart).toBeGreaterThan(-1);
     expect(contextRow).toBeGreaterThan(primaryStart);

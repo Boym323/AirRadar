@@ -40,7 +40,7 @@ describe("Visual System V4 readability and hierarchy", () => {
     expect(advanced).toBeGreaterThan(live);
     expect(board).toContain('<details className="airport-live-advanced"');
     expect(board).toContain("{t.airport.liveBoardAdvancedLabel}");
-    for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-arrival-sequence", "airport-live-board-v9-terminal-horizon", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"])
+    for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-arrival-sequence", "airport-live-board-v9-terminal-horizon", "airport-live-board-runways", "airport-v3-timeline"])
       expect(board).toContain(`data-testid="${id}"`);
     for (const locale of [cs, en]) {
       expect(locale).toContain("liveBoardAdvancedLabel:");

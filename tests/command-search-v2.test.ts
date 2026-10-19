@@ -4,7 +4,6 @@ import { parseCommandSearchRecents } from "@/lib/search/command-palette";
 
 const paletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
 const flightsBrowserSource = readFileSync(new URL("../components/airports-flights-browser.tsx", import.meta.url), "utf8");
-const recapSource = readFileSync(new URL("../components/recap-page.tsx", import.meta.url), "utf8");
 const airportBoardSource = readFileSync(new URL("../components/airport-operations-board.tsx", import.meta.url), "utf8");
 
 describe("Command Search V2 UI contract", () => {
@@ -33,8 +32,6 @@ describe("Command Search V2 UI contract", () => {
   });
 
   it("keeps smart-action destinations anchored to the existing product surfaces", () => {
-    expect(recapSource).toContain('id="operational-events"');
-    expect(recapSource).toContain('id="interesting-aircraft"');
     expect(airportBoardSource).toContain('id="airport-intelligence-v3"');
   });
 });

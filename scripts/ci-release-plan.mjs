@@ -44,12 +44,10 @@ const FEATURE_TARGETS = {
   airport: AIRPORT_TARGETS,
   aircraft: AIRCRAFT_TARGETS,
   system: ["system-desktop", "predictive-readiness-desktop", "predictive-readiness-mobile"],
-  statistics: ["statistics-desktop", "statistics-mobile", "command-search-desktop", "command-search-mobile"],
   weather: ["weather-data-desktop", "weather-empty-mobile"],
   watchlist: ["watchlist-empty-desktop", "watchlist-empty-mobile"],
   notifications: ["notifications-empty-desktop", "notifications-empty-mobile"],
   receiver: ["receiver-unavailable-desktop", "receiver-unavailable-mobile"],
-  recap: ["daily-intelligence-desktop", "daily-intelligence-mobile"],
   operations: ["operations-center-desktop", "operations-center-mobile", "predictive-operations-public-desktop", "predictive-operations-admin-mobile"],
 };
 const FULL_PERFORMANCE_RUNTIME = /^lib\/server\/(?:aircraft-state|sse-capacity|runtime-diagnostics|source-reliability)/;
@@ -79,12 +77,10 @@ const RULES = [
     /^components\/(?:aircraft-(?:detail|observed-weather|communications|weather-fusion|weather-panel|adsb-telemetry|operational-twin)[^/]*|predictive-aircraft-advisories[^/]*)\.(?:[cm]?[jt]sx?|css)$/,
   ] },
   { kind: "system", paths: [/^app\/system\//, /^components\/system-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
-  { kind: "statistics", paths: [/^app\/statistics\//, /^components\/statistics-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "weather", paths: [/^app\/weather\//, /^components\/weather-operations-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "watchlist", paths: [/^app\/watchlist\//, /^components\/watchlist-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "notifications", paths: [/^app\/notifications\//, /^components\/notification-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "receiver", paths: [/^app\/receiver\//, /^components\/receiver-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
-  { kind: "recap", paths: [/^app\/recap\//, /^components\/recap-page\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "operations", paths: [/^app\/operations\//, /^components\/operations-dashboard[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
 ];
 const BACKEND_ONLY = [/^app\/api\//, /^lib\/server\//, /^migrations\//, /^prisma\//, /^tests\//];
