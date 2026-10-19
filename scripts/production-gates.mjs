@@ -1379,12 +1379,20 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await switchAirportView("analytics");
             const advanced = visualPage.getByTestId("airport-live-board-advanced");
             await advanced.waitFor({ state: "visible", timeout: 15_000 });
-            const evidence = advanced.getByTestId("airport-v5-evidence-details");
-            await evidence.locator("summary").click();
-            for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow", "airport-d2-runway-evidence", "airport-d3-approach-evidence", "airport-d4-operational-context"]) {
+            // The V5 nested evidence disclosure was retired. Exercise the
+            // surviving Advanced section's own native disclosure instead.
+            const advancedSummary = advanced.locator(":scope > summary");
+            await advancedSummary.click();
+            if (await advanced.getAttribute("open") !== null) {
+              throw new Error("Airport advanced disclosure did not close");
+            }
+            await advancedSummary.click();
+            if (await advanced.getAttribute("open") === null) {
+              throw new Error("Airport advanced disclosure did not reopen");
+            }
+            for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow", "airport-live-board-v9-terminal-horizon"]) {
               await advanced.locator(`[data-testid="${id}"]`).waitFor({ state: "visible", timeout: 15_000 });
             }
-            await evidence.locator("summary").click();
             await switchAirportView("weather");
             await visualPage.locator(".airport-weather-card").waitFor({ state: "visible", timeout: 15_000 });
             await switchAirportView("map");
