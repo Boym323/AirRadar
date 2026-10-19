@@ -24,7 +24,6 @@ function input(name = "PRG arrivals") {
       showSmallAirports: false,
       showHeliports: false,
       showAtc: true,
-      showAtcTraffic: false,
       showAtsRoutes: false,
       showNavData: false,
       showSids: false,
@@ -52,6 +51,14 @@ describe("Radar Presets V1", () => {
       camera: { longitude: 14.26, latitude: 50.1, zoom: 9.2 },
       mapFilters: { source: "local" },
     });
+  });
+
+  it("parses old V1 presets without re-enabling retired map traffic", () => {
+    const preset = createRadarPreset(input(), new Date("2026-10-06T18:00:00Z"), "legacy");
+    const legacy = { ...preset, layers: { ...preset.layers, showAtcTraffic: true } };
+    const [parsed] = parseRadarPresets([legacy]);
+    expect(parsed?.layers.showAtc).toBe(true);
+    expect(parsed?.layers).not.toHaveProperty("showAtcTraffic");
   });
 
   it("rejects malformed stored presets and caps the list", () => {

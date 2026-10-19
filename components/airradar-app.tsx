@@ -109,7 +109,7 @@ import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
-import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
+import { useRadarAtcMapContext } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
 import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
@@ -197,8 +197,6 @@ const OGN_LABEL_SOURCE_ID = "ogn-traffic-labels";
 const OGN_LABEL_LAYER_ID = "ogn-traffic-labels-symbol";
 
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
-const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
 const AircraftWeatherPanel = dynamic(() => import("@/components/aircraft-weather-panel").then((module) => module.AircraftWeatherPanel), { ssr: false });
 const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.north],
@@ -333,7 +331,6 @@ export function AirRadarApp() {
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
-  const [showAtcTraffic, setShowAtcTraffic] = useState(false);
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
@@ -347,22 +344,9 @@ export function AirRadarApp() {
   const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
   const [showAupUup, setShowAupUup] = useState(false);
-  const {
-    airspaceDataset,
-    airspaceActivity,
-    sectorTraffic,
-    sectorTrafficState,
-    sectorFlowWindow,
-    setSectorFlowWindow,
-    sectorFlows,
-  } = useRadarAtcMapContext({
-    showAtc,
+  const { airspaceDataset, airspaceActivity } = useRadarAtcMapContext({
     showAupUup,
-    showAtcTraffic,
-    searchParams,
   });
-  const sectorTrafficRef = useRef<Map<string, SectorTrafficView>>(new Map());
-  sectorTrafficRef.current = sectorTraffic;
   const {
     radarCatalog,
     radarFrameId,
@@ -774,7 +758,7 @@ export function AirRadarApp() {
   });
   const atcDataset = useDatasetQuery<AtcDataResponse>({
     url: "/api/atc/sectors",
-    enabled: showAtc || showAtcTraffic || showAupUup,
+    enabled: showAtc || showAupUup,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtcDataset),
     itemCount: (value) => value.sectors.length,
@@ -968,7 +952,6 @@ export function AirRadarApp() {
         showSmallAirports,
         showHeliports,
         showAtc,
-        showAtcTraffic,
         showAtsRoutes,
         showNavData,
         showSids,
@@ -997,7 +980,6 @@ export function AirRadarApp() {
     showAircraftWeather,
     showAirports,
     showAtc,
-    showAtcTraffic,
     showAtsRoutes,
     showAupUup,
     showHeliports,
@@ -1024,7 +1006,6 @@ export function AirRadarApp() {
     setShowSmallAirports(preset.layers.showSmallAirports);
     setShowHeliports(preset.layers.showHeliports);
     setShowAtc(preset.layers.showAtc);
-    setShowAtcTraffic(preset.layers.showAtcTraffic);
     setShowAtsRoutes(preset.layers.showAtsRoutes);
     setShowNavData(preset.layers.showNavData);
     setShowSids(preset.layers.showSids);
@@ -1763,10 +1744,6 @@ export function AirRadarApp() {
       map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": AIRRADAR_MAP_THEME.atc.fill, "fill-opacity": ["match", ["get", "airspaceType"], "FIR", 0.012, "TMA", 0.022, "CTR", 0.03, 0.045] } });
       map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.line, "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.82, "upcoming", 0.62, 0.48], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.75, 8, 1.25, 13, 2] } });
       map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.atc.label, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
-      const trafficFilter: FilterSpecification = ["!=", ["get", "trafficLevel"], "NO_DATA"];
-      map.addLayer({ id: "atc-sector-traffic-fill", type: "fill", source: "atc-sectors", filter: trafficFilter, layout: { visibility: "none" }, paint: { "fill-color": AIRRADAR_MAP_THEME.atc.trafficFill, "fill-opacity": 0.025 } });
-      map.addLayer({ id: "atc-sector-traffic-line", type: "line", source: "atc-sectors", filter: trafficFilter, layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.line, "line-opacity": 0.72, "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1.1, 10, 2.1, 13, 2.8] } });
-      map.addLayer({ id: "atc-sector-traffic-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: trafficFilter, layout: { visibility: "none", "text-field": ["concat", ["get", "name"], " · ", ["to-string", ["get", "trafficAircraftCount"]]], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.label, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
       map.addLayer({ id: "atc-sectors-context-highlight", type: "line", source: "atc-sectors", filter: ["==", ["get", "id"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.highlight, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.8, 13, 4.2] } });
       map.moveLayer("airspace-plan-fill");
       map.moveLayer("airspace-plan-line");
@@ -1841,17 +1818,6 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "atc-sectors-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
-      map.on("click", "atc-sector-traffic-fill", (event: MapLayerMouseEvent) => {
-        const properties = event.features?.[0]?.properties; if (!properties) return;
-        const traffic = sectorTrafficRef.current.get(String(properties.id)); const content = document.createElement("div"); content.className = "map-popup";
-        const title = document.createElement("strong"); title.textContent = `PRAHA ACC — ${String(properties.name)}`; content.append(title);
-        const add = (label: string, value: unknown) => { const line = document.createElement("span"); line.textContent = `${label}: ${value == null || value === "" ? "—" : String(value)}`; content.append(line); };
-        if (!traffic) add("Traffic", "NO DATA"); else { add("Vertical", `${traffic.vertical.lower ?? "—"}–${traffic.vertical.upper ?? "—"}`); add("Aircraft now", traffic.traffic.aircraftCount); add("Last 5 min", `+${traffic.traffic.entering5m} entered · -${traffic.traffic.leaving5m} left`); add("Vertical movement", `${traffic.traffic.climbing} climbing · ${traffic.traffic.descending} descending · ${traffic.traffic.level} level`); add("Altitude", `avg ${traffic.traffic.averageAltitude ?? "—"} · median ${traffic.traffic.medianAltitude ?? "—"}`); add("Ground speed", traffic.traffic.averageGroundSpeed == null ? "—" : `${traffic.traffic.averageGroundSpeed} kt`); add("Traffic", traffic.trafficLevel); add("Map time", traffic.at); add("Source", "Czech eAIP + AirRadar ADS-B"); }
-        const note = document.createElement("small"); note.textContent = "Traffic statistics describe aircraft inside the published sector volume and do not represent the official operational sector configuration."; content.append(note);
-        new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
-      });
-      map.on("mouseenter", "atc-sector-traffic-fill", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "atc-sector-traffic-fill", () => { map.getCanvas().style.cursor = ""; });
       map.on("click", "airspace-plan-fill", (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties;
         if (!properties) return;
@@ -2093,8 +2059,6 @@ export function AirRadarApp() {
       (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.segments as FeatureCollection);
       (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.labels as FeatureCollection);
       (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.points as FeatureCollection);
-      (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJsonRef.current);
-      (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJsonRef.current);
       (map.getSource("route-airports") as GeoJSONSource | undefined)?.setData(airportGeoJsonRef.current);
       for (const replay of Object.values(mapReplays)) replay.setReady(true);
       setMapReady(true);
@@ -2638,37 +2602,51 @@ export function AirRadarApp() {
     if (map.getLayer("procedures-star-line")) map.setLayoutProperty("procedures-star-line", "visibility", showStars ? "visible" : "none");
   }, [mapReady, procedures, showSids, showStars]);
 
+  // Data payloads depend on ATC data/plan activity, not on camera padding,
+  // drawer state or MapLibre readiness. Avoid re-creating sector polygons and
+  // re-sending them to WebGL when only the overlay visibility changes.
+  const atcVisible = showAtc || showAupUup;
+  const visibleAirspaceActivity = showAupUup ? airspaceActivity : null;
+  const atcGeoJson = useMemo(
+    () => createAtcGeoJSON(atcData.sectors, atcVisible, visibleAirspaceActivity),
+    [atcData.sectors, atcVisible, visibleAirspaceActivity],
+  );
+  const transmitterGeoJson = useMemo<FeatureCollection>(() => ({
+    type: "FeatureCollection",
+    features: showAtc ? atcData.transmitters.filter((transmitter) => Number.isFinite(transmitter.longitude) && Number.isFinite(transmitter.latitude)
+      && transmitter.longitude >= -180 && transmitter.longitude <= 180
+      && transmitter.latitude >= -90 && transmitter.latitude <= 90).map((transmitter) => ({
+      type: "Feature" as const,
+      properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
+      geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
+    })) : [],
+  }), [atcData.transmitters, showAtc]);
+
   useEffect(() => {
-    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup || showAtcTraffic, airspaceActivity, sectorTraffic);
-    const transmitterGeoJson: FeatureCollection = {
-      type: "FeatureCollection",
-      features: showAtc ? atcData.transmitters.filter((transmitter) => Number.isFinite(transmitter.longitude) && Number.isFinite(transmitter.latitude)
-        && transmitter.longitude >= -180 && transmitter.longitude <= 180
-        && transmitter.latitude >= -90 && transmitter.latitude <= 90).map((transmitter) => ({
-        type: "Feature" as const,
-        properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
-        geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
-      })) : [],
-    };
     atcGeoJsonRef.current = atcGeoJson;
     transmitterGeoJsonRef.current = transmitterGeoJson;
+    // Map replay sets the source once when ready, and retains data until
+    // style.load if the map is not ready. No second source.setData needed.
     mapReplayRef.current.atc.setData(atcGeoJson);
     mapReplayRef.current.transmitters.setData(transmitterGeoJson);
+  }, [atcGeoJson, transmitterGeoJson]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJson);
-    (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJson);
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
-    }
-    for (const layer of ["atc-sector-traffic-fill", "atc-sector-traffic-line", "atc-sector-traffic-label"] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtcTraffic ? "visible" : "none");
     }
     for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
     }
-    // The initial radar view is receiver-centred on Czechia. Without this fit,
-    // valid Slovak/Austrian sectors are loaded but remain outside the viewport.
+  }, [mapReady, showAtc, showAupUup]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    // Fit only when explicitly enabling ATC. Layout/panel changes no longer
+    // trigger heavy source updates, even though camera padding can change.
     if (showAtc && !atcAutoFitRef.current && atcData.sectors.length) {
       const bounds = new maplibregl.LngLatBounds();
       for (const sector of atcData.sectors) for (const polygon of sector.polygons) {
@@ -2682,7 +2660,7 @@ export function AirRadarApp() {
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airspaceActivity, atcData, currentRadarPadding, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
+  }, [atcData.sectors, currentRadarPadding, mapReady, showAtc]);
 
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
@@ -2805,19 +2783,34 @@ export function AirRadarApp() {
       return;
     }
     let active = true;
-    const refresh = () => {
-      void fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/context`, { cache: "no-store" })
-        .then((response) => response.json() as Promise<AtcContextResult>)
-        .then((value) => { if (active) setSelectedAtcContext(value); })
-        .catch(() => { if (active) setSelectedAtcContext(null); });
-    };
-    refresh();
     let timer: number | null = null;
-    const schedule = () => {
-      timer = window.setTimeout(() => { refresh(); schedule(); }, 5_000);
+    let controller: AbortController | null = null;
+    const refresh = async () => {
+      // One in-flight request at a time; the sector estimate is advisory, not real-time ATC.
+      controller = new AbortController();
+      try {
+        const response = await fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/context`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("ATC context unavailable");
+        const value = await response.json() as AtcContextResult;
+        if (active) setSelectedAtcContext(value);
+      } catch (error) {
+        if (active && !(error instanceof DOMException && error.name === "AbortError")) {
+          setSelectedAtcContext(null);
+        }
+      } finally {
+        controller = null;
+        if (active) timer = window.setTimeout(() => { void refresh(); }, 30_000);
+      }
     };
-    schedule();
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
+    void refresh();
+    return () => {
+      active = false;
+      if (timer !== null) window.clearTimeout(timer);
+      controller?.abort();
+    };
   }, [contextAircraftHex, contextHasPosition]);
 
   useEffect(() => {
@@ -3111,7 +3104,7 @@ export function AirRadarApp() {
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
-            {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
+
             <RadarMapHud
               aircraftCount={displayedAircraftCount}
               activeTrafficCount={activeTrafficCount}
@@ -3141,11 +3134,7 @@ export function AirRadarApp() {
                 airportsDataset={airportsDataset}
                 showAtc={showAtc}
                 onShowAtcChange={setShowAtc}
-                showAtcTraffic={showAtcTraffic}
-                onShowAtcTrafficChange={setShowAtcTraffic}
                 atcDataset={atcDataset}
-                sectorTrafficState={sectorTrafficState}
-                airspaceActivity={airspaceActivity}
                 showAtsRoutes={showAtsRoutes}
                 onShowAtsRoutesChange={(value) => {
                   setShowAtsRoutes(value);
@@ -3357,7 +3346,6 @@ export function AirRadarApp() {
             operationalFocusItemId={operationalFocusMapId}
             operationalFocusRevealVersion={operationalFocusRevealVersion}
             onOperationalFocus={focusOperationalItemFromDrawer}
-            sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
             onClose={closeRadarDrawer}

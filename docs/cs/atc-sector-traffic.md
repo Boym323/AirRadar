@@ -19,20 +19,16 @@ deduplikované přechody letů. Unknown pozorování nejsou transitions. Krátk�
 boundary jitter se před počítáním slučuje, ale transitions jsou stále
 observational inference ze vzorkované historie.
 
-Map overlay poskytuje volitelný pohled `ATC Sector Traffic` nad sdíleným
-sector source. Panel `ATC Vertical Traffic` aktuálně zveřejňuje ověřený stack
-SOUTH (`LKAAS`, `LKAANSL`, `LKAATB`) v publikovaném vertikálním pořadí.
-NORTH a WEST se záměrně nezobrazují, dokud nejsou jejich vztahy jednoznačné
-napříč importovanými AIRAC daty. Panel Sector flows používá jeden transitions
-request pro vybrané okno 1, 5 nebo 15 minut; položky představují pohyb mezi
-publikovanými objemy, nikoli potvrzené ATC handoffy.
+Hlavní radarová mapa již nezobrazuje doplňkové vrstvy `ATC Sector Traffic`,
+`ATC Vertical Traffic` ani `Sector Flows`. Neobnovuje jejich provozní API
+po 12/15 sekundách a odvozené počty letadel nepovažuje za skutečné přidělení
+řídícího. Historie provozu zůstává dostupná na detailu ATC sektoru a všechna
+traffic API jsou nadále k dispozici jiným konzumentům.
 
-Aircraft quick detail znovu používá existující point/altitude sector match a
-již načtený batch traffic context. Používá formulace „Published sector“ a
-„Sector traffic“ a nedostupná data hlásí jako `—` místo tvrzení aktuálního
-provozního assignmentu. Historické requesty používají stejný map-time timestamp
-pro traffic, flows a aircraft context; live requesty obnovují traffic po
-12 sekundách a flows po 15 sekundách.
+Rychlý detail letadla zachovává publikované přiřazení podle polohy a výšky,
+frekvence a orientační odhad předání. Už nezobrazuje odvozené počty provozu v
+sektoru. Kontext vybraného letadla používá nejvýše jeden souběžný požadavek
+a minimálně 30sekundovou prodlevu do dalšího obnovení.
 
 Publikované frekvence zůstávají ve vlastnictví existujícího modelu
 `AtcSector`. Pro současná context a transition API není nutná databázová
@@ -48,14 +44,14 @@ důkaz, že je sektor právě provozován samostatně.
 Sekce `Traffic history` se lazy-loaduje z historického API a není pollována
 se živou mapou. Rozsahy se centrálně mapují na buckety takto:
 `1h` → `1m`, `6h` → `5m`, `24h` → `15m` a `7d` → `1h`.
-Historie jednoho sektoru používá jeden sector request; comparison a SOUTH
-history používají jeden batch request až pro tři sektory (`TB`, `SL` a `S`).
+Historie jednoho sektoru používá jeden sector request. Batch historie zůstává
+dostupná samostatným klientům, ale odstraněné mapové panely ji již nevolají.
 
 History window končí v efektivním Global Map Time. V režimu Time Machine se
 použije okamžik `at`, nikoli skutečný aktuální čas. Chybějící hodnoty se
 vykreslují jako mezery/„No data“; nepřevádějí se na nulu. Summary hodnoty
 (peak, average, entries a exits) se berou z backend odpovědi. Grafy popisují
-letadla pozorovaná uvnitř publikovaných SOUTH sector volumes a nereprezentují
+letadla pozorovaná uvnitř publikovaných ATC sektorů a nereprezentují
 provozní konfiguraci ATC sektorů. Výsledky závisí na ADS-B pokrytí AirRadaru a
 zachovaných datech `FlightPosition`.
 
