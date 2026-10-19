@@ -5,16 +5,19 @@ const file = (name: string) => readFileSync(new URL(`../${name}`, import.meta.ur
 
 describe("Visual System V5-A2 map and topbar hierarchy", () => {
   const app = file("components/airradar-app.tsx");
+  const hud = file("components/radar/radar-map-hud.tsx");
   const css = file("app/globals.css");
   it("does not render redundant topbar source metrics or a duplicate filter count", () => {
     expect(app).not.toContain('className="topbar-metric"');
     expect(app).not.toContain('className="topbar-metric topbar-metric-network"');
     expect(app).not.toContain('className="map-summary-filter-state"');
-    expect(app).toContain('className="source-counter-details"');
-    expect(app).toContain('data-testid="radar-map-hud"');
+    expect(hud).toContain('className="source-counter-details"');
+    expect(hud).toContain('data-testid="radar-map-hud"');
+    expect(app).toContain("<RadarMapHud");
   });
   it("keeps the traffic control accessible on a 320px mobile screen", () => {
-    expect(app).toContain('aria-label={t.radar.trafficNearby} data-testid="traffic-trigger"');
+    expect(hud).toContain('aria-label={t.radar.trafficNearby}');
+    expect(hud).toContain('data-testid="traffic-trigger"');
     expect(css).toContain('.map-overlay-primary .map-summary-card { display: none; }');
     expect(css).toContain('.map-overlay-primary .traffic-trigger-label { display: none; }');
     expect(css).toContain('max-width: calc(100vw - 76px)');
