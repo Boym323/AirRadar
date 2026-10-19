@@ -77,6 +77,7 @@ export function ognTargetLabel(target: OgnTargetView): string {
 }
 
 export function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
-  return `<svg class="aircraft-glyph aircraft-glyph-${ognIconKind(aircraftType)}" viewBox="0 0 32 32" aria-hidden="true"><path d="${canonicalAircraftGlyphPath(ognIconKind(aircraftType))}"></path></svg>`;
+  const kind = ognIconKind(aircraftType);
+  return `<svg class="aircraft-glyph aircraft-glyph-${kind}" viewBox="0 0 32 32" aria-hidden="true"><path d="${canonicalAircraftGlyphPath(kind)}"></path></svg>`;
 }
 
