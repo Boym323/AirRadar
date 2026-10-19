@@ -4,7 +4,6 @@ import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { formatAtcFrequency, formatAtcLimit, formatAtcService, t } from "@/lib/i18n";
-import type { SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 
 /** Canonical 2D ATC and Navigation Integrity MapLibre source builders. */
 export function createNavigationIntegrityGeoJSON(cells: Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }>): FeatureCollection {
@@ -19,7 +18,7 @@ export function createNavigationIntegrityGeoJSON(cells: Array<{ latCell: number;
   };
 }
 
-export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivity: AirspaceActivityResponse | null = null, traffic = new Map<string, SectorTrafficView>()) {
+export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivity: AirspaceActivityResponse | null = null) {
   // Hidden ATC has no features; avoid work proportional to planned airspace windows.
   if (!visible) return { type: "FeatureCollection" as const, features: [] };
   const planIndex = buildAirspacePlanMapIndex(airspaceActivity);
@@ -32,7 +31,6 @@ export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspac
       // formatting and planned-activity matching for every polygon.
       const plan = matchAirspacePlanForSector(sector, planIndex);
       const planLabel = plan?.state === "planned-now" ? activityT.plannedNow : plan?.state === "upcoming" ? activityT.upcoming : null;
-      const sectorTraffic = traffic.get(sector.id);
       const frequencies = sector.frequencies;
       const service = formatAtcService(sector.service ?? sector.atcCallsign);
       const lowerAltitude = formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited);
@@ -61,9 +59,6 @@ export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspac
           validTo: sector.validTo,
           lastVerifiedAt: sector.lastVerifiedAt,
           activationStatus: sector.activationStatus ?? "UNKNOWN",
-          trafficLevel: sectorTraffic?.trafficLevel ?? "NO_DATA",
-          trafficAircraftCount: sectorTraffic?.traffic.aircraftCount ?? null,
-          trafficAt: sectorTraffic?.at ?? null,
           airspacePlanState: plan?.state ?? "none",
           airspacePlanStale: plan?.stale ?? false,
           airspacePlanSource: plan?.source ?? "",
