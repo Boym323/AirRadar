@@ -35,8 +35,8 @@ describe("Trajectory Quality Outcome Validation V1 boundaries", () => {
     expect(calibrationRoute).toContain("getOperationalTwinTrajectoryQualityGraduationReport()");
     expect(calibrationRoute).toContain("trajectoryQuality");
     expect(calibrationRoute).toContain("trajectoryQualityGraduation");
-    expect(calibrationCenter).toContain('data-testid="calibration-trajectory-quality-outcome"');
-    expect(calibrationCenter).toContain('data-testid="calibration-trajectory-quality-graduation"');
+    expect(calibrationCenter).toContain('data-testid="calibration-trajectory-quality-outcome-v2"');
+    expect(calibrationCenter).toContain('data-testid="calibration-trajectory-quality-v3-graduation"');
   });
 
   it("keeps graduation manual and fail-closed without changing the canonical trajectory", () => {

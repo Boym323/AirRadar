@@ -244,12 +244,9 @@ describe("global search", () => {
   });
 
   it("recognizes deterministic smart actions without live or database dependencies", async () => {
-    expect(smartSearchActions("go-arounds today")).toEqual([
-      { kind: "action", intent: "go_arounds_today", airportIcao: null, href: "/recap/daily#operational-events" },
-    ]);
-    expect(smartSearchActions("vzácná letadla dnes")).toEqual([
-      { kind: "action", intent: "rare_aircraft_today", airportIcao: null, href: "/recap/daily#interesting-aircraft" },
-    ]);
+    // Retired recap routes must never appear as broken smart-search links.
+    expect(smartSearchActions("go-arounds today")).toEqual([]);
+    expect(smartSearchActions("vzácná letadla dnes")).toEqual([]);
     expect(smartSearchActions("LOWW operations")).toEqual([
       { kind: "action", intent: "airport_operations", airportIcao: "LOWW", href: "/airports/LOWW#airport-intelligence-v3" },
     ]);

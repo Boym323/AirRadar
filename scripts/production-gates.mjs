@@ -1063,9 +1063,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
-        { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
-        { name: "command-search-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historické lety" },
-        { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
+        { name: "command-search-desktop", path: "/history", selector: ".history-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historické lety" },
         { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
         { name: "airport-v5-operations-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "operations" },
@@ -1085,8 +1083,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "notifications-empty-mobile", path: "/notifications", selector: '[data-testid="notification-center-v2"]', viewport: { width: 390, height: 844 }, fullPage: true, mockNotifications: true },
         { name: "receiver-unavailable-desktop", path: "/receiver/coverage", selector: '[data-testid="receiver-explorer-v2"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockReceiverUnavailable: true },
         { name: "receiver-unavailable-mobile", path: "/receiver/coverage", selector: '[data-testid="receiver-explorer-v2"]', viewport: { width: 390, height: 844 }, fullPage: true, mockReceiverUnavailable: true },
-        { name: "more-menu-desktop-cs", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openMore: "desktop" },
-        { name: "more-menu-mobile-en-320", path: "/statistics", selector: ".statistics-page", viewport: { width: 320, height: 568 }, fullPage: false, openMore: "mobile", locale: "en" },
+        { name: "more-menu-desktop-cs", path: "/history", selector: ".history-page", viewport: { width: 1366, height: 900 }, fullPage: false, openMore: "desktop" },
+        { name: "more-menu-mobile-en-320", path: "/history", selector: ".history-page", viewport: { width: 320, height: 568 }, fullPage: false, openMore: "mobile", locale: "en" },
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-320", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false },
@@ -1103,9 +1101,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "radar-mobile-selected-expanded", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true, expandAircraft: true },
-        { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
-        { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW – provozní přehled" },
-        { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
+        { name: "command-search-mobile", path: "/history", selector: ".history-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW – provozní přehled" },
         { name: "airport-live-board-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
         { name: "airport-v5-arrivals-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
         { name: "airport-v5-departures-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "departures" },
@@ -1929,9 +1925,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       return page;
     };
     const routes = [
-      ["/history", ".history-page"], ["/statistics", ".statistics-page"], ["/fleet", ".fleet-page"],
+      ["/history", ".history-page"], ["/fleet", ".fleet-page"],
       ["/time-machine", ".time-machine-page"], ["/intelligence", ".intelligence-page"], ["/watchlist", ".watchlist-page"],
-      ["/alerts", ".alert-history-page"], ["/recap/daily", ".recap-page"], ["/recap/weekly", ".recap-page"],
+      ["/alerts", ".alert-history-page"],
       ["/system", ".system-page"], ["/operations", '[data-testid="operations-dashboard-v1"]'], ["/receiver/coverage", '[data-testid="receiver-explorer-v2"]'],
     ];
     const routePages = await Promise.all(Array.from({ length: 3 }, async () => configureRouteSmokePage(await browser.newPage({ viewport: { width: 1280, height: 800 } }))));
@@ -1986,7 +1982,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       { path: "/system", heading: "System status" },
       { path: "/watchlist", heading: "Watchlist rule management" },
       { path: "/alerts", heading: "Alert history" },
-      { path: "/heatmap", heading: "Traffic Heatmap" },
       { path: "/receiver/coverage", heading: "Receiver Analysis V2" },
     ]) {
       await routeSmoke.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });

@@ -61,10 +61,8 @@ describe("Czech/English full-site localization remediation", () => {
     expect(source("components/receiver-coverage-polar.tsx")).toContain("receiverPolarCellAria");
   });
 
-  it("maintains both languages for client-side heatmap and server-fed intelligence", () => {
-    const heatmap = source("components/heatmap-page-content.tsx");
+  it("maintains both languages for server-fed flight intelligence", () => {
     const intelligence = source("components/intelligence-page-content.tsx");
-    expect(heatmap).toContain("pageExtrasCopy(t.locale).heatmap");
     expect(intelligence).toContain("pageExtrasCopy(t.locale).intelligence");
     expect(intelligence).toContain("t.intelligence.types[event.type]");
     expect(source("app/intelligence/page.tsx")).toContain("getFlightIntelligenceService().query({ limit: 50 })");

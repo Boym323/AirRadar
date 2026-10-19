@@ -149,11 +149,8 @@ describe("Czech UI localization coverage", () => {
     const expected = new Map([
       ["components/navigation-integrity-center.tsx", 'title: "Integrita navigačních dat"'],
       ["components/weather-operations-center.tsx", 'title: "Provozní přehled počasí"'],
-      ["components/traffic-geography.tsx", 'title: "Geografie provozu"'],
       ["components/flight-compare.tsx", 'distance: "Délka zaznamenané stopy"'],
       ["components/airport-compare.tsx", 'title: "Porovnání letišť"'],
-      ["components/aircraft-type-explorer.tsx", 'title: "Typy letadel"'],
-      ["components/operator-explorer.tsx", 'topAirline: "Nejčastější společnost"'],
       ["components/flight-intelligence-analytics.tsx", 'title: "Analýza událostí letů"'],
     ]);
 

@@ -397,12 +397,6 @@ function normalizeIntentQuery(query: string): string {
 
 export function smartSearchActions(query: string): SmartSearchActionResult[] {
   const normalized = normalizeIntentQuery(query);
-  if (/^GO[ -]?AROUNDS?( (TODAY|DNES))?$/.test(normalized)) {
-    return [{ kind: "action", intent: "go_arounds_today", airportIcao: null, href: "/recap/daily#operational-events" }];
-  }
-  if (/^(RARE AIRCRAFT|VZACNA LETADLA)( (TODAY|DNES))?$/.test(normalized)) {
-    return [{ kind: "action", intent: "rare_aircraft_today", airportIcao: null, href: "/recap/daily#interesting-aircraft" }];
-  }
   const airportOperations = normalized.match(/^([A-Z]{4}) (OPERATIONS|OPS|PROVOZ)$/)
     ?? normalized.match(/^(OPERATIONS|OPS|PROVOZ) ([A-Z]{4})$/);
   if (airportOperations) {

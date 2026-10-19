@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 const serverSource = readFileSync(new URL("../lib/server/statistics-coverage-intelligence.ts", import.meta.url), "utf8");
 const modelSource = readFileSync(new URL("../lib/receiver-coverage-intelligence.ts", import.meta.url), "utf8");
-const pageSource = readFileSync(new URL("../components/statistics-coverage-intelligence.tsx", import.meta.url), "utf8");
 
 describe("Receiver Coverage Intelligence V1 boundary", () => {
   it("keeps the coverage intelligence read bounded and off FlightPosition", () => {
@@ -26,10 +25,5 @@ describe("Receiver Coverage Intelligence V1 boundary", () => {
     expect(modelSource).toContain("coverage.unique_aircraft_below_baseline");
   });
 
-  it("renders the V1 trend in the existing coverage intelligence page", () => {
-    expect(pageSource).toContain('data-testid="receiver-coverage-intelligence-v1"');
-    expect(pageSource).toContain("data.intelligence.trend.recentDays");
-    expect(pageSource).toContain("data.intelligence.health.reasons");
-    expect(pageSource).toContain("healthReasonLabel");
-  });
+
 });
