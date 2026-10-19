@@ -22,9 +22,19 @@ const globalPatterns = [
   /(^|\/)(global|shared|types)\.[cm]?[jt]sx?$/,
 ];
 
-const isGlobal = changed.some((file) => globalPatterns.some((pattern) => pattern.test(file)));
+// Deleting a route/component can break tests that inspect paths through
+// readFileSync; Vitest --changed cannot reverse-map those source assertions.
+const deletedTracked = git(["diff", "--name-only", "--diff-filter=D", base + "...HEAD"]);
+const removedRuntimeFiles = deletedTracked.split("\n").some((file) =>
+  /^(app|components|lib)\/.*\.(tsx?|jsx?|mjs|cjs)$/.test(file),
+);
+const isGlobal = removedRuntimeFiles || changed.some((file) =>
+  globalPatterns.some((pattern) => pattern.test(file))
+  || file === "scripts/test-changed.mjs"
+  || file === "scripts/production-gates.mjs",
+);
 if (isGlobal) {
-  process.stdout.write(`test:changed: global change detected; running full suite\n`);
+  process.stdout.write(`test:changed: global change or runtime file removal detected; running full suite\n`);
   process.exit(spawnSync("npx", ["vitest", "run"], { stdio: "inherit" }).status ?? 1);
 }
 
