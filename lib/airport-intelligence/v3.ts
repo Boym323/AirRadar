@@ -115,23 +115,29 @@ export function buildAirportRunwayIntelligence(
   };
 }
 
+/** Parse movement timestamps once per projection and preserve stable tie ordering.
+ * Derived presentation state stays independent of the historical DB payload. */
+function sortedRecentMovements(movements: readonly AirportMovement[]): AirportMovement[] {
+  return movements
+    .map((movement) => ({ movement, at: Date.parse(movement.observedAt) }))
+    .filter((row) => Number.isFinite(row.at))
+    .sort((left, right) => right.at - left.at || right.movement.flightId - left.movement.flightId)
+    .map((row) => row.movement);
+}
+
 export function buildAirportOperationsTimeline(
   operations: AirportOperationsResponse | null,
   limit = TIMELINE_LIMIT,
 ): AirportOperationsTimelineItem[] {
   if (!operations) return [];
   const seen = new Set<string>();
-  return operations.recentMovements
+  return sortedRecentMovements(operations.recentMovements)
     .filter((movement) => {
-      if (!Number.isFinite(Date.parse(movement.observedAt))) return false;
       const key = `${movement.flightId}:${movement.movement}:${movement.observedAt}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
-    .sort((left, right) =>
-      Date.parse(right.observedAt) - Date.parse(left.observedAt)
-      || right.flightId - left.flightId)
     .slice(0, Math.max(1, limit))
     .map((movement) => ({
       key: `${movement.flightId}:${movement.movement}:${movement.observedAt}`,
@@ -139,22 +145,15 @@ export function buildAirportOperationsTimeline(
     }));
 }
 
-
 function newestUniqueMovements(
-  movements: readonly AirportMovement[],
+  ordered: readonly AirportMovement[],
   kinds: ReadonlySet<AirportMovement["movement"]>,
   limit: number,
 ): AirportMovement[] {
   const seenFlights = new Set<number>();
-  return movements
-    .filter((movement) =>
-      kinds.has(movement.movement)
-      && Number.isFinite(Date.parse(movement.observedAt)))
-    .sort((left, right) =>
-      Date.parse(right.observedAt) - Date.parse(left.observedAt)
-      || right.flightId - left.flightId)
+  return ordered
     .filter((movement) => {
-      if (seenFlights.has(movement.flightId)) return false;
+      if (!kinds.has(movement.movement) || seenFlights.has(movement.flightId)) return false;
       seenFlights.add(movement.flightId);
       return true;
     })
@@ -167,24 +166,20 @@ export function buildAirportLiveBoardSnapshot(
 ): AirportLiveBoardSnapshot {
   if (!operations) return { arrivals: [], departures: [], attention: [], runwayUsage: [] };
   const limit = Math.max(1, laneLimit);
+  const ordered = sortedRecentMovements(operations.recentMovements);
   return {
     arrivals: newestUniqueMovements(
-      operations.recentMovements,
+      ordered,
       new Set<AirportMovement["movement"]>(["APPROACH", "LANDING"]),
       limit,
     ),
     departures: newestUniqueMovements(
-      operations.recentMovements,
+      ordered,
       new Set<AirportMovement["movement"]>(["TAKEOFF", "DEPARTURE"]),
       limit,
     ),
-    attention: operations.recentMovements
-      .filter((movement) =>
-        (movement.movement === "GO_AROUND" || movement.movement === "HOLDING")
-        && Number.isFinite(Date.parse(movement.observedAt)))
-      .sort((left, right) =>
-        Date.parse(right.observedAt) - Date.parse(left.observedAt)
-        || right.flightId - left.flightId)
+    attention: ordered
+      .filter((movement) => movement.movement === "GO_AROUND" || movement.movement === "HOLDING")
       .slice(0, limit),
     runwayUsage: operations.runwayUsage
       .filter((item) => Number.isFinite(item.total) && item.total > 0)

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import {
   buildAirportActiveTrafficSnapshot,
@@ -410,6 +410,31 @@ describe("Airport Intelligence V3 composer", () => {
     const live = buildAirportLiveBoardSnapshot(data, 1);
     expect(live.attention.map((item) => item.movement)).toEqual(["GO_AROUND"]);
     expect(live.runwayUsage.map((item) => item.designator)).toEqual(["29", "11"]);
+  });
+
+  it("parses each historical movement only once per presentation projection", () => {
+    const data = operations([
+      movement(1, "APPROACH", "2026-10-04T07:10:00.000Z"),
+      movement(1, "LANDING", "2026-10-04T07:15:00.000Z"),
+      movement(2, "DEPARTURE", "2026-10-04T07:12:00.000Z"),
+      movement(3, "GO_AROUND", "2026-10-04T07:17:00.000Z"),
+      movement(4, "HOLDING", "invalid", null),
+    ]);
+    const parse = vi.spyOn(Date, "parse");
+    try {
+      const live = buildAirportLiveBoardSnapshot(data);
+      expect(live.arrivals.map((x) => x.flightId)).toEqual([1]);
+      expect(live.departures.map((x) => x.flightId)).toEqual([2]);
+      expect(live.attention.map((x) => x.flightId)).toEqual([3]);
+      expect(parse).toHaveBeenCalledTimes(data.recentMovements.length);
+
+      parse.mockClear();
+      const timeline = buildAirportOperationsTimeline(data);
+      expect(timeline.map((x) => x.movement.flightId)).toEqual([3, 1, 2, 1]);
+      expect(parse).toHaveBeenCalledTimes(data.recentMovements.length);
+    } finally {
+      parse.mockRestore();
+    }
   });
 
   it("builds a bounded newest-first unified movement timeline and drops invalid timestamps", () => {

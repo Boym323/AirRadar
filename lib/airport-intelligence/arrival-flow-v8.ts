@@ -1,3 +1,4 @@
+import { median } from "@/lib/airport-intelligence/number-stats";
 import type { AirportArrivalSequenceSummary } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import type { AirportFlowPressureSummary, AirportRunwayFlowIntelligence } from "@/lib/airport-intelligence/v3";
 
@@ -82,14 +83,6 @@ function finiteTime(value: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function median(values: number[]): number | null {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1
-    ? sorted[middle] ?? null
-    : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
-}
 
 function demandTrend(near: number, later: number, etaSamples: number): AirportArrivalDemandTrend {
   if (etaSamples < 2) return "NO_DATA";

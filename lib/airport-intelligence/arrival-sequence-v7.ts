@@ -1,3 +1,4 @@
+import { median } from "@/lib/airport-intelligence/number-stats";
 import type { AirportCorrelatedTrafficSnapshot, AirportActiveJourneyStage } from "@/lib/airport-intelligence/v3";
 import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence/operations-center";
 import type { PredictionConfidence } from "@/lib/predictive-intelligence/types";
@@ -44,13 +45,6 @@ function canonicalAirport(value: string | null | undefined): string | null {
   return /^[A-Z0-9]{4}$/.test(normalized) ? normalized : null;
 }
 
-function median(values: number[]): number | null {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[middle] ?? null;
-  return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
-}
 
 function runwayConsensus(runways: string[]): AirportArrivalSequenceSummary["runway"] {
   const counts = new Map<string, number>();

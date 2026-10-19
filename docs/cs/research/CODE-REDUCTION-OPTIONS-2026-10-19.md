@@ -39,3 +39,5 @@
 - CI, CodeQL, produkční browser testy a syntetická zátěž 1×/2×/4×; T58 pro zásahy do ingestu nebo event loopu.
 - Změřit produkční LOC před/po na konkrétním commitu, ne odvozovat úsporu z hrubého odhadu.
 - Nasazovat jen běžným release CI, ověřit release identity a Integration Health před další změnou.
+
+Další optimalizační kolo: letištní provozní reporty sdílejí jeden průchod historií a jednotné třídění časových značek; vzorek se neukládá navíc, základní letiště a METAR zůstávají zachovány.
