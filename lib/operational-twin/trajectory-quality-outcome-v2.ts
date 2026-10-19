@@ -1,5 +1,5 @@
 import type { Aircraft } from "@/lib/aircraft/types";
-import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { finiteAltitude as finite, truthAltitudeAt } from "./trajectory-quality-truth";
 import type { OperationalTwinSituation } from "./types";
 import type { OperationalTwinTrajectoryPhase } from "./trajectory-quality-v2";
 import type {
@@ -15,7 +15,6 @@ export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_V2_WINDOW_MINUTES = 24 
 export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_V2_BUCKET_MINUTES = 5;
 
 const MIN_CAPTURE_INTERVAL_MS = 55_000;
-const TRUTH_TOLERANCE_MS = 20_000;
 const TRUTH_GRACE_MS = 30_000;
 const MAX_PENDING = 5_000;
 const TIE_TOLERANCE_FT = 100;
@@ -186,45 +185,6 @@ export interface OperationalTwinTrajectoryQualityOutcomeV2DecisionInput {
   truthCoverage: number | null;
 }
 
-function finite(value: number | null | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function currentAltitudeFt(aircraft: Aircraft): number | null {
-  if (finite(aircraft.baroAltitude)) return aircraft.baroAltitude;
-  if (finite(aircraft.altitude)) return aircraft.altitude;
-  if (finite(aircraft.geomAltitude)) return aircraft.geomAltitude;
-  return null;
-}
-
-function truthAltitudeAt(aircraft: Aircraft, targetAt: number): number | null {
-  let bestAltitude: number | null = null;
-  let bestDelta = Number.POSITIVE_INFINITY;
-
-  // Do not allocate a new last-20 trail array for every pending outcome.
-  for (let i = Math.max(0, aircraft.trail.length - 20); i < aircraft.trail.length; i += 1) {
-    const point = aircraft.trail[i]!;
-    const at = Date.parse(point.recordedAt);
-    if (!Number.isFinite(at) || !finite(point.altitude)) continue;
-    const delta = Math.abs(at - targetAt);
-    if (delta < bestDelta) {
-      bestDelta = delta;
-      bestAltitude = point.altitude;
-    }
-  }
-
-  const observedAt = positionObservedAt(aircraft);
-  const currentAltitude = currentAltitudeFt(aircraft);
-  if (observedAt !== null && currentAltitude !== null) {
-    const delta = Math.abs(observedAt - targetAt);
-    if (delta < bestDelta) {
-      bestDelta = delta;
-      bestAltitude = currentAltitude;
-    }
-  }
-
-  return bestDelta <= TRUTH_TOLERANCE_MS ? bestAltitude : null;
-}
 
 function emptyAggregate(): Aggregate {
   return {
