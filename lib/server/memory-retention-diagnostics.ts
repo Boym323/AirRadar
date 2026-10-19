@@ -12,6 +12,11 @@ export interface TrailRetentionSummary extends RetentionAgeSummary {
   maxPointsPerAircraft: number;
 }
 
+export interface TrailLimitCounters {
+  atLimitAircraftCount: number;
+  overLimitAircraftCount: number;
+}
+
 export interface MemoryRetentionDiagnostics {
   scope: "process-local";
   generatedAt: string;
@@ -34,7 +39,8 @@ function retentionSummaries(
   now: number,
   aircraftStaleAfterMs: number,
   trailStaleAfterMs: number,
-): { aircraft: RetentionAgeSummary; trail: TrailRetentionSummary } {
+  trailLimitPoints?: number,
+): { aircraft: RetentionAgeSummary; trail: TrailRetentionSummary; limits: TrailLimitCounters } {
   let aircraftCount = 0;
   let oldestAircraftAtMs: number | null = null;
   let staleAircraft = 0;
@@ -42,6 +48,8 @@ function retentionSummaries(
   let maxPointsPerAircraft = 0;
   let oldestTrailAtMs: number | null = null;
   let staleTrail = 0;
+  let atLimitAircraftCount = 0;
+  let overLimitAircraftCount = 0;
 
   // One pass over each aircraft collection. The same samples feed two
   // independent retention windows, preserving their previous semantics.
@@ -54,6 +62,10 @@ function retentionSummaries(
     }
 
     maxPointsPerAircraft = Math.max(maxPointsPerAircraft, item.trail.length);
+    if (trailLimitPoints !== undefined) {
+      if (item.trail.length === trailLimitPoints) atLimitAircraftCount += 1;
+      if (item.trail.length > trailLimitPoints) overLimitAircraftCount += 1;
+    }
     for (const point of item.trail) {
       points += 1;
       const recordedAt = Date.parse(point.recordedAt);
@@ -78,6 +90,7 @@ function retentionSummaries(
       oldestAgeMs: oldestTrailAtMs === null ? null : Math.max(0, now - oldestTrailAtMs),
       staleRetained: staleTrail,
     },
+    limits: { atLimitAircraftCount, overLimitAircraftCount },
   };
 }
 
@@ -87,6 +100,8 @@ export function getMemoryRetentionDiagnostics(input: {
   localStaleAfterMs: number;
   networkStaleAfterMs: number;
   networkTrailMaxAgeMs: number;
+  localTrailLimitPoints?: number;
+  networkTrailLimitPoints?: number;
   sourcePreferences: ReadonlyMap<string, unknown>;
   sourcePreferenceMissingSince: ReadonlyMap<string, unknown>;
   lastHistorySample: ReadonlyMap<string, unknown>;
@@ -96,14 +111,18 @@ export function getMemoryRetentionDiagnostics(input: {
   snapshotCacheEntries: number;
   listeners: number;
   now?: number;
-}): MemoryRetentionDiagnostics {
+}): MemoryRetentionDiagnostics & { limitCounters?: { local: TrailLimitCounters; network: TrailLimitCounters } } {
   const now = input.now ?? Date.now();
-  const local = retentionSummaries(input.localAircraft.values(), now, input.localStaleAfterMs, input.localStaleAfterMs);
-  const network = retentionSummaries(input.networkAircraft.values(), now, input.networkStaleAfterMs, input.networkTrailMaxAgeMs);
+  const local = retentionSummaries(input.localAircraft.values(), now, input.localStaleAfterMs, input.localStaleAfterMs, input.localTrailLimitPoints);
+  const network = retentionSummaries(input.networkAircraft.values(), now, input.networkStaleAfterMs, input.networkTrailMaxAgeMs, input.networkTrailLimitPoints);
   return {
     scope: "process-local",
     generatedAt: new Date(now).toISOString(),
     note: "bounded object-retention attribution; not a heap snapshot",
+    // Optional internal counters are extracted by AircraftStateService rather than
+    // adding them to the existing serialized retention-attribution contract.
+    ...(input.localTrailLimitPoints === undefined || input.networkTrailLimitPoints === undefined
+      ? {} : { limitCounters: { local: local.limits, network: network.limits } }),
     aircraft: {
       local: local.aircraft,
       network: network.aircraft,

@@ -121,4 +121,36 @@ describe("memory retention diagnostics", () => {
     });
   });
 
+  it("returns optional trail-limit counts without altering the underlying retention summaries", () => {
+    const now = Date.parse("2026-10-10T12:00:00.000Z");
+    const empty = new Map<string, unknown>();
+    const local = new Map([
+      ["A", aircraft("2026-10-10T11:59:00.000Z", ["2026-10-10T11:59:00.000Z", "2026-10-10T11:59:30.000Z"])],
+      ["B", aircraft("2026-10-10T11:59:00.000Z", ["2026-10-10T11:59:00.000Z"])],
+    ]);
+    const input = {
+      localAircraft: local,
+      networkAircraft: new Map([["C", aircraft("2026-10-10T11:59:00.000Z", ["2026-10-10T11:59:00.000Z"])]]),
+      localStaleAfterMs: 60_000, networkStaleAfterMs: 60_000,
+      networkTrailMaxAgeMs: 60_000,
+      sourcePreferences: empty, sourcePreferenceMissingSince: empty,
+      lastHistorySample: empty, predictiveEvaluatedAt: empty,
+      atcResolutionKeys: empty, atcShadowPredictionKeys: empty,
+      snapshotCacheEntries: 0, listeners: 0, now,
+    };
+    const original = getMemoryRetentionDiagnostics(input);
+    const withLimits = getMemoryRetentionDiagnostics({
+      ...input,
+      localTrailLimitPoints: 1,
+      networkTrailLimitPoints: 1,
+    });
+    expect(withLimits.limitCounters).toEqual({
+      local: { atLimitAircraftCount: 1, overLimitAircraftCount: 1 },
+      network: { atLimitAircraftCount: 1, overLimitAircraftCount: 0 },
+    });
+    const { limitCounters, ...unchanged } = withLimits;
+    expect(unchanged).toEqual(original);
+    expect(limitCounters).toBeDefined();
+  });
+
 });
