@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const serverSource = readFileSync(new URL("../lib/server/statistics-coverage-intelligence.ts", import.meta.url), "utf8");
-const modelSource = readFileSync(new URL("../lib/receiver-coverage-intelligence-v1.ts", import.meta.url), "utf8");
+const modelSource = readFileSync(new URL("../lib/receiver-coverage-intelligence.ts", import.meta.url), "utf8");
 const pageSource = readFileSync(new URL("../components/statistics-coverage-intelligence.tsx", import.meta.url), "utf8");
 
 describe("Receiver Coverage Intelligence V1 boundary", () => {
