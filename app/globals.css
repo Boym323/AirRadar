@@ -422,7 +422,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .legend-line { width: 16px; border-top: 2px dashed #7ea9bd; }
 .legend-line.actual { border-top-style: solid; border-top-color: var(--amber); }
 .legend-line.remaining { border-top-color: #a7b6c7; }
-.map-layers { position: relative; margin-left: auto; pointer-events: auto; }
+.map-layers { position: relative; margin-left: 0; flex: 0 0 auto; pointer-events: auto; }
 .map-layers > summary { cursor: pointer; list-style: none; color: var(--text); font-size: 10px; font-weight: 700; }
 .map-layers > summary::-webkit-details-marker { display: none; }
 .map-layers-menu { position: absolute; z-index: 4; top: calc(100% + 8px); right: 0; min-width: 175px; display: grid; gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-overlay); box-shadow: var(--shadow-floating); color: var(--text); font-size: var(--font-size-xs); }
@@ -4298,8 +4298,8 @@ button, input, select, textarea { color-scheme: dark; }
 .secondary-page-content { min-height: calc(100svh - var(--radar-topbar-height)); }
 
 .map-overlay-primary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
@@ -4360,26 +4360,6 @@ button, input, select, textarea { color-scheme: dark; }
     bottom: var(--radar-map-control-bottom, calc(var(--radar-mobile-nav-height) + 10px));
   }
 }
-
-/* Keep the four map controls inside the narrow desktop overlay at the
-   821–900px breakpoint: Traffic and Layers share the second row while the
-   browser-local Presets control gets its own row below. */
-@media (min-width: 821px) and (max-width: 900px) {
-  .map-overlay-primary {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .map-overlay-primary .map-summary-card {
-    grid-column: 1 / -1;
-  }
-
-  .map-overlay-primary > [data-testid="radar-presets-v1"] {
-    grid-column: 1;
-    grid-row: 3;
-    justify-self: start;
-  }
-}
-
 
 /* Extended receiver-local ADS-B / Mode-S telemetry. */
 .aircraft-adsb-telemetry {
@@ -5846,35 +5826,8 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 @media (min-width: 821px) and (max-width: 1260px) {
-  .map-overlay-primary {
-    grid-template-columns: minmax(0, auto) auto auto;
-  }
-
-  .map-overlay-primary .map-summary-card {
-    grid-column: 1 / -1;
-    border-right: 0;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-
-  .map-control-group-primary {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .map-overlay-primary > [data-testid="radar-presets-v1"] {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .map-overlay-primary > .map-layers {
-    grid-column: 3;
-    grid-row: 2;
-  }
-
   .map-overlay-primary > [data-testid="radar-presets-v1"] .map-control-label,
-  .map-overlay-primary > .map-layers .map-control-label {
-    display: none;
-  }
+  .map-overlay-primary > .map-layers .map-control-label { display: none; }
 }
 
 @media (max-width: 820px) {
@@ -6396,7 +6349,7 @@ button, input, select, textarea { color-scheme: dark; }
 @media (max-width: 820px) {
   .map-overlay-primary {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: var(--space-1);
     width: max-content;
     max-width: calc(100vw - 76px);
