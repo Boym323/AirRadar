@@ -67,7 +67,6 @@ describe("runtime memory diagnostics", () => {
     const diagnostics = readRuntimeDiagnostics({}, "public");
     expect(diagnostics.transactionAttribution).toBeUndefined();
     expect(diagnostics.autocommitOperationAttribution).toBeUndefined();
-    expect(diagnostics.systemStatusRequests).toBeUndefined();
     expect(diagnostics.activeSseClients).toBeGreaterThanOrEqual(0);
   });
 });

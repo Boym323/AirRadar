@@ -30,7 +30,6 @@ import { buildSourceReliability } from "@/lib/server/source-reliability";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { getAircraftWeatherDiagnostics, type AircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
-import { recordSystemStatusRequest } from "@/lib/server/system-status-request-diagnostics";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 export {
   toAdminSystemStatus,
@@ -933,7 +932,6 @@ export async function readSystemStatus(
   service: SystemStatusServiceLike = getAircraftStateService(),
   detail: "full" | "public" = "full",
 ): Promise<SystemStatusResponse> {
-  recordSystemStatusRequest();
   await service.waitForReady();
   const ognService = getOgnStateService();
   await ognService.waitForReady();
