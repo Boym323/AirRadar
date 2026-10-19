@@ -35,6 +35,19 @@ describe("explicit selected-feature reduction contracts", () => {
     }
   });
 
+  it("keeps retained airport details free of retired Airport Live Board controllers", () => {
+    const detail = readFileSync(new URL("components/airport-detail.tsx", root), "utf8");
+    const catalog = readFileSync(new URL("components/airports-flights-browser.tsx", root), "utf8");
+    const hud = readFileSync(new URL("components/radar/radar-map-hud.tsx", root), "utf8");
+    expect(detail).not.toContain("useAirportLiveTrafficController");
+    expect(detail).not.toContain("useAirportOperationsController");
+    expect(detail).toContain("<AirportWeatherPanel");
+    expect(detail).toContain("<AirportInfrastructureSections");
+    expect(catalog).not.toContain("LiveAirportNetwork");
+    expect(catalog).not.toContain("FlightsPage");
+    expect(hud).not.toContain("RadarOperationsCenter");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

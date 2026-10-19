@@ -4,7 +4,6 @@ import type { ReactNode, Ref } from "react";
 import { formatNumber, t } from "@/lib/i18n";
 import type { PublicStateSnapshot } from "@/lib/aircraft/types";
 import { MapControlGroup, Panel, UiIcon } from "@/components/ui-primitives";
-import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 
 interface RadarMapHudProps {
   aircraftCount: number;
@@ -49,7 +48,6 @@ export function RadarMapHud({
       </Panel>
       {presentationControls}
       <MapControlGroup className="map-control-group-primary">
-        <RadarOperationsCenter />
         <button
           ref={trafficTriggerRef}
           type="button"
