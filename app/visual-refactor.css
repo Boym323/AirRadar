@@ -512,3 +512,23 @@ body { font-feature-settings: "ss01" on; }
     transition: none;
   }
 }
+
+/* Anchor map flyouts below the entire HUD so touch and mouse traffic controls
+ * remain usable when Layers is expanded. */
+.map-overlay-primary { position: relative; }
+.map-overlay-primary > .map-layers { position: static; }
+.map-overlay-primary > .map-layers > .map-layers-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  left: auto;
+}
+@media (max-width: 820px) {
+  .map-overlay-primary > .map-layers > .map-layers-menu {
+    left: 0;
+    right: auto;
+    width: min(320px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    min-width: 0;
+  }
+}

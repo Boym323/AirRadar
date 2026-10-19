@@ -51,6 +51,11 @@ describe("2026 shared visual refactor", () => {
     expect(css).toContain("@media (min-width: 821px)");
   });
 
+  it("places open Layers below the entire radar HUD to avoid covering Traffic", () => {
+    expect(css).toContain(".map-overlay-primary > .map-layers { position: static; }");
+    expect(css).toContain("top: calc(100% + var(--space-2));");
+    expect(css).toContain("width: min(320px, calc(100vw - 32px));");
+  });
   it("retains solid and reachable small-screen navigation", () => {
     expect(css).toContain("background: var(--surface-elevated);");
     expect(css).toContain("env(safe-area-inset-bottom)");
