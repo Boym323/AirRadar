@@ -29,47 +29,55 @@ export interface MemoryRetentionDiagnostics {
   listeners: number;
 }
 
-function ageSummary(items: Iterable<Aircraft>, now: number, staleAfterMs: number): RetentionAgeSummary {
-  let count = 0;
-  let oldestObservedAtMs: number | null = null;
-  let staleRetained = 0;
-  for (const item of items) {
-    count += 1;
-    const observedAt = Date.parse(item.lastSeen);
-    if (!Number.isFinite(observedAt)) continue;
-    oldestObservedAtMs = oldestObservedAtMs === null ? observedAt : Math.min(oldestObservedAtMs, observedAt);
-    if (now - observedAt > staleAfterMs) staleRetained += 1;
-  }
-  return {
-    count,
-    oldestObservedAt: oldestObservedAtMs === null ? null : new Date(oldestObservedAtMs).toISOString(),
-    oldestAgeMs: oldestObservedAtMs === null ? null : Math.max(0, now - oldestObservedAtMs),
-    staleRetained,
-  };
-}
-
-function trailSummary(items: Iterable<Aircraft>, now: number, staleAfterMs: number): TrailRetentionSummary {
+function retentionSummaries(
+  items: Iterable<Aircraft>,
+  now: number,
+  aircraftStaleAfterMs: number,
+  trailStaleAfterMs: number,
+): { aircraft: RetentionAgeSummary; trail: TrailRetentionSummary } {
+  let aircraftCount = 0;
+  let oldestAircraftAtMs: number | null = null;
+  let staleAircraft = 0;
   let points = 0;
   let maxPointsPerAircraft = 0;
-  let oldestObservedAtMs: number | null = null;
-  let staleRetained = 0;
+  let oldestTrailAtMs: number | null = null;
+  let staleTrail = 0;
+
+  // One pass over each aircraft collection. The same samples feed two
+  // independent retention windows, preserving their previous semantics.
   for (const item of items) {
+    aircraftCount += 1;
+    const observedAt = Date.parse(item.lastSeen);
+    if (Number.isFinite(observedAt)) {
+      oldestAircraftAtMs = oldestAircraftAtMs === null ? observedAt : Math.min(oldestAircraftAtMs, observedAt);
+      if (now - observedAt > aircraftStaleAfterMs) staleAircraft += 1;
+    }
+
     maxPointsPerAircraft = Math.max(maxPointsPerAircraft, item.trail.length);
     for (const point of item.trail) {
       points += 1;
       const recordedAt = Date.parse(point.recordedAt);
       if (!Number.isFinite(recordedAt)) continue;
-      oldestObservedAtMs = oldestObservedAtMs === null ? recordedAt : Math.min(oldestObservedAtMs, recordedAt);
-      if (now - recordedAt > staleAfterMs) staleRetained += 1;
+      oldestTrailAtMs = oldestTrailAtMs === null ? recordedAt : Math.min(oldestTrailAtMs, recordedAt);
+      if (now - recordedAt > trailStaleAfterMs) staleTrail += 1;
     }
   }
+
   return {
-    count: points,
-    points,
-    maxPointsPerAircraft,
-    oldestObservedAt: oldestObservedAtMs === null ? null : new Date(oldestObservedAtMs).toISOString(),
-    oldestAgeMs: oldestObservedAtMs === null ? null : Math.max(0, now - oldestObservedAtMs),
-    staleRetained,
+    aircraft: {
+      count: aircraftCount,
+      oldestObservedAt: oldestAircraftAtMs === null ? null : new Date(oldestAircraftAtMs).toISOString(),
+      oldestAgeMs: oldestAircraftAtMs === null ? null : Math.max(0, now - oldestAircraftAtMs),
+      staleRetained: staleAircraft,
+    },
+    trail: {
+      count: points,
+      points,
+      maxPointsPerAircraft,
+      oldestObservedAt: oldestTrailAtMs === null ? null : new Date(oldestTrailAtMs).toISOString(),
+      oldestAgeMs: oldestTrailAtMs === null ? null : Math.max(0, now - oldestTrailAtMs),
+      staleRetained: staleTrail,
+    },
   };
 }
 
@@ -90,17 +98,19 @@ export function getMemoryRetentionDiagnostics(input: {
   now?: number;
 }): MemoryRetentionDiagnostics {
   const now = input.now ?? Date.now();
+  const local = retentionSummaries(input.localAircraft.values(), now, input.localStaleAfterMs, input.localStaleAfterMs);
+  const network = retentionSummaries(input.networkAircraft.values(), now, input.networkStaleAfterMs, input.networkTrailMaxAgeMs);
   return {
     scope: "process-local",
     generatedAt: new Date(now).toISOString(),
     note: "bounded object-retention attribution; not a heap snapshot",
     aircraft: {
-      local: ageSummary(input.localAircraft.values(), now, input.localStaleAfterMs),
-      network: ageSummary(input.networkAircraft.values(), now, input.networkStaleAfterMs),
+      local: local.aircraft,
+      network: network.aircraft,
     },
     trails: {
-      local: trailSummary(input.localAircraft.values(), now, input.localStaleAfterMs),
-      network: trailSummary(input.networkAircraft.values(), now, input.networkTrailMaxAgeMs),
+      local: local.trail,
+      network: network.trail,
     },
     auxiliaryMaps: {
       sourcePreferences: input.sourcePreferences.size,
