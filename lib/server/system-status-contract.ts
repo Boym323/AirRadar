@@ -14,7 +14,6 @@ import type { ReceiverQuality } from "@/lib/server/receiver-quality";
 import type { ReceiverMonitoring } from "@/lib/server/receiver-monitoring";
 import type { SourceReliability } from "@/lib/server/source-reliability";
 import type { NavigationIntegrityDiagnostics } from "@/lib/navigation-integrity/types";
-import type { FlightPositionPersistenceShadowDiagnostics } from "@/lib/server/flight-position-persistence-shadow";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 import type { NativeAccelerationStatus } from "@/lib/server/native-acceleration";
 
@@ -311,7 +310,6 @@ export interface SystemStatusResponse {
     lastAcceptedAt: string | null;
     lastPersistedAt: string | null;
   };
-  flightPositionPersistenceShadow: FlightPositionPersistenceShadowDiagnostics;
   navigationIntegrity: {
     status: NavigationIntegrityStatus;
     observationsCreated: number;
@@ -470,7 +468,6 @@ export interface SystemStatusBuildInput {
     lastAcceptedAt?: string | null;
     lastPersistedAt?: string | null;
   };
-  flightPositionPersistenceShadow?: FlightPositionPersistenceShadowDiagnostics;
   navigationIntegrity?: NavigationIntegrityDiagnostics & { activeAnomalies?: number };
   predictiveValidation?: SystemStatusResponse["predictiveValidation"];
   mapContext?: { radar?: WeatherRadarDiagnostics; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
