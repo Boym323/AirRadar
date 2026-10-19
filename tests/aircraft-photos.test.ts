@@ -174,7 +174,7 @@ describe("AIRCRAFT PHOTOS V1 API and UI boundaries", () => {
   it("has Czech and English photo labels without adding a polling or EventSource path", () => {
     expect(getTranslations("cs").aircraft.photoTitle).toBe("Fotografie letadla");
     expect(getTranslations("en").aircraft.photoTitle).toBe("Aircraft photo");
-    const componentSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
+    const componentSource = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
     const streamSource = readFileSync(new URL("../app/api/stream/route.ts", import.meta.url), "utf8");
     expect(componentSource).toContain("/photo");
     expect(componentSource).not.toContain("EventSource");

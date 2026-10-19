@@ -6,7 +6,6 @@ import { airportMovementAnalyticsText } from "@/lib/i18n/airport-movement-analyt
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 describe("Visual System V5-E: language, identity and map credits", () => {
-  const aircraftV2 = read("components/aircraft-detail-v2.tsx");
   const aircraftV3 = read("components/aircraft-detail-v3.tsx");
   const movementAnalytics = read("components/airport-movement-analytics.tsx");
   const movementCss = read("components/airport-movement-analytics.module.css");
@@ -23,10 +22,8 @@ describe("Visual System V5-E: language, identity and map credits", () => {
     expect(formatAircraftManufacturerModel(null, "A380-800")).toBe("A380-800");
     expect(formatAircraftManufacturerModel("Airbus", null)).toBe("Airbus");
     expect(formatAircraftManufacturerModel(null, null)).toBeNull();
-    for (const view of [aircraftV2, aircraftV3]) {
-      expect(view).toContain("formatAircraftManufacturerModel(manufacturer, model)");
-      expect(view).not.toContain('[manufacturer, model].filter(Boolean).join(" ")');
-    }
+    expect(aircraftV3).toContain("formatAircraftManufacturerModel(manufacturer, model)");
+    expect(aircraftV3).not.toContain('[manufacturer, model].filter(Boolean).join(" ")');
   });
 
   it("keeps airport movement analytics fully translated in CS/EN", () => {

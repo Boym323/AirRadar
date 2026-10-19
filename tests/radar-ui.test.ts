@@ -38,7 +38,7 @@ const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", imp
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const datasetSource = readFileSync(new URL("../components/use-dataset-query.ts", import.meta.url), "utf8");
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
-const aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
+const aircraftAltitudeChartSource = readFileSync(new URL("../components/aircraft-detail-shared.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const productionGateSource = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
 const atcTrafficSource = readFileSync(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url), "utf8");
@@ -356,9 +356,9 @@ describe("radar UI polish helpers", () => {
   });
 
   it("plots aircraft altitude using recorded time instead of sample index", () => {
-    expect(aircraftDetailSource).toContain("Date.parse(point.recordedAt) - firstTimestamp");
-    expect(aircraftDetailSource).toContain("lastTimestamp - firstTimestamp");
-    expect(aircraftDetailSource).not.toContain("index / (chartPoints.length - 1)");
+    expect(aircraftAltitudeChartSource).toContain("Date.parse(point.recordedAt) - firstTimestamp");
+    expect(aircraftAltitudeChartSource).toContain("lastTimestamp - firstTimestamp");
+    expect(aircraftAltitudeChartSource).not.toContain("index / (chartPoints.length - 1)");
   });
 
   it("keeps independent bounded SSE streams and does not add trail polling", () => {
