@@ -7,8 +7,6 @@ import type {
   OperationalTwinEventOutcomeReport,
   OperationalTwinOutcomeReport,
   OperationalTwinTruthFirstReport,
-  OperationalTwinTrajectoryQualityGraduationReport,
-  OperationalTwinTrajectoryQualityOutcomeReport,
   OperationalTwinTrajectoryQualityOutcomeV2Report,
   OperationalTwinTrajectoryQualityV3GraduationReport,
   RegionalAttentionOutcomeReport,
@@ -24,7 +22,6 @@ type PersistenceStatus = {
   databaseAvailable: boolean;
   hydratedOutcomeBuckets: number;
   hydratedEventOutcomeBuckets: number;
-  hydratedTrajectoryQualityOutcomeBuckets: number;
   hydratedTrajectoryQualityOutcomeV2Buckets: number;
   hydratedRegionalAttentionOutcomeBuckets: number;
   trackedPersistedBuckets: number;
@@ -40,10 +37,8 @@ type CalibrationCenterReport = {
   version: "digital-twin-calibration-center-v1";
   generatedAt: string;
   corridor: OperationalTwinOutcomeReport;
-  trajectoryQuality: OperationalTwinTrajectoryQualityOutcomeReport;
   trajectoryQualityComparison: OperationalTwinTrajectoryQualityOutcomeV2Report;
   trajectoryQualityV3Graduation: OperationalTwinTrajectoryQualityV3GraduationReport;
-  trajectoryQualityGraduation: OperationalTwinTrajectoryQualityGraduationReport;
   event: OperationalTwinEventOutcomeReport;
   focus: AircraftOperationalFocusOutcomeReport;
   truthFirst: OperationalTwinTruthFirstReport;
@@ -202,62 +197,6 @@ export function DigitalTwinCalibrationCenter() {
               <small>{t.calibrationCenter.corridorFootnote}</small>
             </section>
 
-            <section className="statistics-card" data-testid="calibration-trajectory-quality-outcome">
-              <DecisionHeader
-                title={t.calibrationCenter.trajectoryQualityOutcome}
-                decision={report.trajectoryQuality.decision}
-                reasons={report.trajectoryQuality.reasons}
-              />
-              <div className={styles.metrics}>
-                <Metric label={t.calibrationCenter.pairedSamples} value={report.trajectoryQuality.overall.pairedSamples} />
-                <Metric
-                  label={t.calibrationCenter.canonicalMae}
-                  value={report.trajectoryQuality.overall.canonicalMeanAbsoluteErrorFt === null
-                    ? t.common.emptyValue
-                    : `${formatNumber(report.trajectoryQuality.overall.canonicalMeanAbsoluteErrorFt, 0, t.locale)} ft`}
-                />
-                <Metric
-                  label={t.calibrationCenter.qualityV2Mae}
-                  value={report.trajectoryQuality.overall.qualityMeanAbsoluteErrorFt === null
-                    ? t.common.emptyValue
-                    : `${formatNumber(report.trajectoryQuality.overall.qualityMeanAbsoluteErrorFt, 0, t.locale)} ft`}
-                />
-                <Metric label={t.calibrationCenter.shadowWinRate} value={pct(report.trajectoryQuality.overall.qualityWinRate)} />
-                <Metric label={t.calibrationCenter.relativeMaeGain} value={pct(report.trajectoryQuality.overall.relativeMaeImprovement)} />
-                <Metric label={t.calibrationCenter.truthCoverage} value={pct(report.trajectoryQuality.truthCoverage)} />
-              </div>
-              <div className={styles.horizonGrid}>
-                {report.trajectoryQuality.horizonsMinutes.map((horizon) => {
-                  const slice = report.trajectoryQuality.horizons[String(horizon)];
-                  return (
-                    <span className={styles.horizon} key={horizon}>
-                      <strong>{horizon} {t.calibrationCenter.minuteSuffix}</strong>
-                      <small>
-                        {slice?.pairedSamples ?? 0} {t.calibrationCenter.pairedSamples.toLowerCase()}
-                        {" · "}{slice?.qualityMeanAbsoluteErrorFt ?? t.common.emptyValue} ft
-                        {" · "}{pct(slice?.qualityWinRate ?? null)}
-                      </small>
-                    </span>
-                  );
-                })}
-              </div>
-              <div className={styles.horizonGrid}>
-                {Object.entries(report.trajectoryQuality.phases)
-                  .filter(([, slice]) => slice.pairedSamples > 0)
-                  .map(([phase, slice]) => (
-                    <span className={styles.horizon} key={phase}>
-                      <strong>{phase}</strong>
-                      <small>
-                        {slice.pairedSamples} {t.calibrationCenter.pairedSamples.toLowerCase()}
-                        {" · "}{slice.qualityMeanAbsoluteErrorFt ?? t.common.emptyValue} ft
-                        {" · "}{pct(slice.qualityWinRate)}
-                      </small>
-                    </span>
-                  ))}
-              </div>
-              <small>{t.calibrationCenter.trajectoryQualityFootnote}</small>
-            </section>
-
             <section className="statistics-card" data-testid="calibration-trajectory-quality-outcome-v2">
               <DecisionHeader
                 title={t.calibrationCenter.trajectoryQualityComparison}
@@ -381,50 +320,6 @@ export function DigitalTwinCalibrationCenter() {
                 {" · "}{t.calibrationCenter.phaseRegressions}: {report.trajectoryQualityV3Graduation.evidence.phaseRegressions.length}
                 {" · "}{t.calibrationCenter.performanceClassRegressions}: {report.trajectoryQualityV3Graduation.evidence.performanceClassRegressions.length}
                 {" · "}{t.calibrationCenter.v3ProfileRegressions}: {report.trajectoryQualityV3Graduation.evidence.v3ProfileRegressions.length}
-              </small>
-            </section>
-
-            <section className="statistics-card" data-testid="calibration-trajectory-quality-graduation">
-              <DecisionHeader
-                title={t.calibrationCenter.trajectoryQualityGraduation}
-                decision={report.trajectoryQualityGraduation.decision}
-                reasons={report.trajectoryQualityGraduation.reasons}
-              />
-              <div className={styles.metrics}>
-                <Metric
-                  label={t.calibrationCenter.pairedSamples}
-                  value={report.trajectoryQualityGraduation.evidence.pairedSamples}
-                />
-                <Metric
-                  label={t.calibrationCenter.canonicalMae}
-                  value={report.trajectoryQualityGraduation.evidence.canonicalMeanAbsoluteErrorFt === null
-                    ? t.common.emptyValue
-                    : `${formatNumber(report.trajectoryQualityGraduation.evidence.canonicalMeanAbsoluteErrorFt, 0, t.locale)} ft`}
-                />
-                <Metric
-                  label={t.calibrationCenter.qualityV2Mae}
-                  value={report.trajectoryQualityGraduation.evidence.qualityMeanAbsoluteErrorFt === null
-                    ? t.common.emptyValue
-                    : `${formatNumber(report.trajectoryQualityGraduation.evidence.qualityMeanAbsoluteErrorFt, 0, t.locale)} ft`}
-                />
-                <Metric
-                  label={t.calibrationCenter.relativeMaeGain}
-                  value={pct(report.trajectoryQualityGraduation.evidence.relativeMaeImprovement)}
-                />
-                <Metric
-                  label={t.calibrationCenter.shadowWinRate}
-                  value={pct(report.trajectoryQualityGraduation.evidence.qualityWinRate)}
-                />
-                <Metric
-                  label={t.calibrationCenter.truthCoverage}
-                  value={pct(report.trajectoryQualityGraduation.evidence.truthCoverage)}
-                />
-              </div>
-              <small>
-                {t.calibrationCenter.manualPromotionEligible}: {report.trajectoryQualityGraduation.manualPromotionEligible ? t.common.yes : t.common.no}
-                {" · "}{t.calibrationCenter.canonicalTrajectoryActive}
-                {" · "}{t.calibrationCenter.horizonRegressions}: {report.trajectoryQualityGraduation.evidence.horizonRegressions.length}
-                {" · "}{t.calibrationCenter.phaseRegressions}: {report.trajectoryQualityGraduation.evidence.phaseRegressions.length}
               </small>
             </section>
 
@@ -565,10 +460,6 @@ export function DigitalTwinCalibrationCenter() {
               <div className={styles.metrics}>
                 <Metric label={t.calibrationCenter.corridorHydrated} value={report.persistence.hydratedOutcomeBuckets} />
                 <Metric label={t.calibrationCenter.eventHydrated} value={report.persistence.hydratedEventOutcomeBuckets} />
-                <Metric
-                  label={t.calibrationCenter.trajectoryQualityHydrated}
-                  value={report.persistence.hydratedTrajectoryQualityOutcomeBuckets}
-                />
                 <Metric
                   label={t.calibrationCenter.trajectoryQualityComparisonHydrated}
                   value={report.persistence.hydratedTrajectoryQualityOutcomeV2Buckets}
