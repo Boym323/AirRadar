@@ -149,7 +149,19 @@ export function buildAirportTerminalDemandHorizonV9(input: {
     || left.icaoHex.localeCompare(right.icaoHex)
   );
 
-  const withEta = candidates.filter((item) => item.etaMinutes !== null);
+  // One reduction supplies all demand buckets, without re-filtering candidates.
+  let etaEstimated = 0;
+  let within30Minutes = 0;
+  let within60Minutes = 0;
+  let beyond60Minutes = 0;
+  for (const item of candidates) {
+    const eta = item.etaMinutes;
+    if (eta === null) continue;
+    etaEstimated += 1;
+    if (eta <= 30) within30Minutes += 1;
+    if (eta <= 60) within60Minutes += 1;
+    else beyond60Minutes += 1;
+  }
   return {
     version: AIRPORT_TERMINAL_DEMAND_HORIZON_V9_VERSION,
     generatedAt: now.toISOString(),
@@ -157,13 +169,13 @@ export function buildAirportTerminalDemandHorizonV9(input: {
     coverage: {
       localAircraft: input.liveAircraft.length,
       routeMatchedInbound: candidates.length,
-      etaEstimated: withEta.length,
+      etaEstimated,
     },
     demand: {
-      within30Minutes: withEta.filter((item) => item.etaMinutes! <= 30).length,
-      within60Minutes: withEta.filter((item) => item.etaMinutes! <= 60).length,
-      beyond60Minutes: withEta.filter((item) => item.etaMinutes! > 60).length,
-      unknownEta: candidates.filter((item) => item.etaMinutes === null).length,
+      within30Minutes,
+      within60Minutes,
+      beyond60Minutes,
+      unknownEta: candidates.length - etaEstimated,
     },
     items: candidates.slice(0, MAX_ITEMS),
     truncated: candidates.length > MAX_ITEMS,

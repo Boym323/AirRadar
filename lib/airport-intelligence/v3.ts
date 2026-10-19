@@ -713,36 +713,51 @@ function compatibleMovement(
   return false;
 }
 
+interface IndexedAirportMovement {
+  movement: AirportMovement;
+  observedAtMs: number;
+  callsign: string | null;
+}
+
+/** Each historical observation is prepared once per live view; no persistent
+ * identity cache, sorting, or repeated scans across unrelated aircraft. */
+function indexAirportMovements(operations: AirportOperationsResponse | null): Map<string, IndexedAirportMovement[]> {
+  const byHex = new Map<string, IndexedAirportMovement[]>();
+  for (const movement of operations?.recentMovements ?? []) {
+    const observedAtMs = Date.parse(movement.observedAt);
+    if (!Number.isFinite(observedAtMs)) continue;
+    const hex = movement.icaoHex.trim().toUpperCase();
+    const matches = byHex.get(hex) ?? [];
+    matches.push({ movement, observedAtMs, callsign: normalizedIdentity(movement.callsign) });
+    byHex.set(hex, matches);
+  }
+  return byHex;
+}
+
 function correlatedMovement(
   observation: AirportTrafficObservation,
-  operations: AirportOperationsResponse | null,
+  byHex: ReadonlyMap<string, readonly IndexedAirportMovement[]>,
 ): { movement: AirportMovement; ageSeconds: number } | null {
-  if (!operations) return null;
   const liveAt = Date.parse(observation.aircraft.lastSeen);
   if (!Number.isFinite(liveAt)) return null;
   const liveCallsign = normalizedIdentity(observation.aircraft.callsign);
-
-  const candidates = operations.recentMovements
-    .filter((movement) => {
-      if (!compatibleMovement(observation, movement.movement)) return false;
-      if (movement.icaoHex.trim().toUpperCase() !== observation.aircraft.icaoHex.trim().toUpperCase()) return false;
-      const movementCallsign = normalizedIdentity(movement.callsign);
-      if (liveCallsign && movementCallsign && liveCallsign !== movementCallsign) return false;
-      const observedAt = Date.parse(movement.observedAt);
-      if (!Number.isFinite(observedAt)) return false;
-      const ageMs = liveAt - observedAt;
-      return ageMs >= -AIRPORT_LIVE_BOARD_CORRELATION_FUTURE_TOLERANCE_MS
-        && ageMs <= AIRPORT_LIVE_BOARD_CORRELATION_MAX_AGE_MS;
-    })
-    .sort((left, right) =>
-      Date.parse(right.observedAt) - Date.parse(left.observedAt)
-      || right.flightId - left.flightId);
-
-  const movement = candidates[0] ?? null;
-  if (!movement) return null;
+  const candidates = byHex.get(observation.aircraft.icaoHex.trim().toUpperCase()) ?? [];
+  let best: IndexedAirportMovement | null = null;
+  for (const candidate of candidates) {
+    if (!compatibleMovement(observation, candidate.movement.movement)) continue;
+    if (liveCallsign && candidate.callsign && liveCallsign !== candidate.callsign) continue;
+    const ageMs = liveAt - candidate.observedAtMs;
+    if (ageMs < -AIRPORT_LIVE_BOARD_CORRELATION_FUTURE_TOLERANCE_MS
+      || ageMs > AIRPORT_LIVE_BOARD_CORRELATION_MAX_AGE_MS) continue;
+    if (!best || candidate.observedAtMs > best.observedAtMs
+      || (candidate.observedAtMs === best.observedAtMs && candidate.movement.flightId > best.movement.flightId)) {
+      best = candidate;
+    }
+  }
+  if (!best) return null;
   return {
-    movement,
-    ageSeconds: Math.max(0, Math.round((liveAt - Date.parse(movement.observedAt)) / 1_000)),
+    movement: best.movement,
+    ageSeconds: Math.max(0, Math.round((liveAt - best.observedAtMs) / 1_000)),
   };
 }
 
@@ -752,10 +767,11 @@ export function buildAirportCorrelatedTrafficSnapshot(
   limit = AIRPORT_LIVE_BOARD_ACTIVE_LIMIT,
 ): AirportCorrelatedTrafficSnapshot {
   const active = buildAirportActiveTrafficSnapshot(observations, limit);
+  const movementIndex = indexAirportMovements(operations);
   const airportIcao = canonicalAirport(operations?.airport.icao);
   const correlate = (items: AirportTrafficObservation[]): AirportCorrelatedTrafficObservation[] =>
     items.map((observation) => {
-      const match = correlatedMovement(observation, operations);
+      const match = correlatedMovement(observation, movementIndex);
       const movement = match?.movement ?? null;
       return {
         ...observation,
@@ -770,7 +786,7 @@ export function buildAirportCorrelatedTrafficSnapshot(
   const landed = observations
     .filter((observation) => observation.aircraft.onGround && !inboundHexes.has(observation.aircraft.icaoHex.toUpperCase()))
     .flatMap((observation) => {
-      const match = correlatedMovement(observation, operations);
+      const match = correlatedMovement(observation, movementIndex);
       if (match?.movement.movement !== "LANDING") return [];
       return [{
         ...observation,

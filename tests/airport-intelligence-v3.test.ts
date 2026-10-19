@@ -187,6 +187,35 @@ describe("Airport Intelligence V3 composer", () => {
     });
   });
 
+  it("indexes history once and chooses the newest valid event after identity checks", () => {
+    const lastSeen = "2026-10-04T08:20:00.000Z";
+    const records = [
+      { ...movement(10, "APPROACH", "2026-10-04T08:16:00.000Z"), icaoHex: "ABC001", callsign: " VALID1 " },
+      { ...movement(21, "APPROACH", "2026-10-04T08:18:00.000Z"), icaoHex: "ABC001", callsign: "OTHER" },
+      { ...movement(30, "DEPARTURE", "2026-10-04T08:17:00.000Z"), icaoHex: "ABC002", callsign: "OUT30" },
+      { ...movement(15, "APPROACH", "2026-10-04T08:16:00.000Z"), icaoHex: "ABC001", callsign: "VALID1" },
+      ...Array.from({ length: 30 }, (_, n) => ({
+        ...movement(100 + n, "HOLDING", "2026-10-04T07:01:00.000Z"),
+        icaoHex: `NOISE${n}`,
+      })),
+    ];
+    const observed = [
+      { aircraft: { icaoHex: "ABC001", callsign: "VALID1", lastSeen } as never, distanceKm: 6, bearingToAirport: 0, classification: "approaching" as const },
+      { aircraft: { icaoHex: "ABC002", callsign: "OUT30", lastSeen } as never, distanceKm: 7, bearingToAirport: 0, classification: "departing" as const },
+    ];
+    const spy = vi.spyOn(Date, "parse");
+    try {
+      const correlated = buildAirportCorrelatedTrafficSnapshot(observed, operations(records));
+      expect(correlated.inbound[0]).toMatchObject({ movement: { flightId: 15 }, movementAgeSeconds: 240 });
+      expect(correlated.outbound[0]).toMatchObject({ movement: { flightId: 30 }, movementAgeSeconds: 180 });
+      expect(spy.mock.calls.filter(([date]) => date === records[0].observedAt)).toHaveLength(2);
+      expect(spy.mock.calls.filter(([date]) => date === records[1].observedAt)).toHaveLength(1);
+      expect(spy.mock.calls.filter(([date]) => date === lastSeen)).toHaveLength(2);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("keeps active traffic live-only when correlation is stale, identity-conflicting, or direction-incompatible", () => {
     const observation = {
       aircraft: { icaoHex: "ABC001", callsign: "LIVE1", lastSeen: "2026-10-04T08:30:00.000Z" } as never,
