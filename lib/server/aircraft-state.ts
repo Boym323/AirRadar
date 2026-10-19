@@ -1152,14 +1152,18 @@ export class AircraftStateService {
         currentHexes.add(incoming.icaoHex);
         if (!newObservedIdentity && !previousObservedHexes.has(incoming.icaoHex)) newObservedIdentity = true;
         this.continuity.recordObservation("network", incoming.icaoHex, now, reappearWindowMs);
-        this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
+        // Stable network identities already have an affinity. Avoid rewriting
+        // the same Map entry for every aircraft on every network poll.
+        if (!this.sourcePreferences.has(incoming.icaoHex)) {
+          this.sourcePreferences.set(incoming.icaoHex, "network");
+        }
         const previous = this.networkAircraft.get(incoming.icaoHex);
         // Most network adapters already provide the canonical origin. Reuse
         // their immutable observation instead of cloning thousands of objects
         // every poll solely to assign an existing field.
         const withOrigin = incoming.origin ? incoming : { ...incoming, origin: "adsblol" as const };
         const networkIncoming = plausiblePosition(previous, withOrigin);
-        const trail = this.updateTrail(previous, networkIncoming, trailMaxAgeMs, trailMaxPoints);
+        const trail = this.updateTrail(previous, networkIncoming, trailMaxAgeMs, trailMaxPoints, lastSeen);
         this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
       }
     });
@@ -1337,6 +1341,7 @@ export class AircraftStateService {
     incoming: Aircraft,
     networkMaxAgeMs?: number,
     networkMaxPoints?: number,
+    networkLastSeenAt?: number,
   ): TrailPoint[] {
     return measureRuntime("snapshot.trail-update", 1, () => {
       const previousTrail = previous?.trail ?? [];
@@ -1357,7 +1362,9 @@ export class AircraftStateService {
         }
         return point ? appendBoundedServerTrailPoint(base, point) : base;
       }
-      const cutoff = Date.parse(incoming.lastSeen) - (networkMaxAgeMs ?? getNetworkTrailMaxAgeMs());
+      // The network ingest already parsed and validated this same timestamp.
+      // Keep direct/private callers compatible when it is not supplied.
+      const cutoff = (networkLastSeenAt ?? Date.parse(incoming.lastSeen)) - (networkMaxAgeMs ?? getNetworkTrailMaxAgeMs());
       return appendBoundedNetworkTrailPoint(base, point, cutoff, networkMaxPoints ?? getNetworkTrailMaxPoints());
     });
   }
