@@ -36,14 +36,16 @@ describe("Aviation Nav Data V1 boundaries", () => {
 
   it("renders nav data as an optional independent map layer", async () => {
     const app = await readFile("components/airradar-app.tsx", "utf8");
+    const registration = await readFile("lib/radar/base-map-overlays.ts", "utf8");
     const menu = await readFile("components/radar/radar-map-layer-menu.tsx", "utf8");
 
-    expect(app).toContain('map.addSource("aviation-nav-data"');
-    expect(app).toContain('id: "aviation-nav-data-points"');
-    expect(app).toContain('id: "aviation-nav-data-labels"');
+    expect(app).toContain("registerRadarBaseOverlays(map, {");
+    expect(registration).toContain('map.addSource("aviation-nav-data"');
+    expect(registration).toContain('id: "aviation-nav-data-points"');
+    expect(registration).toContain('id: "aviation-nav-data-labels"');
     expect(app).toContain('localStorage.setItem("airradar-nav-data-layer"');
     expect(menu).toContain('data-testid="map-layer-nav-data"');
-    expect(app).toContain('"circle-radius": ["interpolate", ["linear"], ["zoom"]');
-    expect(app).not.toContain('"circle-radius": ["case", ["==", ["get", "routeMatched"], true], ["interpolate"');
+    expect(registration).toContain('"circle-radius": ["interpolate", ["linear"], ["zoom"]');
+    expect(registration).not.toContain('"circle-radius": ["case", ["==", ["get", "routeMatched"], true], ["interpolate"');
   });
 });
