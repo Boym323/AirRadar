@@ -10,6 +10,8 @@ Hlavní mapa slouží k zobrazení **publikovaných ATC sektorů** a jejich zák
 - Nevrací provozní odhady do detailu letadla jako údaj o skutečné komunikaci či přidělení sektoru.
 - Vybraný ATC/ATS kontext obnovuje pouze u vybraného letadla, jedním navazujícím požadavkem a nejdříve po 30 s. Dřívější požadavky se při změně výběru přeruší.
 
+- ATC GeoJSON a data vysílačů se memoizují podle publikovaných dat a aktivních vrstev. Aktualizace používají jedinou replay cestu MapLibre, takže změna rozložení mapy ani panelů neposílá duplicitní setData.
+
 ## Zachované kontrakty
 Databázové schema, import eAIP, publikované ATC/ATS geometrie, výškové přiřazení, API `/api/atc/sectors`, `/api/airspace/activity`, `/api/aircraft/[hex]/context` a samostatné stránky `/airspace` a `/airspace/sectors/[id]` se nemění. Historické traffic / transition endpointy zůstávají pro jiné spotřebitele. V1 radar presety při načtení ignorují již zrušený příznak `showAtcTraffic` a zachovávají ostatní nastavení.
 
