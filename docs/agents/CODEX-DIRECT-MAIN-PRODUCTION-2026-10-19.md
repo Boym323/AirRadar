@@ -1,6 +1,6 @@
 # Codex assignment — AirRadar: direct `main`, canonical production checkout
 
-[Česky](../../cs/agents/CODEX-DIRECT-MAIN-PRODUCTION-2026-10-19.md)
+[Česky](../cs/agents/CODEX-DIRECT-MAIN-PRODUCTION-2026-10-19.md)
 
 **Approved by maintainer:** 19 October 2026. **Repository:** `Boym323/AirRadar`. **Production source checkout:** `/var/www/airradar`. **Public site:** https://airradar.pomykal.cz.
 
