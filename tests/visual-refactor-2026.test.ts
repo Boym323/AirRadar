@@ -45,6 +45,12 @@ describe("2026 shared visual refactor", () => {
     expect(css).toContain("prefers-reduced-motion: reduce");
   });
 
+  it("keeps Traffic clickable beside an expanded desktop Layers popup", () => {
+    expect(css).toContain(".map-overlay-primary > .map-control-group-primary");
+    expect(css).toContain("z-index: calc(var(--z-dropdown) + 1)");
+    expect(css).toContain("@media (min-width: 821px)");
+  });
+
   it("retains solid and reachable small-screen navigation", () => {
     expect(css).toContain("background: var(--surface-elevated);");
     expect(css).toContain("env(safe-area-inset-bottom)");

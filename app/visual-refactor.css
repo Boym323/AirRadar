@@ -263,6 +263,19 @@ body { font-feature-settings: "ss01" on; }
 .radar-traffic-hero-metrics strong { font-variant-numeric: tabular-nums; }
 .radar-traffic-hero-metrics span { color: var(--text-secondary); }
 
+/*
+ * Layer and preset popovers are intentionally positioned above the map.
+ * Give the Traffic control group a higher sibling stacking context so that
+ * its trigger cannot become unclickable when a Layers menu remains open.
+ * Do not change the flyout's own geometry, MapLibre layering or attribution.
+ */
+@media (min-width: 821px) {
+  .map-overlay-primary > .map-control-group-primary {
+    position: relative;
+    z-index: calc(var(--z-dropdown) + 1);
+  }
+}
+
 /* Secondary pages share the same spacing, hierarchy and surfaces. */
 .airradar-page-shell .secondary-page-content {
   min-height: calc(100svh - var(--radar-topbar-height));
