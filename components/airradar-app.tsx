@@ -106,7 +106,6 @@ import { radarWeatherPresentation } from "@/lib/radar/weather-layer-presentation
 import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/airspace-geojson";
 import { createAirportGeoJSON, createMetarGeoJSON, createAircraftWeatherGeoJSON } from "@/lib/radar/map-context-geojson";
 import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
-import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
 import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
@@ -115,7 +114,7 @@ import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/us
 import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
 import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
-import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
+import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { createAviationNavGeoJSON } from "@/lib/navigation-data/map";
@@ -148,6 +147,8 @@ import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions, applyAirRadarBase
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
 import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
 import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
+import { RadarMapHud } from "@/components/radar/radar-map-hud";
+import { parseAirportDataset, parseAtcDataset, parseAtsDataset, parseJsonDataset, type AtsRoutesResponse } from "@/lib/radar/dataset-validation";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import type { RxwWaypointAvailability, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 import {
@@ -208,39 +209,6 @@ const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, n
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.south],
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.south],
 ];
-interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseAirportDataset(value: unknown): value is Airport[] {
-  return Array.isArray(value) && value.every((airport) => isRecord(airport)
-    && typeof airport.icaoCode === "string"
-    && typeof airport.name === "string"
-    && typeof airport.latitude === "number"
-    && Number.isFinite(airport.latitude)
-    && typeof airport.longitude === "number"
-    && Number.isFinite(airport.longitude));
-}
-
-function parseAtcDataset(value: unknown): value is AtcDataResponse {
-  return isRecord(value)
-    && Array.isArray(value.sectors)
-    && Array.isArray(value.transmitters)
-    && isRecord(value.metadata);
-}
-
-function parseAtsDataset(value: unknown): value is AtsRoutesResponse {
-  return isRecord(value) && typeof value.available === "boolean";
-}
-
-async function parseJsonDataset<T>(response: Response, validator: (value: unknown) => value is T): Promise<T> {
-  const value: unknown = await response.json();
-  if (!validator(value)) throw new SyntaxError("malformed dataset response");
-  return value;
-}
-
 interface PublicAlertStatus {
   enabled: boolean;
 }
@@ -270,16 +238,17 @@ function aircraftWebglLabelFeature(
   zoom: number,
   renderedPosition?: { lon: number; lat: number } | null,
 ) {
+  const stale = aircraftPositionIsStale(aircraft);
   return {
     type: "Feature" as const,
     id: aircraft.icaoHex,
     properties: {
       icaoHex: aircraft.icaoHex,
       label: aircraftMapLabelText(aircraft, zoom, {
-        suppressTelemetry: aircraftPositionIsStale(aircraft),
+        suppressTelemetry: stale,
       }) ?? "",
       source: classifyAircraftSource(aircraft),
-      stale: aircraftPositionIsStale(aircraft),
+      stale: stale,
       labelOpacity: aircraftLabelOpacity(aircraft),
     },
     geometry: {
@@ -3217,31 +3186,17 @@ export function AirRadarApp() {
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
             {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
-            <div className="map-overlay-primary" data-testid="radar-map-hud">
-              <Panel className="map-overlay-card map-summary-card">
-                <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
-                {activeCoverage === "extended" && snapshot.sourceStats && <details className="source-counter-details">
-                  <summary aria-label={t.radar.trafficSourceLabel} title={t.radar.trafficSourceLabel}>
-                    <UiIcon name="statistics" />
-                    <span className="source-counter-label">{t.aircraft.source}</span>
-                  </summary>
-                  <div className="source-counter-strip" aria-label={t.radar.trafficSourceLabel}>
-                    <span><strong>{formatNumber(snapshot.sourceStats.local)}</strong><small>LOCAL</small></span>
-                    <span><strong>{formatNumber(snapshot.sourceStats.network)}</strong><small>NETWORK</small></span>
-                    <span><strong>{formatNumber(snapshot.sourceStats.overlap)}</strong><small>OVERLAP</small></span>
-                    <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
-                  </div>
-                </details>}
-              </Panel>
-              <RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />
-              <MapControlGroup className="map-control-group-primary">
-              <RadarOperationsCenter />
-              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" aria-label={t.radar.trafficNearby} data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
-                <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
-                <strong>{formatNumber(activeTrafficCount)}</strong>
-              </button>
-              </MapControlGroup>
-              <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
+            <RadarMapHud
+              aircraftCount={displayedAircraftCount}
+              activeTrafficCount={activeTrafficCount}
+              showSourceBreakdown={activeCoverage === "extended"}
+              sourceStats={snapshot.sourceStats}
+              drawerOpen={drawerState !== "closed"}
+              trafficTriggerRef={trafficTriggerRef}
+              onOpenTraffic={openTrafficDrawer}
+              presentationControls={<RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />}
+              presetMenu={<RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />}
+            >
               <RadarMapLayerMenu
                 mapAppearance={mapAppearance}
                 onMapAppearanceChange={chooseMapAppearance}
@@ -3309,7 +3264,7 @@ export function AirRadarApp() {
                 colorMode={colorMode}
                 onColorModeChange={setColorMode}
               />
-            </div>
+            </RadarMapHud>
             <RadarQuickActions
               weatherEnabled={showWeatherRadar}
               weatherState={weatherView.state}
