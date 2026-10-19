@@ -14,7 +14,7 @@ const componentSource = readFileSync(
   "utf8",
 );
 
-describe("Digital Twin Calibration Center V1 boundary", () => {
+describe("Digital Twin consolidated calibration center boundary", () => {
   it("keeps the center on an explicit admin route", () => {
     expect(pageSource).toContain("DigitalTwinCalibrationCenter");
     expect(pageSource).toContain("AirRadarPageShell");
@@ -39,14 +39,16 @@ describe("Digital Twin Calibration Center V1 boundary", () => {
 
   it("surfaces every calibration lane and persistence health", () => {
     expect(componentSource).toContain('data-testid="calibration-corridor-outcome"');
-    expect(componentSource).toContain('data-testid="calibration-trajectory-quality-outcome"');
-    expect(componentSource).toContain('data-testid="calibration-trajectory-quality-graduation"');
+    expect(componentSource).toContain('data-testid="calibration-trajectory-quality-outcome-v2"');
+    expect(componentSource).toContain('data-testid="calibration-trajectory-quality-v3-graduation"');
+    expect(componentSource).not.toContain('data-testid="calibration-trajectory-quality-outcome"');
+    expect(componentSource).not.toContain('data-testid="calibration-trajectory-quality-graduation"');
     expect(componentSource).toContain('data-testid="calibration-event-outcome"');
     expect(componentSource).toContain('data-testid="calibration-truth-first"');
     expect(componentSource).not.toContain('data-testid="calibration-wind-timing"');
     expect(componentSource).toContain('data-testid="calibration-regional-attention"');
     expect(componentSource).toContain('data-testid="calibration-persistence"');
-    expect(componentSource).toContain("hydratedTrajectoryQualityOutcomeBuckets");
+    expect(componentSource).toContain("hydratedTrajectoryQualityOutcomeV2Buckets");
     expect(componentSource).toContain("hydratedRegionalAttentionOutcomeBuckets");
   });
 
