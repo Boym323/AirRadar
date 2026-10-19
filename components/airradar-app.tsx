@@ -2164,8 +2164,6 @@ export function AirRadarApp() {
       (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.segments as FeatureCollection);
       (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.labels as FeatureCollection);
       (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.points as FeatureCollection);
-      (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJsonRef.current);
-      (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJsonRef.current);
       (map.getSource("route-airports") as GeoJSONSource | undefined)?.setData(airportGeoJsonRef.current);
       for (const replay of Object.values(mapReplays)) replay.setReady(true);
       setMapReady(true);
@@ -2709,34 +2707,51 @@ export function AirRadarApp() {
     if (map.getLayer("procedures-star-line")) map.setLayoutProperty("procedures-star-line", "visibility", showStars ? "visible" : "none");
   }, [mapReady, procedures, showSids, showStars]);
 
+  // Data payloads depend on ATC data/plan activity, not on camera padding,
+  // drawer state or MapLibre readiness. Avoid re-creating sector polygons and
+  // re-sending them to WebGL when only the overlay visibility changes.
+  const atcVisible = showAtc || showAupUup;
+  const visibleAirspaceActivity = showAupUup ? airspaceActivity : null;
+  const atcGeoJson = useMemo(
+    () => createAtcGeoJSON(atcData.sectors, atcVisible, visibleAirspaceActivity),
+    [atcData.sectors, atcVisible, visibleAirspaceActivity],
+  );
+  const transmitterGeoJson = useMemo<FeatureCollection>(() => ({
+    type: "FeatureCollection",
+    features: showAtc ? atcData.transmitters.filter((transmitter) => Number.isFinite(transmitter.longitude) && Number.isFinite(transmitter.latitude)
+      && transmitter.longitude >= -180 && transmitter.longitude <= 180
+      && transmitter.latitude >= -90 && transmitter.latitude <= 90).map((transmitter) => ({
+      type: "Feature" as const,
+      properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
+      geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
+    })) : [],
+  }), [atcData.transmitters, showAtc]);
+
   useEffect(() => {
-    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup, showAupUup ? airspaceActivity : null);
-    const transmitterGeoJson: FeatureCollection = {
-      type: "FeatureCollection",
-      features: showAtc ? atcData.transmitters.filter((transmitter) => Number.isFinite(transmitter.longitude) && Number.isFinite(transmitter.latitude)
-        && transmitter.longitude >= -180 && transmitter.longitude <= 180
-        && transmitter.latitude >= -90 && transmitter.latitude <= 90).map((transmitter) => ({
-        type: "Feature" as const,
-        properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
-        geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
-      })) : [],
-    };
     atcGeoJsonRef.current = atcGeoJson;
     transmitterGeoJsonRef.current = transmitterGeoJson;
+    // Map replay sets the source once when ready, and retains data until
+    // style.load if the map is not ready. No second source.setData needed.
     mapReplayRef.current.atc.setData(atcGeoJson);
     mapReplayRef.current.transmitters.setData(transmitterGeoJson);
+  }, [atcGeoJson, transmitterGeoJson]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJson);
-    (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJson);
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
     for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
     }
-    // The initial radar view is receiver-centred on Czechia. Without this fit,
-    // valid Slovak/Austrian sectors are loaded but remain outside the viewport.
+  }, [mapReady, showAtc, showAupUup]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    // Fit only when explicitly enabling ATC. Layout/panel changes no longer
+    // trigger heavy source updates, even though camera padding can change.
     if (showAtc && !atcAutoFitRef.current && atcData.sectors.length) {
       const bounds = new maplibregl.LngLatBounds();
       for (const sector of atcData.sectors) for (const polygon of sector.polygons) {
@@ -2750,7 +2765,7 @@ export function AirRadarApp() {
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airspaceActivity, atcData, currentRadarPadding, mapReady, showAtc, showAupUup]);
+  }, [atcData.sectors, currentRadarPadding, mapReady, showAtc]);
 
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
