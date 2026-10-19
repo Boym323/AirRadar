@@ -110,7 +110,7 @@
     "benchmark:atc:preparation": "ATC_BENCHMARK_NON_PRODUCTION=true JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-preparation.ts"
   },
   "dependencies": {
-    "@prisma/orm-postgres": "8.0.0-rc.9",
+    "@prisma/orm-postgres": "8.0.0-rc.18",
     "@tanstack/react-query": "^5.104.0",
     "@types/web-push": "^3.6.4",
     "cheerio": "^1.2.0",
