@@ -258,3 +258,15 @@ Hodinová série ukazuje, kdy se problém objevil, a sektorové porovnání ukaz
 ve kterém směru. Denní range intelligence V1 zůstává zachována a dál poskytuje
 fyzické dosahové metriky; V2 měří capture coverage vůči nezávislé síťové
 referenci.
+
+## Sjednocená implementace
+
+Obě doplňující se metody vyhodnocování nyní vlastní jediný čistý modul
+`lib/receiver-coverage-intelligence.ts` se společným vstupem
+`buildReceiverCoverageIntelligence()`. Denní skutečný dosah i průběžná
+úspěšnost zachycení vůči síťové referenci používají nezměněné algoritmy.
+
+Kvůli zpětné kompatibilitě odpověď API zachovává pole `intelligence`
+(denní V1) a `intelligenceV2` (průběžná V2). Všechny grafy a metriky
+zůstávají zachované bez nových dotazů, načítání, služeb na pozadí nebo
+databázových migrací. Historická ani hodinová data se nemění.

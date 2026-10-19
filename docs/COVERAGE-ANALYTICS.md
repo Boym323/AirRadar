@@ -257,3 +257,15 @@ The hourly series makes the onset of a degradation visible, while the sector
 comparison identifies direction. V1 daily range intelligence remains intact and
 continues to provide physical range statistics; V2 measures capture coverage
 against the independent network reference.
+
+## Consolidated implementation
+
+Both complementary health models now belong to one pure module,
+`lib/receiver-coverage-intelligence.ts`, exposed by
+`buildReceiverCoverageIntelligence()`. Daily physical range and rolling
+network-reference capture are evaluated together without changing algorithms.
+
+The API retains the existing `intelligence` (daily V1) and
+`intelligenceV2` (rolling V2) JSON fields for compatibility. All charts and
+metrics are preserved without extra queries, fetches, background work or
+schema migrations. The daily and hourly source data are unchanged.

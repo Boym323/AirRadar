@@ -15,7 +15,7 @@ import {
   type CoverageIntelligenceRange,
   type CoverageIntelligenceResponse,
 } from "@/lib/statistics-coverage-intelligence";
-import type { ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence-v2";
+import type { ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence";
 import { MAX_PLAUSIBLE_FLIGHT_ALTITUDE_FT } from "@/lib/receiver-sanity";
 
 function instantIso(value: Temporal.Instant | Date): string {
