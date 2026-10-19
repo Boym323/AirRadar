@@ -17,6 +17,45 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.530] - 2026-10-19
+
+Changes since v1.0.529.
+
+**Features touched:** Aircraft & Flight Detail, Navigation Integrity, Receiver Coverage.
+
+### Changed
+
+- Retire unused V2 detail UI and extract shared sections (117ab508)
+- Retire offline-only confidence shadow experiment (027edf9b)
+- Retire optional FlightPosition persistence shadow without changing sampling (50af9a19)
+- Unify daily and rolling intelligence calculation with stable API (a764059e)
+- Deploy consolidated cleanup PRs #1047-#1050 (#1053) (8c6d16ca)
+
+### Maintenance
+
+- Remove orphaned persistence audit npm script (37a11f1d)
+- Sync generated repository metadata (#1054) (c953b5b9)
+- Merge latest v1.0.529 metadata before cleanup preview (ef8be285)
+- Retarget V2 structural assertions to active V3 and shared chart (64d016f9)
+
+<details>
+<summary>Technical commits</summary>
+
+- refactor(aircraft): retire unused V2 detail UI and extract shared sections (117ab508)
+- refactor(navigation-integrity): retire offline-only confidence shadow experiment (027edf9b)
+- refactor(history): retire optional FlightPosition persistence shadow without changing sampling (50af9a19)
+- refactor(coverage): unify daily and rolling intelligence calculation with stable API (a764059e)
+- chore(history): remove orphaned persistence audit npm script (37a11f1d)
+- Merge pull request #1047 from Boym323/cleanup/retire-aircraft-detail-v2 (8bb19a71)
+- Merge pull request #1048 from Boym323/cleanup/retire-navigation-integrity-shadow (08262105)
+- Merge pull request #1049 from Boym323/cleanup/retire-flight-position-persistence-shadow (c392dcd5)
+- Merge pull request #1050 from Boym323/cleanup/consolidate-receiver-coverage-intelligence (55bbf23b)
+- chore(metadata): sync generated repository metadata (#1054) (c953b5b9)
+- chore(release): merge latest v1.0.529 metadata before cleanup preview (ef8be285)
+- test(aircraft): retarget V2 structural assertions to active V3 and shared chart (64d016f9)
+- release: deploy consolidated cleanup PRs #1047-#1050 (#1053) (8c6d16ca)
+
+</details>
 ## [1.0.529] - 2026-10-19
 
 Changes since v1.0.528.
