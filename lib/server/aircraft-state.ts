@@ -510,6 +510,12 @@ export class AircraftStateService {
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
     retentionAttribution: MemoryRetentionDiagnostics;
   } {
+    const now = new Date();
+    // Reuse the same bounded outcome snapshot for each corresponding
+    // graduation decision rather than aggregating three validators twice.
+    const trajectoryOutcome = this.getOperationalTwinTrajectoryQualityOutcomeReport(now);
+    const trajectoryOutcomeV2 = this.getOperationalTwinTrajectoryQualityOutcomeV2Report(now);
+    const regionalAttentionOutcome = this.getRegionalAttentionOutcomeReport(now);
     const { limitCounters, ...retentionAttribution } = getMemoryRetentionDiagnostics({
         localAircraft: this.localAircraft,
         localTrailLimitPoints: SERVER_LOCAL_TRAIL_MAX_POINTS,
@@ -560,13 +566,13 @@ export class AircraftStateService {
       }),
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
-      operationalTwinTrajectoryQualityOutcome: this.getOperationalTwinTrajectoryQualityOutcomeReport(),
-      operationalTwinTrajectoryQualityOutcomeV2: this.getOperationalTwinTrajectoryQualityOutcomeV2Report(),
-      operationalTwinTrajectoryQualityGraduation: this.getOperationalTwinTrajectoryQualityGraduationReport(),
-      operationalTwinTrajectoryQualityV3Graduation: this.getOperationalTwinTrajectoryQualityV3GraduationReport(),
+      operationalTwinTrajectoryQualityOutcome: trajectoryOutcome,
+      operationalTwinTrajectoryQualityOutcomeV2: trajectoryOutcomeV2,
+      operationalTwinTrajectoryQualityGraduation: buildOperationalTwinTrajectoryQualityGraduation(trajectoryOutcome),
+      operationalTwinTrajectoryQualityV3Graduation: buildOperationalTwinTrajectoryQualityV3Graduation(trajectoryOutcomeV2),
       operationalFocusOutcome: this.getOperationalFocusOutcomeReport(),
-      regionalAttentionOutcome: this.getRegionalAttentionOutcomeReport(),
-      regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
+      regionalAttentionOutcome,
+      regionalAttentionGraduation: buildRegionalAttentionGraduation(regionalAttentionOutcome),
       operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
       runtimePerformance: getRuntimePerformanceDiagnostics(),
       retentionAttribution,

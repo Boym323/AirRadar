@@ -102,6 +102,33 @@ describe("aircraft state service", () => {
     expect(diagnostics.localTrailPointCount).toBeGreaterThanOrEqual(1);
   });
 
+  it("uses one snapshot per calibration validator for its full diagnostic output", () => {
+    const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
+    services.push(service);
+    const internal = service as unknown as {
+      operationalTwinTrajectoryQualityOutcome: { report: (now?: Date) => unknown };
+      operationalTwinTrajectoryQualityOutcomeV2: { report: (now?: Date) => unknown };
+      regionalAttentionOutcome: { report: (now?: Date) => unknown };
+    };
+    const legacyReport = vi.spyOn(internal.operationalTwinTrajectoryQualityOutcome, "report");
+    const v2Report = vi.spyOn(internal.operationalTwinTrajectoryQualityOutcomeV2, "report");
+    const regionalReport = vi.spyOn(internal.regionalAttentionOutcome, "report");
+
+    const diagnostics = service.getDiagnostics();
+    expect(legacyReport).toHaveBeenCalledTimes(1);
+    expect(v2Report).toHaveBeenCalledTimes(1);
+    expect(regionalReport).toHaveBeenCalledTimes(1);
+    expect(diagnostics.operationalTwinTrajectoryQualityGraduation.outcomeVersion)
+      .toBe(diagnostics.operationalTwinTrajectoryQualityOutcome.version);
+    expect(diagnostics.operationalTwinTrajectoryQualityV3Graduation.outcomeVersion)
+      .toBe(diagnostics.operationalTwinTrajectoryQualityOutcomeV2.version);
+    expect(diagnostics.regionalAttentionGraduation.outcomeVersion)
+      .toBe(diagnostics.regionalAttentionOutcome.version);
+    legacyReport.mockRestore();
+    v2Report.mockRestore();
+    regionalReport.mockRestore();
+  });
+
   it("publishes the correct aircraft icon identity in the first live snapshot", async () => {
     vi.useFakeTimers();
     const receiver = { lat: 50, lon: 14, name: "Test" };
