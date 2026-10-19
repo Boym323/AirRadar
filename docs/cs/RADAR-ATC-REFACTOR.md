@@ -1,7 +1,7 @@
 # Odlehčení ATC v hlavní mapě AirRadaru (2026-10-19)
 
 ## Rozsah
-Hlavní mapa slouží k zobrazení **publikovaných ATC sektorů** a jejich základních údajů (název, služba, zdroj, platnost, frekvence, výškové hranice a polohy vysílačů). Plánované využití prostorů AUP/UUP se dál přepíná vlastní vrstvou. Vybranému letadlu zůstává ATC/ATS kontext a odhad předání; nejde o skutečně potvrzenou komunikaci ani skutečnou operativní konfiguraci řízení.
+Hlavní mapa slouží k zobrazení **publikovaných ATC sektorů** a jejich základních údajů (název, služba, zdroj, platnost, frekvence, výškové hranice a polohy vysílačů). Plánované využití prostorů AUP/UUP se načítá pouze po zapnutí jeho samostatné vrstvy. Vybranému letadlu zůstává ATC/ATS kontext a odhad předání; nejde o skutečně potvrzenou komunikaci ani skutečnou operativní konfiguraci řízení.
 
 ## Co už hlavní mapa nedělá
 - Neobnovuje `/api/atc/sectors/traffic` každých 12 s.
