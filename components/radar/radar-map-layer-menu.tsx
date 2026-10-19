@@ -37,10 +37,7 @@ interface RadarMapLayerMenuProps {
   airportsDataset: DatasetState<unknown>;
   showAtc: boolean;
   onShowAtcChange: (value: boolean) => void;
-  showAtcTraffic: boolean;
-  onShowAtcTrafficChange: (value: boolean) => void;
   atcDataset: DatasetState<unknown>;
-  sectorTrafficState: "idle" | "loading" | "ready" | "stale" | "unavailable";
   airspaceActivity: AirspaceActivityResponse | null;
   showAtsRoutes: boolean;
   onShowAtsRoutesChange: (value: boolean) => void;
@@ -106,10 +103,7 @@ export function RadarMapLayerMenu({
   airportsDataset,
   showAtc,
   onShowAtcChange,
-  showAtcTraffic,
-  onShowAtcTrafficChange,
   atcDataset,
-  sectorTrafficState,
   airspaceActivity,
   showAtsRoutes,
   onShowAtsRoutesChange,
@@ -165,8 +159,6 @@ export function RadarMapLayerMenu({
         <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => onShowHeliportsChange(event.target.checked)} /> {t.layers.heliports}</label>
         <div className="map-layer-subgroup-heading">{t.layers.groups.atcAirspace}</div>
         <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => onShowAtcChange(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
-        <label data-testid="map-layer-atc-traffic"><input type="checkbox" checked={showAtcTraffic} onChange={(event) => onShowAtcTrafficChange(event.target.checked)} /> {t.layers.atcTraffic}</label>
-        {showAtcTraffic && <div className="map-layer-sublevel">{t.layers.atcTrafficLegend}<br /><small>{t.layers.atcTrafficDescription}<br />{t.layers.atcTrafficDisclaimer}{sectorTrafficState === "stale" ? " · STALE" : sectorTrafficState === "unavailable" ? ` · ${t.layers.atcTrafficNoData}` : ""}</small></div>}
         {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
         <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
         <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => onShowAtsRoutesChange(event.target.checked)} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
