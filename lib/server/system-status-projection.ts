@@ -21,7 +21,6 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       history: {
         ...status.database.history,
         retention: undefined,
-        batchCanary: undefined,
       },
     },
     adsbLol: {

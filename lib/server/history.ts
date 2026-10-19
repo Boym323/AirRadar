@@ -11,7 +11,6 @@ import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
-import { historyPersistenceCanary, type HistoryPersistenceCanaryDiagnostics } from "@/lib/server/history-persistence-canary";
 import { historyStatementProfiler, type HistoryStatementPhase } from "@/lib/server/history-statement-profiler";
 import { performance } from "node:perf_hooks";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
@@ -71,7 +70,6 @@ export interface HistoryPersistenceStatus {
   failureCount: number;
   writes?: ReturnType<typeof getAircraftPersistenceDiagnostics>;
   retention?: HistoryRetentionDiagnostics;
-  batchCanary?: HistoryPersistenceCanaryDiagnostics;
   /** Available only when explicitly enabled; no aircraft or SQL identities. */
   statementProfile?: ReturnType<typeof historyStatementProfiler.diagnostics>;
 }
@@ -293,7 +291,6 @@ export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
     failureCount: historyPersistenceFailureCount,
     writes: getAircraftPersistenceDiagnostics(),
     retention: { ...historyRetentionDiagnostics },
-    batchCanary: historyPersistenceCanary.diagnostics(),
     ...(process.env.HISTORY_STATEMENT_PHASE_PROFILE_ENABLED?.trim().toLowerCase() === "true"
       ? { statementProfile: historyStatementProfiler.diagnostics() } : {}),
   };
@@ -1157,8 +1154,6 @@ export async function recordAircraftSnapshot(
       const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(effectiveRecordedAt.getTime());
       const wasNewAircraft = await retryAircraftUniqueViolation(() => {
         let statementCount = 0;
-        let committed = false;
-        const transactionStartedAt = Date.now();
         const statement = async <T>(phase: HistoryStatementPhase, operation: () => Promise<T>): Promise<T> => {
           statementCount += 1;
           if (!profileStatements) return operation();
@@ -1172,9 +1167,7 @@ export async function recordAircraftSnapshot(
             historyStatementProfiler.observe(phase, performance.now() - started, succeeded);
           }
         };
-        return trackDbTransaction("history.snapshot", async () => {
-          try {
-            const transactionResult = await database.transaction(async (transaction) => {
+        return trackDbTransaction("history.snapshot", () => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
       aircraftPersistenceDiagnostics.attempts += 1;
@@ -1357,17 +1350,7 @@ export async function recordAircraftSnapshot(
         }));
       }
       return firstDurableFlight;
-            });
-            committed = true;
-            return transactionResult;
-          } finally {
-            historyPersistenceCanary.observeTransaction({
-              durationMs: Math.max(0, Date.now() - transactionStartedAt),
-              statements: statementCount,
-              success: committed,
-            });
-          }
-        }, () => statementCount);
+      }), () => statementCount);
       });
       result.succeeded.push(item.icaoHex);
       if (wasNewAircraft) result.newAircraft?.push(item.icaoHex);
@@ -1375,12 +1358,6 @@ export async function recordAircraftSnapshot(
       // History is best-effort; one aircraft must not reject the other writes.
       result.failed.push(item.icaoHex);
     }
-  });
-
-  historyPersistenceCanary.observeSnapshot({
-    eligibleAircraft: candidates.length,
-    succeededAircraft: result.succeeded.length,
-    failedAircraft: result.failed.length,
   });
 
   if (result.succeeded.length) lastSuccessfulHistoryWriteAt = new Date().toISOString();
