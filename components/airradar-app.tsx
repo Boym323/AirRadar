@@ -27,7 +27,6 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
-import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
@@ -73,7 +72,7 @@ import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
-import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
+import type { OgnStateSnapshot } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { airportVisibilityFilter, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
