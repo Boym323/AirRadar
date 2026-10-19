@@ -2,13 +2,11 @@ import { readFileSync } from "node:fs";
 import { getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
 import { getDbTransactionDiagnostics, type DbTransactionDiagnosticsSnapshot } from "@/lib/server/db-transaction-diagnostics";
 import { getDbOperationDiagnostics, type DbOperationDiagnosticsSnapshot } from "@/lib/server/db-operation-diagnostics";
-import { getSystemStatusRequestDiagnostics } from "@/lib/server/system-status-request-diagnostics";
 import type { MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 
 export interface RuntimeDiagnostics {
   transactionAttribution?: DbTransactionDiagnosticsSnapshot;
   autocommitOperationAttribution?: DbOperationDiagnosticsSnapshot;
-  systemStatusRequests?: ReturnType<typeof getSystemStatusRequestDiagnostics>;
   coverageAnalytics?: Record<string, unknown>;
   processRssBytes: number;
   processRssAnonBytes: number | null;
@@ -251,7 +249,6 @@ export function readRuntimeDiagnostics(
     ...(detail === "public" ? {} : {
       transactionAttribution: getDbTransactionDiagnostics(),
       autocommitOperationAttribution: getDbOperationDiagnostics(),
-      systemStatusRequests: getSystemStatusRequestDiagnostics(),
     }),
     processRssBytes: nonNegative(memory.rss),
     ...readProcMemory(),
