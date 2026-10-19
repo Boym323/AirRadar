@@ -317,8 +317,10 @@ U vizuálních změn spusťte také desktopovou/mobilní browser bránu. Vizuál
 změnu neověřujte spuštěním `npm run build` v živém produkčním checkoutu:
 běžící proces Next.js může držet starý build manifest, zatímco se přepisuje
 `.next`, čímž se smíchají odkazy ze starého HTML s novými statickými assety.
-Během implementace použijte samostatný worktree nebo lokální/staging proces a
-pro produkci potom `deploy/release.sh`.
+Standardně používejte oddělený worktree; pro výslovně povolený režim
+jediného checkoutu editujte pouze zdrojové soubory v `/var/www/airradar`.
+Nezávislý ověřený build musí vzniknout v CI a atomicky se aktivovat skriptem
+`deploy/release.sh`; živé `.next` během služby nikdy nepřepisujte.
 
 Živý radar má volitelnou browser sondu výkonu. Přidejte k URL radaru
 `?perfDiagnostics=1` a poté v DevTools zkontrolujte
@@ -361,16 +363,21 @@ kontroly, například validaci odkazů a `git diff --check`.
 
 Provozovatel zvolil **přímý vývoj na `main`** v malých, ověřených
 commitech bez automatického zakládání větví a PR. Používejte
-**oddělený neprodukční vývojový checkout sledující `main`**.
-`/var/www/airradar` je živý produkční checkout: neupravujte tam
-kód ani nespouštějte build za běhu služby. Před úpravou ověřte
-`git status`, synchronizujte upstream pouze bezpečně fast-forward
-a zachovejte cizí rozpracované změny. Pouze **jeden agent smí
-zapisovat a pushovat do `main`**; ostatní mohou souběžně číst
-v samostatných read-only checkoutech.
+standardně **oddělený neprodukční vývojový checkout sledující `main`**.
+Pro výslovně schválený úkol z 19. 10. 2026 se však zdrojové soubory
+upravují přímo v kanonickém produkčním checkoutu `/var/www/airradar`
+na `main`, bez dalších vývojových worktree, větví nebo PR. Výjimka
+povoluje **úpravu zdrojových souborů**, nikoli build do živého `.next`,
+přeinstalaci běžících závislostí nebo zápisy testů do produkční DB.
+Před úpravou ověřte `git status`, fast-forward synchronizaci a
+zachovejte cizí změny. Do produkčního checkoutu nezapisujte v průběhu
+automatického release; deploy musí dostat čistý pracovní strom.
+Pouze **jeden agent smí zapisovat a pushovat do `main`**. CI a
+`deploy/release.sh` nadále používají nezbytné dočasné atomické
+adresáře sestavení. Viz [aktuální zadání](agents/CODEX-DIRECT-MAIN-PRODUCTION-2026-10-19.md).
 
-Produkční release skript patří pouze do kanonického checkoutu
-s příslušnými locky, službou a migracemi; ne do vývoje.
+Produkční release skript zůstává vázaný na kanonický checkout,
+odpovídající locky, službu a migrace; CI/CD neobcházejte.
 
 ## Autonomie agentů, přímé commity a hranice produkce
 
@@ -381,8 +388,9 @@ destruktivním operacím nad DB, zapínání providerů, obcházení kontrol
 ani přepisu sdílené historie.
 
 1. Ověřte aktuální kód, CI, sanitizované provozní důkazy a přesné SHA.
-2. Proveďte jednu ucelenou změnu na `main` v neprodukčním
-   checkoutu, doplňte testy a EN/CZ dokumentaci.
+2. Proveďte jednu ucelenou změnu na `main` ve zvoleném
+   checkoutu (při výslovně schváleném úkolu přímo v produkčním),
+   bez přepisu běžícího buildu; doplňte testy a EN/CZ dokumentaci.
 3. **Před pushnutím** ověřte `origin/main`, kompletní diff,
    relevantní lint/typecheck/testy, docs/features a podle změn
    browser/performance. Klasifikujte změny pomocí

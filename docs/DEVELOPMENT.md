@@ -340,8 +340,10 @@ For visual work, also run the desktop/mobile browser gate. Do not validate a
 visual change by running `npm run build` in the live production checkout: a
 running Next.js process can retain the old build manifest while `.next` is
 rewritten, which mixes old HTML references with new static assets. Use a
-separate worktree or local/staging process during implementation, then use
-`deploy/release.sh` for production.
+separate worktree by default; for the explicitly authorized single-checkout
+workflow, edit tracked source in `/var/www/airradar` but let CI create
+the independent, validated build artifact and use `deploy/release.sh`
+for atomic activation. Never replace the serving `.next` directly.
 
 The live radar has an opt-in browser performance probe. Add
 `?perfDiagnostics=1` to the radar URL, then inspect
@@ -384,16 +386,22 @@ validation and `git diff --check`.
 
 The maintainer selects **small, verified direct commits to `main`** as the
 standard workflow; do not create new task branches or PRs routinely.
-Work in a **separate, non-serving development checkout tracking `main`**.
-`/var/www/airradar` is the canonical **live production checkout**:
-never edit/build there while the service is running. Check `git status`,
-fetch/rebase only when safe, use fast-forward-only upstream synchronization,
-and preserve unrelated work. Only one agent may write/push `main` at a
-time; parallel agents may read in isolated checkouts, but must not race
-pushes or edit the same working tree.
+The normal default is a **separate, non-serving development checkout**.
+For the maintainer-authorized single-checkout assignment dated 2026-10-19,
+edit tracked source directly in the canonical `/var/www/airradar` checkout
+on `main`; no persistent alternate worktrees, task branches or PRs.
+This exception changes **source-edit location only**, not the rule against
+building into the live `.next`, reinstalling runtime dependencies, or
+writing test data to the production database. Always inspect `git status`,
+use fast-forward-only upstream synchronization and preserve unrelated work.
+One agent owns the checkout and all pushes; pause source edits during any
+automated production deploy and keep the checkout clean for deployment
+preflight. The validated CI artifact and release script still use necessary
+short-lived isolated build folders to atomically activate the new release.
+See [the task-specific instructions](agents/CODEX-DIRECT-MAIN-PRODUCTION-2026-10-19.md).
 
-The production release script is tied to the serving checkout, locks,
-service and migrations. Do not invoke it from the development checkout.
+The production release script remains tied to its canonical checkout,
+locks, service and migrations. Do not bypass the existing CI/CD pipeline.
 
 ## Agent autonomy, direct-main commits, and production boundaries
 
@@ -404,8 +412,10 @@ destructive DB actions, provider activation, bypassing checks, or rewriting
 shared history.
 
 1. Analyze the current code, CI, privacy-safe runtime evidence and exact SHA.
-2. Implement one coherent change on `main` in the non-serving checkout.
-   Add targeted regression tests and update the matching EN/CZ docs.
+2. Implement one coherent change directly on `main` in the selected
+   checkout (the canonical production checkout for the explicitly authorized
+   single-checkout task), keeping the serving build intact. Add targeted
+   regression tests and matching EN/CZ documentation.
 3. Before pushing, confirm `origin/main` is current, review the complete diff,
    run relevant lint/typecheck/full or targeted tests, docs/features and
    browser/performance gates for impacted paths. Determine deployment scope

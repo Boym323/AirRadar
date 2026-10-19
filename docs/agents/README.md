@@ -8,7 +8,8 @@ Root [AGENTS.md](../../AGENTS.md) is the only global instruction entry point. Us
 
 - [Performance engineering workflow](PERFORMANCE-WORKFLOW.md): short, reusable instructions for CPU, memory, SSE, Rust and T58.
 - [Development rules](../DEVELOPMENT.md): direct `main` commits, single-writer integration, measurements, tests and release boundaries.
-- [Direct-main consolidation plan](AIRRADAR_KONSOLIDACE_REFAKTOR_CODEX_MAIN_2026-10-18.md): refactor priorities, public diagnostics and verification.
+- [2026-10-19 authorized direct-main / canonical-production-checkout assignment](CODEX-DIRECT-MAIN-PRODUCTION-2026-10-19.md): current maintainer workflow, safety boundary, refactor stages and deployment acceptance; open for this task.
+- [Direct-main consolidation plan](AIRRADAR_KONSOLIDACE_REFAKTOR_CODEX_MAIN_2026-10-18.md): historical refactor priorities, public diagnostics and verification; the newer authorized checkout location takes precedence.
 - [2026-10-18 active task: remove redundant runtime work](RUNTIME-REDUNDANT-WORK-2026-10-18.md): T58-evidenced P0–P3 investigation and same-workload A/B acceptance; open only for this task.
 
 - [2026-10-18 active task: retire unused data sources and features](DATA-FEATURE-RETIREMENT-AUDIT-2026-10-18.md): consumer graph, production evidence, deletion safety and measured savings; open only for this task.
