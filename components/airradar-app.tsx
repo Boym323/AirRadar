@@ -19,7 +19,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
-import { aircraftMapLabelLevel, aircraftMapLabelText, trafficMapLabelText } from "@/lib/aircraft/map-labels";
+import { aircraftMapLabelLevel, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -75,7 +75,6 @@ import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
-import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
@@ -148,8 +147,8 @@ import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance 
 import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
 import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
 import { RadarMapHud } from "@/components/radar/radar-map-hud";
+import { aircraftWebglLabelFeature, ognMapLabelFeature, labelForAircraft, aircraftSearchText, ognTargetLabel, ognGlyphMarkup } from "@/lib/radar/map-label-presentation";
 import { parseAirportDataset, parseAtcDataset, parseAtsDataset, parseJsonDataset, type AtsRoutesResponse } from "@/lib/radar/dataset-validation";
-import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import type { RxwWaypointAvailability, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 import {
   createRxwFpnBadges,
@@ -162,8 +161,7 @@ import {
   RXW_FPN_ROUTE_POINTS,
   RXW_FPN_ROUTE_LABEL,
 } from "@/lib/radar/rxw-fpn-visual";
-import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
-import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
+import { radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
 import { aircraftColor } from "@/lib/aircraft/color-mode";
 import { addRadarPreset, createRadarPreset, readRadarPresets, writeRadarPresets, type RadarPreset } from "@/lib/radar/presets";
@@ -233,52 +231,6 @@ function trailEndpointKey(point: TrailPoint | undefined): string {
   return point ? `${point.recordedAt}|${point.lat}|${point.lon}` : "";
 }
 
-function aircraftWebglLabelFeature(
-  aircraft: AircraftView,
-  zoom: number,
-  renderedPosition?: { lon: number; lat: number } | null,
-) {
-  const stale = aircraftPositionIsStale(aircraft);
-  return {
-    type: "Feature" as const,
-    id: aircraft.icaoHex,
-    properties: {
-      icaoHex: aircraft.icaoHex,
-      label: aircraftMapLabelText(aircraft, zoom, {
-        suppressTelemetry: stale,
-      }) ?? "",
-      source: classifyAircraftSource(aircraft),
-      stale: stale,
-      labelOpacity: aircraftLabelOpacity(aircraft),
-    },
-    geometry: {
-      type: "Point" as const,
-      coordinates: [renderedPosition?.lon ?? aircraft.lon!, renderedPosition?.lat ?? aircraft.lat!] as [number, number],
-    },
-  };
-}
-
-function ognMapLabelFeature(target: OgnTargetView, zoom: number, selected: boolean) {
-  const presentation = toOgnTrafficPresentation(target);
-  return {
-    type: "Feature" as const,
-    id: target.id,
-    properties: {
-      targetId: target.id,
-      label: selected ? "" : trafficMapLabelText({
-        identity: presentation.primaryLabel,
-        altitudeFt: presentation.altitudeFt,
-        speedKt: presentation.speedKt,
-      }, zoom, { suppressTelemetry: target.stale }) ?? "",
-      stale: target.stale,
-    },
-    geometry: {
-      type: "Point" as const,
-      coordinates: [target.longitude, target.latitude] as [number, number],
-    },
-  };
-}
-
 function setOgnDomLabel(handle: OgnMarkerHandle, value: string | null): boolean {
   if (handle.labelText === value) return false;
   handle.labelText = value;
@@ -324,23 +276,6 @@ function collapseNarrowRadarAttribution(map: maplibregl.Map): void {
   credits.classList.remove("maplibregl-compact-show");
 }
 
-function labelForAircraft(aircraft: AircraftView): string {
-  return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
-}
-
-const aircraftSearchTextCache = new WeakMap<AircraftView, string>();
-
-function aircraftSearchText(aircraft: AircraftView): string {
-  const cached = aircraftSearchTextCache.get(aircraft);
-  if (cached !== undefined) return cached;
-  const value = [aircraft.callsign, aircraft.registration, aircraft.enrichment?.metadata?.registration, aircraft.icaoHex]
-    .filter(Boolean)
-    .join(" ")
-    .toUpperCase();
-  aircraftSearchTextCache.set(aircraft, value);
-  return value;
-}
-
 function formatAirspaceUtc(value: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
@@ -360,14 +295,6 @@ function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id:
 function relativeTwinMapOffset(minutes: number): string {
   if (minutes <= 0.05) return "NOW";
   return `+${formatNumber(minutes, minutes < 10 ? 1 : 0)} min`;
-}
-
-function ognTargetLabel(target: OgnTargetView): string {
-  return ognPrimaryLabel(target);
-}
-
-function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
-  return `<svg class="aircraft-glyph aircraft-glyph-${ognIconKind(aircraftType)}" viewBox="0 0 32 32" aria-hidden="true"><path d="${canonicalAircraftGlyphPath(ognIconKind(aircraftType))}"></path></svg>`;
 }
 
 export function AirRadarApp() {
