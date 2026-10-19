@@ -43,9 +43,8 @@ describe("Visual System V5-E2–E6", () => {
   });
 
   it("reuses airport traffic controller and deep links into existing radar selection", () => {
-    expect(airport).toContain('data-testid="airport-v5-map-shortcut"');
-    expect(airport).toContain('switchView("map")');
-    expect(nearby).toContain('data-testid="airport-v5-nearby-filters"');
+    expect(airport).toContain("<AirportMap airport={airport}");
+    expect(nearby).toContain("useAirportLiveTrafficController");
     expect(nearby).toContain('item.classification === movement');
     expect(nearby).toContain('aria-pressed={movement === option.key}');
     expect(nearby).toContain('/?aircraft=');

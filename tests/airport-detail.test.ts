@@ -57,8 +57,8 @@ describe("airport detail V1", () => {
     expect(weatherSource).toContain("{metar?.rawText && <details className=\"weather-raw\">");
     expect(weatherSource).toContain("{taf.rawText && <details className=\"weather-raw\">");
     expect(detailSource).toContain("<AirportWeatherPanel");
-    expect(detailSource).toContain("sharedState={{");
-    expect(detailSource).toContain("operationsController.weather");
+    expect(detailSource).not.toContain("operationsController.weather");
+    expect(detailSource).toContain("<AirportWeatherPanel airport={airport}");
   });
 
   it("keeps flight-detail airport navigation, map navigation, and raw weather mobile-safe", () => {

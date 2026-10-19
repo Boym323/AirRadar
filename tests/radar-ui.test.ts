@@ -15,7 +15,6 @@ import { aircraftLabelOpacity, aircraftMarkerClassNames, aircraftPositionIsStale
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const mapLabelsSource = readFileSync(new URL("../lib/radar/map-label-presentation.ts", import.meta.url), "utf8");
 const radarHudSource = readFileSync(new URL("../components/radar/radar-map-hud.tsx", import.meta.url), "utf8");
-const timeMachineSource = readFileSync(new URL("../components/time-machine.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftMotionRuntimeSource = readFileSync(new URL("../lib/radar/aircraft-motion-runtime.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
@@ -172,13 +171,6 @@ describe("radar UI polish helpers", () => {
     expect(productionGateSource).toContain("areTilesLoaded");
   });
 
-  it("shares the canonical vector basemap and style lifecycle with Time Machine", () => {
-    expect(timeMachineSource).toContain("AIRRADAR_BASE_MAP_STYLE_URL");
-    expect(timeMachineSource).toContain('map.once("style.load", () => {');
-    expect(timeMachineSource).not.toContain("tile.openstreetmap.org");
-    expect(timeMachineSource).toContain("time-machine-aircraft");
-  });
-
   it("keeps aircraft visual effects off the MapLibre root", () => {
     expect(globalCss).toContain(".aircraft-marker.selected .aircraft-marker-visual::before");
     expect(globalCss).toContain("position: absolute");
@@ -247,21 +239,6 @@ describe("radar UI polish helpers", () => {
     expect(radarDrawerDetailsSource).toContain("<AircraftRadarQuickDetail");
     expect(radarMapLayerMenuSource).toContain('data-testid="map-layer-atc"');
     expect(radarDrawerInteractionsSource).toContain('window.addEventListener("keydown", handleKeyboardShortcut, true)');
-  });
-
-  it("keeps Operations Center in a focused read-only intelligence boundary", () => {
-    expect(radarHudSource).toContain("<RadarOperationsCenter />");
-    expect(radarOperationsCenterSource).toContain("useIntelligenceStream(open)");
-    expect(radarOperationsCenterSource).toContain('"/api/alerts?page=0&pageSize=50&filter=all"');
-    expect(radarOperationsCenterSource).toContain('"/api/logbook/summary"');
-    expect(radarOperationsCenterSource).toContain("/operations?period=24h");
-    expect(radarOperationsCenterSource).toContain("AIRPORT_CONTEXT_REFRESH_INTERVAL_MS = 300_000");
-    expect(radarOperationsCenterSource).not.toContain("useAircraftStream");
-    expect(radarOperationsCenterSource).not.toContain("maplibre");
-    expect(radarOperationsCenterSource).not.toContain("method: \"POST\"");
-    expect(radarOperationsCenterSource).not.toContain("method: \"PATCH\"");
-    expect(radarOperationsCenterSource).not.toContain("method: \"DELETE\"");
-    expect(radarOperationsCenterSource).toContain('href={\`/aircraft/\${event.icaoHex}\`}');
   });
 
   it("keeps performance diagnostics opt-in and off the default hot path", () => {
