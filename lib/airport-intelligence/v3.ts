@@ -721,9 +721,9 @@ interface IndexedAirportMovement {
 
 /** Each historical observation is prepared once per live view; no persistent
  * identity cache, sorting, or repeated scans across unrelated aircraft. */
-function indexAirportMovements(operations: AirportOperationsResponse | null): Map<string, IndexedAirportMovement[]> {
+function indexAirportMovements(operations: AirportOperationsResponse): Map<string, IndexedAirportMovement[]> {
   const byHex = new Map<string, IndexedAirportMovement[]>();
-  for (const movement of operations?.recentMovements ?? []) {
+  for (const movement of operations.recentMovements) {
     const observedAtMs = Date.parse(movement.observedAt);
     if (!Number.isFinite(observedAtMs)) continue;
     const hex = movement.icaoHex.trim().toUpperCase();
@@ -736,8 +736,9 @@ function indexAirportMovements(operations: AirportOperationsResponse | null): Ma
 
 function correlatedMovement(
   observation: AirportTrafficObservation,
-  byHex: ReadonlyMap<string, readonly IndexedAirportMovement[]>,
+  byHex: ReadonlyMap<string, readonly IndexedAirportMovement[]> | null,
 ): { movement: AirportMovement; ageSeconds: number } | null {
+  if (!byHex) return null;
   const liveAt = Date.parse(observation.aircraft.lastSeen);
   if (!Number.isFinite(liveAt)) return null;
   const liveCallsign = normalizedIdentity(observation.aircraft.callsign);
@@ -767,7 +768,7 @@ export function buildAirportCorrelatedTrafficSnapshot(
   limit = AIRPORT_LIVE_BOARD_ACTIVE_LIMIT,
 ): AirportCorrelatedTrafficSnapshot {
   const active = buildAirportActiveTrafficSnapshot(observations, limit);
-  const movementIndex = indexAirportMovements(operations);
+  const movementIndex = operations ? indexAirportMovements(operations) : null;
   const airportIcao = canonicalAirport(operations?.airport.icao);
   const correlate = (items: AirportTrafficObservation[]): AirportCorrelatedTrafficObservation[] =>
     items.map((observation) => {
