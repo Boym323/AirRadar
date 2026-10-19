@@ -121,6 +121,11 @@ export function parseRadarPreset(value: unknown): RadarPreset | null {
     || !finite(displayValue.radarOpacity) || displayValue.radarOpacity < 0.2 || displayValue.radarOpacity > 1
   ) return null;
 
+  // Keep compatibility with V1 presets that contain the retired traffic flag.
+  // A shallow copy avoids allocating an entries array for each saved preset.
+  const layers: RadarPresetLayers & { showAtcTraffic?: boolean } = { ...preset.layers };
+  delete layers.showAtcTraffic;
+
   return {
     version: 1,
     id: preset.id,
@@ -133,10 +138,7 @@ export function parseRadarPreset(value: unknown): RadarPreset | null {
     },
     coverage: preset.coverage,
     mapFilters: { ...DEFAULT_MAP_AIRCRAFT_FILTERS, ...preset.mapFilters },
-    // Older V1 presets may contain the retired ATC traffic flag.
-    // Drop it while preserving every supported layer and the V1 format.
-    layers: Object.fromEntries(Object.entries(preset.layers as Record<string, unknown>)
-      .filter(([key]) => key !== "showAtcTraffic")) as unknown as RadarPresetLayers,
+    layers,
     display: {
       colorMode: displayValue.colorMode,
       radarOpacity: displayValue.radarOpacity,
