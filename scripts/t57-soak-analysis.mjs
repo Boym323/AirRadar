@@ -3,7 +3,7 @@
 // diagnostics store ID may be written to an output report. Process continuity
 // uses a one-way process key derived from the private diagnostics identity.
 import { createHash } from "node:crypto";
-import { stats } from "./t55-runtime-analysis.mjs";
+import { stats } from "./soak-statistics.mjs";
 
 const MiB = 1024 * 1024;
 const AUXILIARY_NAMES = [
