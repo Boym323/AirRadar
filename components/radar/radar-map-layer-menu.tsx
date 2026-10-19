@@ -1,11 +1,9 @@
 "use client";
 
-import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
 import { MapControl, UiIcon } from "@/components/ui-primitives";
 import type { DatasetState } from "@/components/use-dataset-query";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
-import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import type { RadarMapAppearance } from "@/lib/radar/map-appearance";
 
 interface AtsRoutesSummary {
@@ -38,7 +36,6 @@ interface RadarMapLayerMenuProps {
   showAtc: boolean;
   onShowAtcChange: (value: boolean) => void;
   atcDataset: DatasetState<unknown>;
-  airspaceActivity: AirspaceActivityResponse | null;
   showAtsRoutes: boolean;
   onShowAtsRoutesChange: (value: boolean) => void;
   atsDataset: DatasetState<unknown>;
@@ -104,7 +101,6 @@ export function RadarMapLayerMenu({
   showAtc,
   onShowAtcChange,
   atcDataset,
-  airspaceActivity,
   showAtsRoutes,
   onShowAtsRoutesChange,
   atsDataset,
@@ -159,7 +155,6 @@ export function RadarMapLayerMenu({
         <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => onShowHeliportsChange(event.target.checked)} /> {t.layers.heliports}</label>
         <div className="map-layer-subgroup-heading">{t.layers.groups.atcAirspace}</div>
         <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => onShowAtcChange(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
-        {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
         <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
         <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => onShowAtsRoutesChange(event.target.checked)} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
         <label data-testid="map-layer-nav-data"><input type="checkbox" checked={showNavData} onChange={(event) => onShowNavDataChange(event.target.checked)} /> {datasetStateLabel(t.layers.navData, navDataDataset, (count) => String(count))}</label>
