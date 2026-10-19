@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const mapSource = readFileSync(new URL("../lib/operational-twin/map.ts", import.meta.url), "utf8");
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const selectedContextSource = readFileSync(new URL("../components/radar/use-radar-aircraft-context.ts", import.meta.url), "utf8");
 
 describe("Operational Digital Twin V2 map boundary", () => {
   it("keeps map visualization a pure projection over the existing situation response", () => {
@@ -15,11 +16,12 @@ describe("Operational Digital Twin V2 map boundary", () => {
   });
 
   it("reuses the radar's existing selected Operational Twin request without another timer", () => {
-    expect(radarSource).toContain("setSelectedOperationalTwin(value)");
-    expect(radarSource).toContain('/situation');
+    expect(selectedContextSource).toContain("setOperationalTwin(value)");
+    expect(selectedContextSource).toContain('/situation');
+    expect(selectedContextSource.match(/\/situation/g)).toHaveLength(1);
+    expect(radarSource).toContain("useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition })");
     expect(radarSource).toContain("createOperationalTwinMapGeoJSON(availableTwin)");
     expect(radarSource).toContain("map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID");
-    expect(radarSource.match(/\/situation/g)).toHaveLength(1);
   });
 
   it("registers uncertainty, route-aware, kinematic, milestone and event layers on style.load", () => {

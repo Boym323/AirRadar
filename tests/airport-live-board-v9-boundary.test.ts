@@ -5,6 +5,7 @@ const modelSource = readFileSync(new URL("../lib/server/airport-terminal-demand-
 const routeSource = readFileSync(new URL("../app/api/airports/[icao]/operations/route.ts", import.meta.url), "utf8");
 const boardSource = readFileSync(new URL("../components/airport-operations-board.tsx", import.meta.url), "utf8");
 const controllerSource = readFileSync(new URL("../components/airport-operations-controller.ts", import.meta.url), "utf8");
+const browserGateSource = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
 
 describe("Airport Live Board V9 Terminal Demand Horizon boundary", () => {
   it("reuses the existing operations refresh and one LOCAL state snapshot", () => {
@@ -22,6 +23,8 @@ describe("Airport Live Board V9 Terminal Demand Horizon boundary", () => {
     expect(boardSource).toContain("buildAirportArrivalFlowIntelligence");
     expect(boardSource).toContain('data-testid="airport-live-board-v9-terminal-horizon"');
     expect(boardSource).toContain('data-terminal-demand-product="airport-live-board-v9"');
+    expect(browserGateSource).toContain('terminalDemandHorizon: {');
+    expect(browserGateSource).toContain('version: "airport-live-board-v9"');
   });
 
   it("keeps the extended horizon explicitly outside ATC/public-prediction semantics", () => {

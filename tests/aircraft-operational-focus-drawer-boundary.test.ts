@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const selectedContextSource = readFileSync(new URL("../components/radar/use-radar-aircraft-context.ts", import.meta.url), "utf8");
 const drawerSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const summarySource = readFileSync(new URL("../components/radar/radar-operational-focus-summary.tsx", import.meta.url), "utf8");
@@ -10,8 +11,8 @@ const csSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "ut
 
 describe("Aircraft Operational Focus drawer V1 boundary", () => {
   it("derives change intelligence from the existing situation refresh", () => {
-    expect(appSource).toContain("compareAircraftOperationalFocus(previous, value.operationalFocus)");
-    expect(appSource).toContain("operationalFocusSnapshotsRef");
+    expect(selectedContextSource).toContain("compareAircraftOperationalFocus(previous, value.operationalFocus)");
+    expect(selectedContextSource).toContain("operationalFocusSnapshotsRef");
     expect(appSource).toContain("operationalFocusChanges={selectedOperationalFocusChanges}");
     expect(summarySource).toContain('data-testid="aircraft-operational-focus-changes"');
     expect(summarySource).not.toContain("fetch(");

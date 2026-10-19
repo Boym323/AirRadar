@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const componentSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const selectedContextSource = readFileSync(new URL("../components/radar/use-radar-aircraft-context.ts", import.meta.url), "utf8");
 const quickCss = readFileSync(new URL("../app/radar-aircraft-panel.css", import.meta.url), "utf8");
 const telemetrySource = readFileSync(new URL("../components/aircraft-adsb-telemetry.tsx", import.meta.url), "utf8");
 const detailSource = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
@@ -71,7 +72,7 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain('data-testid="flight-situation-summary"');
     expect(componentSource).toContain("buildFlightSituationSummary");
     expect(componentSource).toContain("t.intelligence.situationDisclaimer");
-    expect(appSource).toContain("/route-weather");
+    expect(selectedContextSource).toContain("/route-weather");
     expect(appSource).toContain("routeWeather={selectedRouteWeather}");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
@@ -111,6 +112,6 @@ describe("aircraft radar quick detail", () => {
   it("uses the explicit quick API mode and keeps the existing trail/context requests", () => {
     expect(appSource).toContain("?mode=quick&coverage=");
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
-    expect(appSource).toContain("/api/aircraft/${encodeURIComponent(contextAircraftHex)}/context");
+    expect(selectedContextSource).toContain("/api/aircraft/${encodeURIComponent(aircraftHex)}/context");
   });
 });

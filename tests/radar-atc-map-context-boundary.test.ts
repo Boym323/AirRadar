@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const app = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const hook = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
+const selectedContextHook = readFileSync(new URL("../components/radar/use-radar-aircraft-context.ts", import.meta.url), "utf8");
 const menu = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const quick = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 
@@ -48,8 +49,8 @@ describe("lightweight radar ATC map boundary", () => {
     expect(app).toContain('map.on("click", "atc-sectors-fill"');
     expect(app).toContain('"atc-sectors-context-highlight"');
     expect(app).toContain('mapRef.current?.getSource("atc-sectors")');
-    expect(app).toContain("/context");
+    expect(selectedContextHook).toContain("/context");
     expect(quick).toContain("buildAtcHandoffEstimate");
-    expect(app).toContain("30_000");
+    expect(selectedContextHook).toContain("30_000");
   });
 });

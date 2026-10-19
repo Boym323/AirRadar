@@ -441,6 +441,23 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           { flightId: 7004, icaoHex: "3C0001", callsign: "DLH789", registration: "D-TST", movement: "HOLDING", confidence: "medium", airport: "LKPR", runway: null, observedAt: "2026-10-04T07:20:00.000Z", evidence: ["fixture"] },
         ],
         diagnostics: { flightsExamined: 18, positionsExamined: 420, queryDurationMs: 9 },
+        terminalDemandHorizon: {
+          version: "airport-live-board-v9",
+          generatedAt: "2026-10-04T08:00:00.000Z",
+          airport: "LKPR",
+          coverage: { localAircraft: 25, routeMatchedInbound: 7, etaEstimated: 5 },
+          demand: { within30Minutes: 2, within60Minutes: 5, beyond60Minutes: 0, unknownEta: 2 },
+          items: [],
+          truncated: false,
+          limitations: [
+            "LOCAL_RECEIVER_ONLY",
+            "ROUTE_DESTINATION_REQUIRED",
+            "DIRECT_DISTANCE_GROUNDSPEED_ETA",
+            "NOT_PUBLIC_PREDICTION",
+            "NOT_ATC_SEQUENCE",
+            "NO_CAPACITY_OR_DELAY_INFERENCE",
+          ],
+        },
       };
       const airportWeatherFixture = {
         metar: {
