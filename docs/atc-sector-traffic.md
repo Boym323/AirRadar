@@ -19,20 +19,17 @@ flight transitions. Unknown observations are not transitions. Short boundary
 jitter is collapsed before counting, but transitions are still observational
 inferences from sampled history.
 
-The map overlay provides an optional `ATC Sector Traffic` view over the shared
-sector source. The `ATC Vertical Traffic` panel currently exposes the verified
-SOUTH stack (`LKAAS`, `LKAANSL`, `LKAATB`) in published vertical order. NORTH
-and WEST are intentionally not presented until their relationships are
-unambiguous across imported AIRAC data. The Sector flows panel uses one
-transitions request for the selected 1, 5, or 15 minute window; its entries
-represent movement between published volumes, not confirmed ATC handoffs.
+The main radar map no longer renders the optional `ATC Sector Traffic`,
+`ATC Vertical Traffic` or `Sector Flows` overlays. It neither polls the
+traffic/transition API every 12/15 seconds nor treats observational sector
+volume occupancy as live controller assignments. Sector histories remain
+available from the dedicated airspace sector detail, and all traffic APIs
+remain available for independent consumers.
 
-The aircraft quick detail reuses the existing point/altitude sector match and
-the already loaded batch traffic context. It uses “Published sector” and
-“Sector traffic” wording and reports unavailable data as `—` rather than
-claiming a current operational assignment. Historical requests use the same
-map-time timestamp for traffic, flows, and aircraft context; live requests
-refresh traffic at 12 seconds and flows at 15 seconds.
+The aircraft quick detail retains the published point/altitude sector match
+and the published frequency and advisory handoff. It no longer displays
+inferred sector traffic counts. Its selected-aircraft context refresh is
+bounded to one in-flight request and a 30-second minimum delay.
 
 Published frequencies remain owned by the existing `AtcSector` model. No
 database migration is required for the current context and transition APIs;
@@ -48,14 +45,14 @@ evidence that the sector is currently operated independently.
 The `Traffic history` section is lazy-loaded from the historical API and is
 not polled with the live map. Ranges map centrally to buckets as follows:
 `1h` → `1m`, `6h` → `5m`, `24h` → `15m`, and `7d` → `1h`. Single-sector
-history uses one sector request; comparison and SOUTH history use one batch
-request for up to three sectors (`TB`, `SL`, and `S`).
+history uses one sector request. The batch history API remains available to
+independent consumers but is no longer requested by the removed map panels.
 
 The history window ends at the effective Global Map Time. In Time Machine mode
 the `at` instant is used rather than the real current time. Missing values are
 rendered as gaps/“No data”; they are not converted to zero. Summary values
 (peak, average, entries, and exits) are taken from the backend response.
-Charts describe aircraft observed within published SOUTH sector volumes and do
+Charts describe aircraft observed within published sector volumes and do
 not represent the operational ATC sector configuration. Results depend on
 AirRadar ADS-B coverage and retained `FlightPosition` data.
 
