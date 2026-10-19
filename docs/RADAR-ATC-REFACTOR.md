@@ -10,6 +10,8 @@ The main radar map displays **published ATC sectors** and essential metadata: na
 - Does not present inferred traffic counts as proof of actual ATC assignment or radio use in the selected aircraft details.
 - Refreshes selected-aircraft ATC/ATS context with non-overlapping requests, at least 30 seconds apart, and aborts stale requests when the selected aircraft changes.
 
+- MapLibre ATC and transmitter GeoJSON are memoized from the published datasets and enabled layers. Source updates go through a single replay path, avoiding duplicate setData transfers when camera padding or the map UI changes.
+
 ## Contracts preserved
 Database schema, eAIP import, published ATC/ATS geometry, altitude-aware assignment, `/api/atc/sectors`, `/api/airspace/activity`, `/api/aircraft/[hex]/context` and the dedicated `/airspace` and `/airspace/sectors/[id]` views remain unchanged. Historical traffic and transition endpoints remain available to other consumers. V1 radar presets discard the retired `showAtcTraffic` flag when reading legacy snapshots without losing other layer options.
 
