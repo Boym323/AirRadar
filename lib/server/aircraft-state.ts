@@ -48,7 +48,6 @@ import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classifica
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-provenance";
-import { flightPositionPersistenceShadow } from "@/lib/server/flight-position-persistence-shadow";
 import {
   PredictiveStateStore,
   buildPublicEtaAdvisory,
@@ -494,7 +493,6 @@ export class AircraftStateService {
     local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
-    flightPositionPersistenceShadow: ReturnType<typeof flightPositionPersistenceShadow.diagnostics>;
     predictiveIntelligence: ReturnType<PredictiveStateStore["diagnostics"]>;
     flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
@@ -552,7 +550,6 @@ export class AircraftStateService {
       local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
       altitudeDiagnostics: getAltitudeDiagnostics(),
-      flightPositionPersistenceShadow: flightPositionPersistenceShadow.diagnostics(),
       predictiveIntelligence: this.predictive.diagnostics(),
       flightIntelligence: this.intelligence.getDiagnostics(),
       destinationProvenance: getDestinationProvenanceDiagnostics(),
@@ -1393,35 +1390,14 @@ export class AircraftStateService {
 
     const now = Date.now();
     const sampleIntervalMs = getHistorySampleIntervalMs();
-    const shadowEnabled = flightPositionPersistenceShadow.isEnabled;
-    // Avoid shadow-only objects, proximity calculations and the active-key
-    // array entirely while the observational shadow gate is disabled.
-    const activeHexes: string[] | null = shadowEnabled ? [] : null;
     const due: Aircraft[] = [];
     for (const item of snapshot.aircraft) {
-      if (activeHexes) activeHexes.push(item.icaoHex);
       if (item.lat === null || item.lon === null) continue;
       const previous = this.lastHistorySample.get(item.icaoHex);
       const currentPersist = previous === undefined || sampledAt - previous >= sampleIntervalMs;
-      // Merge metadata/route only for position samples actually due for
-      // persistence. The shadow policy still observes every valid position.
+      // Preserve the established time-sampled history persistence decision.
       if (currentPersist) due.push(historyAircraftForSnapshot(item, this.aircraft.get(item.icaoHex)));
-      if (shadowEnabled) {
-        flightPositionPersistenceShadow.observe({
-          aircraftHex: item.icaoHex,
-          currentPersist,
-          candidate: {
-            recordedAtMs: sampledAt, lat: item.lat, lon: item.lon, altitudeFt: item.altitude,
-            trackDeg: item.track, groundSpeedKt: item.groundSpeed, verticalRateFpm: item.verticalRate,
-            onGround: item.onGround, source: item.provenance?.positionSource ?? item.source,
-            airportProximity: isAirportProximity(item),
-            phase: item.onGround ? "airport" : item.targetState?.approachMode ? "approach" : item.verticalRate !== null && item.verticalRate >= 250 ? "climb" : item.verticalRate !== null && item.verticalRate <= -250 ? "descent" : item.groundSpeed !== null && item.groundSpeed > 120 ? "cruise" : "unknown",
-          },
-          nowMs: now,
-        });
-      }
     }
-    if (activeHexes) flightPositionPersistenceShadow.cleanup(activeHexes, now);
     if (due.length) {
       // Weather is a separate sparse lane. It is intentionally fire-and-forget
       // so a database hiccup cannot add latency to the live Beast/SSE loop.
