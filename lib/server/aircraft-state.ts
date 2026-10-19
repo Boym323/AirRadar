@@ -913,12 +913,15 @@ export class AircraftStateService {
       // A network failure must never change local receiver health.
     } finally {
       this.networkRefreshing = false;
-      if (this.running && this.networkProvider.getDiagnostics().enabled) {
-        const delay = this.networkProvider.getNextPollDelayMs?.() ?? this.networkProvider.getDiagnostics().pollIntervalMs;
+      if (this.running) {
+        const diagnostics = this.networkProvider.getDiagnostics();
+        if (diagnostics.enabled) {
+          const delay = this.networkProvider.getNextPollDelayMs?.() ?? diagnostics.pollIntervalMs;
         this.networkTimer = setTimeout(() => {
           this.networkTimer = null;
           void this.refreshNetwork();
-        }, Number.isFinite(delay) && delay >= 0 ? delay : getAdsbLolStaleAfterMs());
+          }, Number.isFinite(delay) && delay >= 0 ? delay : getAdsbLolStaleAfterMs());
+        }
       }
     }
   }
