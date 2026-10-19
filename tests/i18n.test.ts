@@ -34,9 +34,9 @@ describe("localization", () => {
     expect(aircraftCount(2, english)).toBe("2 aircraft");
   });
 
-  it("uses the shared aircraft formatter in the ATC panel", () => {
+  it("uses localized aircraft terminology in the retained ATC history panel", () => {
     const source = readFileSync(fileURLToPath(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url)), "utf8");
-    expect(source).toContain("aircraftCount(item.traffic.aircraftCount)");
+    expect(source).toContain('<option value="aircraftCount">{t.atc.aircraft}</option>');
     expect(source).not.toContain("t.atc.aircraft.toLowerCase()");
   });
 
