@@ -17,6 +17,44 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.532] - 2026-10-19
+
+Changes since v1.0.531.
+
+**Features touched:** Aircraft & Flight Detail, Statistics & Recaps.
+
+### Changed
+
+- Share identical truth altitude resolver across outcome validators (ca14baec)
+- Remove obsolete transaction-batching canary (#1056) (55eecc1c)
+- Extract shared T57 stats and archive obsolete T55/T56 tooling (#1058) (5f02e6bc)
+- Shared twin truth and single-pass retention diagnostics (#1064) (cbbc46b3)
+
+### Performance
+
+- Consolidate aircraft and trail retention into one collection pass (a26fb54a)
+- Reuse retained trail statistics for aircraft state counters (02815af1)
+
+### Maintenance
+
+- Retire branch-specific 30-minute diagnostic workflow (#1057) (c34731ca)
+- Sync generated repository metadata (#1063) (82830a2d)
+
+<details>
+<summary>Technical commits</summary>
+
+- refactor(twin): share identical truth altitude resolver across outcome validators (ca14baec)
+- perf(diagnostics): consolidate aircraft and trail retention into one collection pass (a26fb54a)
+- refactor(history): remove obsolete transaction-batching canary (#1056) (55eecc1c)
+- ci(t58): retire branch-specific 30-minute diagnostic workflow (#1057) (c34731ca)
+- refactor(soak): extract shared T57 stats and archive obsolete T55/T56 tooling (#1058) (5f02e6bc)
+- perf(diagnostics): reuse retained trail statistics for aircraft state counters (02815af1)
+- chore(metadata): sync generated repository metadata (#1063) (82830a2d)
+- Merge pull request #1061 from Boym323/cleanup/share-operational-twin-truth-altitude (03a7a97a)
+- Merge pull request #1062 from Boym323/perf/single-pass-memory-retention-diagnostics (b34601f3)
+- release: shared twin truth and single-pass retention diagnostics (#1064) (cbbc46b3)
+
+</details>
 ## [1.0.531] - 2026-10-19
 
 Changes since v1.0.530.
