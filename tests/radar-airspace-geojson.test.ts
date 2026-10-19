@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/airspace-geojson";
 import type { AtcSector } from "@/lib/atc/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
@@ -25,15 +25,14 @@ describe("radar airspace map GeoJSON parity", () => {
     });
   });
 
-  it("preserves visible ATC polygon validation, metadata, labels and traffic defaults", () => {
+  it("preserves visible published ATC geometry and metadata", () => {
     const result = createAtcGeoJSON([sector], true);
     expect(result.features).toHaveLength(1);
     expect(result.features[0]).toMatchObject({
       type: "Feature",
       properties: {
         id: "LKTRA36", countryCode: "CZ", name: "LKTRA36",
-        label: "LKTRA36", trafficLevel: "NO_DATA",
-        trafficAircraftCount: null, airspacePlanState: "none",
+        label: "LKTRA36", airspacePlanState: "none",
         activationStatus: "ACTIVE",
       },
       geometry: { type: "Polygon", coordinates: [[[14, 50], [15, 50], [15, 51]]] },
@@ -42,9 +41,6 @@ describe("radar airspace map GeoJSON parity", () => {
 
   it("formats shared sector properties once for multiple polygons without changing output", () => {
     const polygon: AtcSector["polygons"][number] = [[14, 50], [15, 50], [15, 51]];
-    const traffic = new Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; at: string }>();
-    traffic.set("LKTRA36", { trafficLevel: "BUSY", traffic: { aircraftCount: 12 }, at: "2026-10-18T19:00:00Z" });
-    const get = vi.spyOn(traffic, "get");
     let frequencyReads = 0;
     const repeatedSector = { ...sector, polygons: [polygon, polygon, polygon] };
     Object.defineProperty(repeatedSector, "frequencies", {
@@ -53,17 +49,15 @@ describe("radar airspace map GeoJSON parity", () => {
         return [{ frequencyMhz: 123.45, isPrimary: true }, { frequencyMhz: 124.5, isPrimary: false }];
       },
     });
-    const result = createAtcGeoJSON([repeatedSector], true, null, traffic as never);
+    const result = createAtcGeoJSON([repeatedSector], true);
     expect(result.features).toHaveLength(3);
-    expect(get).toHaveBeenCalledTimes(1);
     expect(frequencyReads).toBe(1);
     const first = result.features[0]?.properties;
     for (const feature of result.features) {
       expect(feature.properties).toEqual(first);
-      expect(feature.properties).toMatchObject({
-        id: "LKTRA36", trafficLevel: "BUSY", trafficAircraftCount: 12,
-        trafficAt: "2026-10-18T19:00:00Z",
-      });
+      expect(feature.properties).toMatchObject({ id: "LKTRA36" });
+      expect(feature.properties).not.toHaveProperty("trafficAircraftCount");
+      expect(feature.properties).not.toHaveProperty("trafficLevel");
     }
   });
 
