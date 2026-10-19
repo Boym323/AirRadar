@@ -700,7 +700,6 @@ export function AircraftRadarQuickDetail({
     sigmetDeviation,
   });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
-  const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
   async function shareAircraft(): Promise<void> {
     const url = new URL(fullDetailHref, window.location.origin).toString();
     try {
@@ -775,9 +774,7 @@ export function AircraftRadarQuickDetail({
       <nav className="aircraft-quick-actions aircraft-v5-quick-actions" aria-label={t.aircraft.quickActions} data-testid="aircraft-v5-quick-actions">
         <button type="button" className={`aircraft-quick-action${following ? " active" : ""}`} onClick={onToggleFollow} disabled={aircraft.lat === null || aircraft.lon === null} aria-pressed={following} data-testid="aircraft-v5-follow">{following ? t.aircraftQuickV5.stopFollowing : t.aircraftQuickV5.followMap}</button>
         <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
-        <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFlightHistory}</Link>
         <button type="button" className="aircraft-quick-action" onClick={() => { void shareAircraft(); }} data-testid="aircraft-v5-share">{t.aircraftQuickV5.share}</button>
-        <Link className="aircraft-quick-action" href="/alerts" title={t.aircraftQuickV5.alertsHint}>{t.aircraftQuickV5.alerts}</Link>
         <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
       </nav>
       <p className="aircraft-v5-share-status" role="status" aria-live="polite">{shareStatus === "copied" ? t.aircraftQuickV5.linkCopied : shareStatus === "shared" ? t.aircraftQuickV5.shared : shareStatus === "unavailable" ? t.aircraftQuickV5.shareUnavailable : ""}</p>

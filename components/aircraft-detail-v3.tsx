@@ -7,7 +7,6 @@ import { assessFlightStatusEvidence } from "@/lib/aircraft/flight-status-evidenc
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import { aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import { formatAircraftManufacturerModel } from "@/lib/aircraft/display-name";
 import { formatAge, formatAltitude, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
@@ -278,8 +277,7 @@ export function AircraftDetailV3({
   const flightAware = flightPlan?.flightAware ?? null;
   const flightStatusEvidence = assessFlightStatusEvidence(flightPlan);
   const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
-  const backLink = backHref === "/history" ? "/history" : "/";
-  const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
+  const backLink = "/";
   const sourceLabel = liveAircraft?.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
   const freshness = liveAircraft?.seenSeconds === null || liveAircraft?.seenSeconds === undefined
     ? "stale"
@@ -421,7 +419,6 @@ export function AircraftDetailV3({
             <DetailValue label={t.aircraft.lastUpdate}>{liveAircraft ? formatAge(liveAircraft.seenSeconds) : formatTime(lastSeen)}</DetailValue>
             <DetailValue label={t.aircraft.positions}>{formatNumber(positionCount)}</DetailValue>
           </div>
-          <div className="aircraft-trail-actions"><Link className="primary-button" href={`/history?hex=${encodeURIComponent(icaoHex)}`}>{t.aircraft.showFullTrail}</Link></div>
         </section>
       </div>
     </section>
@@ -528,7 +525,6 @@ export function AircraftDetailV3({
             <DetailValue label={t.aircraft.source}>{valueOrEmpty(liveAircraft.sourceType ?? liveAircraft.source)}</DetailValue>
             {liveAircraft.beastSignal !== null && liveAircraft.beastSignal !== undefined && <DetailValue label={t.aircraft.beastSignal}>{formatNumber(liveAircraft.beastSignal)}</DetailValue>}
           </div>}
-          <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
         </section>
 
         <AirspaceCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />

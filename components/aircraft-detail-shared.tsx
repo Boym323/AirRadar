@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { aircraftAirportHref, aircraftFlightHref } from "@/lib/aircraft/detail-links";
+import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary, HistoryResponse } from "@/lib/server/history";
 import { formatAltitude, formatDateTime, formatNumber, formatTime, t } from "@/lib/i18n";
 
@@ -203,10 +203,10 @@ export function AircraftRecentFlights({
           {recentFlights.slice(0, 10).map((flight) => (
             <article className="aircraft-recent-flight" key={flight.id}>
               <div className="aircraft-recent-flight-heading">
-                <Link className="aircraft-recent-flight-history" href={aircraftFlightHref(flight.id)} aria-label={`${t.history.detailFlight}: ${flight.callsign || t.history.unknownCallsign}`}>
+                <div className="aircraft-recent-flight-history">
                   <strong>{flight.callsign || t.history.unknownCallsign}</strong>
                   <span>{formatDateTime(flight.startTime)}–{formatDateTime(flight.endTime ?? flight.lastSeenAt)}</span>
-                </Link>
+                </div>
                 <span className="aircraft-recent-flight-type">{flight.aircraftType || t.aircraft.unknownAircraftType}</span>
               </div>
               <div className="aircraft-recent-flight-route" aria-label={t.route.originDestination}>

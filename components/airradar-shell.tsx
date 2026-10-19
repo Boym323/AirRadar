@@ -94,17 +94,6 @@ function radarRailNavigation() { return [
   { href: "/system", label: t.system.title, icon: "system", active: false },
 ] as const; }
 
-export function UtcClock() {
-  const [utc, setUtc] = useState<Date | null>(null);
-  useEffect(() => {
-    const update = () => setUtc(new Date());
-    update();
-    const timer = window.setInterval(update, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return <time className="topbar-utc" dateTime={utc?.toISOString()} aria-label="UTC"><span>UTC</span>{utc ? utc.toISOString().slice(11, 19) : "--:--:--"}</time>;
-}
-
 export function RadarNavRail({
   showAtc,
   onShowAtcChange,

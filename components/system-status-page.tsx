@@ -573,9 +573,9 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
 
 function LinkNav({ dictionary }: { dictionary: LocaleDictionary }) {
   return <nav className="system-nav" aria-label={dictionary.system.navigation}>
-    <Link href="/history">{dictionary.history.title}</Link>
-    <Link href="/watchlist">{dictionary.watchlist.title}</Link>
-    <Link href="/alerts">{dictionary.alerts.title}</Link>
+    <Link href="/receiver/coverage">{dictionary.locale.startsWith("cs") ? "Pokrytí přijímače" : "Receiver coverage"}</Link>
+    <Link href="/navigation-integrity">{dictionary.locale.startsWith("cs") ? "Integrita navigace" : "Navigation integrity"}</Link>
+    <Link href="/weather">{dictionary.locale.startsWith("cs") ? "Počasí" : "Weather"}</Link>
   </nav>;
 }
 
