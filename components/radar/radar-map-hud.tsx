@@ -58,7 +58,7 @@ export function RadarMapHud({
           aria-controls="radar-sidebar"
           aria-label={t.radar.trafficNearby}
           data-testid="traffic-trigger"
-          onClick={onOpenTraffic}
+          onClick={() => onOpenTraffic()}
         >
           <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
           <strong>{formatNumber(activeTrafficCount)}</strong>

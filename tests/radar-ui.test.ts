@@ -442,6 +442,10 @@ describe("radar UI polish helpers", () => {
     expect(contextRow).toBeGreaterThan(primaryStart);
   });
 
+  it("does not pass the click event as a traffic drawer shortcut", () => {
+    expect(radarHudSource).toContain("onClick={() => onOpenTraffic()}");
+  });
+
   it("keeps the layer overlay drawer-aware without changing mobile placement", () => {
     expect(globalCss).toContain("--radar-drawer-width");
     expect(globalCss).toContain(".radar-content:has(.drawer-traffic) .map-overlay");
