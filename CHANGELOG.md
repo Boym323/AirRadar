@@ -17,6 +17,40 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.529] - 2026-10-19
+
+Changes since v1.0.528.
+
+### Fixed
+
+- Synchronize MapLibre worker in CI releases (#1052) (35991965)
+
+### Documentation
+
+- Record third-round radar cleanup results (5aecf11e)
+
+### Maintenance
+
+- Sync generated repository metadata (#1040) (f4f36a74)
+- Bump maplibre-gl from 6.9.0 to 6.14.0 (#1046) (6190f3a3)
+- Bump pdfjs-dist from 6.3.289 to 6.4.299 (#1044) (ab201dd2)
+- Bump @tanstack/react-query from 5.104.0 to 5.104.3 (#1043) (c94c4c64)
+- Bump vitest from 5.0.3 to 5.0.5 (#1042) (5ad5068c)
+- Untrack ephemeral captures and debug script (#1051) (e47533c5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1040) (f4f36a74)
+- docs(agents): record third-round radar cleanup results (5aecf11e)
+- build(deps): bump maplibre-gl from 6.9.0 to 6.14.0 (#1046) (6190f3a3)
+- build(deps): bump pdfjs-dist from 6.3.289 to 6.4.299 (#1044) (ab201dd2)
+- build(deps): bump @tanstack/react-query from 5.104.0 to 5.104.3 (#1043) (c94c4c64)
+- build(deps-dev): bump vitest from 5.0.3 to 5.0.5 (#1042) (5ad5068c)
+- chore(repo): untrack ephemeral captures and debug script (#1051) (e47533c5)
+- fix(build): synchronize MapLibre worker in CI releases (#1052) (35991965)
+
+</details>
 ## [1.0.528] - 2026-10-18
 
 Changes since v1.0.527.
