@@ -11,9 +11,11 @@ describe("lightweight radar ATC map boundary", () => {
     expect(app).toContain("useRadarAtcMapContext");
     expect(app).toContain("enabled: showAtc || showAupUup");
     expect(hook).toContain('url: "/api/airspace/activity"');
-    expect(hook).toContain("enabled: showAtc || showAupUup");
+    expect(hook).toContain("enabled: showAupUup");
+    expect(hook).not.toContain("showAtc: boolean");
     expect(menu).toContain('data-testid="map-layer-atc"');
     expect(menu).toContain('data-testid="map-layer-aup-uup"');
+    expect(app).toContain("showAupUup ? airspaceActivity : null");
   });
 
   it("keeps live sector-traffic and transition analytics out of the map", () => {
