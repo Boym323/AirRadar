@@ -17,6 +17,63 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.540] - 2026-10-19
+
+Changes since v1.0.539.
+
+**Features touched:** Airport Intelligence, ATC & ATS Intelligence, Live Radar, Navigation Integrity, OGN / FLARM, Operational Digital Twin, Operations Dashboard, Statistics & Recaps.
+
+### Changed
+
+- Remove unused standalone statistics and recap screens (#1081) (7ca65261)
+- Retire old one-time audits, recovery scripts and calibration benchmarks (#1082) (07ec362c)
+- Slim V8/V9 board and remove D2–D4 evidence panels (#1083) (e0b99f6d)
+- Consolidate calibration Center on V2/V3 views (#1084) (0e7fe1ea)
+- Modularize map HUD and fix initial Layers visibility (#1087) (06c780c4)
+- Lightweight ATC sectors without live traffic overlays (#1086) (9a65c62d)
+- Isolate OGN label controller and navigation focus parsing (#1089) (9530fb5f)
+- Isolate selected aircraft context requests (6e0a4328)
+
+### Fixed
+
+- Retire obsolete statistics and recap smoke/test references (#1088) (5f7b2bba)
+- Update airport browser gate and ATC localization after cleanup (#1090) (9feec1b7)
+- Keep mobile traffic drawer compact (10098eb4)
+
+### Documentation
+
+- Authorize direct-main source edits in canonical production checkout (32c64843)
+- Fix direct-main assignment localization (2d4c3564)
+
+### Maintenance
+
+- Sync generated repository metadata (#1080) (1c0c3967)
+- Sync generated repository metadata (#1091) (53ec5189)
+- Follow extracted aircraft context hook (9c96210a)
+- Diagnose compact drawer smoke failures (50f7677f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1080) (1c0c3967)
+- refactor(ui): remove unused standalone statistics and recap screens (#1081) (7ca65261)
+- refactor(scripts): retire old one-time audits, recovery scripts and calibration benchmarks (#1082) (07ec362c)
+- refactor(airport): slim V8/V9 board and remove D2–D4 evidence panels (#1083) (e0b99f6d)
+- refactor(twin): consolidate calibration Center on V2/V3 views (#1084) (0e7fe1ea)
+- refactor(radar): modularize map HUD and fix initial Layers visibility (#1087) (06c780c4)
+- fix(release): retire obsolete statistics and recap smoke/test references (#1088) (5f7b2bba)
+- refactor(radar): lightweight ATC sectors without live traffic overlays (#1086) (9a65c62d)
+- fix(release): update airport browser gate and ATC localization after cleanup (#1090) (9feec1b7)
+- refactor(radar): isolate OGN label controller and navigation focus parsing (#1089) (9530fb5f)
+- docs(codex): authorize direct-main source edits in canonical production checkout (32c64843)
+- docs(codex): fix direct-main assignment localization (2d4c3564)
+- chore(metadata): sync generated repository metadata (#1091) (53ec5189)
+- refactor(radar): isolate selected aircraft context requests (6e0a4328)
+- test(radar): follow extracted aircraft context hook (9c96210a)
+- test(radar): diagnose compact drawer smoke failures (50f7677f)
+- fix(radar): keep mobile traffic drawer compact (10098eb4)
+
+</details>
 ## [1.0.539] - 2026-10-19
 
 Changes since v1.0.538.
