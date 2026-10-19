@@ -32,10 +32,22 @@ describe("lightweight radar ATC map boundary", () => {
     expect(quick).not.toContain("sectorTraffic");
   });
 
+  it("memoizes ATC geometry and sends each payload through one MapLibre replay path", () => {
+    expect(app).toContain("const atcGeoJson = useMemo(");
+    expect(app).toContain("[atcData.sectors, atcVisible, visibleAirspaceActivity]");
+    expect(app).toContain("const transmitterGeoJson = useMemo<FeatureCollection>");
+    expect(app).toContain("[atcData.transmitters, showAtc]");
+    expect(app).toContain("mapReplayRef.current.atc.setData(atcGeoJson)");
+    expect(app).toContain("mapReplayRef.current.transmitters.setData(transmitterGeoJson)");
+    expect(app).not.toContain('(map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(');
+    expect(app).not.toContain('(map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(');
+    expect(app).toContain("for (const replay of Object.values(mapReplays)) replay.setReady(true)");
+  });
+
   it("retains interactive sector geometry and selected-aircraft context", () => {
     expect(app).toContain('map.on("click", "atc-sectors-fill"');
     expect(app).toContain('"atc-sectors-context-highlight"');
-    expect(app).toContain('map.getSource("atc-sectors")');
+    expect(app).toContain('mapRef.current?.getSource("atc-sectors")');
     expect(app).toContain("/context");
     expect(quick).toContain("buildAtcHandoffEstimate");
     expect(app).toContain("30_000");
