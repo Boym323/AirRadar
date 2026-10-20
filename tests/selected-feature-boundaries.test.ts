@@ -351,3 +351,22 @@ describe("phase 22 T11 SID STAR surface retirement", () => {
     expect(radar).toContain("showNavData");
   });
 });
+
+describe("phase 23 retired airport operations and flight-history listing APIs", () => {
+  it("does not re-expose removed A03-A12 and H05-H09 public API routes", () => {
+    for (const path of [
+      "app/api/airports/[icao]/movements/route.ts",
+      "app/api/airports/[icao]/operations/route.ts",
+      "app/api/airports/[icao]/traffic/route.ts",
+      "app/api/history/flights/route.ts",
+      "app/api/history/flights/[id]/route.ts"
+]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+  });
+  it("keeps retained airport and aircraft time-series data entrypoints", () => {
+    for (const path of ["app/api/airports/route.ts", "app/api/airports/[icao]/route.ts", "app/api/history/[hex]/route.ts", "app/api/aircraft/[hex]/route.ts"]) {
+      expect(existsSync(new URL(path, root)), path).toBe(true);
+    }
+  });
+});

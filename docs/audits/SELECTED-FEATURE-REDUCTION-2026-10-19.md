@@ -181,3 +181,13 @@ Preserved ATS route network, NAVAID/FIX references and other selected map overla
 Legacy map presets strip the rejected `showSids` and `showStars` fields on parse.
 Pure procedure parsing/repository code is left temporarily until all server/scripts
 consumers are audited; no historical procedure source data is deleted.
+
+## Phase 23 (staged): retire standalone airport operations and historical-flight API routes
+
+Retired three public airport operation/traffic APIs (A03-A12) and the historical
+flight list/flight story APIs (H05-H09). Kept airport list/details, aircraft
+quick detail, `/api/history/:hex`, statistics/storage services and all recorded
+Flight/FlightPosition rows. Pure server aggregation/flight-history helpers remain
+while shared callers and database writer contracts are audited. Removed only
+route-owned tests; retained query/persistence regression tests and no migrations.
+Existing external consumers of removed URLs will see 404 after deployment.

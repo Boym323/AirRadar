@@ -85,7 +85,7 @@
       "category": "history",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Selected aircraft detail with retained ADS-B telemetry, photos, receiver context and sampled historical altitude profile; retired prediction and route-weather panels are excluded.",
+      "summary": "Retained live aircraft detail, altitude/time-series observations, telemetry and receiver context without public historical-flight listing or Flight Story routes.",
       "pages": [
         "/aircraft/:hex"
       ],
@@ -93,9 +93,7 @@
         "/api/aircraft/:hex/context",
         "/api/aircraft/:hex/prediction",
         "/api/aircraft/:hex/photo",
-        "/api/history/:hex",
-        "/api/history/flights",
-        "/api/history/flights/:id"
+        "/api/history/:hex"
       ],
       "changelogScopes": [
         "aircraft",
@@ -141,17 +139,14 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Searchable airport catalog and detail with published runways, frequencies, navaids, map, nearby airports and current METAR/TAF. Legacy operations/traffic API compatibility is pending separate removal.",
+      "summary": "Published airport catalog, runways, navaids, nearby airports and current METAR/TAF; rejected arrival/departure live board and traffic analytics endpoints are no longer public.",
       "pages": [
         "/airports",
         "/airports/:icao"
       ],
       "apis": [
         "/api/airports",
-        "/api/airports/:icao",
-        "/api/airports/:icao/movements",
-        "/api/airports/:icao/operations",
-        "/api/airports/:icao/traffic"
+        "/api/airports/:icao"
       ],
       "changelogScopes": [
         "airport",

@@ -173,3 +173,12 @@ mapové vrstvy, jejich načítání a osamocený generátor geometrie. Zachován
 jsou ATS trasy, navigační body NAVAID/FIX a ostatní vybrané mapové vrstvy.
 Staré uložené presety při načtení zahodí volby `showSids` a `showStars`.
 Čisté parsovací a repozitářové moduly zůstávají do dalšího auditu závislostí.
+
+## Fáze 23 (postupně): odstranění API letištního provozu a seznamu historických letů
+
+Zrušena tři veřejná API letištního provozu (A03–A12) a API pro seznam
+historických letů a detail Flight Story (H05–H09). Zachovány seznam a detail
+letišť, detail aktuálního letadla, `/api/history/:hex`, statistické služby
+i uložené záznamy Flight/FlightPosition. Sdílené serverové funkce zůstávají
+do auditu volajících a databázových zápisů. Bez migrací a mazání dat.
+Po nasazení budou vyřazené veřejné adresy vracet HTTP 404.
