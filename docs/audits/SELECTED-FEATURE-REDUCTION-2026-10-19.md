@@ -42,3 +42,7 @@ the user's explicit keep/remove selection in the ChatGPT conversation on 2026-10
 4. No production deployment until all checks are green and remaining external
    API consumers have been inventoried. Verify release identity and production
    health following deploy. Never run destructive database migrations.
+
+## Phase 2 (staged): remove the live H1/FPN radar overlay
+
+The retained E07 RXW Hub metadata integration is unchanged. The rejected E08 live H1/FPN map functionality no longer registers FPN MapLibre layers or makes 60-second availability and 30-second selected-aircraft waypoint polling requests. Tests ensure the live radar has no FPN imports, layers or client requests. Existing optional RXW API/parser and the historical archive reader remain temporarily intact until independent dependency and persistence review; this is **not** a claim that E08 is completely removed. No database migration or production deploy is performed by this PR.

@@ -48,6 +48,14 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(hud).not.toContain("RadarOperationsCenter");
   });
 
+  it("keeps RXW Hub metadata but no longer runs the rejected live FPN map lane", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(app).not.toContain("RXW_FPN_");
+    expect(app).not.toContain("createRxwFpn");
+    expect(app).not.toContain("/api/aircraft/communications/waypoints");
+    expect(existsSync(new URL("app/api/aircraft/[hex]/communications/route.ts", root))).toBe(true);
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");
