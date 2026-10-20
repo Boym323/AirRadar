@@ -26,6 +26,13 @@ describe("Retired Digital Twin API regression", () => {
     }
   });
 
+  it("removes the abandoned Digital Twin library while retaining independent weather corridor code", () => {
+    expect(existsSync(new URL("../lib/operational-twin", import.meta.url))).toBe(false);
+    const weather = readFileSync(new URL("../lib/weather/corridor-intelligence.ts", import.meta.url), "utf8");
+    expect(weather).not.toContain("lib/operational-twin");
+    expect(weather).toContain("export interface WeatherCorridorPath");
+  });
+
   it("retains canonical navigation integrity and historical recording without Twin calibration", () => {
     const state = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
     expect(state).toContain("this.navigationIntegrity.observe(");

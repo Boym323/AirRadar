@@ -398,3 +398,14 @@ helpers, along with eight direct unit-test suites. Remove their obsolete barrel
 exports and guard against reintroduction. Retain the weather corridor's shared
 type dependencies and preserve the separately implemented Navigation Integrity,
 ATC map context, receiver history and notification transport stack.
+
+## Phase 42 (staged): retire the last Digital Twin domain modules
+
+Remove the seven remaining `lib/operational-twin/` files (corridor, events,
+index, navigation-integrity corridor **projection**, trajectory-quality V2/V3,
+and Twin-specific types) and five tests for rejected Twin forecasts. Extract
+the minimal structurally equivalent corridor input types into the independent
+`lib/weather/corridor-intelligence.ts` weather model, preserving its existing
+PIREP/SIGMET test coverage and semantics. This is *not* removal of the retained
+`lib/server/navigation-integrity` service, receiver weather observations,
+METAR, SIGMET or historical PostgreSQL aircraft positions.

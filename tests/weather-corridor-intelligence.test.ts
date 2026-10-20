@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { OperationalTwinCorridor } from "@/lib/operational-twin/types";
+import type { WeatherCorridorPath } from "@/lib/weather/corridor-intelligence";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import type { PirepSnapshot, SigmetSnapshot } from "@/lib/weather/types";
 
 const now = new Date("2026-10-05T06:00:00.000Z");
 
-function corridor(): OperationalTwinCorridor {
+function corridor(): WeatherCorridorPath {
   return {
     horizonMinutes: 30,
     stepMinutes: 10,

@@ -1,5 +1,4 @@
 import { haversineDistanceKm } from "@/lib/geo";
-import type { OperationalTwinCorridor, OperationalTwinTrajectoryPoint } from "@/lib/operational-twin/types";
 import {
   classifyPirepSeverity,
   classifyWeatherHazard,
@@ -9,6 +8,41 @@ import {
 } from "@/lib/weather/fusion";
 import { pointInSigmetGeometry } from "@/lib/weather/aircraft-sigmet-context";
 import type { PirepSnapshot, SigmetSnapshot } from "@/lib/weather/types";
+
+/** Aircraft corridor geometry shared by the optional PIREP/SIGMET weather projection.
+ * Independent of the retired Digital Twin server and calibration modules. */
+export type WeatherCorridorMode = "ROUTE_AWARE" | "KINEMATIC";
+
+export interface WeatherCorridorPoint {
+  offsetMinutes: number;
+  at: string;
+  lat: number;
+  lon: number;
+  altitudeFt: number | null;
+  trackDeg: number | null;
+  uncertaintyNm: number;
+  mode: WeatherCorridorMode;
+}
+
+export interface WeatherCorridorPath {
+  horizonMinutes: number;
+  stepMinutes: number;
+  mode: WeatherCorridorMode;
+  routeAdherence: string | null;
+  routePrecision: string | null;
+  maxUncertaintyNm: number;
+  points: WeatherCorridorPoint[];
+  waypoints: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lon: number;
+    offsetMinutes: number;
+    at: string;
+    distanceNm: number;
+    sourceKind: string;
+  }>;
+}
 
 export const WEATHER_CORRIDOR_VERSION = "weather-corridor-intelligence-v1" as const;
 
@@ -43,14 +77,14 @@ export interface WeatherCorridorIntelligence {
   version: typeof WEATHER_CORRIDOR_VERSION;
   status: "AVAILABLE" | "PARTIAL" | "INSUFFICIENT";
   horizonMinutes: number;
-  corridorMode: OperationalTwinCorridor["mode"];
+  corridorMode: WeatherCorridorPath["mode"];
   routePrecision: string | null;
   events: WeatherCorridorEvent[];
   sources: WeatherCorridorSourceSummary[];
 }
 
 export interface WeatherCorridorInput {
-  corridor: OperationalTwinCorridor;
+  corridor: WeatherCorridorPath;
   pireps: PirepSnapshot | null;
   sigmets: SigmetSnapshot | null;
   now?: Date;
@@ -65,7 +99,7 @@ function distanceNm(a: { lat: number; lon: number }, b: { lat: number; lon: numb
   return haversineDistanceKm(a.lat, a.lon, b.lat, b.lon) / KM_PER_NM;
 }
 
-function cumulativeDistances(points: readonly OperationalTwinTrajectoryPoint[]): number[] {
+function cumulativeDistances(points: readonly WeatherCorridorPoint[]): number[] {
   const result: number[] = [];
   let total = 0;
   for (let index = 0; index < points.length; index += 1) {
@@ -125,7 +159,7 @@ function pirepEvent(
   report: PirepSnapshot["reports"][number],
   risk: Extract<WeatherFusionRiskKind, "TURBULENCE" | "ICING">,
   severity: Exclude<WeatherFusionSeverity, "UNKNOWN">,
-  corridor: OperationalTwinCorridor,
+  corridor: WeatherCorridorPath,
   distances: readonly number[],
   now: Date,
   stale: boolean,
@@ -185,7 +219,7 @@ function pirepEvent(
 
 function buildPirepEvents(
   snapshot: PirepSnapshot | null,
-  corridor: OperationalTwinCorridor,
+  corridor: WeatherCorridorPath,
   distances: readonly number[],
   now: Date,
 ): WeatherCorridorEvent[] {
@@ -208,7 +242,7 @@ function buildPirepEvents(
 
 function buildSigmetEvents(
   snapshot: SigmetSnapshot | null,
-  corridor: OperationalTwinCorridor,
+  corridor: WeatherCorridorPath,
   distances: readonly number[],
 ): WeatherCorridorEvent[] {
   if (!snapshot) return [];

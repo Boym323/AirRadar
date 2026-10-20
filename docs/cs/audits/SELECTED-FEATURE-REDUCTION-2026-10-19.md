@@ -354,3 +354,13 @@ pozornost a fronty zaměření, forenzní výpočty a pomocník kontroly trajekt
 Odstraněno osm souvisejících jednotkových testů, neplatné exporty a přidána
 negativní regresní kontrola. Zachovány sdílené meteorologické typy,
 Navigation Integrity, ATC mapa, příjem a historie letadel i transporty oznámení.
+
+## Fáze 42 (postupně): odstranění posledních modulů Digital Twin
+
+Odstraněno posledních sedm souborů adresáře `lib/operational-twin/`:
+koridor, události, index, prediktivní projekce Navigation Integrity,
+kvalita trajektorie V2/V3 a typy; zároveň pět testů odmítnutých predikcí.
+Minimální kompatibilní typy meteorologického koridoru byly přesunuty do
+samostatného modelu `lib/weather/corridor-intelligence.ts`. Zachovány testy
+PIREP/SIGMET a jejich dosavadní význam, skutečná Navigation Integrity,
+METAR, pozorované počasí i historické polohy v PostgreSQL.
