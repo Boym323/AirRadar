@@ -327,3 +327,13 @@ implementace perzistence kalibrace a její samostatný test. Historické tabulky
 a uložená data zůstávají beze změny. Systémová diagnostika již nepředává
 zrušené výsledky Digital Twin. Příjem ADS-B nečeká na kalibraci; statistiky,
 Navigation Integrity, historie a doručovací infrastruktura zůstávají.
+
+## Fáze 40 (postupně): odstranění osiřelých validátorů Digital Twin
+
+Odstraněno jedenáct již nepoužívaných modulů validace výsledků, událostí,
+kvality trajektorie V1/V2, promotion/graduation, truth-first recall,
+regionální pozornosti a Aircraft Operational Focus včetně jedenácti
+samostatných testovacích souborů. Upraveny exporty a přidána negativní
+regresní kontrola jejich nepřítomnosti. Sdílené typy koridorů prozatím
+zůstávají, protože je používá meteorologická část. Zachována všechna
+historická data, samostatná Navigation Integrity i běžný živý radar.

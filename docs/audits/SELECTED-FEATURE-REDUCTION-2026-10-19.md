@@ -368,3 +368,15 @@ unit test; leave all historical database tables/records intact. System-status
 no longer exposes orphan Twin validation fields. Local reception startup no
 longer awaits optional Digital Twin calibration hydration, but retains stats,
 Navigation Integrity, history, core delivery and receiver diagnostics.
+
+## Phase 40 (staged): remove abandoned Digital Twin validators and replay tests
+
+Delete eleven unused in-memory Twin validation modules for outcome, event,
+trajectory-quality V1/V2, graduation/promotion, truth-first recall,
+regional attention and aircraft focus, together with eleven isolated
+unit-test suites. Remove obsolete barrel exports and add a negative regression
+for the retired modules. Preserve the shared corridor model/typing temporarily
+because weather-corridor consumers still import its types, and leave all
+historical database rows and the independently retained Navigation Integrity
+service untouched. The remaining Twin projection/map libraries need a separate
+consumer audit before deletion.
