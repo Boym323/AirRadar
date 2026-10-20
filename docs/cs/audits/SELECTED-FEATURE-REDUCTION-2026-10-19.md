@@ -337,3 +337,11 @@ samostatných testovacích souborů. Upraveny exporty a přidána negativní
 regresní kontrola jejich nepřítomnosti. Sdílené typy koridorů prozatím
 zůstávají, protože je používá meteorologická část. Zachována všechna
 historická data, samostatná Navigation Integrity i běžný živý radar.
+
+## Fáze 40a: odpojení provozního API od odstraněné validace
+
+Zachované API runtime-performance dosud importovalo odstraněný modul
+Event Outcome kvůli starým forenzním údajům. Import a nepoužívané položky
+`validatorPaths` a `operationalTwinForensics` byly odstraněny.
+Měření příjmu, CPU, systémových fází, event-loop a stall evidence i řízení
+přístupu zůstává. Historické záznamy a příjem letadel beze změny.

@@ -380,3 +380,11 @@ because weather-corridor consumers still import its types, and leave all
 historical database rows and the independently retained Navigation Integrity
 service untouched. The remaining Twin projection/map libraries need a separate
 consumer audit before deletion.
+
+## Phase 40a: decouple retained runtime-performance API from deleted validators
+
+The retained runtime-performance endpoint previously imported Twin Event Outcome
+forensics after the validation module had been deleted. Remove this orphan import
+and the obsolete `validatorPaths` / `operationalTwinForensics` telemetry fields.
+Preserve ingest, CPU, health phases, event-loop, stall evidence and admin/public
+access policies. No historical measurements or live receiver behavior change.

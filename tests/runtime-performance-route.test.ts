@@ -31,6 +31,8 @@ describe("authenticated runtime performance projection", () => {
     expect(Object.keys(body.phases)).toHaveLength(9);
     expect(body.hotPaths).toEqual([]);
     expect(body.ingestPaths).toEqual([]);
+    expect(body.validatorPaths).toBeUndefined();
+    expect(body.operationalTwinForensics).toBeUndefined();
     expect(body.runtime.status).toBe("disabled");
     expect(body.runtime.majorGcCount).toBe(2);
     expect(body.runtime.gcMaxPauseMs).toBeNull();

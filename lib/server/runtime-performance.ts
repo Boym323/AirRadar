@@ -2,7 +2,7 @@ import { performance } from "node:perf_hooks";
 import { recordRuntimeSlowSyncSpan } from "@/lib/server/runtime-stall-evidence";
 
 const MAX_SAMPLES = 128;
-// Bounded headroom for dedicated Twin validator scopes alongside existing health metrics.
+// Bounded headroom for active runtime and receiver performance measurements.
 // Reserve room for transport callbacks in addition to the existing snapshot,
 // history and health scopes. Names remain code-defined and storage bounded.
 const MAX_METRICS = 64;
