@@ -1943,7 +1943,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     const routes = [
       ["/airports", ".browse-page"],
       ["/navigation", '[data-testid="navigation-reference-explorer-v1"]'],
-      ["/navigation-integrity", "main"],
+      ["/navigation-integrity", "#main-content > main"],
       ["/weather", '[data-testid="weather-operations-center-v1"]'],
       ["/system", ".system-page"],
       ["/receiver/coverage", '[data-testid="receiver-explorer-v2"]'],
