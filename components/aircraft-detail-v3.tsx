@@ -9,7 +9,6 @@ import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/histo
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { formatAircraftManufacturerModel } from "@/lib/aircraft/display-name";
 import { formatAge, formatAltitude, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
-import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { AircraftCommunications } from "@/components/aircraft-communications";
 import {
@@ -516,7 +515,6 @@ export function AircraftDetailV3({
         </section>
 
         <AirspaceCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
-        {hasRouteData && route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       </aside>
     </div>
 

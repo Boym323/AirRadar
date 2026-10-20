@@ -93,3 +93,7 @@ The retained aircraft detail no longer mounts PredictiveAircraftAdvisories or Ai
 ## Phase 11 (staged): unmount rejected W10 Weather Fusion in aircraft detail
 
 Stop the retained aircraft detail from auto-requesting the retired W10 Aviation Weather Fusion endpoint by unmounting its component. Keep existing ATC context, public METAR/SIGMET sources, observed BDS 4.4 aircraft weather, historical altitude chart and ADS-B telemetry unchanged. Pure fusion UI/service/API and history are preserved until the cross-import and storage retention audit. Add negative mount regression coverage.
+
+## Phase 12 (staged): unmount rejected origin/destination weather on aircraft detail
+
+Remove the W12-style origin/destination FlightRouteWeather component from retained aircraft detail. This stops its additional route-weather request without impacting the recorded aircraft route, published METAR/TAF airport weather, SIGMET or retained altitude history. Also update the stale visual-refinement test for already-removed PredictiveAircraftAdvisories and Digital Twin UI, preserving hero metrics and mobile drawer expectations. Weather provider/API modules and historical records remain unchanged.

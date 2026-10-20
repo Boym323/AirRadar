@@ -94,3 +94,7 @@ Z ponechaného detailu letadla byly odpojeny komponenty PredictiveAircraftAdviso
 ## Fáze 11 (rozpracováno): odstranění panelu W10 Weather Fusion z detailu letadla
 
 Odpojením komponenty ze zachovaného detailu letadla se již automaticky nedotazuje vyřazený endpoint W10 Aviation Weather Fusion. Zachovaný ATC kontext, METAR/SIGMET, pozorovaná data počasí BDS 4.4, historický graf výšky i telemetrie ADS-B zůstávají. Samostatná knihovna/panel/API a historie zatím nejsou mazány kvůli auditu importů a retence; regresní test hlídá, že se panel nevrátí.
+
+## Fáze 12 (rozpracováno): odpojení počasí na trase z detailu letadla
+
+Zachovaný detail letadla již nevykresluje komponentu FlightRouteWeather pro počasí na počátečním/cílovém letišti. Odpovídající klientský požadavek odpadá; přitom zůstávají informace o trase, METAR/TAF letišť, SIGMET a historický graf výšky. Opraven také starý test vizuálu, který vyžadoval odstraněné panely PredictiveAircraftAdvisories a Digital Twin. Moduly poskytovatelů počasí, API a historická data beze změn.
