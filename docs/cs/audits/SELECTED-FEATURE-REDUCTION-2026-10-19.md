@@ -86,3 +86,7 @@ Nevyžadovaná klasifikace W11 Weather Avoidance se již nepočítá při výbě
 ## Fáze 9 (rozpracováno): odstranění regionálních mapových vrstev Digital Twin
 
 Odstraněn osiřelý mapový zdroj Regional Attention, vrstvy čar/letadel, klientský posluchač a přepočítávání GeoJSON při snímcích provozu. Běžná stopa letadel, ATC i mapové informace Navigation Integrity jsou zachovány. Čistá knihovna Regional Attention zůstává do auditu všech producentů událostí a serverových konzumentů; bez zásahů do databázové historie či produkce.
+
+## Fáze 10 (rozpracováno): odstranění panelů predikcí a Digital Twin z detailu letadla
+
+Z ponechaného detailu letadla byly odpojeny komponenty PredictiveAircraftAdvisories a AircraftOperationalTwin. Prohlížeč už z této stránky neposílá jejich požadavky na zrušená API predikcí a situace. Fotografie letadla, telemetrie ADS-B, historický výškový graf, kontext přijímače a běžná metadata zůstávají zachovány. UI soubory, serverová API, historická kalibrační data i výpočtové moduly dočasně zůstávají kvůli auditu vazeb a retence dat. Testy brání opětovnému připojení panelů.

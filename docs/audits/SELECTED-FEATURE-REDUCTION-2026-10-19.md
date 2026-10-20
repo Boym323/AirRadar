@@ -85,3 +85,7 @@ The rejected W11 Weather Avoidance classification no longer runs in the radar se
 ## Phase 9 (staged): unregister rejected Digital Twin Regional Attention radar overlays
 
 Remove the orphan regional-attention map source, its line/aircraft layers, client-side focus events, and associated per-snapshot GeoJSON calculation. Preserve ordinary aircraft trails, ATC and Navigation Integrity map overlays. The pure Regional Attention helper remains until all event publishers and server-side consumers are independently audited; the patch does not touch database history or production.
+
+## Phase 10 (staged): unmount rejected Predictive and Digital Twin detail panels
+
+The retained aircraft detail no longer mounts PredictiveAircraftAdvisories or AircraftOperationalTwin. This removes their live browser requests to the rejected prediction and situation APIs without affecting the aircraft hero photo, ADS-B telemetry, historical altitude profile, receiver context or normal aircraft metadata. Their UI modules, API routes, historical outcome/audit data, and supporting analytical engines remain untouched until server dependencies and data retention are reviewed. Tests assert these panels are not remounted.

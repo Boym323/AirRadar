@@ -166,6 +166,15 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(app).toContain('map.addSource("selected-trail"');
   });
 
+  it("does not mount rejected predictive or Digital Twin panels on the retained aircraft detail", () => {
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("PredictiveAircraftAdvisories");
+    expect(detail).not.toContain("AircraftOperationalTwin");
+    expect(detail).toContain("<AircraftHeroPhoto");
+    expect(detail).toContain("<AircraftAltitudeChart");
+    expect(detail).toContain("<AircraftAdsbTelemetry");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

@@ -35,9 +35,10 @@ describe("Predictive ETA Advisory V1 boundary", () => {
     expect(advisorySource).toContain('state: "stale"');
   });
 
-  it("mounts predictive advisories only on the existing aircraft detail surface", () => {
-    expect(detailSource).toContain("PredictiveAircraftAdvisories");
-    expect(detailSource).toContain("enabled={Boolean(liveAircraft");
+  it("keeps the retained aircraft detail free of rejected predictive advisories", () => {
+    expect(detailSource).not.toContain("PredictiveAircraftAdvisories");
+    expect(detailSource).not.toContain("AircraftOperationalTwin");
+    expect(detailSource).toContain("<AircraftAltitudeChart");
     expect(advisorySource).toContain('data-testid="predictive-eta-advisory"');
   });
 

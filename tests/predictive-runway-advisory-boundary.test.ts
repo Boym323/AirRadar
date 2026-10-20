@@ -32,9 +32,10 @@ describe("Predictive Runway Advisory V1 boundary", () => {
     expect(advisorySource).toContain('data-testid="predictive-runway-advisory"');
   });
 
-  it("mounts the shared predictive panel only on aircraft detail", () => {
-    expect(detailSource).toContain("PredictiveAircraftAdvisories");
-    expect(detailSource).toContain("enabled={Boolean(liveAircraft");
+  it("keeps the retained aircraft detail free of rejected predictive advisories", () => {
+    expect(detailSource).not.toContain("PredictiveAircraftAdvisories");
+    expect(detailSource).not.toContain("AircraftOperationalTwin");
+    expect(detailSource).toContain("<AircraftAltitudeChart");
   });
 
   it("keeps the legacy public predictive state freshness guard as a second boundary", () => {
