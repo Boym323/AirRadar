@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frequencyLabel } from "@/lib/server/sector-traffic-context";
+import { frequencyLabel } from "@/lib/atc/frequency-policy";
 
 describe("ATC frequency spacing provenance", () => {
   it("preserves an explicitly authoritative 25 kHz spacing", () => {

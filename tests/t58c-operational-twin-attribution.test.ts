@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
-import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
+import { MockReadsbProvider } from "@/tests/helpers/mock-readsb-provider";
 import { getRuntimePerformanceDiagnostics, resetRuntimePerformanceDiagnosticsForTests } from "@/lib/server/runtime-performance";
 
 describe("Retired Digital Twin snapshot hot path", () => {

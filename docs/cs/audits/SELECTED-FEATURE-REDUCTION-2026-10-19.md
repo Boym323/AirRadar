@@ -547,3 +547,13 @@ i nepoužívané dávkové historické přehledy ATC sektorů, jejich typy,
 samostatný test a zastaralé styly provozních panelů. Zachována aktuální
 geometrie ATC a přiřazení sektorů, ATS trasy, meteorologická API a
 historické databázové záznamy FlightPosition. Bez migrací a nasazení.
+
+## Fáze 55a: oprava archivního rozsahu mapy a starých testů
+
+Zachované API rozsahu mapového kontextu již neimportuje Time Machine.
+Rozsah odstraněného přehrávání provozu je výslovně prázdný, zatímco
+časové rozsahy METAR/AUP/radaru fungují dál. Odstraněny zastaralé
+benchmarky ATC historie a testy opuštěné analytiky. Značení ATC kanálů
+25/8,33 kHz přesunuto do společné politiky frekvencí a dále testováno.
+Test T58 používá výhradně testovací fixture syntetických letadel.
+Regresní kontroly UI již nevyžadují odstraněné ATC panely.

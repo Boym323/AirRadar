@@ -5,6 +5,7 @@ describe("retired standalone history/flight-story/procedure surfaces", () => {
   it("does not ship abandoned Time Machine, Flight Story presentation or procedure imports", () => {
     for (const path of [
       "lib/server/time-machine.ts",
+      "lib/server/sector-traffic-transitions.ts",
       "lib/time-machine/events.ts",
       "lib/time-machine/playback.ts",
       "lib/server/flight-story.ts",

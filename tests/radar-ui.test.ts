@@ -42,7 +42,6 @@ const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", i
 const aircraftAltitudeChartSource = readFileSync(new URL("../components/aircraft-detail-shared.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const productionGateSource = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-const atcTrafficSource = readFileSync(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url), "utf8");
 const englishSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "utf8");
 const czechSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
 const maplibreCss = readFileSync(new URL("../node_modules/maplibre-gl/dist/maplibre-gl.css", import.meta.url), "utf8");
@@ -132,21 +131,14 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toMatch(/\.source-counter-strip\s*\{[^}]*repeat\(4/);
   });
 
-  it("uses one layers icon and an explicit ATC history stroke", () => {
+  it("keeps the layers icon and live ATC panel independent of history UI", () => {
     expect(globalCss).not.toContain('.map-layers > summary::before { content: "☷"');
-    expect(globalCss).toMatch(/\.atc-history-series[^}]*stroke:/);
-    expect(atcTrafficSource).toContain('<path key={i} d={path} fill="none" stroke="currentColor" />');
-    expect(atcTrafficSource).toContain('aria-label={t.atc.historyChart}');
+    expect(atcSource).toContain("t.atc");
   });
 
-  it("keeps ATC UI copy translated and source badges compact", () => {
-    for (const key of ["verticalTraffic", "trafficHistory", "showHistory", "sectorFlows", "loadingHistory"]) {
-      expect(englishSource).toContain(`${key}:`);
-      expect(czechSource).toContain(`${key}:`);
-    }
-    expect(atcTrafficSource).not.toContain("ATC Vertical Traffic");
-    expect(atcTrafficSource).not.toContain("Traffic history");
-    expect(atcTrafficSource).not.toContain("Show history");
+  it("keeps live ATC wording and source badges independent of historical panels", () => {
+    expect(englishSource).toContain("probableRelevant:");
+    expect(czechSource).toContain("probableRelevant:");
     expect(appSource).not.toContain("classifyAircraftSource(aircraft)} · {aircraftPositionSourceLabel");
     expect(aircraftTrafficRowSource).toContain("aircraftSourceLabel(aircraft)");
   });

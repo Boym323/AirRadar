@@ -622,3 +622,14 @@ batch/DTO modules and their dedicated integration test, plus obsolete operations
 stylesheets. Retain live sector matching and published geometries, sector map,
 ATS routes, airport/runway wind computation, METAR/TAF/SIGMET and persisted
 FlightPosition records. No schema migration or release deployment.
+
+## Phase 55a: repair retained map-context range and stale test imports
+
+The retained map-context range API no longer imports Time Machine. Its traffic
+playback range is explicitly nullable while METAR/AUP/radar archive ranges
+keep their existing contract. Remove abandoned ATC history benchmarks and
+specialized analytics tests. Move the retained ATC channel-spacing formatter
+to the shared frequency-policy module; update its test instead of losing
+spacing provenance. Keep J10 synthetic aircraft exclusively as test fixtures;
+update the T58 boundary test to import the isolated fixture. Refresh radar
+and Czech UI tests that previously read a retired ATC component.

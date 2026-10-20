@@ -1,4 +1,3 @@
-import { getTimeMachineRange } from "@/lib/server/time-machine";
 import { defaultMapContextArchive, defaultWeatherRadarArchive, getMapContextMaxAgeMs } from "@/lib/server/map-context";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
@@ -9,14 +8,14 @@ export async function GET(request: Request): Promise<Response> {
   const limited = checkPublicRateLimit("mapContext", request);
   if (!limited.allowed) return rateLimitResponse(limited);
   try {
-    const [traffic, context, radar] = await Promise.all([
-      getTimeMachineRange().catch(() => ({ min: null, max: null, positions: null })),
+    // Traffic playback is retired; retain its nullable DTO without obsolete DB reads.
+    const [context, radar] = await Promise.all([
       defaultMapContextArchive.range(),
       defaultWeatherRadarArchive.listFrames(),
     ]);
     const cutoff = new Date(Date.now() - getMapContextMaxAgeMs()).toISOString();
     return Response.json({
-      traffic: { minAvailableAt: traffic.min, maxAvailableAt: traffic.max },
+      traffic: { minAvailableAt: null, maxAvailableAt: null },
       radar: { minAvailableAt: radar[0]?.at ?? null, maxAvailableAt: radar.at(-1)?.at ?? null },
       metar: context.metar,
       aup: context.aup,

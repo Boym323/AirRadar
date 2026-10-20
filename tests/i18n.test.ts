@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import {
   DEFAULT_LOCALE,
   aircraftCount,
@@ -34,11 +32,6 @@ describe("localization", () => {
     expect(aircraftCount(2, english)).toBe("2 aircraft");
   });
 
-  it("uses localized aircraft terminology in the retained ATC history panel", () => {
-    const source = readFileSync(fileURLToPath(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url)), "utf8");
-    expect(source).toContain('<option value="aircraftCount">{t.atc.aircraft}</option>');
-    expect(source).not.toContain("t.atc.aircraft.toLowerCase()");
-  });
 
   it("formats numbers and invalid dates for the UI locale", () => {
     expect(formatNumber(1234.5, 1)).toBe("1 234,5");
