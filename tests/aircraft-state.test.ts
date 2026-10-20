@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
+import { MockReadsbProvider } from "@/tests/helpers/mock-readsb-provider";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, AircraftEnrichment, ProviderSnapshot, StateSnapshot } from "@/lib/aircraft/types";

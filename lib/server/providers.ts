@@ -3,7 +3,6 @@ import { createNetworkFailoverProvider } from "@/lib/server/network-failover-pro
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { BeastLocalProvider } from "@/lib/server/beast-local-provider";
 import { FailoverLocalProvider } from "@/lib/server/failover-local-provider";
-import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { ENRICHMENT_TTLS } from "@/lib/server/enrichment-cache";
 import { AdsbDbPersistence } from "@/lib/server/adsbdb-persistence";
@@ -19,10 +18,24 @@ import type { AtcDataResponse } from "@/lib/atc/types";
 
 export function createAircraftProvider(): AircraftProvider {
   const baseUrl = process.env.READSB_BASE_URL?.trim();
-  if (!baseUrl) return new MockReadsbProvider(getReceiverPosition());
+  // J10 retirement: never synthesize local aircraft when the receiver URL is unset.
+  // A configured Beast feed remains a real source even without the JSON endpoint.
+  const beastEnabled = isReadsbBeastEnabled();
+  const beast = beastEnabled
+    ? new BeastLocalProvider({ host: getReadsbBeastHost(), port: getReadsbBeastPort(), receiver: getReceiverPosition(), staleMs: getReadsbBeastStaleMs(), reconnectMaxMs: getReadsbBeastReconnectMaxMs() })
+    : null;
+  if (!baseUrl) {
+    if (beast) return beast;
+    return {
+      name: "readsb-unconfigured",
+      async getSnapshot() {
+        throw new Error("Local ADS-B receiver is not configured (READSB_BASE_URL or READSB_BEAST_HOST required)");
+      },
+      getDiagnostics: () => ({ status: "unconfigured", configured: false }),
+    };
+  }
   const json = new LocalReadsbProvider(baseUrl, getReceiverPosition());
-  if (!isReadsbBeastEnabled()) return json;
-  const beast = new BeastLocalProvider({ host: getReadsbBeastHost(), port: getReadsbBeastPort(), receiver: getReceiverPosition(), staleMs: getReadsbBeastStaleMs(), reconnectMaxMs: getReadsbBeastReconnectMaxMs() });
+  if (!beast) return json;
   return new FailoverLocalProvider(beast, json, isReadsbJsonFailoverEnabled());
 }
 

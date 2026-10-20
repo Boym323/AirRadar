@@ -93,12 +93,9 @@ export function isReadsbJsonFailoverEnabled(): boolean {
   return raw !== "false";
 }
 
-/** Sample ATC is useful in demo mode, but is opt-in once a real receiver is configured. */
+/** Demo-only ATC fixtures are always opt-in; no implicit synthetic fallback. */
 export function shouldUseSampleAtcData(): boolean {
-  const explicit = process.env.ATC_SAMPLE_ENABLED?.trim().toLowerCase();
-  if (explicit === "true") return true;
-  if (explicit === "false") return false;
-  return !isReadsbConfigured();
+  return process.env.ATC_SAMPLE_ENABLED?.trim().toLowerCase() === "true";
 }
 
 export function getPollIntervalMs(): number {
