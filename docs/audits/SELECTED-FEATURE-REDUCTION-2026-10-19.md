@@ -229,3 +229,13 @@ responsive sweeps, language switching, retained aircraft quick actions, and
 live radar/weather/receiver/aircraft visual evidence. Update assertions referring
 to removed AUP/UUP map hook and presets. Do not merge or deploy until the exact
 head passes all required checks.
+
+## Phase 28 (staged): synchronize release visual scope with selected features
+
+Remove screenshot target registrations for retired airport live boards, predictive
+panels, standalone watchlists, notification centers and Operations dashboards
+from the release gate planner. Keep selected live radar, airport map, aircraft
+detail, weather, receiver and system targets. Retired feature file paths fail
+closed to the full browser gate rather than requesting deleted screenshots.
+The release planner's tests now assert that every targeted screenshot exists in
+the actual production capture registry. No production deployment authorized.

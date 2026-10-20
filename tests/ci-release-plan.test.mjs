@@ -44,6 +44,12 @@ test("documentation and tests never create an empty fast plan", () => {
   assert.equal(planReleaseGates(["tests/sse-capacity.test.ts"]).browser, "fast");
 });
 
+test("retired feature paths force full validation instead of requesting removed screenshots", () => {
+  for (const path of ["components/watchlist-page.tsx", "components/notification-center.tsx", "components/operations-dashboard.tsx"]) {
+    assert.equal(planReleaseGates([path]).browser, "full");
+  }
+});
+
 test("every active targeted screenshot exists in the production capture list", () => {
   const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
   const start = source.indexOf("const visualTargets = [");
@@ -54,8 +60,6 @@ test("every active targeted screenshot exists in the production capture list", (
     "components/radar/radar-map-layer-menu.tsx", "components/airport-map.tsx", "app/aircraft/896139/page.tsx",
     "components/weather-operations-center.tsx",
     "components/system-status-page.tsx", "components/receiver-explorer.module.css",
-    "components/watchlist-page.tsx", "components/notification-center.tsx",
-    "components/operations-dashboard.tsx",
   ];
   for (const path of examples) {
     const planned = planReleaseGates([path]);

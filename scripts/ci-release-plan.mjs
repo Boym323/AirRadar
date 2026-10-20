@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 export const FAST_VISUAL_TARGETS = [
   "radar-desktop", "radar-mobile", "system-desktop",
-  "airport-live-board-desktop", "airport-live-board-mobile",
+  "airport-v5-map-desktop", "airport-v5-map-mobile",
   "aircraft-detail-mobile",
 ];
 
@@ -23,32 +23,18 @@ const RADAR_TARGETS = [
 ];
 const AIRPORT_TARGETS = [
   "airport-v5-map-desktop", "airport-v5-map-mobile",
-  "airport-v5-analytics-desktop", "airport-v5-analytics-mobile",
-  "airport-v5-analytics-en-mobile", "airport-v5-operations-desktop",
-  "airport-v5-weather-desktop", "airport-v5-arrivals-mobile",
-  "airport-v5-departures-mobile", "airport-v5-arrivals-320",
-  "airport-v5-overview-tablet", "airport-v5-overview-320",
-  "airport-v6-media-embed-desktop", "airport-v6-media-embed-mobile",
-  "airport-v6-h-authorized-media",
 ];
 const AIRCRAFT_TARGETS = [
   "aircraft-detail-desktop", "aircraft-detail-tablet", "aircraft-detail-mobile",
   "aircraft-detail-telemetry-expanded", "aircraft-detail-receiver",
-  "predictive-eta-public-desktop", "predictive-runway-public-desktop",
-  "predictive-runway-change-public-desktop", "predictive-trajectory-public-desktop",
-  "predictive-eta-admin-mobile", "predictive-runway-admin-mobile",
-  "predictive-runway-change-admin-mobile", "predictive-trajectory-admin-mobile",
 ];
 const FEATURE_TARGETS = {
   radar: RADAR_TARGETS,
   airport: AIRPORT_TARGETS,
   aircraft: AIRCRAFT_TARGETS,
-  system: ["system-desktop", "predictive-readiness-desktop", "predictive-readiness-mobile"],
+  system: ["system-desktop"],
   weather: ["weather-data-desktop", "weather-empty-mobile"],
-  watchlist: ["watchlist-empty-desktop", "watchlist-empty-mobile"],
-  notifications: ["notifications-empty-desktop", "notifications-empty-mobile"],
   receiver: ["receiver-unavailable-desktop", "receiver-unavailable-mobile"],
-  operations: ["operations-center-desktop", "operations-center-mobile", "predictive-operations-public-desktop", "predictive-operations-admin-mobile"],
 };
 const FULL_PERFORMANCE_RUNTIME = /^lib\/server\/(?:aircraft-state|sse-capacity|runtime-diagnostics|source-reliability)/;
 const FAST_VIEWPORTS = "375x812,821x1000";
@@ -78,10 +64,7 @@ const RULES = [
   ] },
   { kind: "system", paths: [/^app\/system\//, /^components\/system-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "weather", paths: [/^app\/weather\//, /^components\/weather-operations-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
-  { kind: "watchlist", paths: [/^app\/watchlist\//, /^components\/watchlist-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
-  { kind: "notifications", paths: [/^app\/notifications\//, /^components\/notification-center[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
   { kind: "receiver", paths: [/^app\/receiver\//, /^components\/receiver-[^/]+\.(?:[cm]?[jt]sx?|css)$/] },
-  { kind: "operations", paths: [/^app\/operations\//, /^components\/operations-dashboard[^/]*\.(?:[cm]?[jt]sx?|css)$/] },
 ];
 const BACKEND_ONLY = [/^app\/api\//, /^lib\/server\//, /^migrations\//, /^prisma\//, /^tests\//];
 

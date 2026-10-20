@@ -213,3 +213,11 @@ nahrazeny kontrolami letišť, navigace, Navigation Integrity, počasí, systém
 přijímače. Odstraněné stránky musí vracet HTTP 404. Zachovány testy mobilního
 rozložení, jazyků, detailu letadla a mapových vizuálů. Opraveny kontroly starého
 AUP/UUP hooku a presetů. Bez úspěšného CI není možné nasadit produkci.
+
+## Fáze 28 (postupně): synchronizace vizuálních release kontrol
+
+Z plánovače release odstraněny neexistující screenshoty letištních Live Boardů,
+predikčních panelů, Watchlistu, Notification Center a Operations Dashboardu.
+Zachovány kontroly živé mapy, letišť, detailu letadla, počasí, přijímače a
+systému. Změny zrušených oblastí spouštějí plnou kontrolu místo odkazu na
+neexistující screenshot. Produkce zůstává nezměněna.
