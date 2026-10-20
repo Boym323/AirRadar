@@ -451,3 +451,11 @@ longer instantiates or owns a predictor; the retained system status no longer
 publishes the old prospective validation field. This does not delete the still
 imported prediction model library or historical outcome/observation rows;
 these have independent tests and require a separate dependency-checked removal.
+
+## Phase 47: align tests with rejected ATC and predictive surfaces
+
+Replace stale ATC-shadow configuration assertions, prediction-route runway
+boundary checks and browser contracts that required the removed admin
+readiness dashboard. Retain coverage for current ATC sector enablement,
+system status polling, historical safety checks and the canonical production
+fixtures. Do not restore rejected endpoints or config solely for old tests.

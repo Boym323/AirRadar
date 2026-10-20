@@ -401,3 +401,10 @@ vypnutí, přístupové metody i nepotřebná diagnostika. Příjem ADS-B již �
 prediktivní stav nevlastní a systémový stav nezobrazuje historickou validaci.
 Samostatná modelová knihovna a staré databázové záznamy zatím zůstávají pro
 následující kontrolu závislostí. Historie a zachované funkce beze změny.
+
+## Fáze 47: úprava testů po odstranění ATC a prediktivních funkcí
+
+Zastaralé testy konfiguračního přepínače ATC shadow, veřejného predikčního
+API, administrátorského readiness panelu a starých browser očekávání byly
+nahrazeny kontrolami zachovaných služeb a nepřítomnosti odstraněných cest.
+Zůstává kontrola aktuálních sektorů, stavu systému i bezpečnostních podmínek.

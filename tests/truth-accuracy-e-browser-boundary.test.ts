@@ -5,10 +5,10 @@ const component = readFileSync(new URL("../components/system-status-page.tsx", i
 const gates = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
 
 describe("Stage E browser payload compatibility", () => {
-  it("keeps /system available for an older cached readiness response", () => {
-    expect(component).toContain("const truthAccuracy = report.truthAccuracy ?? null;");
-    expect(component).toContain("{truthAccuracy ? <>");
-    expect(component).toContain("data-testid=\"predictive-readiness\"");
+  it("keeps /system functional after removing retired predictive readiness", () => {
+    expect(component).not.toContain("PredictiveReadinessPanel");
+    expect(component).not.toContain('data-testid="predictive-readiness"');
+    expect(component).toContain('fetch("/api/system/status"');
   });
   it("exercises actual E metrics in the canonical production browser fixture", () => {
     expect(gates).toContain('truthAccuracy: {');

@@ -6,10 +6,6 @@ const sharedRolloutSource = readFileSync(new URL("../lib/predictive-intelligence
 const advisorySource = readFileSync(new URL("../lib/predictive-intelligence/runway-advisory.ts", import.meta.url), "utf8");
 const readinessSource = readFileSync(new URL("../lib/server/predictive-readiness.ts", import.meta.url), "utf8");
 
-const publicSurfaces = [
-  readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8"),
-].join("\n");
-
 describe("Runway Public Rollout V1 boundary", () => {
   it("remains a pure decision layer without persistence or environment mutation", () => {
     expect(rolloutSource).toContain("buildRunwayPublicRolloutDecision");
@@ -24,7 +20,7 @@ describe("Runway Public Rollout V1 boundary", () => {
     expect(advisorySource).toContain('effectivePolicy.RUNWAY !== "PUBLIC" || readiness?.decision !== "PASS"');
     expect(readinessSource).toContain('evaluation.capabilities[capability].decision !== "PASS"');
     expect(readinessSource).toContain('effective[capability] = "SHADOW"');
-    expect(publicSurfaces).not.toContain("buildRunwayPublicRolloutDecision");
+    expect(existsSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url))).toBe(false);
     expect(existsSync(new URL("../app/api/operations/predictive/route.ts", import.meta.url))).toBe(false);
   });
 
