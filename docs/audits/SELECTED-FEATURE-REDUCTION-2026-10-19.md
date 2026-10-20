@@ -432,3 +432,13 @@ Prediction feature. Update outcome/readiness boundary tests to enforce 404.
 Do not remove the independent system admin readiness endpoint in this phase;
 that retained page must be decoupled before deleting the predictive library.
 Historical PostgreSQL records and migrations are untouched.
+
+## Phase 45 (staged): remove admin prediction calibration dashboard
+
+Unmount the retired predictive readiness/calibration UI from the retained
+System page, stop its automatic data fetch, delete the admin readiness API,
+and update both generated feature tables. Remove the stale Digital Twin
+outcome card that was already unsupported by the server. Preserve live
+receiver diagnostics, ATC/Navigation Integrity health, runtime timeline,
+weather observability and historical database schema. Predictive collector
+libraries and old unit tests still require a separate retirement phase.

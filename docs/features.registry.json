@@ -452,7 +452,6 @@
       "apis": [
         "/api/admin/altitude/:hex",
         "/api/admin/flights/:id/evidence",
-        "/api/admin/predictive/readiness",
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/runtime-performance",

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { getEffectivePredictiveGraduationPolicy } from "@/lib/server/predictive-readiness";
 
 const collectorSource = readFileSync(new URL("../lib/server/predictive-readiness.ts", import.meta.url), "utf8");
-const adminRouteSource = readFileSync(new URL("../app/api/admin/predictive/readiness/route.ts", import.meta.url), "utf8");
 const systemPageSource = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
 const calibrationSource = readFileSync(new URL("../lib/predictive-intelligence/graduation-calibration.ts", import.meta.url), "utf8");
 
@@ -48,23 +47,10 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(existsSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url))).toBe(false);
   });
 
-  it("keeps the readiness report admin-only and no-store", () => {
-    expect(adminRouteSource).toContain("isWatchlistSessionValid(request)");
-    expect(adminRouteSource).toContain('status: 401');
-    expect(adminRouteSource).toContain('"Cache-Control": "no-store"');
-    expect(adminRouteSource).toContain("readPredictiveReadinessReport()");
-    expect(collectorSource).toContain("buildPredictiveGraduationCalibration");
-    expect(collectorSource).toContain("buildPredictivePublicRolloutReport");
-    expect(collectorSource).toContain("rollout: buildPredictivePublicRolloutReport");
-  });
-
-  it("loads and renders readiness only for the admin system view", () => {
-    expect(systemPageSource).toContain('fetch("/api/admin/predictive/readiness"');
-    expect(systemPageSource).toContain('data?.detailLevel !== "admin"');
-    expect(systemPageSource).toContain('data-testid="predictive-readiness"');
-    expect(systemPageSource).toContain('data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}');
-    expect(systemPageSource).toContain('data-testid={`predictive-rollout-${capability.key.toLowerCase()}`}');
-    expect(systemPageSource).toContain("predictiveCalibrationManualReview");
-    expect(systemPageSource).toContain("predictiveRolloutStateLabels");
+  it("no longer exposes the removed predictive readiness dashboard or API", () => {
+    expect(existsSync(new URL("../app/api/admin/predictive/readiness/route.ts", import.meta.url))).toBe(false);
+    expect(systemPageSource).not.toContain("/api/admin/predictive/readiness");
+    expect(systemPageSource).not.toContain("PredictiveReadinessPanel");
+    expect(systemPageSource).not.toContain("operationalTwinOutcome");
   });
 });

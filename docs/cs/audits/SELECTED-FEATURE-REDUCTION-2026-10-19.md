@@ -384,3 +384,12 @@ testy prediktivních doporučení. Vyčištěn registr funkcí a záznam Explain
 Prediction; zbývající testy nyní ověřují nepřítomnost veřejného API.
 Administrátorské vyhodnocení readiness v systémové stránce zatím zůstává,
 dokud nebude odpojeno ve vlastní fázi. Historické záznamy a migrace beze změn.
+
+## Fáze 45 (postupně): odstranění administrátorského panelu predikcí
+
+Ze zachované systémové stránky odstraněn starý panel prediktivní připravenosti
+a kalibrace, jeho automatické dotazy a administrační readiness API.
+Aktualizovány tabulky funkcí EN/CS a odstraněna nefunkční diagnostická karta
+Digital Twin. Zachována diagnostika přijímače, ATC/Navigation Integrity,
+časová osa výkonu, meteorologie i databázová historie. Samostatné knihovny
+a testy predikcí zbývají na další fázi.
