@@ -189,6 +189,16 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(detail).toContain("<AirspaceCard");
   });
 
+  it("does not ship deleted predictive client panel modules", () => {
+    for (const path of [
+      "components/predictive-aircraft-advisories.tsx",
+      "components/predictive-aircraft-advisories.module.css",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("PredictiveAircraftAdvisories");
+    expect(detail).toContain("<AircraftAltitudeChart");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

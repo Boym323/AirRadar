@@ -97,3 +97,7 @@ Stop the retained aircraft detail from auto-requesting the retired W10 Aviation 
 ## Phase 12 (staged): unmount rejected origin/destination weather on aircraft detail
 
 Remove the W12-style origin/destination FlightRouteWeather component from retained aircraft detail. This stops its additional route-weather request without impacting the recorded aircraft route, published METAR/TAF airport weather, SIGMET or retained altitude history. Also update the stale visual-refinement test for already-removed PredictiveAircraftAdvisories and Digital Twin UI, preserving hero metrics and mobile drawer expectations. Weather provider/API modules and historical records remain unchanged.
+
+## Phase 13 (staged): delete orphan client-side prediction panel
+
+Now that retained aircraft detail no longer imports predictive advisories, delete `components/predictive-aircraft-advisories.tsx` and its CSS. Retain server prediction endpoints and predictive models/output tests temporarily pending independent runtime dependency and historical-data retention audit; update UI-only tests to assert absence rather than testing retired component timers. No destructive schema changes or production deploy.

@@ -98,3 +98,7 @@ Odpojením komponenty ze zachovaného detailu letadla se již automaticky nedota
 ## Fáze 12 (rozpracováno): odpojení počasí na trase z detailu letadla
 
 Zachovaný detail letadla již nevykresluje komponentu FlightRouteWeather pro počasí na počátečním/cílovém letišti. Odpovídající klientský požadavek odpadá; přitom zůstávají informace o trase, METAR/TAF letišť, SIGMET a historický graf výšky. Opraven také starý test vizuálu, který vyžadoval odstraněné panely PredictiveAircraftAdvisories a Digital Twin. Moduly poskytovatelů počasí, API a historická data beze změn.
+
+## Fáze 13 (rozpracováno): odstranění osiřelého klientského panelu predikcí
+
+Po odpojení ze zachovaného detailu letadla byly odstraněny soubory `components/predictive-aircraft-advisories.tsx` a příslušné CSS. Serverová API a výpočetní knihovny predikcí i jejich testy zůstávají do auditu sdílených vazeb a zachování historických dat. Testy již neověřují časovače zrušeného panelu, ale jeho nepřítomnost. Bez destruktivních migrací a nasazení produkce.
