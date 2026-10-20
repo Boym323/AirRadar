@@ -430,3 +430,13 @@ describe("phase 32 live analytics versus L11/L12 delivery separation", () => {
     expect(state).toContain("recordAircraftSnapshot");
   });
 });
+
+describe("phase 34 retired FlightEvent ID lookup", () => {
+  it("keeps the alert engine independent from FlightEvent ORM and old resolver tests", () => {
+    const alertSource = readFileSync(new URL("lib/server/alert-engine.ts", root), "utf8");
+    expect(alertSource).not.toContain("resolvePersistedFlightEventId");
+    expect(alertSource).not.toContain("getPrisma");
+    expect(existsSync(new URL("tests/alert-engine-canonical-id.test.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/server/alert-delivery-worker.ts", root))).toBe(true);
+  });
+});

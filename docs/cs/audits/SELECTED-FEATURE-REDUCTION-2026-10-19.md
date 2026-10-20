@@ -271,3 +271,10 @@ Produkční prohlížečový test čekal na již odstraněný widget počasí na
 vybraného letu. Odstraněn falešný API fixture i staré selektory. Test nadále
 kontroluje ATC panel, rozbalení pokročilého kontextu a zachované podklady
 Navigation Integrity a počasí.
+
+## Fáze 34 (postupně): odstranění testu již zrušeného dohledávání FlightEvent ID
+
+Úplné testy nalezly jediný zastaralý test privátní funkce
+`AlertEngine.resolvePersistedFlightEventId`. Test byl odstraněn a nahrazen
+kontrolou, že doručovací engine znovu nezíská přímou závislost na ORM FlightEvent.
+Historická data a samostatný doručovací worker zůstávají beze změny.

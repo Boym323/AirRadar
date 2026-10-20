@@ -304,3 +304,11 @@ inside the selected-aircraft Situation tab. Remove the obsolete mocked API,
 widget selectors and flight-situation summary expectation. Preserve the real
 ATC panel, retained advanced-disclosure navigation integrity/weather evidence
 and the quick-detail tab interaction test.
+
+## Phase 34 (staged): retire obsolete FlightEvent canonical-id unit test
+
+Full release tests exposed one legacy test whose sole purpose was calling the
+removed `AlertEngine.resolvePersistedFlightEventId` private helper. Delete it
+and replace it with a negative dependency regression: the delivery engine must
+not import the FlightEvent ORM or recreate that lookup. Keep history tables
+and delivery worker unchanged.
