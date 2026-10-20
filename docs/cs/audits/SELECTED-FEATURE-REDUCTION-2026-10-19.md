@@ -526,3 +526,14 @@ model Fusion a samostatná prediktivní meteorologická koridorová analytika
 včetně izolovaných testů. Zůstává skutečné počasí METAR/TAF/SIGMET,
 meteorologický radar, pozorování z letadel, mapový kontext SIGMET a používaný
 kontext počasí podél trasy. Bez změny uložených dat, schématu nebo produkce.
+
+## Fáze 54 (postupně): odstranění přehrávání historie, Flight Story a procedur
+
+Odstraněny již nezobrazené knihovny Time Machine pro přehrávání a časová okna,
+narativní sestavovač Flight Story, opuštěná interpretace denních rekapitulací
+a samostatný importér procedur SID/STAR se synchronizačním skriptem.
+Zrušeny související izolované testy a zastaralý příkaz `procedures:sync`.
+Pryč je i osamocený panel historického provozu ATC a překlad Fleet Explorer.
+Zachována vzorkovaná historie, databázové Flight/Position/Event záznamy,
+obecná historická API, ATS trasy a FIX, současná sektorová ATC geometrie
+na mapě a nezávislé statistické služby. Bez migrací či zásahů do produkce.

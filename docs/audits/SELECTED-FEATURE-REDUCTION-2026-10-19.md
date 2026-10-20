@@ -600,3 +600,15 @@ isolated tests. Keep the retained METAR/TAF/SIGMET and weather-radar
 providers, aircraft observations, aircraft SIGMET overlays and current
 route-weather context. No hot-path weather calculations are introduced,
 no persistence or schema migrations are modified, and no deployment occurs.
+
+## Phase 54 (staged): retire standalone playback, Flight Story prose, recaps and procedures
+
+Delete unmounted Time Machine playback/window/event utilities, Flight Story
+narrative assembler and unused read-only alias, daily recap interpreter, and
+standalone SID/STAR procedure import pipeline and synchronization script.
+Remove their isolated tests and the stale `procedures:sync` command. Drop the
+orphan ATC sector traffic panel and obsolete Fleet Explorer locale helper.
+Preserve sampled aircraft history, flight/position/event tables, generic
+history API, ATS navigation routes/FIX data, live ATC map geometry and
+independent history/statistics API consumers. No database migrations or main
+branch/production changes. Full CI must check for remaining source imports.
