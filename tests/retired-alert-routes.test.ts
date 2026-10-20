@@ -51,5 +51,7 @@ describe("retired Alert/Fleet/Watchlist API boundaries", () => {
     for (const retired of ["saveRule(", "deleteRule(", "saveFleet(", "saveGeofence(", "recordOccurrence(", "loadConfig("]) expect(repository).not.toContain(retired);
     for (const retained of ["claimDelivery(", "getOccurrenceForDelivery(", "markDeliverySent(", "markDeliveryFailure(", "recoverStaleDeliveries(", "deliveryHealthSnapshot(", "listOccurrenceHistory("]) expect(repository).toContain(retained);
     expect(existsSync(file("lib/server/alerts-fleets-v1.ts"))).toBe(false);
+    for (const obsolete of ["lib/server/alert-config.ts", "lib/server/watchlist-store.ts", "lib/server/watchlist-api.ts"]) expect(existsSync(file(obsolete)), obsolete).toBe(false);
+    expect(existsSync(file("lib/aircraft/watchlist.ts"))).toBe(true); // retained local-only radar filters
   });
 });
