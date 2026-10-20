@@ -317,3 +317,13 @@ nová regresní kontrola naopak ověřuje jejich nepřítomnost. Samostatná
 Navigation Integrity, historická data a geometrie ATC mapy zůstávají.
 Databázová schémata ani uložené tabulky kalibrace se nemažou.
 Validátory kalibrace a jejich diagnostiky v procesu vyžadují další fázi.
+
+## Fáze 39 (postupně): odstranění osiřelé kalibrace Digital Twin v procesu
+
+Ze služby AircraftStateService odstraněno sedm objektů validace Digital Twin,
+načítání kalibrace při startu, ukládání při vypínání a staré metody pro
+zachycování a sestavování reportů. Odstraněna již nepoužívaná serverová
+implementace perzistence kalibrace a její samostatný test. Historické tabulky
+a uložená data zůstávají beze změny. Systémová diagnostika již nepředává
+zrušené výsledky Digital Twin. Příjem ADS-B nečeká na kalibraci; statistiky,
+Navigation Integrity, historie a doručovací infrastruktura zůstávají.

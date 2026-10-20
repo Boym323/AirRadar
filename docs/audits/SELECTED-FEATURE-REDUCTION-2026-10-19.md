@@ -358,3 +358,13 @@ independent Navigation Integrity feature, recorded aircraft history, and ATC
 map geometry. This does **not** delete existing PostgreSQL calibration tables
 or change schema. The in-process calibration validators and their diagnostics
 still need a dedicated removal phase before merge.
+
+## Phase 39 (staged): remove orphan Digital Twin in-process calibration
+
+Drop the seven Digital Twin validation instances, startup hydration, shutdown
+persistence flush and the rejected report/capture API from AircraftStateService.
+Retire the unused calibration persistence implementation and its dedicated
+unit test; leave all historical database tables/records intact. System-status
+no longer exposes orphan Twin validation fields. Local reception startup no
+longer awaits optional Digital Twin calibration hydration, but retains stats,
+Navigation Integrity, history, core delivery and receiver diagnostics.

@@ -14,9 +14,13 @@ describe("Retired Digital Twin API regression", () => {
     ]) expect(existsSync(new URL(path, import.meta.url)), path).toBe(false);
   });
 
-  it("retains canonical navigation integrity and historical recording", () => {
+  it("retains canonical navigation integrity and historical recording without Twin calibration", () => {
     const state = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
     expect(state).toContain("this.navigationIntegrity.observe(");
     expect(state).toContain("recordAircraftSnapshot(");
+    expect(state).not.toContain("OperationalTwinCalibrationPersistence");
+    expect(state).not.toContain("getOperationalTwinOutcomeReport");
+    expect(state).not.toContain("operationalTwinOutcome");
+    expect(state).not.toContain("regionalAttentionOutcome");
   });
 });

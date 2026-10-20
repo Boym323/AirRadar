@@ -48,10 +48,6 @@ import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } f
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-provenance";
 import { PredictiveStateStore } from "@/lib/predictive-intelligence";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeV2Validator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildOperationalTwinTrajectoryQualityGraduation, buildOperationalTwinTrajectoryQualityV3Graduation, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
-import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
-import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
-import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 import { getMemoryRetentionDiagnostics, type MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 import { mapBounded, mapSettledBounded } from "@/lib/server/bounded-batch";
 import { historyAircraftForSnapshot } from "@/lib/server/history-aircraft-payload";
@@ -155,28 +151,6 @@ export class AircraftStateService {
   /** Start of a preferred-source outage while the alternate observation remains live. */
   private readonly sourcePreferenceMissingSince = new Map<string, number>();
   private readonly continuity = new AircraftContinuityGuard();
-  /** Request + bounded refresh-sampled Operational Digital Twin calibration against future LOCAL receiver truth. */
-  private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
-  /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
-  private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
-  /** Canonical-vs-Trajectory Quality V2 vertical outcome validation against future LOCAL truth. */
-  private readonly operationalTwinTrajectoryQualityOutcome = new OperationalTwinTrajectoryQualityOutcomeValidator();
-  /** Triple-paired canonical-vs-V2-vs-V3 vertical outcome validation against the same future LOCAL truth. */
-  private readonly operationalTwinTrajectoryQualityOutcomeV2 = new OperationalTwinTrajectoryQualityOutcomeV2Validator();
-  /** Final Aircraft Operational Focus validation against later independent LOCAL SIGMET truth where scoreable. */
-  private readonly operationalFocusOutcome = new AircraftOperationalFocusOutcomeValidator();
-  /** Truth-first multi-domain recall validation from independent later observations. */
-  private readonly operationalTwinTruthFirst = new OperationalTwinTruthFirstValidator();
-  /** Prospective Regional Attention validation against future LOCAL pair state. */
-  private readonly regionalAttentionOutcome = new RegionalAttentionOutcomeValidator();
-  /** PostgreSQL persistence for anonymous completed five-minute calibration aggregates only. */
-  private readonly operationalTwinCalibrationPersistence = new OperationalTwinCalibrationPersistence(
-    this.operationalTwinOutcome,
-    this.operationalTwinEventOutcome,
-    this.operationalTwinTrajectoryQualityOutcome,
-    this.operationalTwinTrajectoryQualityOutcomeV2,
-    this.regionalAttentionOutcome,
-  );
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -262,14 +236,8 @@ export class AircraftStateService {
         this.scheduleReceptionRecordEvaluation();
       });
     void this.loadLifetimeReceptionRecord();
-    const calibrationReady = this.operationalTwinCalibrationPersistence.load()
-      .catch((error) => {
-        // Calibration persistence is optional; live radar and Digital Twin
-        // must continue from fresh process-local evidence on any DB failure.
-        logger.warn({ error }, "Operational Digital Twin calibration hydration skipped");
-      });
-    const refresh = calibrationReady.then(() => this.refresh());
-    this.initialRefresh = Promise.all([this.statisticsReady, calibrationReady, refresh]).then(() => undefined);
+    const refresh = this.refresh();
+    this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
     void this.refreshNetwork();
     this.receiverCoverage.start(() => ({
       network: [...this.networkAircraft.values()], local: this.localAircraft, receiver: this.currentReceiver,
@@ -299,7 +267,6 @@ export class AircraftStateService {
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
     await this.awaitUntil(this.predictive.flushProspective(), deadline);
-    await this.awaitUntil(this.operationalTwinCalibrationPersistence.stop(), deadline);
     // Weather coalescing is intentionally lossy on crashes, but a normal
     // restart gets a bounded best-effort flush of representative samples.
     await this.awaitUntil(flushAircraftWeatherPersistence(deadline), deadline);
@@ -481,25 +448,9 @@ export class AircraftStateService {
     flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
-    operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
-    operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
-    operationalTwinTrajectoryQualityOutcome: ReturnType<OperationalTwinTrajectoryQualityOutcomeValidator["report"]>;
-    operationalTwinTrajectoryQualityOutcomeV2: ReturnType<OperationalTwinTrajectoryQualityOutcomeV2Validator["report"]>;
-    operationalTwinTrajectoryQualityGraduation: ReturnType<typeof buildOperationalTwinTrajectoryQualityGraduation>;
-    operationalTwinTrajectoryQualityV3Graduation: ReturnType<typeof buildOperationalTwinTrajectoryQualityV3Graduation>;
-    operationalFocusOutcome: ReturnType<AircraftOperationalFocusOutcomeValidator["report"]>;
-    regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
-    regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
-    operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
     retentionAttribution: MemoryRetentionDiagnostics;
   } {
-    const now = new Date();
-    // Reuse the same bounded outcome snapshot for each corresponding
-    // graduation decision rather than aggregating three validators twice.
-    const trajectoryOutcome = this.getOperationalTwinTrajectoryQualityOutcomeReport(now);
-    const trajectoryOutcomeV2 = this.getOperationalTwinTrajectoryQualityOutcomeV2Report(now);
-    const regionalAttentionOutcome = this.getRegionalAttentionOutcomeReport(now);
     const { limitCounters, ...retentionAttribution } = getMemoryRetentionDiagnostics({
         localAircraft: this.localAircraft,
         localTrailLimitPoints: SERVER_LOCAL_TRAIL_MAX_POINTS,
@@ -548,16 +499,6 @@ export class AircraftStateService {
         networkRetained: this.networkAircraft.size,
         pendingAffinity: this.sourcePreferenceMissingSince.size,
       }),
-      operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
-      operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
-      operationalTwinTrajectoryQualityOutcome: trajectoryOutcome,
-      operationalTwinTrajectoryQualityOutcomeV2: trajectoryOutcomeV2,
-      operationalTwinTrajectoryQualityGraduation: buildOperationalTwinTrajectoryQualityGraduation(trajectoryOutcome),
-      operationalTwinTrajectoryQualityV3Graduation: buildOperationalTwinTrajectoryQualityV3Graduation(trajectoryOutcomeV2),
-      operationalFocusOutcome: this.getOperationalFocusOutcomeReport(),
-      regionalAttentionOutcome,
-      regionalAttentionGraduation: buildRegionalAttentionGraduation(regionalAttentionOutcome),
-      operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
       runtimePerformance: getRuntimePerformanceDiagnostics(),
       retentionAttribution,
     };
@@ -609,96 +550,6 @@ export class AircraftStateService {
 
   getPredictiveDiagnostics() {
     return this.predictive.diagnostics();
-  }
-
-  captureOperationalTwinOutcome(situation: OperationalTwinSituation): void {
-    this.operationalTwinOutcome.capture(situation);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinOutcomeReport(now = new Date()) {
-    return this.operationalTwinOutcome.report(now);
-  }
-
-  captureOperationalTwinTrajectoryQualityOutcome(situation: OperationalTwinSituation): void {
-    this.operationalTwinTrajectoryQualityOutcome.capture(situation);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinTrajectoryQualityOutcomeReport(now = new Date()) {
-    return this.operationalTwinTrajectoryQualityOutcome.report(now);
-  }
-
-  captureOperationalTwinTrajectoryQualityOutcomeV2(situation: OperationalTwinSituation): void {
-    this.operationalTwinTrajectoryQualityOutcomeV2.capture(situation);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinTrajectoryQualityOutcomeV2Report(now = new Date()) {
-    return this.operationalTwinTrajectoryQualityOutcomeV2.report(now);
-  }
-
-  getOperationalTwinTrajectoryQualityV3GraduationReport(now = new Date()) {
-    return buildOperationalTwinTrajectoryQualityV3Graduation(
-      this.operationalTwinTrajectoryQualityOutcomeV2.report(now),
-    );
-  }
-
-  getOperationalTwinTrajectoryQualityGraduationReport(now = new Date()) {
-    return buildOperationalTwinTrajectoryQualityGraduation(
-      this.operationalTwinTrajectoryQualityOutcome.report(now),
-    );
-  }
-
-  observeOperationalTwinTruthContext(
-    context: OperationalTwinTruthObservationContext,
-    now = Date.now(),
-  ): void {
-    this.operationalTwinTruthFirst.observeContext(context, now);
-  }
-
-  captureOperationalTwinEventOutcome(
-    situation: OperationalTwinSituation,
-    context: OperationalTwinEventOutcomeCaptureContext,
-  ): void {
-    this.operationalTwinEventOutcome.capture(situation, context);
-    this.operationalTwinTruthFirst.capture(situation, context);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinEventOutcomeReport(now = new Date()) {
-    return {
-      ...this.operationalTwinEventOutcome.report(now),
-      truthFirst: this.operationalTwinTruthFirst.report(now),
-      calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
-    };
-  }
-
-  captureOperationalFocusOutcome(
-    situation: OperationalTwinSituation,
-    sigmets: import("@/lib/weather/types").SigmetSnapshot | null,
-  ): void {
-    this.operationalFocusOutcome.capture(situation, sigmets);
-  }
-
-  getOperationalFocusOutcomeReport(now = new Date()) {
-    return this.operationalFocusOutcome.report(now);
-  }
-
-  captureRegionalAttentionOutcome(summary: OperationalAttentionSummary): void {
-    this.regionalAttentionOutcome.capture(summary);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getRegionalAttentionOutcomeReport(now = new Date()) {
-    return {
-      ...this.regionalAttentionOutcome.report(now),
-      calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
-    };
-  }
-
-  getRegionalAttentionGraduationReport(now = new Date()) {
-    return buildRegionalAttentionGraduation(this.regionalAttentionOutcome.report(now));
   }
 
   getNetworkDiagnostics() {
