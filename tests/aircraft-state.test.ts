@@ -514,6 +514,10 @@ describe("aircraft state service", () => {
       notifier: { name: "test", enabled: true, send: alertSend },
       history: { recordDetected: vi.fn(async () => undefined), recordNotification: vi.fn(async () => undefined) },
     });
+    // Retired alert rules must never be invoked by retained live tracking.
+    const observeSpy = vi.spyOn(alerts, "observe");
+    const newAircraftSpy = vi.spyOn(alerts, "observeNewAircraft");
+    const receptionRecordSpy = vi.spyOn(alerts, "observeReceptionRecord");
     const service = new AircraftStateService(
       localProvider,
       new EnrichmentService({}),
@@ -541,6 +545,9 @@ describe("aircraft state service", () => {
     expect(persistedAircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
     expect(alertSend.mock.calls.some(([alert]) => alert.aircraft.icaoHex === "DEF456")).toBe(false);
     expect(alertSend.mock.calls.some(([alert]) => alert.type === "watchlist")).toBe(false);
+    expect(observeSpy).not.toHaveBeenCalled();
+    expect(newAircraftSpy).not.toHaveBeenCalled();
+    expect(receptionRecordSpy).not.toHaveBeenCalled();
     expect(networkProvider.getSnapshot).toHaveBeenCalledTimes(1);
   });
 
