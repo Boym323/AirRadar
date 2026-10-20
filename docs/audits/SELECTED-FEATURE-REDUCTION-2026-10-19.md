@@ -337,3 +337,13 @@ on-demand capture methods, startup calibration hydration/persistence and their
 modules are intentionally still present. Removing them, along with the old
 AlertEngine and its rules, requires a separate dependency-checked patch. No
 database migration or historical data deletion is part of this change.
+
+## Phase 37 (staged): retire synthetic Digital Twin benchmarks
+
+Delete the T57 standalone GitHub workflow, replay-only test and benchmark script.
+The 1x/2x/4x load-scaling workflow now measures retained snapshot application,
+SSE fanout and ATC geometry only, using output schema version 2. Remove its
+disconnected Twin validator timing report and obsolete CLI entrypoint. The
+snapshot comparison diagnostic list now names retained snapshot paths instead
+of retired Twin and Flight Intelligence timings. No claims of measured CPU
+savings are made until a matched before/after live-snapshot benchmark is run.

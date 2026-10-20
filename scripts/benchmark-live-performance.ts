@@ -189,7 +189,7 @@ export async function snapshotApplyComparisonBenchmark(count = 1_000) {
         timerDelayP95Ms: Number(sortedEventLoopDelays[Math.floor(sortedEventLoopDelays.length * 0.95)]!.toFixed(3)),
         timerDelayMaxMs: Number(sortedEventLoopDelays.at(-1)!.toFixed(3)),
       },
-      paths: Object.fromEntries(["snapshot.apply.total", "snapshot.intelligence", "snapshot.operationalTwin", "twin.eventOutcome.local"].map((name) => {
+      paths: Object.fromEntries(["snapshot.apply.total", "snapshot.statistics", "snapshot.navigationIntegrity", "snapshot.alerts"].map((name) => {
         const value = diagnostics[name];
         return [name, value ? { p50Ms: value.p50Ms, p95Ms: value.p95Ms, maxMs: value.maxMs, cpuMs: value.cpuMs } : null];
       })),

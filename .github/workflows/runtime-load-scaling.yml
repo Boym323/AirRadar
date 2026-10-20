@@ -27,7 +27,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run prisma:generate
-      - name: Generate isolated snapshot, Operational Twin and SSE measurements
+      - name: Generate isolated retained radar, ATC and SSE measurements
         env:
           AIRRADAR_LOAD_MULTIPLIER: ${{ matrix.multiplier }}
           GITHUB_SHA: ${{ github.sha }}
