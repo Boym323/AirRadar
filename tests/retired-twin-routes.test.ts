@@ -22,5 +22,7 @@ describe("Retired Digital Twin API regression", () => {
     expect(state).not.toContain("getOperationalTwinOutcomeReport");
     expect(state).not.toContain("operationalTwinOutcome");
     expect(state).not.toContain("regionalAttentionOutcome");
+    const registry = readFileSync(new URL("../docs/features.registry.json", import.meta.url), "utf8");
+    expect(registry).not.toContain('"id": "operational-digital-twin"');
   });
 });
