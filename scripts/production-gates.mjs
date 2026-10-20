@@ -2918,7 +2918,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
 async function startIsolatedReadsbFixture() {
   const started = Date.now();
   const traffic = [
-    { hex: "896139", flight: "UAE139  ", r: "A6-EOG", t: "A388", desc: "Airbus A380-800", lat: 50.113, lon: 14.468, alt_baro: 37000, gs: 462, track: 274, squawk: "1234" },
+    { hex: "896139", flight: "UAE139  ", r: "A6-EOG", t: "A388", desc: "Airbus A380-800", lat: 50.113, lon: 14.468, alt_baro: 37000, gs: 462, track: 274, squawk: "1234", ias: 430, tas: 465, mach: 0.82, true_heading: 273, mag_heading: 271 },
     { hex: "3C65A1", flight: "DLH8K   ", r: "D-AIXQ", t: "A359", lat: 50.15, lon: 14.52, alt_baro: 34000, gs: 418, track: 128, squawk: "4521" },
     { hex: "4CA9A4", flight: "RYR71QH ", r: "EI-DCL", t: "B738", lat: 50.21, lon: 14.59, alt_baro: 21800, gs: 286, track: 228, squawk: "2631" },
     { hex: "4B1812", flight: "SWR433  ", r: "HB-JDA", t: "A20N", lat: 50.22, lon: 14.22, alt_baro: 31000, gs: 392, track: 46, squawk: "1001" },
