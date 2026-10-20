@@ -28,8 +28,8 @@ describe("Operational Digital Twin Outcome Validation V1 boundary", () => {
     expect(situationSource).not.toContain("OperationalTwinOutcomeValidator");
   });
 
-  it("resolves only against live LOCAL receiver state and never network truth", () => {
-    expect(stateSource).toContain("this.operationalTwinOutcome.observeTruth(this.localAircraft, now)");
+  it("does not run retired outcome validation in the receiver hot path", () => {
+    expect(stateSource).not.toContain("this.operationalTwinOutcome.observeTruth(this.localAircraft, now)");
     expect(outcomeSource).toContain('truthSource: "LOCAL_RECEIVER"');
     expect(outcomeSource).not.toContain("network");
     expect(outcomeSource).not.toContain("mergeAircraft");

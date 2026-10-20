@@ -33,8 +33,8 @@ describe("Regional Attention Outcome Validation V1 boundary", () => {
     expect(existsSync(new URL("../app/api/operations/situation/route.ts", import.meta.url))).toBe(false);
   });
 
-  it("resolves truth only from canonical LOCAL aircraft state", () => {
-    expect(stateSource).toContain("this.regionalAttentionOutcome.observeTruth(this.localAircraft, now)");
+  it("retires regional attention truth validation from the LOCAL snapshot loop", () => {
+    expect(stateSource).not.toContain("this.regionalAttentionOutcome.observeTruth(this.localAircraft, now)");
     expect(outcomeSource).toContain('truthSource: "LOCAL_RECEIVER_PAIR_STATE"');
     expect(outcomeSource).not.toContain("networkAircraft");
     expect(outcomeSource).not.toContain("mergeAircraft");

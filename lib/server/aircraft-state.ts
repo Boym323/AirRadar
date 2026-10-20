@@ -963,20 +963,6 @@ export class AircraftStateService {
     // pruneMissingAircraft performs the only post-prune affinity cleanup
     // needed for identities removed from the last retained source.
     if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, localStaleAfterMs, now);
-    measureRuntime("snapshot.operationalTwin", this.localAircraft.size, () => {
-      // Preserve the evaluation order and evidence outputs. Parent and
-      // nested measurements overlap and must never be summed.
-      measureRuntime("twin.outcome.truth", this.localAircraft.size,
-        () => this.operationalTwinOutcome.observeTruth(this.localAircraft, now));
-      measureRuntime("twin.trajectoryQuality.truth", this.localAircraft.size,
-        () => this.operationalTwinTrajectoryQualityOutcome.observeTruth(this.localAircraft, now));
-      measureRuntime("twin.trajectoryQualityV2.truth", this.localAircraft.size,
-        () => this.operationalTwinTrajectoryQualityOutcomeV2.observeTruth(this.localAircraft, now));
-      measureRuntime("twin.eventOutcome.local", this.localAircraft.size,
-        () => this.operationalTwinEventOutcome.observeLocal(this.localAircraft, now));
-      measureRuntime("twin.regionalAttention.truth", this.localAircraft.size,
-        () => this.regionalAttentionOutcome.observeTruth(this.localAircraft, now));
-    });
     const activeAircraft = [...this.localAircraft.values()];
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) measureRuntime("snapshot.statistics", activeAircraft.length, () => this.statistics.observe(activeAircraft, this.currentReceiver, new Date()));
@@ -984,9 +970,7 @@ export class AircraftStateService {
     measureRuntime("snapshot.alerts", activeAircraft.length, () => this.alerts.observe(previousAircraft, this.localAircraft));
     // Rejected Flight Intelligence and predictive watchlist analytics never run
     // inside the live ADS-B snapshot loop. Alert delivery remains independent.
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
     measureRuntime("snapshot.navigationIntegrity", activeAircraft.length, () => this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt), "local"));
-    this.operationalFocusOutcome.observe(this.localAircraft, new Date(snapshot.fetchedAt));
     this.invalidateSnapshotCache();
   }
 

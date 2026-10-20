@@ -321,3 +321,19 @@ Restrict the authoritative live map data-layer verification to retained
 airport locations, ATC sector map context, ATS routes and SIGMET. Preserve
 fixture-backed feature-content/cross-country checks; do not bring back Twin
 map sources just to satisfy an obsolete browser assertion.
+
+## Phase 36 (staged): remove Digital Twin validation from live ADS-B snapshots
+
+Remove five Digital Twin outcome/trajectory/event/regional validators and the
+Aircraft Operational Focus observation from the LOCAL receiver snapshot path.
+Eliminate the per-snapshot calibration flush scheduling. Keep the ordinary local
+ingest, statistics, alert delivery, navigation integrity, trails, history and
+source-affinity processing intact. Regression tests now assert that rejected
+`snapshot.operationalTwin` and nested `twin.*` timings are absent while
+retained statistics/Navigation Integrity still run.
+
+This is **hot-path isolation only**: the legacy Digital Twin request APIs,
+on-demand capture methods, startup calibration hydration/persistence and their
+modules are intentionally still present. Removing them, along with the old
+AlertEngine and its rules, requires a separate dependency-checked patch. No
+database migration or historical data deletion is part of this change.
