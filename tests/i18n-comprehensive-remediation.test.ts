@@ -72,28 +72,16 @@ describe("Czech/English full-site localization remediation", () => {
     expect(getTranslations("cs").system.pageTitle).toBe("Stav systému");
   });
 
-  it("reuses a real system snapshot for desktop and mobile predictive visual fixtures", () => {
+  it("reuses public System status without retired predictive fixture overrides", () => {
     const gates = source("scripts/production-gates.mjs");
     expect(gates).toContain("let systemStatusSnapshot = null;");
     expect(gates).toContain('target.name === "system-desktop"');
     expect(gates).toContain('const upstream = await get("/api/system/status")');
-    expect(gates).toContain('if (!upstream.ok) throw new Error(');
     expect(gates).toContain("systemStatusSnapshot = await upstream.json()");
-    const systemDesktop = gates.slice(
-      gates.indexOf('if (target.name === "system-desktop") {'),
-      gates.indexOf("if (target.mockPredictiveReadiness)"),
-    );
-    expect(systemDesktop).not.toContain('visualPage.route("**/api/system/status"');
     expect(gates).toContain('visualPage.locator(".system-grid").waitFor');
-    expect(gates).toContain("readIsolatedGateAdminStatus");
-    expect(gates).toContain("systemAdminStatusSnapshot = await readIsolatedGateAdminStatus()");
-    expect(gates).toContain("Predictive visual smoke requires an authenticated admin snapshot");
-    expect(gates).toContain('body: JSON.stringify(systemAdminStatusSnapshot)');
-    expect(gates).toContain('const session = await request(base + "/api/watchlist/session"');
-    expect(gates).toContain('if (snapshot?.detailLevel !== "admin")');
-    expect(gates).toContain('const upstream = await get("/api/system/status")');
-    expect(gates).toContain("systemStatusSnapshot = await upstream.json()");
-    expect(gates).not.toContain('JSON.stringify({ ...systemStatusSnapshot, detailLevel: "admin" })');
+    expect(gates).not.toContain('visualPage.route("**/api/system/status"');
+    expect(gates).not.toContain("systemAdminStatusSnapshot = await readIsolatedGateAdminStatus()");
+    expect(gates).not.toContain("mockPredictiveReadiness");
   });
 
 

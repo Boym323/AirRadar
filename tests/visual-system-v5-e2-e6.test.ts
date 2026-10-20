@@ -49,7 +49,8 @@ describe("Visual System V5-E2–E6", () => {
     expect(radar).toContain('searchParams.get("aircraft")');
     expect(nearby).not.toContain("new EventSource(");
     expect(gate).toContain("airport-v5-map-mobile");
-    expect(gate).toContain("verifyAirportMapShortcut");
+    expect(gate).toContain("airport-v5-map-desktop");
+    expect(gate).not.toContain("verifyAirportMapShortcut");
   });
 
   it("keeps full bilingual labels and accessible, token-based controls", () => {

@@ -10,10 +10,11 @@ describe("Stage E browser payload compatibility", () => {
     expect(component).not.toContain('data-testid="predictive-readiness"');
     expect(component).toContain('fetch("/api/system/status"');
   });
-  it("exercises actual E metrics in the canonical production browser fixture", () => {
-    expect(gates).toContain('truthAccuracy: {');
-    expect(gates).toContain('version: "truth-accuracy-v1"');
-    expect(gates).toContain('decision: "REVIEW_QUALITY"');
-    expect(gates).toContain('airport: "LKPR"');
+  it("does not synthesize retired Truth Accuracy in the browser fixture", () => {
+    expect(gates).toContain("startIsolatedReadsbFixture");
+    expect(gates).toContain('name: "system-desktop"');
+    expect(gates).not.toContain("truthAccuracy: {");
+    expect(gates).not.toContain('version: "truth-accuracy-v1"');
+    expect(gates).not.toContain('decision: "REVIEW_QUALITY"');
   });
 });

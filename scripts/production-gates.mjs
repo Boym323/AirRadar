@@ -543,17 +543,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.locator(".system-grid").waitFor({ state: "visible", timeout: 15_000 });
             if (!systemStatusSnapshot) throw new Error("System visual smoke did not receive the expected status response");
           }
-          if (target.openOperationsCenter) {
-            const operationsTrigger = visualPage.locator('[data-testid="operations-center-trigger"]');
-            const operationsPanel = visualPage.locator('[data-testid="operations-center-panel"]');
-            await operationsTrigger.waitFor({ state: "visible", timeout: 15_000 });
-            await operationsTrigger.click();
-            if (!await operationsPanel.isVisible()) {
-              await visualPage.waitForTimeout(500);
-              if (!await operationsPanel.isVisible()) await operationsTrigger.click();
-            }
-            await operationsPanel.waitFor({ state: "visible", timeout: 15_000 });
-          }
+
 
 
 

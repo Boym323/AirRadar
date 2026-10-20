@@ -606,3 +606,12 @@ Testy živého radaru, ATC/ATS, letišť, počasí, detailů letadel, přijíma�
 a systémové stránky zůstávají. Izolovaný readsb test nově předává NIC/NACp/SIL,
 aby se skutečně zobrazilo a otestovalo zachované rozbalení ADS-B telemetrie.
 Produkční příjem ani chování při výpadku se nemění.
+
+## Fáze 57b: sladění testů s ponechanými funkcemi
+
+Opraveno pět testovacích souborů stále kontrolujících odstraněné fixture pro
+predikce, rekapitulace, letištní operace a Truth Accuracy. Nové regresní
+kontroly hlídají, že se vyřazené funkce nevrátí, a zároveň zachovávají
+kontrolu systému, telemetrie NIC/NACp/SIL z readsb, mapy letišť, radaru,
+počasí a přijímače. Nepoužívaný otvírač Operations Center byl odstraněn.
+Produkční aplikace a databáze se nemění.

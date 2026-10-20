@@ -684,3 +684,12 @@ aircraft details, receiver, System and local ADS-B normalization. The isolated
 readsb wire fixture now supplies NIC/NACp/SIL integrity fields so the retained
 advanced ADS-B telemetry disclosure is actually mounted and tested. No
 production receiver fallback or transport logic is altered.
+
+## Phase 57b: align visual regression tests with retained features
+
+Update five stale suites that still required eliminated prediction, recap,
+airport operations and Truth Accuracy visual fixture data. Replace their old
+expectations with regression guards against reintroduced APIs and positive
+checks for the retained System status, readsb NIC/NACp/SIL telemetry, airport
+map, radar, weather and receiver smoke. Remove the unmounted Operations Center
+opener from the release smoke worker. The application and database are unchanged.

@@ -63,21 +63,13 @@ describe("Czech UI localization coverage", () => {
     expect(cs.aircraft.predictiveAdminPreview).toBe("SPRÁVA · EXPERIMENTÁLNÍ NÁHLED");
   });
 
-  it("keeps production smoke expectations synchronized with Czech user-facing labels", () => {
+  it("keeps Czech weather smoke without retired prediction copy", () => {
     const gates = source("scripts/production-gates.mjs");
-    const cs = getTranslations();
-    for (const copy of [
-      cs.system.predictiveRolloutStateLabels.SHADOW_COLLECTING,
-      cs.system.predictiveRolloutStateLabels.READY_FOR_PUBLIC_CONFIG,
-      cs.system.predictiveCalibrationPhaseLabels.READY,
-      cs.system.predictiveCalibrationPhaseLabels.COLLECTING,
-      cs.system.predictiveCalibrationPhaseLabels.TRUTH_BLOCKED,
-      cs.aircraft.predictiveAdminPreview,
-    ]) {
-      expect(gates, copy).toContain(JSON.stringify(copy));
-    }
-    expect(gates).not.toContain("SHADOW · sbírání evidence");
-    expect(gates).not.toContain("ADMIN · SHADOW PREVIEW");
+    expect(gates).toContain("Data nejsou aktuálně dostupná.");
+    expect(gates).toContain("weather-data-desktop");
+    expect(gates).toContain("weather-empty-mobile");
+    expect(gates).not.toContain("predictiveReadinessFixture");
+    expect(gates).not.toContain("SPRÁVA · EXPERIMENTÁLNÍ NÁHLED");
   });
 
   it("keeps localized delivery-health diagnostics but excludes retired alert administration", () => {
