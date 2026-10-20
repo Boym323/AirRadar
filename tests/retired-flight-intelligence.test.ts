@@ -16,5 +16,8 @@ describe("Retired Flight Intelligence backend boundary", () => {
     }
     expect(existsSync(new URL("../lib/server/history.ts", import.meta.url))).toBe(true);
     expect(existsSync(new URL("../lib/intelligence/destination-provenance.ts", import.meta.url))).toBe(true);
+    const benchmark = readFileSync(new URL("../scripts/benchmark-live-performance.ts", import.meta.url), "utf8");
+    expect(benchmark).not.toContain("FlightIntelligenceDetector");
+    expect(benchmark).not.toContain("snapshotApplyComparisonBenchmark");
   });
 });

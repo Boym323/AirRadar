@@ -452,3 +452,11 @@ Sdílené typy událostí Flight Intelligence prozatím zůstávají kvůli
 historickým modelům; zachována destination provenance, databázové záznamy
 Flight/FlightPosition/FlightEvent, Navigation Integrity, historie letadel,
 příjem ADS-B a transporty Web Push/Pushover. Žádné migrace ani produkce.
+
+## Fáze 49a (postupně): odpojení benchmarků od odstraněného detektoru
+
+Starý benchmark dosud vytvářel FlightIntelligenceDetector a zasahoval
+do jeho interního vyhledávání letišť. Nepotřebné scénáře a zavádějící
+před/po porovnání odstraněny. Zachována měření aplikace snapshotů,
+SSE, source merge, cache a geometrie ATC. Výsledný load-scaling report
+používá schéma 3 a `snapshotApplication.full`, bez starých experimentů.

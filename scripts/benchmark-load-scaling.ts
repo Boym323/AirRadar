@@ -2,7 +2,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { runT56dSseScenario } from "./t56d-sse-fanout-benchmark";
-import { snapshotApplyBenchmark, snapshotApplyComparisonBenchmark } from "./benchmark-live-performance";
+import { snapshotApplyBenchmark } from "./benchmark-live-performance";
 import { runAtcRingScenario } from "./benchmark-atc-ring-stalls";
 
 const multiplier = Number(process.env.AIRRADAR_LOAD_MULTIPLIER ?? "1");
@@ -10,22 +10,21 @@ if (![1, 2, 4].includes(multiplier)) throw new Error("invalid_load_multiplier");
 const aircraft = 100 * multiplier;
 const clients = 5 * multiplier;
 
-const comparison = await snapshotApplyComparisonBenchmark(aircraft);
 const snapshotApply = snapshotApplyBenchmark(aircraft);
 const sse = runT56dSseScenario(aircraft, clients, 0.02, 5, 10);
 const atcGeometry = await runAtcRingScenario(multiplier);
 const report = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   workload: { multiplier, aircraft, simultaneousSseClients: clients },
   environment: { commit: process.env.GITHUB_SHA ?? "local", node: process.version,
     platform: process.platform, arch: process.arch },
-  snapshotApplication: { comparison, full: snapshotApply },
+  snapshotApplication: { full: snapshotApply },
   sseFanout: sse,
   atcGeometry,
   limitations: [
     "Synthetic deterministic data only; no receiver, network, PostgreSQL, TLS, proxy, or stream backpressure.",
     "SSE clients represent concurrent subscribers sharing one Node event loop; work is synchronous fanout.",
-    "No synthetic Digital Twin validator timings: these algorithms are retired from the live radar path.",
+    "No synthetic Digital Twin or Flight Intelligence detector timings: those algorithms are retired.",
     "Runner timings are comparative evidence for this run, not a production performance guarantee.",
   ],
 };

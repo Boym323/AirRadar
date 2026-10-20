@@ -1,8 +1,5 @@
 import { performance } from "node:perf_hooks";
-import { setImmediate as yieldImmediate } from "node:timers/promises";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
-import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
-import { haversineDistanceKm } from "@/lib/geo";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { toPublicLiveStateSnapshot, getPublicAircraftChangeSet } from "@/lib/server/public-serialization";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
@@ -36,49 +33,7 @@ function provider(snapshot: ProviderSnapshot): AircraftProvider {
   return { name: "benchmark", getSnapshot: async () => snapshot };
 }
 
-type IntelligenceInternals = { intelligence: { detector: FlightIntelligenceDetector } };
-type LookupMode = "indexed" | "linear";
-
-function benchmarkAirports() {
-  return Array.from({ length: 5_886 }, (_, index) => ({
-    icaoCode: `X${String(index).padStart(3, "0")}`,
-    iataCode: null,
-    name: `Benchmark airport ${index}`,
-    city: null,
-    country: null,
-    latitude: -55 + (index % 220) * 0.5,
-    longitude: -175 + Math.floor(index / 220) * 13.5,
-  }));
-}
-
-function configureIntelligenceCatalog(service: AircraftStateService, airports: ReturnType<typeof benchmarkAirports>, mode: LookupMode, onLookup?: () => void): () => void {
-  const detector = (service as unknown as IntelligenceInternals).intelligence.detector;
-  // This is synchronous and happens before the first applySnapshot call. It
-  // models the completed production airport-index load without relying on a
-  // background promise or timer having settled.
-  detector.cleanup(new Set());
-  detector.setAirports(airports);
-  const original = detector.nearestAirport;
-  const linear = (item: Aircraft) => {
-    if (item.lat === null || item.lon === null) return null;
-    let best: { airport: (typeof airports)[number]; distanceKm: number } | null = null;
-    for (const airport of airports) {
-      const distanceKm = haversineDistanceKm(item.lat, item.lon, airport.latitude, airport.longitude);
-      if (!best || distanceKm < best.distanceKm) best = { airport, distanceKm };
-    }
-    return best;
-  };
-  detector.nearestAirport = (mode === "linear" ? function linearLookup(item: Aircraft) {
-    onLookup?.();
-    return linear(item);
-  } : function indexed(item: Aircraft) {
-    onLookup?.();
-    return original.call(detector, item);
-  }) as typeof detector.nearestAirport;
-  return () => { detector.nearestAirport = original; };
-}
-
-function buildService(aircraft: Aircraft[], airports?: ReturnType<typeof benchmarkAirports>, mode: LookupMode = "indexed", onLookup?: () => void): AircraftStateService {
+function buildService(aircraft: Aircraft[]): AircraftStateService {
   const snapshot: ProviderSnapshot = {
     aircraft,
     receiver,
@@ -87,9 +42,7 @@ function buildService(aircraft: Aircraft[], airports?: ReturnType<typeof benchma
     messagesPerSecond: 1_000,
   };
   const service = new AircraftStateService(provider(snapshot));
-  const restoreLookup = airports ? configureIntelligenceCatalog(service, airports, mode, onLookup) : null;
   (service as unknown as { applySnapshot: (value: ProviderSnapshot) => void }).applySnapshot(snapshot);
-  restoreLookup?.();
   return service;
 }
 
@@ -124,104 +77,9 @@ export function snapshotApplyBenchmark(count: number) {
     p95Ms: Number(sorted[Math.floor(sorted.length * 0.95)]!.toFixed(3)),
     maxMs: Number(sorted.at(-1)!.toFixed(3)),
     paths: Object.fromEntries(Object.entries(diagnostics)
-      .filter(([name]) => name.startsWith("snapshot.") || name.startsWith("twin."))
+      .filter(([name]) => name.startsWith("snapshot."))
       .map(([name, value]) => [name, { p50Ms: value.p50Ms, p95Ms: value.p95Ms, maxMs: value.maxMs, calls: value.calls }])),
   };
-}
-
-export async function snapshotApplyComparisonBenchmark(count = 1_000) {
-  const airports = benchmarkAirports();
-  const run = async (mode: LookupMode) => {
-    resetRuntimePerformanceDiagnosticsForTests();
-    let lookupCalls = 0;
-    const cpuStarted = process.cpuUsage();
-    const aircraft = fixtureAircraft(count);
-    const service = buildService(aircraft, airports, mode, () => { lookupCalls += 1; });
-    const detector = (service as unknown as IntelligenceInternals).intelligence.detector;
-    const original = detector.nearestAirport;
-    const linear = (item: Aircraft) => {
-      if (item.lat === null || item.lon === null) return null;
-      let best: { airport: (typeof airports)[number]; distanceKm: number } | null = null;
-      for (const airport of airports) {
-        const distanceKm = haversineDistanceKm(item.lat, item.lon, airport.latitude, airport.longitude);
-        if (!best || distanceKm < best.distanceKm) best = { airport, distanceKm };
-      }
-      return best;
-    };
-    const indexed = (item: Aircraft) => {
-      lookupCalls += 1;
-      return original.call(detector, item);
-    };
-    detector.nearestAirport = (mode === "linear" ? function linearLookup(item: Aircraft) {
-      lookupCalls += 1;
-      return linear(item);
-    } : indexed) as typeof detector.nearestAirport;
-    const samples: number[] = [];
-    const eventLoopDelays: number[] = [];
-    for (let index = 0; index < 6; index += 1) {
-      const snapshot: ProviderSnapshot = {
-        aircraft: aircraft.map((item) => ({ ...item, lon: (item.lon ?? 0) + (index % 2 === 0 ? 0.0001 : 0), lastSeen: new Date(Date.parse(item.lastSeen) + index * 1_000).toISOString() })),
-        receiver, fetchedAt: new Date(Date.now() + index * 1_000).toISOString(), provider: "benchmark", messagesPerSecond: 1_000,
-      };
-      let timerFiredAt: number | null = null;
-      const timerStartedAt = performance.now();
-      const timer = setTimeout(() => { timerFiredAt = performance.now(); }, 0);
-      const startedAt = performance.now();
-      (service as unknown as { applySnapshot: (value: ProviderSnapshot) => void }).applySnapshot(snapshot);
-      samples.push(performance.now() - startedAt);
-      await yieldImmediate();
-      clearTimeout(timer);
-      eventLoopDelays.push((timerFiredAt ?? performance.now()) - timerStartedAt);
-    }
-    detector.nearestAirport = original;
-    const sorted = samples.slice().sort((left, right) => left - right);
-    const sortedEventLoopDelays = eventLoopDelays.slice().sort((left, right) => left - right);
-    const diagnostics = getRuntimePerformanceDiagnostics();
-    const cpu = process.cpuUsage(cpuStarted);
-    return {
-      mode, lookupAlgorithm: mode === "indexed" ? "FlightIntelligenceDetector.kdTree" : "linear-reference", catalogAirports: airports.length, catalogConfiguredBeforeFirstApply: true, aircraft: count, lookupCalls,
-      p50Ms: Number(sorted[Math.floor(sorted.length * 0.5)]!.toFixed(3)),
-      p95Ms: Number(sorted[Math.floor(sorted.length * 0.95)]!.toFixed(3)),
-      maxMs: Number(sorted.at(-1)!.toFixed(3)),
-      cpuMs: Number(((cpu.user + cpu.system) / 1000).toFixed(3)),
-      eventLoop: {
-        timerDelayP50Ms: Number(sortedEventLoopDelays[Math.floor(sortedEventLoopDelays.length * 0.5)]!.toFixed(3)),
-        timerDelayP95Ms: Number(sortedEventLoopDelays[Math.floor(sortedEventLoopDelays.length * 0.95)]!.toFixed(3)),
-        timerDelayMaxMs: Number(sortedEventLoopDelays.at(-1)!.toFixed(3)),
-      },
-      paths: Object.fromEntries(["snapshot.apply.total", "snapshot.statistics", "snapshot.navigationIntegrity", "snapshot.alerts"].map((name) => {
-        const value = diagnostics[name];
-        return [name, value ? { p50Ms: value.p50Ms, p95Ms: value.p95Ms, maxMs: value.maxMs, cpuMs: value.cpuMs } : null];
-      })),
-    };
-  };
-  return { scenario: "aircraft-state-e2e-airport-catalog", node: process.version, atc: { resolution: false, shadowPrediction: false }, before: await run("linear"), after: await run("indexed") };
-}
-
-function intelligenceAirportLookupBenchmark() {
-  const airports = benchmarkAirports();
-  const aircraft = fixtureAircraft(5_000).map((item) => ({ ...item, lat: 49.5 + (Number.parseInt(item.icaoHex, 16) % 40) * 0.03, lon: 13.5 + (Number.parseInt(item.icaoHex, 16) % 30) * 0.04 }));
-  const detector = new FlightIntelligenceDetector(airports);
-  const lookup = (detector as unknown as { nearestAirport: (item: Aircraft) => { airport: { icaoCode: string }; distanceKm: number } | null }).nearestAirport.bind(detector);
-  const linear = (item: Aircraft) => airports.reduce<{ airport: typeof airports[number]; distanceKm: number } | null>((best, airport) => {
-    const distanceKm = haversineDistanceKm(item.lat!, item.lon!, airport.latitude, airport.longitude);
-    return !best || distanceKm < best.distanceKm ? { airport, distanceKm } : best;
-  }, null);
-  const run = (fn: (item: Aircraft) => unknown) => {
-    const startedAt = performance.now();
-    let checksum = "";
-    for (const item of aircraft) checksum = String((fn(item) as { airport?: { icaoCode: string } } | null)?.airport?.icaoCode ?? checksum);
-    return { elapsedMs: Number((performance.now() - startedAt).toFixed(3)), checksum };
-  };
-  const linearResult = run(linear);
-  const indexedResult = run(lookup);
-  let mismatches = 0;
-  for (const item of aircraft) {
-    const expected = linear(item);
-    const actual = lookup(item);
-    if (expected?.airport.icaoCode !== actual?.airport.icaoCode || Math.abs((expected?.distanceKm ?? 0) - (actual?.distanceKm ?? 0)) > 1e-9) mismatches += 1;
-  }
-  return { scenario: "intelligence-nearest-airport", airports: airports.length, aircraft: aircraft.length, linear: linearResult, indexed: indexedResult, mismatches, speedup: Number((linearResult.elapsedMs / Math.max(indexedResult.elapsedMs, 0.001)).toFixed(2)) };
 }
 
 export function fanoutBenchmark(count: number, clients: number, coverage: "local" | "extended") {
@@ -331,10 +189,7 @@ function sourceMergeBenchmark(count: number) {
 // intentionally report-only; hosted runner wall-clock values are informative.
 async function main() {
   const counts = [100, 1_000, 5_000];
-  const comparison = await snapshotApplyComparisonBenchmark();
   const results = [
-    comparison,
-    intelligenceAirportLookupBenchmark(),
     ...counts.map(snapshotApplyBenchmark),
     ...counts.map(detailLookupBenchmark),
     ...counts.map(sourceMergeBenchmark),

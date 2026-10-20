@@ -515,3 +515,14 @@ Navigation Integrity, retained aircraft history endpoints, ADS-B ingestion and
 Web Push/Pushover transports. No tables, migrations or production config are
 changed. Add a negative source-level guard against re-instantiating the old
 producer from live state.
+
+## Phase 49a (staged): decouple retained load benchmarks from deleted detector
+
+The old live-performance benchmark still instantiated FlightIntelligenceDetector
+and mutated its private nearest-airport lookup; this no longer exists. Remove
+these dead scenarios and the misleading before/after comparison. Keep the
+actual retained snapshot-apply, SSE fanout, source merge, cache and ATC
+geometry benchmarks. Version the isolated load-scaling report to schema 3
+with `snapshotApplication.full` only; the old airport-catalog comparison and
+synthetic Flight Intelligence nearest-airport experiment are retired. Update
+regression tests and avoid attributing invented CPU savings to this cleanup.
