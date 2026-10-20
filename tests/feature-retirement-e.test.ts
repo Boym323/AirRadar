@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const state = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
-const twin = readFileSync(new URL("../lib/server/operational-twin.ts", import.meta.url), "utf8");
 const config = readFileSync(new URL("../lib/server/config.ts", import.meta.url), "utf8");
 const system = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
 
@@ -18,12 +17,9 @@ describe("Track Fusion Shadow retirement", () => {
     expect(system).not.toContain("trackFusionOutcome");
   });
 
-  it("uses canonical LOCAL aircraft for Digital Twin regardless of legacy feature flags", () => {
-    expect(twin).toContain('service.getAircraft(icaoHex, "local")');
-    expect(twin).toContain('stateSource: "CANONICAL"');
-    expect(twin).not.toContain("fusionEligible");
-    expect(twin).not.toContain("getTrackFusionShadowTrack");
-    expect(twin).toContain("getOperationalTwinForAircraft");
+  it("keeps canonical LOCAL observations while the retired Digital Twin API stays removed", () => {
+    expect(existsSync(new URL("../lib/server/operational-twin.ts", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../app/api/aircraft/[hex]/situation/route.ts", import.meta.url))).toBe(false);
     expect(state).toContain("mergeAircraftMaps(this.localAircraft, this.networkAircraft");
     expect(state).toContain("this.continuity.observeMembership");
   });

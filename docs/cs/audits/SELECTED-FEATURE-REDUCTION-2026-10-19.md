@@ -307,3 +307,13 @@ a geometrii ATC; výstup má schéma verze 2. Neaktivní měření Digital Twin
 a zastaralý příkaz CLI již nejsou součástí testu. Diagnostika
 zpracování snímku používá zachované provozní části. Žádná číselná
 úspora CPU se bez srovnatelného měření před/po netvrdí.
+
+## Fáze 38 (postupně): odstranění API a sestavování Digital Twin na vyžádání
+
+Odstraněno veřejné API pro situaci letadla, všech pět administračních API pro
+kalibraci a vyhodnocení Digital Twin a již nepoužívaný serverový sestavovač.
+Zrušeny zastaralé hraniční testy, které tyto odmítnuté endpointy vyžadovaly;
+nová regresní kontrola naopak ověřuje jejich nepřítomnost. Samostatná
+Navigation Integrity, historická data a geometrie ATC mapy zůstávají.
+Databázová schémata ani uložené tabulky kalibrace se nemažou.
+Validátory kalibrace a jejich diagnostiky v procesu vyžadují další fázi.

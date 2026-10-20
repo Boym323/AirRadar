@@ -347,3 +347,14 @@ disconnected Twin validator timing report and obsolete CLI entrypoint. The
 snapshot comparison diagnostic list now names retained snapshot paths instead
 of retired Twin and Flight Intelligence timings. No claims of measured CPU
 savings are made until a matched before/after live-snapshot benchmark is run.
+
+## Phase 38 (staged): retire Digital Twin request endpoints and server assembly
+
+Delete the retired public aircraft situation endpoint, all five Digital Twin
+admin calibration/graduation routes and the now-unreachable server situation
+assembler. Remove obsolete boundary tests that intentionally demanded these
+rejected APIs; replace them with a negative route regression. Preserve the
+independent Navigation Integrity feature, recorded aircraft history, and ATC
+map geometry. This does **not** delete existing PostgreSQL calibration tables
+or change schema. The in-process calibration validators and their diagnostics
+still need a dedicated removal phase before merge.
