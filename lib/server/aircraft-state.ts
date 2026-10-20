@@ -23,9 +23,7 @@ import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
-import { AlertEngine } from "@/lib/server/alert-engine";
-import type { AlertStatus } from "@/lib/server/alert-engine";
-import { loadAlertConfig } from "@/lib/server/alert-config";
+import type { AlertEngine, AlertStatus } from "@/lib/server/alert-engine";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { coverageStats, mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
@@ -159,7 +157,6 @@ export class AircraftStateService {
   private shuttingDown = false;
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
-  private readonly alerts: AlertEngine;
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
@@ -180,14 +177,13 @@ export class AircraftStateService {
     provider: AircraftProvider = createAircraftProvider(),
     enrichment: EnrichmentService = createEnrichmentService(),
     atc: AtcSectorService = new AtcSectorService(createAtcSectorProvider()),
-    alerts: AlertEngine = new AlertEngine(),
+    _retiredAlerts: AlertEngine | undefined = undefined,
     statistics: ReceiverStatistics = new ReceiverStatistics(),
     networkProvider: NetworkAircraftProvider = createNetworkAircraftProvider(),
   ) {
     this.provider = provider;
     this.enrichment = enrichment;
     this.atc = atc;
-    this.alerts = alerts;
     this.statistics = statistics;
     this.networkProvider = networkProvider;
   }
@@ -464,12 +460,14 @@ export class AircraftStateService {
     };
   }
 
+  /** Compatibility response until the retired alert administration APIs are removed. */
   getAlertStatus(): AlertStatus {
-    return this.alerts.getStatus();
+    return { status: "disabled", enabled: false, notifier: "retired", ruleCount: 0 };
   }
 
+  /** The legacy rules engine is retired; transports retain their own worker lifecycle. */
   reloadAlertConfig(): void {
-    this.alerts.reload(loadAlertConfig());
+    // Intentionally no-op. Alert rules are no longer evaluated.
   }
 
   getStatistics(): ReceiverStatisticsResponse {
