@@ -47,5 +47,9 @@ describe("retired Alert/Fleet/Watchlist API boundaries", () => {
     expect(state).not.toContain("this.alerts.observe(");
     expect(state).not.toContain("this.alerts.observeNewAircraft(");
     expect(state).not.toContain("snapshot.alerts");
+    const repository = readFileSync(file("lib/server/alerts-fleets-repository.ts"), "utf8");
+    for (const retired of ["saveRule(", "deleteRule(", "saveFleet(", "saveGeofence(", "recordOccurrence(", "loadConfig("]) expect(repository).not.toContain(retired);
+    for (const retained of ["claimDelivery(", "getOccurrenceForDelivery(", "markDeliverySent(", "markDeliveryFailure(", "recoverStaleDeliveries(", "deliveryHealthSnapshot(", "listOccurrenceHistory("]) expect(repository).toContain(retained);
+    expect(existsSync(file("lib/server/alerts-fleets-v1.ts"))).toBe(false);
   });
 });

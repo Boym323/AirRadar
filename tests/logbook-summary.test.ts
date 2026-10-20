@@ -19,14 +19,10 @@ function liveInterestingAircraft(): AircraftView {
 }
 
 describe("dashboard logbook summary", () => {
-  it("counts durable statuses once per aircraft and matches enabled watchlist rules", () => {
+  it("counts durable statuses independently of retired watchlist rules", () => {
     const result = buildLogbookSummary({
       liveAircraft: [liveAircraft("ABC123"), liveAircraft("DEF456")],
       stats: { currentAircraft: 2, uniqueAircraftToday: 4 },
-      rules: [
-        { id: "abc", enabled: true, type: "icaoHex", value: "ABC123" },
-        { id: "disabled", enabled: false, type: "icaoHex", value: "DEF456" },
-      ],
       evidence: [
         { icaoHex: "ABC123", firstObservedAt: "2026-09-08T00:01:00Z", flightCount: 1, returningGapDays: null },
         { icaoHex: "DEF456", firstObservedAt: "2026-09-07T12:00:00Z", flightCount: 3, returningGapDays: 30 },
@@ -37,7 +33,7 @@ describe("dashboard logbook summary", () => {
       now: new Date("2026-09-08T12:00:00Z"),
     });
 
-    expect(result).toMatchObject({ source: "postgres", liveAircraft: 2, uniqueAircraftToday: 4, newAircraftToday: 1, rareAircraftToday: 1, returningAircraftToday: 1, watchlistedLiveAircraft: 1 });
+    expect(result).toMatchObject({ source: "postgres", liveAircraft: 2, uniqueAircraftToday: 4, newAircraftToday: 1, rareAircraftToday: 1, returningAircraftToday: 1, watchlistedLiveAircraft: 0 });
     expect(result.interestingAircraft.map((aircraft) => [aircraft.icaoHex, aircraft.labels])).toEqual([
       ["ABC123", ["new"]],
       ["DEF456", ["rare", "returning"]],
@@ -45,15 +41,14 @@ describe("dashboard logbook summary", () => {
   });
 
   it("keeps a degraded summary safe when durable evidence is unavailable", () => {
-    const result = buildLogbookSummary({ liveAircraft: [], stats: { currentAircraft: 0, uniqueAircraftToday: 2 }, rules: [], evidence: [], reception, source: "unavailable", now: new Date("2026-09-08T12:00:00Z") });
+    const result = buildLogbookSummary({ liveAircraft: [], stats: { currentAircraft: 0, uniqueAircraftToday: 2 }, evidence: [], reception, source: "unavailable", now: new Date("2026-09-08T12:00:00Z") });
     expect(result).toMatchObject({ source: "unavailable", uniqueAircraftToday: 2, newAircraftToday: 0, rareAircraftToday: 0, returningAircraftToday: 0, interestingAircraft: [] });
   });
 
-  it("explains live watchlist, emergency, and record highlights with deterministic reasons", () => {
+  it("explains emergency and record highlights without old watchlist rules", () => {
     const result = buildLogbookSummary({
       liveAircraft: [liveInterestingAircraft()],
       stats: { currentAircraft: 1, uniqueAircraftToday: 1 },
-      rules: [{ id: "abc", enabled: true, type: "icaoHex", value: "ABC123" }],
       evidence: [],
       reception: {
         ...reception,
@@ -62,6 +57,6 @@ describe("dashboard logbook summary", () => {
       source: "memory",
       now: new Date("2026-09-08T12:00:00Z"),
     });
-    expect(result.interestingAircraft[0]).toMatchObject({ icaoHex: "ABC123", isLive: true, reasons: ["watchlisted", "emergency", "record"] });
+    expect(result.interestingAircraft[0]).toMatchObject({ icaoHex: "ABC123", isLive: true, reasons: ["emergency", "record"] });
   });
 });

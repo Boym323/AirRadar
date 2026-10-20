@@ -7,12 +7,10 @@ import type {
   RadarStats,
   ReceiverReceptionRecordsResponse,
 } from "@/lib/aircraft/types";
-import { matchesAircraftRule } from "@/lib/aircraft/watchlist";
 import { getAppTimezone } from "@/lib/server/config";
 import { historyRangeBounds } from "@/lib/server/history";
 import { getPrisma } from "@/lib/server/db";
 import { classifyAircraftLogbook } from "@/lib/server/logbook";
-import type { AlertRule } from "@/lib/server/alert-config";
 
 export interface LogbookSummaryAircraftEvidence {
   icaoHex: string;
@@ -40,21 +38,15 @@ function validDate(value: Date): Date | null {
   return Number.isFinite(value.getTime()) ? value : null;
 }
 
-function enabledRules(rules: AlertRule[]): AlertRule[] {
-  return rules.filter((rule) => rule.enabled);
-}
-
 export function buildLogbookSummary(options: {
   liveAircraft: AircraftView[];
   stats: Pick<RadarStats, "currentAircraft" | "uniqueAircraftToday">;
-  rules: AlertRule[];
   evidence: LogbookSummaryAircraftEvidence[];
   reception: ReceiverReceptionRecordsResponse;
   source: LogbookSummaryResponse["source"];
   now?: Date;
 }): LogbookSummaryResponse {
   const now = options.now ?? new Date();
-  const rules = enabledRules(options.rules);
   const statusByHex = new Map<string, LogbookInterestingAircraft>();
   for (const item of options.evidence) {
     const status = classifyAircraftLogbook(item, now, getAppTimezone());
@@ -75,7 +67,6 @@ export function buildLogbookSummary(options: {
   for (const aircraft of options.liveAircraft) {
     const existing = statusByHex.get(aircraft.icaoHex);
     const reasons = new Set<LogbookInterestingReason>(existing?.reasons ?? []);
-    if (rules.some((rule) => matchesAircraftRule(aircraft, rule))) reasons.add("watchlisted");
     if (aircraft.emergency) reasons.add("emergency");
     const record = options.reception.today;
     if (record && aircraft.distanceKm !== null && aircraft.distanceKm >= record.distanceKm * 0.9) reasons.add("record");
@@ -106,7 +97,7 @@ export function buildLogbookSummary(options: {
     }
   }
   const isInteresting = (item: LogbookInterestingAircraft): boolean => item.reasons.length > 0;
-  const score = (item: LogbookInterestingAircraft): number => item.reasons.reduce((total, reason) => total + (reason === "new" ? 10 : reason === "emergency" ? 9 : reason === "watchlisted" ? 6 : reason === "record" ? 5 : reason === "returning" ? 2 : 1), 0);
+  const score = (item: LogbookInterestingAircraft): number => item.reasons.reduce((total, reason) => total + (reason === "new" ? 10 : reason === "emergency" ? 9 : reason === "record" ? 5 : reason === "returning" ? 2 : 1), 0);
   const interestingAircraft = statuses
     .filter(isInteresting)
     .sort((a, b) => score(b) - score(a) || Number(b.isLive) - Number(a.isLive) || b.flightCount - a.flightCount || a.icaoHex.localeCompare(b.icaoHex))
@@ -120,7 +111,8 @@ export function buildLogbookSummary(options: {
     newAircraftToday: statuses.filter((item) => item.labels.includes("new")).length,
     rareAircraftToday: statuses.filter((item) => item.labels.includes("rare")).length,
     returningAircraftToday: statuses.filter((item) => item.labels.includes("returning")).length,
-    watchlistedLiveAircraft: options.liveAircraft.filter((aircraft) => rules.some((rule) => matchesAircraftRule(aircraft, rule))).length,
+    // Deprecated wire field: retained to avoid breaking older consumers.
+    watchlistedLiveAircraft: 0,
     interestingAircraft,
     todayReceptionRecord: options.reception.today,
     lifetimeReceptionRecord: options.reception.lifetime,
@@ -135,7 +127,6 @@ export function buildLogbookSummary(options: {
 export async function getLogbookSummary(
   liveAircraft: AircraftView[],
   stats: Pick<RadarStats, "currentAircraft" | "uniqueAircraftToday">,
-  rules: AlertRule[],
   reception: ReceiverReceptionRecordsResponse,
   now = new Date(),
 ): Promise<LogbookSummaryResponse> {
@@ -143,7 +134,7 @@ export async function getLogbookSummary(
   const memorySource: LogbookSummaryResponse["source"] = database
     ? reception.source === "unavailable" ? "unavailable" : "postgres"
     : "memory";
-  if (!database) return buildLogbookSummary({ liveAircraft, stats, rules, evidence: [], reception, source: memorySource, now });
+  if (!database) return buildLogbookSummary({ liveAircraft, stats, evidence: [], reception, source: memorySource, now });
 
   try {
     const bounds = historyRangeBounds("today", now);
@@ -155,7 +146,7 @@ export async function getLogbookSummary(
       .select("aircraftId", "startTime", "lastSeenAt")
       .all() as SummaryFlightRow[];
     const aircraftIds = [...new Set(todayFlights.map((flight) => flight.aircraftId))];
-    if (!aircraftIds.length) return buildLogbookSummary({ liveAircraft, stats, rules, evidence: [], reception, source: memorySource, now });
+    if (!aircraftIds.length) return buildLogbookSummary({ liveAircraft, stats, evidence: [], reception, source: memorySource, now });
 
     const historyFlightsQuery = database.orm.public.Flight
         .where((flight) => flight.aircraftId.in(aircraftIds))
@@ -196,9 +187,9 @@ export async function getLogbookSummary(
         returningGapDays: gapMs >= 0 ? Math.floor(gapMs / (24 * 60 * 60 * 1000)) : null,
       });
     }
-    return buildLogbookSummary({ liveAircraft, stats, rules, evidence, reception, source: memorySource, now });
+    return buildLogbookSummary({ liveAircraft, stats, evidence, reception, source: memorySource, now });
   } catch (error) {
     console.error("AirRadar logbook summary load failed", error);
-    return buildLogbookSummary({ liveAircraft, stats, rules, evidence: [], reception, source: "unavailable", now });
+    return buildLogbookSummary({ liveAircraft, stats, evidence: [], reception, source: "unavailable", now });
   }
 }

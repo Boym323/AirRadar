@@ -10,9 +10,9 @@ describe("Batch C feature retirement", () => {
     expect(registry.features.some((feature: { id: string }) => feature.id === "mobile-spotter-mode")).toBe(false);
   });
 
-  it("keeps shared browser security and other alert/geofence services", () => {
+  it("retains browser security while retiring alert/geofence rule evaluation", () => {
     const config = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
     expect(config).toContain("camera=(), geolocation=(self)");
-    expect(existsSync(new URL("../lib/server/alerts-fleets-v1.ts", import.meta.url))).toBe(true);
+    expect(existsSync(new URL("../lib/server/alerts-fleets-v1.ts", import.meta.url))).toBe(false);
   });
 });

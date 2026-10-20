@@ -66,7 +66,6 @@ export function LogbookSummary() {
         <Metric label={t.dashboard.newToday} value={data.newAircraftToday} />
         <Metric label={t.dashboard.rareToday} value={data.rareAircraftToday} />
         <Metric label={t.dashboard.returningToday} value={data.returningAircraftToday} />
-        <Metric label={t.dashboard.watchlistedLive} value={data.watchlistedLiveAircraft} />
       </div>
       <div className="dashboard-logbook-lower">
         <div className="dashboard-logbook-highlights">
