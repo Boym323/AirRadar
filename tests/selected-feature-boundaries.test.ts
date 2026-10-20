@@ -56,6 +56,13 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(existsSync(new URL("app/api/aircraft/[hex]/communications/route.ts", root))).toBe(true);
   });
 
+  it("keeps RXW communication metadata without the rejected H1/FPN detail panel", () => {
+    const panel = readFileSync(new URL("components/aircraft-communications.tsx", root), "utf8");
+    expect(panel).toContain("snapshot.routeHint");
+    expect(panel).toContain("snapshot.messages");
+    expect(panel).not.toContain("snapshot.waypointPlan");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");
