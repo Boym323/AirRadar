@@ -388,3 +388,13 @@ forensics after the validation module had been deleted. Remove this orphan impor
 and the obsolete `validatorPaths` / `operationalTwinForensics` telemetry fields.
 Preserve ingest, CPU, health phases, event-loop, stall evidence and admin/public
 access policies. No historical measurements or live receiver behavior change.
+
+## Phase 41 (staged): remove abandoned Twin overlays, forensics and attention models
+
+Remove nine Twin-only libraries: situation map overlays, Aircraft Operational
+Focus map/navigation/change/focus projections, regional attention and situation
+models, focus queues, historical Twin forensics and retired trajectory-truth
+helpers, along with eight direct unit-test suites. Remove their obsolete barrel
+exports and guard against reintroduction. Retain the weather corridor's shared
+type dependencies and preserve the separately implemented Navigation Integrity,
+ATC map context, receiver history and notification transport stack.

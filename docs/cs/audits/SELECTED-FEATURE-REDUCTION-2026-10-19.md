@@ -345,3 +345,12 @@ Event Outcome kvůli starým forenzním údajům. Import a nepoužívané polož
 `validatorPaths` a `operationalTwinForensics` byly odstraněny.
 Měření příjmu, CPU, systémových fází, event-loop a stall evidence i řízení
 přístupu zůstává. Historické záznamy a příjem letadel beze změny.
+
+## Fáze 41 (postupně): odstranění mapových projekcí a forenziky Digital Twin
+
+Odstraněno devět již nepoužívaných modulů Digital Twin: staré mapové
+vrstvy, kontext a změny Aircraft Operational Focus, model regionální situace,
+pozornost a fronty zaměření, forenzní výpočty a pomocník kontroly trajektorie.
+Odstraněno osm souvisejících jednotkových testů, neplatné exporty a přidána
+negativní regresní kontrola. Zachovány sdílené meteorologické typy,
+Navigation Integrity, ATC mapa, příjem a historie letadel i transporty oznámení.

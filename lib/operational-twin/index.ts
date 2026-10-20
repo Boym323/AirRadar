@@ -65,5 +65,3 @@ export * from "./events";
 export * from "./trajectory-quality-v2";
 export * from "./trajectory-quality-v3";
 export * from "./navigation-integrity-corridor";
-export * from "./aircraft-operational-focus";
-export * from "./aircraft-operational-focus-ui";

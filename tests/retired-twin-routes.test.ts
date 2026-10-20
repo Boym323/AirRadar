@@ -20,6 +20,12 @@ describe("Retired Digital Twin API regression", () => {
     }
   });
 
+  it("keeps retired map, focus, regional analytics and forensics modules absent", () => {
+    for (const path of ["../lib/operational-twin/aircraft-operational-focus-change.ts","../lib/operational-twin/aircraft-operational-focus-ui.ts","../lib/operational-twin/aircraft-operational-focus.ts","../lib/operational-twin/forensics.ts","../lib/operational-twin/map.ts","../lib/operational-twin/operational-attention.ts","../lib/operational-twin/regional-focus-queue.ts","../lib/operational-twin/regional-situation.ts","../lib/operational-twin/trajectory-quality-truth.ts"]) {
+      expect(existsSync(new URL(path, import.meta.url)), path).toBe(false);
+    }
+  });
+
   it("retains canonical navigation integrity and historical recording without Twin calibration", () => {
     const state = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
     expect(state).toContain("this.navigationIntegrity.observe(");
