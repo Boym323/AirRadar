@@ -73,3 +73,7 @@ Remove the rejected synthesized Flight Intelligence situation summary and its UI
 ## Phase 7a (staged): stop Digital Twin polling in selected-aircraft context
 
 Remove the rejected 60-second per-selection Digital Twin HTTP loop, local outcome-diff state and snapshots from the aircraft context hook. Keep an explicitly null typed compatibility field until the separate map/display removal, so no stale forecast is rendered and no remaining UI integration makes HTTP requests. Do not remove the shared history or operational runtime until its server-side consumers are audited.
+
+## Phase 7b (staged): remove orphan Digital Twin and Operational Focus map layers
+
+Following the disabled per-aircraft situation polling, unregister eight Digital Twin forecast layers, the Operational Focus line/target layers, the event popups, focus camera/URL callbacks, map legend and the unreachable quick-detail focus section. Preserve the selected aircraft trails, ATC/ATS maps, SIGMET and Navigation Integrity overlays. Other projection libraries and the temporary typed-null Digital Twin value remain until the broader server and Flight Follow HUD dependency audit. No database migrations or production changes.

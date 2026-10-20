@@ -74,3 +74,7 @@ Z rychlého detailu vybraného letadla byl odstraněn nepožadovaný syntetizova
 ## Fáze 7a (rozpracováno): ukončení dotazů Digital Twin pro vybrané letadlo
 
 Z hooku detailu letadla byla odstraněna nepožadovaná HTTP smyčka Digital Twin po 60 sekundách, stav rozdílů priorit a cache snímků. Do následného odstranění mapových komponent zůstává pouze typově definovaná `null` kompatibilita, takže se nenačítají ani nezobrazují zastaralé predikce. Historická data a serverové zpracování zůstávají do samostatného auditu vazeb.
+
+## Fáze 7b (rozpracováno): odstranění mapových vrstev Digital Twin a Operational Focus
+
+Po vypnutí dotazování vybraného letadla byly vyřazeny predikční vrstvy Digital Twin, čáry a body Operational Focus, mapové události, automatické přiblížení, URL akce, legenda a již nepoužívaná sekce v detailu letadla. Výběr letadla, jeho stopa, ATC/ATS, SIGMET a Navigation Integrity zůstávají zachovány. Zbylé serverové knihovny a dočasný typový null výstup Digital Twin čekají na samostatný audit závislostí; bez migrací databáze a změn produkce.

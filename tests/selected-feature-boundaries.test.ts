@@ -136,6 +136,17 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(hook).toContain("/context");
   });
 
+  it("does not mount rejected Digital Twin and Operational Focus map layers", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const detail = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(app).not.toContain("OPERATIONAL_TWIN_");
+    expect(app).not.toContain("AIRCRAFT_OPERATIONAL_FOCUS_MAP_");
+    expect(app).not.toContain("RadarOperationalFocusCard");
+    expect(detail).not.toContain("RadarOperationalFocusSummary");
+    expect(app).toContain("showNavigationIntegrity");
+    expect(app).toContain("showAtc");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

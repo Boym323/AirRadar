@@ -1,38 +1,22 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const mapSource = readFileSync(new URL("../lib/operational-twin/map.ts", import.meta.url), "utf8");
-const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
-const selectedContextSource = readFileSync(new URL("../components/radar/use-radar-aircraft-context.ts", import.meta.url), "utf8");
+const read = (path: string) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 
-describe("Operational Digital Twin V2 map boundary", () => {
-  it("keeps map visualization a pure projection over the existing situation response", () => {
-    expect(mapSource).toContain("createOperationalTwinMapGeoJSON");
-    expect(mapSource).toContain('OPERATIONAL_TWIN_MAP_SOURCE_ID = "operational-twin-v2"');
-    expect(mapSource).not.toContain("fetch(");
-    expect(mapSource).not.toContain("EventSource");
-    expect(mapSource).not.toContain("getPrisma");
-    expect(mapSource).not.toContain("/api/");
+describe("Rejected Digital Twin map layer boundary", () => {
+  it("unregisters all forecast map sources, event handlers and legend", () => {
+    const radar = read("components/airradar-app.tsx");
+    expect(radar).not.toContain("OPERATIONAL_TWIN_");
+    expect(radar).not.toContain("createOperationalTwinMapGeoJSON");
+    expect(radar).not.toContain("openOperationalTwinMapEvent");
+    expect(radar).not.toContain("operational-twin-map-legend");
+    expect(radar).not.toContain("AIRCRAFT_OPERATIONAL_FOCUS_MAP_");
   });
 
-  it("disables the rejected selected Operational Twin request until retired map layers are deleted", () => {
-    expect(selectedContextSource).not.toContain("setOperationalTwin(value)");
-    expect(selectedContextSource).not.toContain('/situation');
-    expect(selectedContextSource.match(/\/situation/g)).toBeNull();
-    expect(radarSource).toContain("useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition })");
-    expect(radarSource).toContain("createOperationalTwinMapGeoJSON(availableTwin)");
-    expect(radarSource).toContain("map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID");
-  });
-
-  it("registers uncertainty, route-aware, kinematic, milestone and event layers on style.load", () => {
-    expect(radarSource).toContain('map.once("style.load"');
-    expect(radarSource).toContain("OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID");
-    expect(radarSource).toContain("OPERATIONAL_TWIN_ROUTE_LAYER_ID");
-    expect(radarSource).toContain("OPERATIONAL_TWIN_KINEMATIC_LAYER_ID");
-    expect(radarSource).toContain("OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID");
-    expect(radarSource).toContain("OPERATIONAL_TWIN_EVENT_LAYER_ID");
-    expect(radarSource).toContain("OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID");
-    expect(radarSource).toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
-    expect(radarSource).toContain('data-testid="operational-twin-map-legend"');
+  it("keeps selected-traffic and Navigation Integrity layers", () => {
+    const radar = read("components/airradar-app.tsx");
+    expect(radar).toContain("map.addSource(\"selected-trail\"");
+    expect(radar).toContain("showNavigationIntegrity");
+    expect(radar).toContain("useRadarAircraftContext");
   });
 });

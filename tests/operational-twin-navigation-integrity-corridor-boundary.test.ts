@@ -25,11 +25,10 @@ describe("Navigation Integrity Corridor V1 boundary", () => {
     expect(serverSource).not.toContain("/api/navigation-integrity/current");
   });
 
-  it("renders the inferred intersection through the existing Digital Twin map source", () => {
-    expect(mapSource).toContain('"navigation-integrity-event"');
+  it("does not expose rejected Digital Twin Navigation Integrity forecasts in the retained radar", () => {
     expect(mapSource).toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
-    expect(appSource).toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
-    expect(appSource).toContain('filter: ["==", ["get", "kind"], "navigation-integrity-event"]');
+    expect(appSource).not.toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
+    expect(appSource).toContain("showNavigationIntegrity");
     expect(panelSource).toContain('data-testid="navigation-integrity-corridor-v1"');
   });
 

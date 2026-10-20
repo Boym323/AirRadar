@@ -29,11 +29,6 @@ interface RadarDrawerDetailsProps {
   sigmetStale: boolean;
   routeCorridor: AircraftRadarQuickDetailProps["routeCorridor"];
   routeConformance: AircraftRadarQuickDetailProps["routeConformance"];
-  operationalTwin: AircraftRadarQuickDetailProps["operationalTwin"];
-  operationalFocusChanges: AircraftRadarQuickDetailProps["operationalFocusChanges"];
-  operationalFocusItemId: AircraftRadarQuickDetailProps["operationalFocusItemId"];
-  operationalFocusRevealVersion: AircraftRadarQuickDetailProps["operationalFocusRevealVersion"];
-  onOperationalFocus: NonNullable<AircraftRadarQuickDetailProps["onOperationalFocus"]>;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -58,11 +53,6 @@ export function RadarDrawerDetails({
   sigmetStale,
   routeCorridor,
   routeConformance,
-  operationalTwin,
-  operationalFocusChanges,
-  operationalFocusItemId,
-  operationalFocusRevealVersion,
-  onOperationalFocus,
   watchlisted,
   onBack,
   onClose,
@@ -92,11 +82,6 @@ export function RadarDrawerDetails({
       sigmetStale={sigmetStale}
       routeCorridor={routeCorridor}
       routeConformance={routeConformance}
-      operationalTwin={operationalTwin}
-      operationalFocusChanges={operationalFocusChanges}
-      operationalFocusItemId={operationalFocusItemId}
-      operationalFocusRevealVersion={operationalFocusRevealVersion}
-      onOperationalFocus={onOperationalFocus}
       watchlisted={watchlisted}
       onBack={onBack}
       onClose={onClose}

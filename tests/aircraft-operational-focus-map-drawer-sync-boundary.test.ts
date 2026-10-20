@@ -1,40 +1,24 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
-const drawerSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
-const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
-const summarySource = readFileSync(new URL("../components/radar/radar-operational-focus-summary.tsx", import.meta.url), "utf8");
+const read = (path: string) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 
-describe("Aircraft Operational Focus map ↔ drawer sync V1 boundary", () => {
-  it("registers map-click reveal handlers only on the existing focus layers", () => {
-    expect(appSource).toContain("const revealOperationalFocusFromMap");
-    expect(appSource).toContain('map.on("click", layer, revealOperationalFocusFromMap)');
-    expect(appSource).toContain("AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID");
-    expect(appSource).toContain("AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID");
-    expect(appSource).toContain("setOperationalFocusRevealVersion((value) => value + 1)");
+describe("Rejected Operational Focus map/drawer sync", () => {
+  it("has no map click handlers or deep-link focus selection", () => {
+    const app = read("components/airradar-app.tsx");
+    expect(app).not.toContain("revealOperationalFocusFromMap");
+    expect(app).not.toContain("operationalFocusMapId");
+    expect(app).not.toContain("operationalFocusRevealVersion");
+    expect(app).toContain("selectedHexRef.current");
   });
 
-  it("keeps the canonical aircraft + focus URL contract on map click", () => {
-    expect(appSource).toContain("aircraftOperationalFocusRadarHref(hex, itemId)");
-    expect(appSource).toContain("const hex = selectedHexRef.current");
-  });
-
-  it("reveals the Situation tab for URL focus and repeated map clicks", () => {
-    expect(drawerSource).toContain("operationalFocusRevealVersion={operationalFocusRevealVersion}");
-    expect(quickDetailSource).toContain("operationalFocusRevealVersion = 0");
-    expect(quickDetailSource).toContain('setActiveTab("situation")');
-    expect(quickDetailSource).toContain("[operationalFocusItemId, operationalFocusRevealVersion]");
-  });
-
-  it("always keeps the active focus item inside the compact four-row summary", () => {
-    expect(summarySource).toContain("focus.items.find((item) => item.id === activeItemId)");
-    expect(summarySource).toContain("firstItems.slice(0, 3), activeItem");
-    expect(summarySource).toContain("focus.items.slice(0, 4)");
-  });
-
-  it("does not add another data request for map-to-drawer synchronization", () => {
-    expect(summarySource).not.toContain("fetch(");
-    expect(quickDetailSource).not.toContain("/situation");
+  it("leaves the retained aircraft drawer independent of Operational Twin", () => {
+    const quick = read("components/aircraft-radar-quick-detail.tsx");
+    const drawer = read("components/radar/radar-drawer-details.tsx");
+    expect(quick).not.toContain("RadarOperationalFocusSummary");
+    expect(quick).not.toContain("operationalTwin");
+    expect(drawer).not.toContain("operationalTwin");
+    expect(quick).toContain("<NavigationIntegritySection");
+    expect(quick).toContain("<SigmetSection");
   });
 });

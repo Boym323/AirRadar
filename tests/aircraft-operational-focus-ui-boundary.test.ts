@@ -25,9 +25,9 @@ describe("Aircraft Operational Focus UI V1 boundary", () => {
   it("links each focus item to the existing live-radar Digital Twin projection", () => {
     expect(componentSource).toContain("aircraftOperationalFocusRadarHref(icaoHex, item.id)");
     expect(componentSource).toContain("operationalFocusMapAction");
-    expect(radarSource).toContain("AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM");
-    expect(radarSource).toContain("createAircraftOperationalFocusMapGeoJSON");
-    expect(radarSource).toContain("resolveAircraftOperationalFocusMapTarget");
+    expect(radarSource).not.toContain("AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM");
+    expect(radarSource).not.toContain("createAircraftOperationalFocusMapGeoJSON");
+    expect(radarSource).not.toContain("resolveAircraftOperationalFocusMapTarget");
     expect(radarSource).not.toContain("/api/aircraft/${encodeURIComponent(aircraftFocus)}/situation");
   });
 
