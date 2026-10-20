@@ -587,3 +587,22 @@ přes reálnou cestu příjmu, nikoliv produkční MockReadsbProvider.
 Health je stále degradovaný, protože test nemá PostgreSQL; readsb jako
 transport však funguje. Testovací server se po dokončení uklidí.
 Nepřipojený produkční přijímač nadále správně selhává bez simulace.
+
+## Fáze 57: odstranění osiřelé historie alertů a starého intelligence streamu
+
+Odstraněn nepoužívaný klientský hook SSE pro Flight Intelligence, jeho analytické
+typy a staré JSONL čtení, prezentace i test historie upozornění. Historické
+záznamy a tabulky PostgreSQL, čtení již uložených událostí, fronta doručování,
+Pushover worker, Web Push a administrátorské zabezpečení zůstávají. Test
+paměti místo odstraněného souboru spouští test trvalé doručovací fronty.
+Bez mazání uložených dat nebo databázových migrací.
+
+## Fáze 57a: vyčištění nepoužívaných vizuálních testovacích dat
+
+Odstraněno více než 900 řádků neaktivních fixture a browser kontrol starých
+rekapitulací, letištní prediktivní analytiky a administrace predikcí.
+Žádný z aktuálních cílů vizuálních testů tyto obrazovky neobsahoval.
+Testy živého radaru, ATC/ATS, letišť, počasí, detailů letadel, přijímače
+a systémové stránky zůstávají. Izolovaný readsb test nově předává NIC/NACp/SIL,
+aby se skutečně zobrazilo a otestovalo zachované rozbalení ADS-B telemetrie.
+Produkční příjem ani chování při výpadku se nemění.

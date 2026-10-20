@@ -52,6 +52,7 @@ describe("retired Alert/Fleet/Watchlist API boundaries", () => {
     for (const retained of ["claimDelivery(", "getOccurrenceForDelivery(", "markDeliverySent(", "markDeliveryFailure(", "recoverStaleDeliveries(", "deliveryHealthSnapshot(", "listOccurrenceHistory("]) expect(repository).toContain(retained);
     expect(existsSync(file("lib/server/alerts-fleets-v1.ts"))).toBe(false);
     expect(existsSync(file("lib/server/alert-notifier.ts"))).toBe(false);
+    expect(existsSync(file("lib/server/alert-history.ts"))).toBe(false); // unused JSONL historical presentation, database records retained
     const webPush = readFileSync(file("lib/server/web-push.ts"), "utf8");
     expect(webPush).toContain("class WebPushNotifier");
     expect(webPush).toContain("async send(");

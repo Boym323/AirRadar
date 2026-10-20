@@ -664,3 +664,23 @@ selection against that fixture; keep public health degraded because the
 isolated PostgreSQL DB is absent and ensure it reports real readsb transport
 rather than mock. The separately tested unconfigured production provider
 still fails closed. Shut down the fixture with the child process.
+
+## Phase 57: retire orphan alert JSONL presentation and legacy intelligence stream
+
+Remove the no-longer-called Flight Intelligence SSE UI hook and analytics DTO,
+the legacy JSONL alert-history page/store and its isolated unit test. AlertV1
+historical PostgreSQL tables, records, read-only occurrence/queue APIs,
+Pushover worker, Web Push transport and admin authentication remain unchanged.
+The memory-test script now exercises the durable delivery worker instead.
+No migrations or persisted data are deleted.
+
+## Phase 57a: prune unreachable visual regression fixtures
+
+Remove more than 900 lines of abandoned visual fixtures and smoke paths for
+retired recap, airport movement intelligence and predictive advisory/admin
+screens. The current visual target inventory contains none of these screens.
+Retain real browser coverage for the live radar, ATC/ATS map, airport/weather,
+aircraft details, receiver, System and local ADS-B normalization. The isolated
+readsb wire fixture now supplies NIC/NACp/SIL integrity fields so the retained
+advanced ADS-B telemetry disclosure is actually mounted and tested. No
+production receiver fallback or transport logic is altered.
