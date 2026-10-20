@@ -1,5 +1,4 @@
 import type { Aircraft } from "@/lib/aircraft/types";
-import type { AlertRule } from "@/lib/server/alert-config";
 import type { AlertHistoryReason, AlertHistoryRecordValue, AlertHistoryEventType } from "@/lib/server/alert-history";
 import { WebPushNotifier } from "@/lib/server/web-push";
 
@@ -7,7 +6,8 @@ export type { AlertHistoryReason, AlertHistoryRecordValue, AlertHistoryEventType
 
 export interface AircraftAlert {
   aircraft: Aircraft;
-  matchedRules: AlertRule[];
+  /** Historical display labels only; the legacy rule engine is retired. */
+  matchedRules: Array<{ id: string; name?: string }>;
   emergency: boolean;
   priority: "normal" | "high";
   /**

@@ -26,11 +26,10 @@ describe("Retired Digital Twin API regression", () => {
     }
   });
 
-  it("removes the abandoned Digital Twin library while retaining independent weather corridor code", () => {
+  it("removes abandoned Digital Twin and legacy weather corridor calculation modules", () => {
     expect(existsSync(new URL("../lib/operational-twin", import.meta.url))).toBe(false);
-    const weather = readFileSync(new URL("../lib/weather/corridor-intelligence.ts", import.meta.url), "utf8");
-    expect(weather).not.toContain("lib/operational-twin");
-    expect(weather).toContain("export interface WeatherCorridorPath");
+    expect(existsSync(new URL("../lib/weather/corridor-intelligence.ts", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../lib/weather/route-weather-context.ts", import.meta.url))).toBe(true);
   });
 
   it("does not retain isolated regional focus queue tests", () => {

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { getTranslations } from "@/lib/i18n";
 
@@ -80,37 +80,20 @@ describe("Czech UI localization coverage", () => {
     expect(gates).not.toContain("ADMIN · SHADOW PREVIEW");
   });
 
-  it("localizes alert analytics and delivery health dashboards without dropping English support", () => {
-    const analytics = source("components/alert-effectiveness-analytics-page.tsx");
+  it("keeps localized delivery-health diagnostics but excludes retired alert administration", () => {
     const delivery = source("components/delivery-health-page.tsx");
-
-    for (const component of [analytics, delivery]) {
-      expect(component).toContain('t.locale.startsWith("cs") ? {');
-      expect(component).toContain("copy.kicker");
-      expect(component).toContain("copy.title");
-      expect(component).toContain("copy.unavailable");
-    }
-
-    expect(analytics).toContain('title: "Analýza účinnosti upozornění"');
-    expect(analytics).toContain('noisiest: "Nejčastěji aktivovaná pravidla"');
-    expect(analytics).toContain('title: "Alert Effectiveness Analytics"');
+    expect(delivery).toContain('t.locale.startsWith("cs") ? {');
+    expect(delivery).toContain("copy.kicker");
+    expect(delivery).toContain("copy.title");
+    expect(delivery).toContain("copy.unavailable");
     expect(delivery).toContain('title: "Stav doručování upozornění"');
     expect(delivery).toContain('queueDepth: "Ve frontě"');
     expect(delivery).toContain('title: "Delivery Health"');
-    expect(delivery).toContain("data.status === \"DEGRADED\" ? copy.degraded : copy.disabled");
-    expect(analytics).not.toContain('<MetricCard value={data.sent} label="Delivered"');
-    expect(delivery).not.toContain('<MetricCard value={data.durable.queueDepth} label="Queue depth"');
-  });
-
-  it("localizes alert rule simulation while keeping rule identifiers unchanged", () => {
-    const simulator = source("components/alert-rule-simulator-page.tsx");
-    expect(simulator).toContain('title: "Simulátor pravidel upozornění"');
-    expect(simulator).toContain('flightEvent: "Letová událost"');
-    expect(simulator).toContain('match: "SHODA"');
-    expect(simulator).toContain("copy.actionableRules(result.matchedRuleIds.length)");
-    expect(simulator).toContain('<option value="GEOFENCE_ENTER">{copy.geofenceEnter}</option>');
-    expect(simulator).toContain('title: "Alert Rule Simulator"');
-    expect(simulator).not.toContain('<button className="primary-button" type="submit">Simulate</button>');
+    for (const retired of [
+      "components/alert-effectiveness-analytics-page.tsx",
+      "components/alert-rule-simulator-page.tsx",
+      "components/alerts-admin-page.tsx",
+    ]) expect(existsSync(new URL(`../${retired}`, import.meta.url)), retired).toBe(false);
   });
 
   it("renders Czech receiver coverage text including SVG and dynamic health", () => {
