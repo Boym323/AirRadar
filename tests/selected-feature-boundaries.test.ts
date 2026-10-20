@@ -90,6 +90,22 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(existsSync(new URL("lib/radar/airspace-geojson.ts", root))).toBe(true);
   });
 
+  it("retains only selected deep-link contracts in the shared investigation helper", () => {
+    const source = readFileSync(new URL("lib/investigation-links.ts", root), "utf8");
+    for (const required of [
+      "parseNavigationIntegrityInvestigation", "buildNavigationIntegrityInvestigation",
+      "parseNavigationReferenceInvestigation", "buildNavigationReferenceInvestigation",
+      "investigationHref",
+    ]) expect(source).toContain("export function " + required);
+    for (const retired of [
+      "parseAirspaceInvestigation", "buildAirspaceInvestigation",
+      "parseFlightCompareInvestigation", "buildFlightCompareInvestigation",
+      "parseAirportCompareInvestigation", "buildAirportCompareInvestigation",
+      "parseProcedureInvestigation", "buildProcedureInvestigation",
+      "parseSectorDetailInvestigation", "buildSectorDetailInvestigation",
+    ]) expect(source).not.toContain("export function " + retired);
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

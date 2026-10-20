@@ -58,3 +58,7 @@ dekodér historických záznamů, migrace a data zůstávají nedotčené.
 ## Fáze 3 (rozpracováno): odstranění osiřelých UI modulů
 
 Po odstranění jejich vstupních stránek byly vyřazeny samostatné komponenty průzkumníku procedur, ATC průzkumníku a porovnání letišť včetně vlastních CSS. Samostatný prohlížeč NAVAID/ATS, geometrie ATC sektorů pro mapu, katalog i detail letiště a referenční importní procesy zůstávají zachovány. Regresní test brání návratu odstraněných komponent. Bez změny schématu a bez mazání historie.
+
+## Fáze 4 (rozpracováno): úklid odkazů na zrušené stránky
+
+Sdílený pomocník pro vyšetřovací odkazy nyní zachovává jen ověřování záložek pro Navigation Integrity a NAVAID/ATS používaných v ponechaném UI. Odstraněny jsou parsování a generování parametrů pro zrušený ATC průzkumník, porovnání letů a letišť, procedury SID/STAR a historii sektorů včetně nepoužívaných typů a validací. Regresní test hlídá zachované i odstraněné exporty. Beze změny API, databáze, historických dat a příjmu provozu.

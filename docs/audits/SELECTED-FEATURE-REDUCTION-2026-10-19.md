@@ -57,3 +57,7 @@ migration definitions and database contents remain intact.
 ## Phase 3 (staged): retire standalone UI modules
 
 Remove orphaned procedure-explorer, ATC airspace-explorer, airport-compare components and their dedicated CSS after removal of their original page entrypoints. Preserve independent NAVAID/ATS navigation browser, published ATC map geometry, airport catalog/airport detail, and all non-UI reference and import pipelines. Add a regression guard so obsolete standalone components do not return. No schema changes or history deletions.
+
+## Phase 4 (staged): drop retired investigation deep links
+
+The shared investigation-link helper keeps only Navigation Integrity and NAVAID/ATS route bookmark validation used by the retained views. Deleted airspace-sector, flight comparison, airport comparison, SID/STAR procedure and sector-history parameter parsers/builders, their obsolete types and validation helpers. Regression test guards the kept and removed exports. No API routes, database tables, historical data, or runtime ingestion are changed.
