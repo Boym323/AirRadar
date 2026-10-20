@@ -548,6 +548,7 @@ describe("aircraft state service", () => {
     expect(observeSpy).not.toHaveBeenCalled();
     expect(newAircraftSpy).not.toHaveBeenCalled();
     expect(receptionRecordSpy).not.toHaveBeenCalled();
+    expect(service.getAlertStatus()).toEqual({ status: "disabled", enabled: false, notifier: "retired", ruleCount: 0 });
     expect(networkProvider.getSnapshot).toHaveBeenCalledTimes(1);
   });
 
