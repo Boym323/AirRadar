@@ -612,3 +612,13 @@ Preserve sampled aircraft history, flight/position/event tables, generic
 history API, ATS navigation routes/FIX data, live ATC map geometry and
 independent history/statistics API consumers. No database migrations or main
 branch/production changes. Full CI must check for remaining source imports.
+
+## Phase 55 (staged): remove unused modeled wind and sector history analytics
+
+Remove abandoned ICON-EU/ALADIN wind-aloft network client and its former
+wind-fusion adapter, unrelated to retained direct BDS aircraft weather and
+runway METAR wind-component calculation. Retire unmounted ATC sector history
+batch/DTO modules and their dedicated integration test, plus obsolete operations
+stylesheets. Retain live sector matching and published geometries, sector map,
+ATS routes, airport/runway wind computation, METAR/TAF/SIGMET and persisted
+FlightPosition records. No schema migration or release deployment.

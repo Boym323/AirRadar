@@ -537,3 +537,13 @@ Pryč je i osamocený panel historického provozu ATC a překlad Fleet Explorer.
 Zachována vzorkovaná historie, databázové Flight/Position/Event záznamy,
 obecná historická API, ATS trasy a FIX, současná sektorová ATC geometrie
 na mapě a nezávislé statistické služby. Bez migrací či zásahů do produkce.
+
+## Fáze 55 (postupně): odstranění modelovaného větru a historie ATC analytiky
+
+Odstraněn osiřelý síťový klient větru ICON-EU/ALADIN a jeho někdejší
+výpočtový adaptér. Pozorování počasí přímo z letadel (BDS) a výpočet
+složky větru vůči letištní dráze z METAR zůstávají samostatné. Pryč jsou
+i nepoužívané dávkové historické přehledy ATC sektorů, jejich typy,
+samostatný test a zastaralé styly provozních panelů. Zachována aktuální
+geometrie ATC a přiřazení sektorů, ATS trasy, meteorologická API a
+historické databázové záznamy FlightPosition. Bez migrací a nasazení.
