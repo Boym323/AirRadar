@@ -633,3 +633,12 @@ to the shared frequency-policy module; update its test instead of losing
 spacing provenance. Keep J10 synthetic aircraft exclusively as test fixtures;
 update the T58 boundary test to import the isolated fixture. Refresh radar
 and Czech UI tests that previously read a retired ATC component.
+
+## Phase 55b: retire orphan notifier factories while retaining delivery transports
+
+Remove the unused legacy AlertNotifier factory, duplicate Pushover HTTP sender
+and predictive/Flight-Intelligence alert formatter. Keep the independent
+durable Pushover worker and DB-backed queue, passive delivery-health reporting
+and the Web Push VAPID/subscription/sending transport. Declare Web Push's
+minimal delivery payload contract locally so it no longer imports an obsolete
+alert producer. This does not restore event detection or create fresh alerts.

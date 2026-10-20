@@ -557,3 +557,12 @@ benchmarky ATC historie a testy opuštěné analytiky. Značení ATC kanálů
 25/8,33 kHz přesunuto do společné politiky frekvencí a dále testováno.
 Test T58 používá výhradně testovací fixture syntetických letadel.
 Regresní kontroly UI již nevyžadují odstraněné ATC panely.
+
+## Fáze 55b: odstranění osiřelých notifikačních továren
+
+Odstraněna nepoužívaná továrna AlertNotifier, duplicitní přímý HTTP
+odesílatel Pushover a formátovač starých predikčních a Flight Intelligence
+upozornění. Zachován samostatný Pushover worker, trvalá databázová fronta,
+diagnostika doručování a Web Push VAPID, registrace i odesílací transport.
+Web Push má nově minimální typ dat bez importu odstraněného AlertEngine.
+Tato změna sama žádná nová upozornění nevytváří.
