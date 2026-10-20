@@ -27,7 +27,6 @@ import { AlertEngine } from "@/lib/server/alert-engine";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
-import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
@@ -172,10 +171,6 @@ export class AircraftStateService {
   private pendingAtcResolutionSnapshot: ProviderSnapshot | null = null;
   private atcResolutionDrain: Promise<void> | null = null;
   private atcResolutionFirstCallSettled = false;
-  private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
-  private lifetimeReceptionRecordLoaded = false;
-  private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
-  private receptionEvaluationPending = false;
   private networkStopPromise: Promise<void> | null = null;
   private snapshotVersion = 0;
   private readonly snapshotCache = new Map<string, { version: number; snapshot: StateSnapshot }>();
@@ -207,12 +202,7 @@ export class AircraftStateService {
         // Statistics are optional; a load failure must not prevent the first
         // live provider refresh.
         logger.error({ error }, "AirRadar statistics startup failed");
-      })
-      .then(() => {
-        this.lastEvaluatedDailyReceptionRecord = this.statistics.getDailyReceptionRecord();
-        this.scheduleReceptionRecordEvaluation();
       });
-    void this.loadLifetimeReceptionRecord();
     const refresh = this.refresh();
     this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
     void this.refreshNetwork();
@@ -730,7 +720,6 @@ export class AircraftStateService {
     this.currentReceiver = snapshot.receiver;
     const atcResolutionEnabled = isAtcResolutionEnabled();
     if (!atcResolutionEnabled) this.clearAtcResolutionState();
-    const previousAircraft = new Map(this.localAircraft);
     const previousObservedHexes = this.localObservedHexes;
     const currentHexes = new Set<string>();
     let newObservedIdentity = false;
@@ -778,10 +767,8 @@ export class AircraftStateService {
     const activeAircraft = [...this.localAircraft.values()];
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) measureRuntime("snapshot.statistics", activeAircraft.length, () => this.statistics.observe(activeAircraft, this.currentReceiver, new Date()));
-    this.scheduleReceptionRecordEvaluation();
-    measureRuntime("snapshot.alerts", activeAircraft.length, () => this.alerts.observe(previousAircraft, this.localAircraft));
-    // Rejected Flight Intelligence and predictive watchlist analytics never run
-    // inside the live ADS-B snapshot loop. Alert delivery remains independent.
+    // The retired AlertEngine does not evaluate live ADS-B snapshots.
+    // Durable push/Pushover delivery is handled separately by AlertDeliveryWorker.
     measureRuntime("snapshot.navigationIntegrity", activeAircraft.length, () => this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt), "local"));
     this.invalidateSnapshotCache();
   }
@@ -1033,10 +1020,6 @@ export class AircraftStateService {
       try {
         const result = await recordAircraftSnapshot(due, new Date(sampledAt));
         for (const icaoHex of result.succeeded) this.lastHistorySample.set(icaoHex, sampledAt);
-        for (const icaoHex of result.newAircraft ?? []) {
-          const current = this.aircraft.get(icaoHex);
-          if (current) this.alerts.observeNewAircraft(current);
-        }
         if (result.failed.length) {
           logger.error({ failedAircraft: result.failed.length }, "AirRadar history persistence failed");
         }
@@ -1053,45 +1036,6 @@ export class AircraftStateService {
     for (const [hex, sampledAt] of this.lastHistorySample) {
       if (sampledAt < cleanupBefore && !this.aircraft.has(hex)) this.lastHistorySample.delete(hex);
     }
-  }
-
-  private async loadLifetimeReceptionRecord(): Promise<void> {
-    try {
-      const records = await getReceptionRecords(null);
-      this.lifetimeReceptionRecord = records.lifetime;
-      this.lifetimeReceptionRecordLoaded = true;
-      this.scheduleReceptionRecordEvaluation();
-    } catch {
-      // Reception records are optional and must never affect live refresh.
-      this.lifetimeReceptionRecordLoaded = true;
-      this.scheduleReceptionRecordEvaluation();
-    }
-  }
-
-  private scheduleReceptionRecordEvaluation(): void {
-    this.receptionEvaluationPending = true;
-    const ready = this.statisticsReady;
-    if (!ready) return;
-    void ready.then(() => {
-      if (!this.receptionEvaluationPending) return;
-      this.receptionEvaluationPending = false;
-      const current = this.statistics.getDailyReceptionRecord();
-      const previousDaily = this.lastEvaluatedDailyReceptionRecord;
-      if (current && (!previousDaily || current.date !== previousDaily.date || current.distanceKm > previousDaily.distanceKm)) {
-        this.alerts.observeReceptionRecord("daily", current, previousDaily?.date === current.date ? previousDaily : null);
-      }
-      this.lastEvaluatedDailyReceptionRecord = current;
-      if (current && this.lifetimeReceptionRecordLoaded
-        && (!this.lifetimeReceptionRecord || current.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
-        const previousLifetime = this.lifetimeReceptionRecord;
-        this.lifetimeReceptionRecord = current;
-        this.alerts.observeReceptionRecord("lifetime", current, previousLifetime);
-      }
-    }).catch((error) => {
-      // This callback is intentionally fire-and-forget. Never let an
-      // optional alert/record side effect become a process-level rejection.
-      logger.debug({ error }, "AirRadar reception-record evaluation skipped");
-    });
   }
 
   private queueHistory(snapshot: ProviderSnapshot): void {
@@ -1167,7 +1111,6 @@ export class AircraftStateService {
       if (!enrichment) continue;
       const updated = { ...current, enrichment };
       this.aircraft.set(current.icaoHex, updated);
-      this.alerts.observe(new Map([[current.icaoHex, current]]), [updated]);
       changed = true;
     }
     if (changed && !this.shuttingDown) {
