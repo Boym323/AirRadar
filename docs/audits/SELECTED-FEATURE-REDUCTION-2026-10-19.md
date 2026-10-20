@@ -121,3 +121,7 @@ Delete unused map focus card and compact drawer summary components and their ded
 ## Phase 12 (staged): repair CI after retired predictive/Digital Twin UI deletion
 
 Removed the obsolete prediction-timeline UI-only boundary test, and updated three surviving test suites to stop importing deleted PredictiveAircraftAdvisories/AircraftOperationalTwin components. Retain read-only checks of the legacy server prediction evidence whitelist and Digital Twin promotion safeguards, until their API dependencies and persistence are reviewed. Czech UI test no longer demands copy inside removed UI. New feature-boundary assertion protects against accidental restoration of discarded panels and the obsolete test. No DB changes.
+
+## Phase 13 (staged): remove unreachable Digital Twin forecasts from the retained Flight Follow HUD
+
+Flight Follow remains available, with identity, live altitude/speed/vertical-rate telemetry, known destination, the existing route waypoint context, follow toggle and compact drawer mode. The always-null Digital Twin compatibility prop and dead ETA, predicted runway and forecast weather rendering have been removed from this HUD. No additional network requests, database changes or migrations. Tests protect the retained follow interaction and the absence of retired forecast content.

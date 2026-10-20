@@ -2247,7 +2247,6 @@ export function AirRadarApp() {
   const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
   const {
     atcContext: selectedAtcContext,
-    operationalTwin: selectedOperationalTwin,
   } = useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition });
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
   useEffect(() => {
@@ -2502,7 +2501,6 @@ export function AirRadarApp() {
               compact={drawerState === "aircraft"}
               corridor={selectedRouteCorridor.corridor}
               conformance={selectedRouteCorridor.conformance}
-              operationalTwin={selectedOperationalTwin}
               following={followSelected}
               onToggle={() => setFollowSelected((value) => !value)}
             /> : null}

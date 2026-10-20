@@ -122,3 +122,7 @@ Po odstranění posledních živých konzumentů byly smazány mapová karta Ope
 ## Fáze 12 (rozpracováno): oprava CI po odstranění UI predikcí a Digital Twin
 
 Zrušen zastaralý test pouze odstraněné predikční časové osy a upraveny tři zbývající testovací soubory tak, aby neimportovaly smazané komponenty PredictiveAircraftAdvisories/AircraftOperationalTwin. Kontroly stávajícího seznamu povolených serverových podkladů predikcí a ochrany kalibrace Digital Twin zůstávají do auditu závislostí API a uložených dat. Lokalizační test už nevyžaduje text ve smazaném UI. Nový regresní test hlídá nepřítomnost odstraněných panelů a starého testu. Bez změn DB.
+
+## Fáze 13 (rozpracováno): odstranění nedostupných předpovědí Digital Twin z režimu sledování
+
+Flight Follow zůstává dostupný včetně identity, živé telemetrie výšky/rychlosti/vertikálního pohybu, známého cíle, kontextu dalšího bodu trasy, tlačítka sledování a zmenšeného režimu panelu. Odstraněn je vždy prázdný parametr Digital Twin i již nefunkční zobrazování prediktivního ETA, dráhy a počasí. Žádné nové dotazy, změny databáze ani migrace. Testy hlídají zachované sledování a nepřítomnost zrušených predikcí.

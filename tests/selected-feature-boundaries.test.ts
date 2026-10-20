@@ -251,6 +251,17 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(existsSync(new URL("lib/predictive-intelligence/explainability.ts", root))).toBe(true);
   });
 
+  it("keeps flight-follow telemetry without rejected Digital Twin forecasts", () => {
+    const follow = readFileSync(new URL("components/radar/radar-flight-follow-hud.tsx", root), "utf8");
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(follow).not.toContain("OperationalTwin");
+    expect(follow).not.toContain("etaEvent");
+    expect(follow).not.toContain("runwayEvent");
+    expect(follow).not.toContain("weatherEvent");
+    expect(follow).toContain("verticalRate(aircraft.verticalRate)");
+    expect(app).toContain("<RadarFlightFollowHud");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

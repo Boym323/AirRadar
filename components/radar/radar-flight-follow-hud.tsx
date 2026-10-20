@@ -1,8 +1,7 @@
 "use client";
 
 import type { AircraftView } from "@/lib/aircraft/types";
-import { formatAltitude, formatNumber, formatSpeed, formatTime, t } from "@/lib/i18n";
-import type { OperationalTwinApiResponse, OperationalTwinConfidence } from "@/lib/operational-twin";
+import { formatAltitude, formatNumber, formatSpeed, t } from "@/lib/i18n";
 import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
 import styles from "./radar-flight-follow-hud.module.css";
 
@@ -10,14 +9,9 @@ interface RadarFlightFollowHudProps {
   aircraft: AircraftView;
   corridor: RouteCorridorSnapshot | null;
   conformance: TrajectoryConformanceSnapshot | null;
-  operationalTwin: OperationalTwinApiResponse | null;
   following: boolean;
   compact?: boolean;
   onToggle: () => void;
-}
-
-function confidenceLabel(confidence: OperationalTwinConfidence): string {
-  return t.radar.followConfidence[confidence];
 }
 
 function verticalRate(value: number | null): string | null {
@@ -30,18 +24,10 @@ export function RadarFlightFollowHud({
   aircraft,
   corridor,
   conformance,
-  operationalTwin,
   following,
   compact = false,
   onToggle,
 }: RadarFlightFollowHudProps) {
-  const twin = operationalTwin?.status === "available" ? operationalTwin : null;
-  const etaEvent = twin?.events.find((event) => event.type === "ARRIVAL_ETA" && event.provenance === "PREDICTED") ?? null;
-  const runwayEvent = twin?.events.find((event) => event.type === "RUNWAY_EXPECTATION" && event.provenance === "PREDICTED") ?? null;
-  const weatherEvent = twin?.weatherCorridor.events
-    .filter((event) => event.offsetMinutes >= 0)
-    .sort((a, b) => a.offsetMinutes - b.offsetMinutes)[0] ?? null;
-
   const metadata = aircraft.enrichment?.metadata;
   const identity = aircraft.callsign || aircraft.registration || metadata?.registration || aircraft.icaoHex;
   const secondary = [
@@ -53,11 +39,7 @@ export function RadarFlightFollowHud({
     || null;
   const nextPoint = corridor?.nextPoint?.name ?? null;
   const nextEta = corridor?.etaToNextMinutes;
-  const runway = runwayEvent?.title.startsWith("RWY ") ? runwayEvent.title.slice(4) : runwayEvent?.title ?? null;
   const climb = verticalRate(aircraft.verticalRate);
-  const weather = weatherEvent
-    ? `${t.radar.followWeatherRisks[weatherEvent.risk]} · ${t.radar.followSeverity[weatherEvent.severity]} · ~${formatNumber(weatherEvent.offsetMinutes, 0)} min`
-    : null;
   const conformanceLabel = conformance ? t.routeConformance.statuses[conformance.status] : null;
 
   return <section
@@ -88,20 +70,6 @@ export function RadarFlightFollowHud({
         <small>{t.radar.followNext}</small>
         <strong>{nextPoint}</strong>
         {nextEta !== null && nextEta !== undefined && <em>~{formatNumber(nextEta, 0)} min</em>}
-      </span>}
-      {etaEvent && <span className={styles.metric}>
-        <small>{t.radar.followEta}</small>
-        <strong>{formatTime(etaEvent.at)}</strong>
-        <em>{etaEvent.detail ? `${etaEvent.detail} · ${confidenceLabel(etaEvent.confidence)}` : confidenceLabel(etaEvent.confidence)}</em>
-      </span>}
-      {runway && <span className={styles.metric}>
-        <small>{t.radar.followRunway}</small>
-        <strong>{runway}</strong>
-        <em>{confidenceLabel(runwayEvent!.confidence)}</em>
-      </span>}
-      {weather && <span className={styles.metric}>
-        <small>{t.radar.followWeather}</small>
-        <strong>{weather}</strong>
       </span>}
       {conformanceLabel && <span className={styles.metric}>
         <small>{t.radar.followTrajectory}</small>
