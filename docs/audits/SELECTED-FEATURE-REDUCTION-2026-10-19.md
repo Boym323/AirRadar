@@ -489,3 +489,15 @@ Remove the deleted admin flight-prediction evidence route from the system
 observability registry and both generated/localized feature tables. The
 system feature description now lists only supported receiver diagnostics;
 predictive readiness and graduation no longer appear as active promises.
+
+## Phase 48b: retire predictive airport board and stale rollout contracts
+
+Delete the orphan airport-operations client hook (which continued trying the
+retired `/api/operations/predictive` endpoint), the rejected V7 arrival
+sequence and dependent V8 arrival-flow prediction projection. Remove their
+isolated tests and the old rollout/accuracy unit suites that require deleted
+Predictive Intelligence modules. Preserve the independent airport catalog,
+airport detail, weather, `AirportOperationsResponse` types shared by legacy
+airport domain helpers, and actual history records. Retain the unrelated CSP
+security boundary while replacing the obsolete prediction-export test with
+negative regression checks. No migrations or deployment.

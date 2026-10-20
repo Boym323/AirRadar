@@ -434,3 +434,11 @@ systemd timer; v rámci draft PR se nastavení produkce nemění.
 Odstraněno zrušené API důkazů predikce letu z registru a obou tabulek
 funkcí. Systémová diagnostika již neslibuje neexistující prediktivní
 readiness ani graduation. Zachována skutečná diagnostika příjmu ADS-B.
+
+## Fáze 48b: odstranění prediktivních letištních panelů a starých testů
+
+Odstraněn již nepoužívaný hook Airport Operations (včetně dotazů na
+zrušené API), předpovědní přístupové vrstvy Arrival Sequence V7 a Arrival
+Flow V8 i testy založené na odstraněných prediktivních modulech.
+Zůstává katalog a detail letiště, skutečné počasí, sdílené letištní typy
+a historické záznamy. Bez migrací a nasazení; kontrola CSP zůstala.
