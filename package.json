@@ -75,7 +75,6 @@
     "audit:aircraft-weather": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-aircraft-weather.ts",
     "audit:navigation-integrity": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-quality.ts",
     "audit:navigation-integrity-candidates": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-candidates.ts",
-    "audit:airport-operations": "JITI_TSCONFIG_PATHS=true jiti scripts/airport-operations-quality.ts",
     "audit:db-write-amplification": "node scripts/audit-db-write-amplification.mjs",
     "audit:integrations": "node scripts/integration-audit.mjs",
     "changelog:check": "node scripts/changelog.mjs check",
