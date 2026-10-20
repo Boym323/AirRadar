@@ -119,6 +119,15 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(detail).not.toContain("<FlightRouteWeather");
   });
 
+  it("keeps retained ATC and SIGMET context without the rejected flight situation summary", () => {
+    const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(quick).not.toContain("buildFlightSituationSummary");
+    expect(quick).not.toContain("SituationSummarySection");
+    expect(quick).toContain("<AtcSection");
+    expect(quick).toContain("<SigmetSection");
+    expect(quick).toContain("<NavigationIntegritySection");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

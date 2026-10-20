@@ -66,3 +66,7 @@ Sdílený pomocník pro vyšetřovací odkazy nyní zachovává jen ověřován�
 ## Fáze 5 (rozpracováno): vypnutí dotazů odstraněných funkcí
 
 Hook kontextu vybraného letadla již nedotazuje Flight Intelligence ani inteligenci počasí na trase (dříve při výběru a každých 120 sekund). Odstraněny jsou sekce rychlého detailu, předávané parametry a OD route-weather panel. ATC kontext, SIGMET a Navigation Integrity zůstávají zachovány. Souhrn situace zůstává dočasně do samostatného auditu závislostí; tento patch nevypíná serverové výpočty.
+
+## Fáze 6 (rozpracováno): odstranění souhrnu Flight Intelligence z detailu letadla
+
+Z rychlého detailu vybraného letadla byl odstraněn nepožadovaný syntetizovaný souhrn letové situace a související UI adaptér. Samostatný kontext ATC, SIGMET a údaje o integritě navigace zůstávají zachovány. Sdílená analytická knihovna ani historická pozorování nebyla odstraněna; ta vyžadují samostatný audit serverových závislostí.

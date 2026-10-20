@@ -15,7 +15,6 @@ import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin/types";
 import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/aircraft-operational-focus-change";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
-import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import { AircraftAltitudeChart } from "@/components/aircraft-detail-shared";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -358,41 +357,6 @@ function compactVerticalRateLabel(value: number | null): string {
   return `${value > 0 ? "+" : value < 0 ? "−" : ""}${formatNumber(Math.abs(value), 0)} fpm`;
 }
 
-function SituationSummarySection({ summary }: { summary: FlightSituationSummary }) {
-  const hasMeaningfulContext = Boolean(
-    summary.currentSector
-      || summary.nextSector
-      || summary.weatherState !== "unknown"
-      || summary.routeDeviationNearSigmet,
-  );
-  if (!hasMeaningfulContext) return null;
-
-  const atc = summary.currentSector
-    ? [summary.currentSector, summary.currentUnit].filter(Boolean).join(" · ")
-    : t.common.emptyValue;
-  const next = summary.nextSector && summary.nextSectorMinutes !== null
-    ? t.intelligence.situationNextSector(summary.nextSector, formatNumber(summary.nextSectorMinutes, 0))
-    : null;
-  const hazard = summary.weatherHazard || t.weather.sigmetUnknownHazard;
-  const weather = summary.weatherState === "current_sigmet"
-    ? t.intelligence.situationWeatherCurrent(hazard)
-    : summary.weatherState === "route_sigmet" && summary.weatherDistanceNm !== null
-      ? t.intelligence.situationWeatherRoute(hazard, formatNumber(summary.weatherDistanceNm, 0))
-      : summary.weatherState === "projected_sigmet" && summary.weatherDistanceNm !== null
-        ? t.intelligence.situationWeatherProjected(hazard, formatNumber(summary.weatherDistanceNm, 0))
-        : summary.weatherState === "clear"
-          ? t.intelligence.situationWeatherClear
-          : t.intelligence.situationWeatherUnknown;
-  return <QuickSection id="aircraft-situation-summary-title" title={t.intelligence.situationTitle} className="aircraft-quick-situation">
-    <div className="aircraft-quick-detail-grid" data-testid="flight-situation-summary">
-      <DetailValue label={t.intelligence.situationAtc} value={next ? `${atc} · ${next}` : atc} />
-      <DetailValue label={t.intelligence.situationWeather} value={weather} />
-    </div>
-    {summary.routeDeviationNearSigmet && <p className="aircraft-quick-situation-signal">{t.intelligence.situationDeviation}</p>}
-    <p className="aircraft-quick-disclaimer">{t.intelligence.situationDisclaimer}</p>
-  </QuickSection>;
-}
-
 function NavigationIntegritySection({ aircraft }: { aircraft: AircraftView }) {
   const context = useNavigationIntegrityContext(aircraft.icaoHex);
   const latest = context?.latest;
@@ -642,14 +606,6 @@ export function AircraftRadarQuickDetail({
   const emergency = aircraft.emergency && aircraft.emergency.toLowerCase() !== "none" ? aircraft.emergency : null;
   const emergencySquawk = aircraft.squawk && ["7500", "7600", "7700"].includes(aircraft.squawk) ? aircraft.squawk : null;
   const sourceAge = aircraft.seenPosSeconds === null ? null : formatAge(aircraft.seenPosSeconds);
-  const situation = buildFlightSituationSummary({
-    aircraft,
-    atc: atcContext,
-    sigmets: sigmetContext,
-    sigmetStale,
-    routeWeather: null,
-    sigmetDeviation,
-  });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
   async function shareAircraft(): Promise<void> {
     const url = new URL(fullDetailHref, window.location.origin).toString();
@@ -743,7 +699,6 @@ export function AircraftRadarQuickDetail({
         activeItemId={operationalFocusItemId}
         onFocus={onOperationalFocus}
       /> : null}
-      <SituationSummarySection summary={situation} />
       <AtcSection aircraft={aircraft} context={atcContext} />
       <details className="aircraft-quick-deep-context" data-testid="aircraft-v5-advanced-context" onToggle={(event) => setAdvancedContextOpen(event.currentTarget.open)}>
         <summary>{t.aircraftQuickV5.advancedContext}</summary>

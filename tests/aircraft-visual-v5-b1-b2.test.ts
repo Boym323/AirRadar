@@ -18,7 +18,7 @@ describe("V5-B1/B2 aircraft identity and progressive detail", () => {
 
   it("keeps primary operational context visible but progressively reveals deep detail", () => {
     const tab = quick.slice(quick.indexOf('id="aircraft-tabpanel-situation"'));
-    expect(tab).toContain('<SituationSummarySection summary={situation} />');
+    expect(tab).not.toContain('<SituationSummarySection summary={situation} />');
     expect(tab).toContain('<AtcSection');
     expect(tab).not.toContain('<RouteWeatherSection');
     expect(tab).not.toContain('<IntelligenceSection');

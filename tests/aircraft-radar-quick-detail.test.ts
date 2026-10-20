@@ -66,8 +66,8 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).not.toContain("WindSection");
     expect(componentSource).not.toContain('data-testid="aircraft-wind-context"');
     expect(appSource).not.toContain("useSelectedAircraftWindContext(");
-    expect(componentSource).toContain('data-testid="flight-situation-summary"');
-    expect(componentSource).toContain("buildFlightSituationSummary");
+    expect(componentSource).not.toContain('data-testid="flight-situation-summary"');
+    expect(componentSource).not.toContain("buildFlightSituationSummary");
     expect(componentSource).not.toContain("IntelligenceSection");
     expect(componentSource).not.toContain("RouteWeatherSection");
     expect(appSource).not.toContain("selectedIntelligenceEvents");
