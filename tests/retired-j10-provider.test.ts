@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAircraftProvider } from "@/lib/server/providers";
+import { readFileSync } from "node:fs";
 import { shouldUseSampleAtcData } from "@/lib/server/config";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -20,6 +21,13 @@ describe("retired J10 simulated receiver", () => {
     expect(shouldUseSampleAtcData()).toBe(false);
     vi.stubEnv("ATC_SAMPLE_ENABLED", "true");
     expect(shouldUseSampleAtcData()).toBe(true);
+  });
+
+  it("keeps isolated production gates fail-closed without fake traffic", () => {
+    const gate = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(gate).toContain('healthPayload.status !== "degraded"');
+    expect(gate).toContain('healthPayload.readsb?.provider !== "readsb-unconfigured"');
+    expect(gate).toContain('healthPayload.aircraftCount !== 0');
   });
 
   it("keeps Beast-only live receiver configuration available", () => {

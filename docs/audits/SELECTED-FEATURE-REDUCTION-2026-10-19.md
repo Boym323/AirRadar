@@ -642,3 +642,13 @@ durable Pushover worker and DB-backed queue, passive delivery-health reporting
 and the Web Push VAPID/subscription/sending transport. Declare Web Push's
 minimal delivery payload contract locally so it no longer imports an obsolete
 alert producer. This does not restore event detection or create fresh alerts.
+
+## Phase 56: fail-closed smoke semantics for J10 retirement
+
+The isolated production-gates environment has no real readsb/Beast receiver,
+network provider, or PostgreSQL URL. After retiring J10, the correct API health
+state is explicitly degraded with provider readsb-unconfigured,
+readsb offline, database not configured, and zero fabricated aircraft. Update
+only this isolated gate to assert those exact properties; do not weaken
+real deployment health checks or restore synthesized production traffic.
+Keep explicit Beast-only source support if configured.

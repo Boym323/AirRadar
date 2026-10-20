@@ -566,3 +566,13 @@ upozornění. Zachován samostatný Pushover worker, trvalá databázová fronta
 diagnostika doručování a Web Push VAPID, registrace i odesílací transport.
 Web Push má nově minimální typ dat bez importu odstraněného AlertEngine.
 Tato změna sama žádná nová upozornění nevytváří.
+
+## Fáze 56: kontrola správně degradovaného stavu bez J10
+
+Izolované produkční testy záměrně nemají skutečný readsb ani Beast přijímač,
+síťový zdroj nebo PostgreSQL připojení. Po odstranění J10 musí health API
+vracet stav degraded, provider readsb-unconfigured, nepřipojený readsb,
+nenastavenou databázi a nula fiktivních letadel. Pouze tento izolovaný test
+nově ověřuje všechny vlastnosti; reálné monitorování nasazené produkce se
+nesmí oslabovat ani obnovovat syntetický provoz. Samostatný Beast příjem
+zůstává při výslovném nastavení dostupný.

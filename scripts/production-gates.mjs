@@ -2928,6 +2928,10 @@ async function main() {
       NODE_ENV: "production",
       DATABASE_URL: "",
       READSB_BASE_URL: "",
+      READSB_BEAST_ENABLED: "false",
+      READSB_BEAST_HOST: "",
+      ADSBLOL_ENABLED: "false",
+      ADSBHUB_ENABLED: "false",
       ATC_SAMPLE_ENABLED: "true",
       ADSBDB_ENABLED: "false",
       AIRCRAFT_PHOTOS_ENABLED: "false",
@@ -2956,7 +2960,17 @@ async function main() {
     const staticPayloadBytes = {};
     if (mode !== "browser") {
     const health = await get("/api/health");
-    if (!health.ok || (await health.json()).status !== "ok") throw new Error("Health smoke failed");
+    const healthPayload = await health.json();
+    // This isolated gate deliberately has NO local or network receiver.
+    // A degraded state is the correct fail-closed behavior after J10 retirement.
+    // Never accept an offline receiver as healthy in a deployed monitoring gate.
+    if (!health.ok || healthPayload.status !== "degraded"
+      || healthPayload.readsb?.provider !== "readsb-unconfigured"
+      || healthPayload.readsb?.status !== "offline"
+      || healthPayload.database?.status !== "not_configured"
+      || healthPayload.aircraftCount !== 0) {
+      throw new Error("Health smoke failed: missing receiver must be degraded without synthetic aircraft");
+    }
     const version = await get("/api/version");
     const versionPayload = await version.json();
     assertProductionReleaseMetadata(versionPayload, gateChannel, expectedVersion);
