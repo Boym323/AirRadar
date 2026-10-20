@@ -129,3 +129,7 @@ Flight Follow remains available, with identity, live altitude/speed/vertical-rat
 ## Phase 14 (staged): prune unused Regional Attention map-only projector
 
 Removed the obsolete `lib/operational-twin/regional-attention-ui.ts` and its dedicated visualization test, which had no radar consumer after removing D-layer event listeners and GeoJSON sources. Preserve historical Regional Attention outcome validators, promotion/graduation logic and stored data; this is not a server/runtime migration. The explicit feature-boundary regression confirms the dead UI projector remains removed without deleting persisted outcome modules.
+
+## Phase 12 (staged): retire Digital Twin compatibility API shape
+
+The selected-aircraft context hook now returns only the retained ATC result. All temporary typed-null Digital Twin and Operational Focus return fields and type imports are removed after confirming that map, flight-follow and drawer call sites no longer consume them. Regression tests protect the ATC context and ensure the rejected Digital Twin type is not reintroduced. Historical data and server APIs remain unchanged.

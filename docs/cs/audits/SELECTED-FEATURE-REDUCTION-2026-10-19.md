@@ -130,3 +130,7 @@ Flight Follow zůstává dostupný včetně identity, živé telemetrie výšky/
 ## Fáze 14 (rozpracováno): odstranění osiřelého mapového projektoru Regional Attention
 
 Vyřazena nepotřebná knihovna `lib/operational-twin/regional-attention-ui.ts` a její test mapového zobrazení, protože radar již nemá související posluchače ani GeoJSON zdroje. Validátory historických Regional Attention výsledků, kalibrační logika a uložená data zůstávají beze změn; nejde o migraci serveru. Regresní test hlídá nepřítomnost mapového projektoru bez ztráty historických výsledků.
+
+## Fáze 12 (rozpracováno): odstranění kompatibilního rozhraní Digital Twin
+
+Hook kontextu vybraného letadla nyní vrací pouze zachovaný výsledek ATC. Byly odstraněny dočasné prázdné položky Digital Twin a Operational Focus i související typové importy, protože je již nepoužívá mapa, sledování letu ani detail. Regresní testy zachovávají ATC kontext a hlídají, aby se zrušené typy nevrátily. Historická data a serverová API se nemění.

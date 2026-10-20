@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/aircraft-operational-focus-change";
-import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
 
 interface UseRadarAircraftContextOptions {
   aircraftHex: string | null;
@@ -48,11 +46,5 @@ export function useRadarAircraftContext({ aircraftHex, hasPosition }: UseRadarAi
     };
   }, [aircraftHex, hasPosition]);
 
-  // Transitional API shape: the rejected Digital Twin must never poll the
-  // selected aircraft. The visual map consumers are retired separately.
-  return {
-    atcContext,
-    operationalTwin: null as OperationalTwinApiResponse | null,
-    operationalFocusChanges: null as AircraftOperationalFocusChangeSummary | null,
-  };
+  return { atcContext };
 }

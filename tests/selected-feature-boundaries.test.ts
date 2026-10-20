@@ -132,7 +132,8 @@ describe("explicit selected-feature reduction contracts", () => {
     const hook = readFileSync(new URL("components/radar/use-radar-aircraft-context.ts", root), "utf8");
     expect(hook).not.toContain("/situation");
     expect(hook).not.toContain("setOperationalTwin");
-    expect(hook).toContain("operationalTwin: null");
+    expect(hook).not.toContain("OperationalTwinApiResponse");
+    expect(hook).toContain("return { atcContext };");
     expect(hook).toContain("/context");
   });
 
