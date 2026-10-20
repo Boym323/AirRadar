@@ -460,3 +460,10 @@ do jeho interního vyhledávání letišť. Nepotřebné scénáře a zaváděj�
 před/po porovnání odstraněny. Zachována měření aplikace snapshotů,
 SSE, source merge, cache a geometrie ATC. Výsledný load-scaling report
 používá schéma 3 a `snapshotApplication.full`, bez starých experimentů.
+
+## Fáze 49b: odstranění posledních osiřelých testů Flight Intelligence
+
+Kompletní Vitest odhalil dva testy importující zrušený Operations Center
+a prediktivní validátor terminálních událostí. Jde pouze o zrušené
+analytické funkce, proto byly testy odstraněny a negativní regresní
+kontrola rozšířena. Historická data a API zůstávají.

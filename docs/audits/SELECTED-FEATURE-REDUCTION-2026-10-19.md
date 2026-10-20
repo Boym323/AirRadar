@@ -526,3 +526,11 @@ geometry benchmarks. Version the isolated load-scaling report to schema 3
 with `snapshotApplication.full` only; the old airport-catalog comparison and
 synthetic Flight Intelligence nearest-airport experiment are retired. Update
 regression tests and avoid attributing invented CPU savings to this cleanup.
+
+## Phase 49b: remove last orphan Flight Intelligence replay-only tests
+
+The full Vitest run found two tests importing the deleted operations-center
+projection and prospective terminal-evidence classifier. Both only tested the
+rejected prediction/Flight Intelligence domain, not retained historical
+readers. Delete these two test suites and extend the negative regression guard.
+Leave all FlightEvent and FlightPosition records, migrations and history APIs.
