@@ -419,12 +419,10 @@ describe("phase 29 no autonomous rejected Digital Twin calibration", () => {
 describe("phase 32 live analytics versus L11/L12 delivery separation", () => {
   it("keeps the historic tables while no longer invoking removed analytical triggers", () => {
     const state = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
-    const alerts = readFileSync(new URL("lib/server/alert-engine.ts", root), "utf8");
     expect(state).not.toContain("this.intelligence.observe(");
     expect(state).not.toContain("this.predictive.evaluate(");
     expect(state).not.toContain("schedulePredictiveWatchlistAlerts");
-    expect(alerts).not.toContain("observeIntelligenceEvent");
-    expect(alerts).not.toContain("observePredictiveAdvisories");
+    expect(existsSync(new URL("lib/server/alert-engine.ts", root))).toBe(false);
     expect(state).toContain("getAlertDeliveryWorker().start()");
     expect(state).toContain("this.navigationIntegrity.observe(activeAircraft");
     expect(state).toContain("recordAircraftSnapshot");
@@ -432,10 +430,8 @@ describe("phase 32 live analytics versus L11/L12 delivery separation", () => {
 });
 
 describe("phase 34 retired FlightEvent ID lookup", () => {
-  it("keeps the alert engine independent from FlightEvent ORM and old resolver tests", () => {
-    const alertSource = readFileSync(new URL("lib/server/alert-engine.ts", root), "utf8");
-    expect(alertSource).not.toContain("resolvePersistedFlightEventId");
-    expect(alertSource).not.toContain("getPrisma");
+  it("removes the obsolete engine and retains the durable delivery worker", () => {
+    expect(existsSync(new URL("lib/server/alert-engine.ts", root))).toBe(false);
     expect(existsSync(new URL("tests/alert-engine-canonical-id.test.ts", root))).toBe(false);
     expect(existsSync(new URL("lib/server/alert-delivery-worker.ts", root))).toBe(true);
   });

@@ -23,7 +23,7 @@ import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
-import type { AlertEngine, AlertStatus } from "@/lib/server/alert-engine";
+import type { AlertStatus } from "@/lib/server/alert-status";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { coverageStats, mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
@@ -177,7 +177,7 @@ export class AircraftStateService {
     provider: AircraftProvider = createAircraftProvider(),
     enrichment: EnrichmentService = createEnrichmentService(),
     atc: AtcSectorService = new AtcSectorService(createAtcSectorProvider()),
-    _retiredAlerts: AlertEngine | undefined = undefined,
+    _retiredAlerts: unknown = undefined,
     statistics: ReceiverStatistics = new ReceiverStatistics(),
     networkProvider: NetworkAircraftProvider = createNetworkAircraftProvider(),
   ) {

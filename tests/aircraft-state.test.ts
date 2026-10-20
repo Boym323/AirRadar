@@ -5,8 +5,6 @@ import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, AircraftEnrichment, ProviderSnapshot, StateSnapshot } from "@/lib/aircraft/types";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { AtcSectorService, EmptyAtcSectorProvider } from "@/lib/server/atc-sector-service";
-import { AlertEngine } from "@/lib/server/alert-engine";
-import type { AircraftAlert } from "@/lib/server/alert-notifier";
 import type { AircraftProvider, NetworkAircraftProvider } from "@/lib/server/provider";
 import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 import { recordAircraftSnapshot } from "@/lib/server/history";
@@ -508,16 +506,12 @@ describe("aircraft state service", () => {
       stop: vi.fn(async () => undefined),
     };
     vi.mocked(recordAircraftSnapshot).mockClear();
-    const alertSend = vi.fn(async (alert: AircraftAlert) => { void alert; });
-    const alerts = new AlertEngine({
-      rules: [{ id: "network-watch", enabled: true, type: "callsignPattern", value: "NETWORK*" }],
-      notifier: { name: "test", enabled: true, send: alertSend },
-      history: { recordDetected: vi.fn(async () => undefined), recordNotification: vi.fn(async () => undefined) },
-    });
-    // Retired alert rules must never be invoked by retained live tracking.
-    const observeSpy = vi.spyOn(alerts, "observe");
-    const newAircraftSpy = vi.spyOn(alerts, "observeNewAircraft");
-    const receptionRecordSpy = vi.spyOn(alerts, "observeReceptionRecord");
+    // A legacy adapter is deliberately ignored; retired rule evaluation must never run.
+    const alerts = {
+      observe: vi.fn(),
+      observeNewAircraft: vi.fn(),
+      observeReceptionRecord: vi.fn(),
+    };
     const service = new AircraftStateService(
       localProvider,
       new EnrichmentService({}),
@@ -543,11 +537,9 @@ describe("aircraft state service", () => {
       .filter((aircraft) => aircraft.length > 0)
       .flat();
     expect(persistedAircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
-    expect(alertSend.mock.calls.some(([alert]) => alert.aircraft.icaoHex === "DEF456")).toBe(false);
-    expect(alertSend.mock.calls.some(([alert]) => alert.type === "watchlist")).toBe(false);
-    expect(observeSpy).not.toHaveBeenCalled();
-    expect(newAircraftSpy).not.toHaveBeenCalled();
-    expect(receptionRecordSpy).not.toHaveBeenCalled();
+    expect(alerts.observe).not.toHaveBeenCalled();
+    expect(alerts.observeNewAircraft).not.toHaveBeenCalled();
+    expect(alerts.observeReceptionRecord).not.toHaveBeenCalled();
     expect(service.getAlertStatus()).toEqual({ status: "disabled", enabled: false, notifier: "retired", ruleCount: 0 });
     expect(networkProvider.getSnapshot).toHaveBeenCalledTimes(1);
   });

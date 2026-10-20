@@ -1,6 +1,6 @@
 import type { StateSnapshot } from "@/lib/aircraft/types";
 import type { AtcDatasetMetadata } from "@/lib/atc/types";
-import type { AlertStatus } from "@/lib/server/alert-engine";
+import type { AlertStatus } from "@/lib/server/alert-status";
 
 export interface HealthDatabaseStatus {
   status: "ok" | "offline" | "not_configured";
