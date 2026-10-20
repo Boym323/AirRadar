@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Airport } from "@/lib/airports/types";
-import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getTranslations } from "@/lib/i18n";
 import {
   AIRPORT_TRAFFIC_RECENT_LIMIT,
