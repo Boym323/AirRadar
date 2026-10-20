@@ -321,3 +321,17 @@ describe("phase 19 retired Flight Intelligence transport", () => {
     expect(existsSync(new URL("app/api/ogn/stream/route.ts", root))).toBe(true);
   });
 });
+
+describe("phase 20 rejected receiver-position presentation", () => {
+  it("removes R13 map/UI while keeping receiver-local context", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const menu = readFileSync(new URL("components/radar/radar-map-layer-menu.tsx", root), "utf8");
+    expect(app).not.toContain("receiver-marker");
+    expect(app).not.toContain("range-rings");
+    expect(menu).not.toContain("showRangeRings");
+    expect(existsSync(new URL("lib/range-rings.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/range-rings.test.ts", root))).toBe(false);
+    expect(app).toContain("shouldRecenterOnReceiver");
+    expect(app).toContain("receiverPositionAvailable ?");
+  });
+});

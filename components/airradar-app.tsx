@@ -32,7 +32,6 @@ import type { AircraftWeatherMapObservation } from "@/components/aircraft-weathe
 import type { OgnStateSnapshot } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { airportVisibilityFilter, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
-import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
 import {
   createRouteAirportGeoJSON,
@@ -228,7 +227,6 @@ export function AirRadarApp() {
   const [watchlist, setWatchlist] = useState<Array<{ kind: string; value: string }>>([]);
   const [showAircraft, setShowAircraft] = useState(true);
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
-  const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
@@ -305,7 +303,6 @@ export function AirRadarApp() {
   const attributionControlRef = useRef<maplibregl.AttributionControl | null>(null);
   const centeredTrafficRef = useRef(false);
   const focusedAircraftRef = useRef<string | null>(null);
-  const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const aircraftMarkersRef = useRef<Map<string, AircraftMarkerHandle>>(new Map());
   const ognMarkersRef = useRef<Map<string, OgnMarkerHandle>>(new Map());
   const aircraftMotionRuntimeRef = useRef<AircraftMotionRuntime | null>(null);
@@ -757,7 +754,6 @@ export function AirRadarApp() {
         showAircraftWeather,
         showNavigationIntegrity,
         showAupUup,
-        showRangeRings,
       },
       display: { colorMode, radarOpacity },
     });
@@ -782,7 +778,6 @@ export function AirRadarApp() {
     showNavData,
     showNavigationIntegrity,
     showOgn,
-    showRangeRings,
     showSids,
     showSigmet,
     showSignificantAirports,
@@ -811,7 +806,6 @@ export function AirRadarApp() {
     setShowAircraftWeather(preset.layers.showAircraftWeather);
     setShowNavigationIntegrity(preset.layers.showNavigationIntegrity);
     setShowAupUup(preset.layers.showAupUup);
-    setShowRangeRings(preset.layers.showRangeRings);
     setColorMode(preset.display.colorMode);
     setRadarOpacity(preset.display.radarOpacity);
     setRadarPlaying(false);
@@ -1175,39 +1169,6 @@ export function AirRadarApp() {
       map.addSource("navigation-integrity", { type: "geojson", data: EMPTY_NAVIGATION_INTEGRITY_GEOJSON });
       map.addLayer({ id: "navigation-integrity-fill", type: "fill", source: "navigation-integrity", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "state"], "SEVERE", AIRRADAR_MAP_THEME.hazard, "DEGRADED", AIRRADAR_MAP_THEME.warning, AIRRADAR_MAP_THEME.warning], "fill-opacity": 0.14 } });
       map.addLayer({ id: "navigation-integrity-line", type: "line", source: "navigation-integrity", layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "state"], "SEVERE", AIRRADAR_MAP_THEME.hazard, AIRRADAR_MAP_THEME.warning], "line-opacity": 0.55, "line-width": 1.1, "line-dasharray": [2, 2] } });
-      map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: "range-rings-line",
-        type: "line",
-        source: "range-rings",
-        paint: {
-          "line-color": AIRRADAR_MAP_THEME.rangeRing,
-          "line-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.04, 5, 0.16, 8, 0.26, 11, 0.2, 14, 0.1],
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 1, 13, 1.2],
-          "line-dasharray": [2, 3],
-        },
-      });
-      map.addLayer({
-        id: "range-rings-label",
-        type: "symbol",
-        source: "range-rings",
-        minzoom: 6.2,
-        layout: {
-          "text-field": ["concat", ["to-string", ["get", "radiusKm"]], " km"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 9,
-          "symbol-placement": "line",
-          "text-padding": 10,
-          "text-allow-overlap": false,
-          "text-ignore-placement": false,
-        },
-        paint: {
-          "text-color": AIRRADAR_MAP_THEME.rangeRingLabel,
-          "text-opacity": ["interpolate", ["linear"], ["zoom"], 6.2, 0.35, 8, 0.7, 12, 0.52, 15, 0.25],
-          "text-halo-color": AIRRADAR_MAP_THEME.outline,
-          "text-halo-width": 1,
-        },
-      });
       map.addSource("aviation-nav-data", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "aviation-nav-data-points", type: "circle", source: "aviation-nav-data", minzoom: 6.5, layout: { visibility: "none" }, paint: { "circle-color": ["case", ["==", ["get", "routeMatched"], true], AIRRADAR_MAP_THEME.accent, ["==", ["get", "kind"], "NAVAID"], AIRRADAR_MAP_THEME.routes.atsCdr, AIRRADAR_MAP_THEME.labelMuted], "circle-radius": ["interpolate", ["linear"], ["zoom"], 6.5, ["case", ["==", ["get", "routeMatched"], true], 3, 2], 10, ["case", ["==", ["get", "routeMatched"], true], 4, 3], 13, ["case", ["==", ["get", "routeMatched"], true], 5, 4]], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1 } });
       map.addLayer({ id: "aviation-nav-data-labels", type: "symbol", source: "aviation-nav-data", minzoom: 8.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 9, "text-offset": [0, 1.1], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.labelMuted, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
@@ -1563,8 +1524,6 @@ export function AirRadarApp() {
       aircraftWebglLabelsUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
       if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
       aircraftMapSyncFrameRef.current = null;
-      receiverMarkerRef.current?.remove();
-      receiverMarkerRef.current = null;
       for (const handle of aircraftMarkers.values()) handle.marker.remove();
       aircraftMarkers.clear();
       for (const handle of ognMarkers.values()) handle.marker.remove();
@@ -1607,34 +1566,12 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     const receiver = snapshot.receiver;
     receiverRef.current = receiver;
-    const rings = map.getSource("range-rings") as GeoJSONSource | undefined;
-    const rangeLayer = map.getLayer("range-rings-line");
-    if (receiver.lat === null || receiver.lon === null) {
-      receiverMarkerRef.current?.remove();
-      receiverMarkerRef.current = null;
-      rings?.setData({ type: "FeatureCollection", features: [] });
-      if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", "none");
-      if (map.getLayer("range-rings-label")) map.setLayoutProperty("range-rings-label", "visibility", "none");
-      return;
-    }
-    const receiverWithCoordinates: ReceiverPosition = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
-    if (!receiverMarkerRef.current) {
-      const receiverElement = document.createElement("div");
-      receiverElement.className = "receiver-marker";
-      receiverElement.setAttribute("aria-label", t.radar.receiverPosition);
-      receiverMarkerRef.current = new maplibregl.Marker({ element: receiverElement, anchor: "center" })
-        .setLngLat([receiver.lon, receiver.lat])
-        .addTo(map);
-    }
-    receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
-    rings?.setData(createRangeRingsGeoJSON(receiverWithCoordinates, showRangeRings ? RANGE_RING_RADII_KM : []));
-    if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", showRangeRings ? "visible" : "none");
-    if (map.getLayer("range-rings-label")) map.setLayoutProperty("range-rings-label", "visibility", showRangeRings ? "visible" : "none");
+    if (receiver.lat === null || receiver.lon === null) return;
     if (shouldRecenterOnReceiver(snapshot.provider, centeredReceiverRef.current, receiver)) {
       map.jumpTo({ center: [receiver.lon, receiver.lat] });
-      centeredReceiverRef.current = receiverWithCoordinates;
+      centeredReceiverRef.current = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
     }
-  }, [mapReady, showRangeRings, snapshot.provider, snapshot.receiver]);
+  }, [mapReady, snapshot.provider, snapshot.receiver]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2461,9 +2398,6 @@ export function AirRadarApp() {
                 showAupUup={showAupUup}
                 onShowAupUupChange={setShowAupUup}
                 airspaceDataset={airspaceDataset}
-                receiverPositionAvailable={receiverPositionAvailable}
-                showRangeRings={showRangeRings}
-                onShowRangeRingsChange={setShowRangeRings}
                 colorMode={colorMode}
                 onColorModeChange={setColorMode}
               />
@@ -2520,8 +2454,7 @@ export function AirRadarApp() {
               </div> : <div className="map-layer-notice" role="status">{weatherView.state === "unavailable" ? t.layers.radarUnavailable : t.radarQuickActions.weatherLoading}</div>}
             </div> : null}
             {networkNotice && <div className="map-source-notice"><span className="network-notice">{networkNotice}</span></div>}
-            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
-              {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
+            {colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
               {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
               {showMetar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.metar}</strong><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span></span>}

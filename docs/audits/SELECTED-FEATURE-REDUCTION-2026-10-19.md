@@ -157,3 +157,10 @@ Preserve shared SSE capacity management for live radar, OGN and system streams. 
 FlightEvent history and the shared runtime producer until notification and database dependencies
 have been audited. Retire Time Machine and Flight Intelligence rows from the feature registry;
 update the generated English and localized Czech tables. No DB/schema migration or deploy.
+
+## Phase 20 (staged): retire R13 receiver marker and range rings
+
+Remove public receiver marker rendering, MapLibre ring layers, menu control,
+preset flag, helper and dedicated tests. Preserve internal receiver coordinates
+for local airport proximity and initial map centering. Previously saved presets
+with the retired ring flag remain loadable and silently discard it.

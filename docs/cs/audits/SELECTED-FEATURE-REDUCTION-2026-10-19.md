@@ -150,3 +150,10 @@ Flight Intelligence a jeho izolovaný test. Sdílený SSE kapacitní manažer a
 streamy živého radaru, OGN a systému zůstávají. Uložená historie FlightEvent
 se nemaže; zbylé runtime producenty je nutné auditovat kvůli závislostem
 notifikací a perzistence. Registr funkcí a tabulky EN/CS byly synchronizovány.
+
+## Fáze 20 (postupně): odstranění R13 značky přijímače a kružnic dosahu
+
+Odstraněna veřejná značka přijímače, kružnice dosahu, přepínač vrstvy,
+volba v mapových presetech, pomocný modul a příslušné testy. Interní souřadnice
+přijímače zůstávají pro okolní letiště a počáteční vycentrování mapy.
+Dříve uložené presety jsou kompatibilní a zastaralou volbu zahazují.

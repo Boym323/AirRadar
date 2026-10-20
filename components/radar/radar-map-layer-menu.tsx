@@ -68,9 +68,6 @@ interface RadarMapLayerMenuProps {
   showAupUup: boolean;
   onShowAupUupChange: (value: boolean) => void;
   airspaceDataset: DatasetState<unknown>;
-  receiverPositionAvailable: boolean;
-  showRangeRings: boolean;
-  onShowRangeRingsChange: (value: boolean) => void;
   colorMode: AircraftColorMode;
   onColorModeChange: (value: AircraftColorMode) => void;
 }
@@ -133,9 +130,6 @@ export function RadarMapLayerMenu({
   showAupUup,
   onShowAupUupChange,
   airspaceDataset,
-  receiverPositionAvailable,
-  showRangeRings,
-  onShowRangeRingsChange,
   colorMode,
   onColorModeChange,
 }: RadarMapLayerMenuProps) {
@@ -197,7 +191,6 @@ export function RadarMapLayerMenu({
           </select>
         </label>
         {mapAppearance === "satellite" && <small>{t.locale.startsWith("en") ? "2020 non-live satellite mosaic · EOxCloudless · personal non-commercial use" : "Historický satelitní podklad 2020 · EOxCloudless · pouze nekomerční použití"}</small>}
-        {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => onShowRangeRingsChange(event.target.checked)} /> {t.layers.rangeRings}</label>}
         <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => onColorModeChange(event.target.value as AircraftColorMode)}>
           <option value="default">{t.layers.colorModes.default}</option>
           <option value="altitude">{t.layers.colorModes.altitude}</option>

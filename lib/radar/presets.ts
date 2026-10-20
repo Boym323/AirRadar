@@ -26,7 +26,6 @@ export interface RadarPresetLayers {
   showAircraftWeather: boolean;
   showNavigationIntegrity: boolean;
   showAupUup: boolean;
-  showRangeRings: boolean;
 }
 
 export interface RadarPreset {
@@ -88,7 +87,6 @@ function validLayers(value: unknown): value is RadarPresetLayers {
     "showAircraft", "showOgn", "showAirports", "showSignificantAirports", "showSmallAirports", "showHeliports",
     "showAtc", "showAtsRoutes", "showNavData", "showSids", "showStars", "showSigmet",
     "showWeatherRadar", "showMetar", "showAircraftWeather", "showNavigationIntegrity", "showAupUup",
-    "showRangeRings",
   ].every((key) => boolean(layers[key]));
 }
 
@@ -123,8 +121,9 @@ export function parseRadarPreset(value: unknown): RadarPreset | null {
 
   // Keep compatibility with V1 presets that contain the retired traffic flag.
   // A shallow copy avoids allocating an entries array for each saved preset.
-  const layers: RadarPresetLayers & { showAtcTraffic?: boolean } = { ...preset.layers };
+  const layers: RadarPresetLayers & { showAtcTraffic?: boolean; showRangeRings?: boolean } = { ...preset.layers };
   delete layers.showAtcTraffic;
+  delete layers.showRangeRings;
 
   return {
     version: 1,

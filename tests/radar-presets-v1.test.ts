@@ -34,7 +34,6 @@ function input(name = "PRG arrivals") {
       showAircraftWeather: false,
       showNavigationIntegrity: false,
       showAupUup: true,
-      showRangeRings: true,
     },
     display: { colorMode: "altitude" as const, radarOpacity: 0.65 },
   };
@@ -55,10 +54,11 @@ describe("Radar Presets V1", () => {
 
   it("parses old V1 presets without re-enabling retired map traffic", () => {
     const preset = createRadarPreset(input(), new Date("2026-10-06T18:00:00Z"), "legacy");
-    const legacy = { ...preset, layers: { ...preset.layers, showAtcTraffic: true } };
+    const legacy = { ...preset, layers: { ...preset.layers, showAtcTraffic: true, showRangeRings: true } };
     const [parsed] = parseRadarPresets([legacy]);
     expect(parsed?.layers.showAtc).toBe(true);
     expect(parsed?.layers).not.toHaveProperty("showAtcTraffic");
+    expect(parsed?.layers).not.toHaveProperty("showRangeRings");
   });
 
   it("rejects malformed stored presets and caps the list", () => {

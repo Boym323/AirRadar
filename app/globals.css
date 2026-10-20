@@ -970,7 +970,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .radar-traffic-hero-metrics > div { display: grid; gap: 2px; min-width: 0; }
 .radar-traffic-hero-metrics strong { color: var(--text-primary); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
 .radar-traffic-hero-metrics span { color: var(--text-muted); font-size: var(--font-size-2xs); text-transform: uppercase; }
-.receiver-marker { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(243, 185, 95, .2); box-shadow: 0 0 0 7px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { background: rgba(8,17,29,.87) !important; border: 1px solid var(--line) !important; }
 .maplibregl-ctrl-group button { filter: invert(1) hue-rotate(160deg); }
 .maplibregl-ctrl-attrib { background: rgba(8,17,29,.75) !important; color: var(--muted) !important; }
@@ -2155,7 +2154,6 @@ button, input, select, textarea { color-scheme: dark; }
 .primary-button:hover { background: var(--accent-hover); }
 .detail-footer { margin-top: 17px; padding-top: 13px; border-top-color: var(--border); font-size: 11px; }
 
-.receiver-marker { width: 18px; height: 18px; border-color: var(--warning); background: rgba(243, 185, 95, .16); box-shadow: 0 0 0 6px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { border-color: var(--border-strong) !important; border-radius: 4px !important; background: rgba(8, 17, 29, .94) !important; overflow: hidden; }
 .maplibregl-ctrl-group button { width: 34px; height: 34px; filter: invert(1) sepia(.2) saturate(.5) hue-rotate(145deg); }
 .maplibregl-ctrl-attrib { background: rgba(8, 17, 29, .84) !important; color: var(--text-muted) !important; font-size: var(--font-size-2xs); }
@@ -4762,14 +4760,6 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--accent) !important;
 }
 
-.receiver-marker {
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--selected);
-  border-radius: 50%;
-  background: var(--surface-selected-soft);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--selected) 10%, transparent);
-}
 
 .contextual-legend {
   gap: var(--space-2) var(--space-4);
@@ -4792,10 +4782,6 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--text-secondary);
 }
 
-.legend-line.range-ring {
-  border-top-color: var(--accent);
-  opacity: .7;
-}
 
 .legend-line.actual {
   border-top-color: var(--selected);

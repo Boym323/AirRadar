@@ -19,7 +19,6 @@ const ognStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-
 const searchTriggerSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
 const commandPaletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
 const serverSearchSource = readFileSync(new URL("../lib/server/search.ts", import.meta.url), "utf8");
-const rangeRingsSource = readFileSync(new URL("../lib/range-rings.ts", import.meta.url), "utf8");
 
 const origin = {
   icaoCode: "LKPR",
@@ -112,12 +111,12 @@ describe("feature integration", () => {
     expect(commandPaletteSource).toContain("/api/search?q=");
   });
 
-  it("keeps range rings optional and within the public receiver privacy boundary", () => {
-    expect(rangeRingsSource).toContain("50, 100, 200, 300, 400");
-    expect(radarSource).toContain("showRangeRings");
-    expect(radarSource).toContain("snapshot.receiver.lat === null || snapshot.receiver.lon === null");
-    expect(radarLayerMenuSource).toContain("receiverPositionAvailable && <label>");
-    expect(`${radarSource}\n${ognStreamSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
+  it("keeps receiver airport lookup without a map marker or rings", () => {
+    expect(radarSource).toContain("receiverPositionAvailable ?");
+    expect(radarSource).not.toContain("showRangeRings");
+    expect(radarSource).not.toContain("receiver-marker");
+    expect(radarSource).not.toContain('map.addSource("range-rings"');
+    expect(radarLayerMenuSource).not.toContain("showRangeRings");
   });
 
   it("keeps aircraft and airport result navigation canonical", () => {
