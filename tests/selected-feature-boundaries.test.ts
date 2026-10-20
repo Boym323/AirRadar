@@ -411,7 +411,7 @@ describe("phase 29 no autonomous rejected Digital Twin calibration", () => {
     expect(source).not.toContain('import("@/lib/server/operational-twin")');
     expect(source).toContain("this.navigationIntegrity.observe(activeAircraft");
     expect(source).toContain("this.statistics.observe(activeAircraft");
-    expect(source).toContain("this.operationalTwinCalibrationPersistence.stop()");
+    expect(source).not.toContain("this.operationalTwinCalibrationPersistence.stop()");
     expect(source).toContain("recordAircraftSnapshot");
   });
 });
