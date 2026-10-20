@@ -133,3 +133,19 @@ Removed the obsolete `lib/operational-twin/regional-attention-ui.ts` and its ded
 ## Phase 12 (staged): retire Digital Twin compatibility API shape
 
 The selected-aircraft context hook now returns only the retained ATC result. All temporary typed-null Digital Twin and Operational Focus return fields and type imports are removed after confirming that map, flight-follow and drawer call sites no longer consume them. Regression tests protect the ATC context and ensure the rejected Digital Twin type is not reintroduced. Historical data and server APIs remain unchanged.
+
+## Phase 18 (staged): retire unused public read APIs
+
+Remove eight read-only API entrypoints whose standalone pages or selected-aircraft consumers
+were retired in the preceding phases: Time Machine range/window (H11/H12), Flight
+Intelligence events/analytics (P01-P03), regional/predictive Operations views (P15,
+D09-D12), selected-aircraft route-weather (W12) and Weather Fusion (W10).
+
+Preserve all PostgreSQL history, stored outcomes, ingestion services, and archived observations.
+This phase changes no migrations or databases. Shared weather provider, route reference,
+Navigation Integrity, retained altitude history, and published ATC map geometry stay intact.
+Remaining server pipelines and internal libraries require a separate import/call graph review
+before removal; old external consumers of these removed routes receive 404 after deployment.
+
+Do not merge/deploy until the full CI, build and runtime smoke pass against the new head.
+The PR remains draft and release validation/production gates still require explicit review.

@@ -283,3 +283,31 @@ describe("explicit selected-feature reduction contracts", () => {
     }
   });
 });
+
+describe("phase 18 retired API entrypoints", () => {
+  it("does not expose standalone Time Machine, Intelligence or prediction APIs", () => {
+    for (const path of [
+      "app/api/time-machine/range/route.ts",
+      "app/api/time-machine/window/route.ts",
+      "app/api/intelligence/analytics/route.ts",
+      "app/api/intelligence/events/route.ts",
+      "app/api/operations/predictive/route.ts",
+      "app/api/operations/situation/route.ts",
+      "app/api/aircraft/[hex]/route-weather/route.ts",
+      "app/api/aircraft/[hex]/weather-fusion/route.ts"
+]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+  });
+  it("retains selected history, navigation, weather and notification transports", () => {
+    for (const path of [
+      "app/api/history/[hex]/route.ts",
+      "app/api/navigation-integrity/current/route.ts",
+      "app/api/ats/routes/route.ts",
+      "app/api/weather/sigmet/route.ts",
+      "app/api/weather/airport/[icao]/route.ts",
+      "app/api/push/subscribe/route.ts",
+      "app/api/push/vapid-public-key/route.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(true);
+  });
+});
