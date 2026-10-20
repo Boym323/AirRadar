@@ -38,14 +38,13 @@
       "category": "radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state.",
+      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, live SSE transport and selected-aircraft map/route context without predictive dashboards.",
       "pages": [
         "/"
       ],
       "apis": [
         "/api/aircraft",
         "/api/aircraft/:hex",
-        "/api/operations/predictive",
         "/api/search",
         "/api/stream"
       ],
@@ -86,7 +85,7 @@
       "category": "history",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories.",
+      "summary": "Selected aircraft detail with retained ADS-B telemetry, photos, receiver context and sampled historical altitude profile; retired prediction and route-weather panels are excluded.",
       "pages": [
         "/aircraft/:hex"
       ],
@@ -94,7 +93,6 @@
         "/api/aircraft/:hex/context",
         "/api/aircraft/:hex/prediction",
         "/api/aircraft/:hex/photo",
-        "/api/aircraft/:hex/route-weather",
         "/api/history/:hex",
         "/api/history/flights",
         "/api/history/flights/:id"
@@ -190,28 +188,6 @@
       ]
     },
     {
-      "id": "time-machine",
-      "name": "Time Machine",
-      "category": "history",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence.",
-      "pages": [],
-      "apis": [
-        "/api/time-machine/range",
-        "/api/time-machine/window"
-      ],
-      "changelogScopes": [
-        "time-machine",
-        "event-replay"
-      ],
-      "changelogKeywords": [
-        "time machine",
-        "event replay",
-        "replay ±10 min"
-      ]
-    },
-    {
       "id": "trajectory-conformance",
       "name": "Trajectory Conformance",
       "category": "navigation / intelligence",
@@ -241,12 +217,11 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion.",
+      "summary": "Radar imagery, METAR/TAF, SIGMET, aircraft-observed weather, and bounded PIREP/AIREP context; standalone Weather Fusion and flight-route weather endpoints are retired.",
       "pages": [
         "/weather"
       ],
       "apis": [
-        "/api/aircraft/:hex/weather-fusion",
         "/api/map-context/at",
         "/api/map-context/aup",
         "/api/map-context/metar",
@@ -359,30 +334,6 @@
         "alert history",
         "fleet",
         "notification center"
-      ]
-    },
-    {
-      "id": "flight-intelligence",
-      "name": "Flight Intelligence",
-      "category": "intelligence",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events.",
-      "pages": [],
-      "apis": [
-        "/api/intelligence/events",
-        "/api/intelligence/stream",
-        "/api/intelligence/analytics"
-      ],
-      "changelogScopes": [
-        "intelligence"
-      ],
-      "changelogKeywords": [
-        "flight intelligence",
-        "go-around",
-        "holding detection",
-        "transition intelligence",
-        "flight intelligence analytics"
       ]
     },
     {
@@ -586,8 +537,7 @@
         "/api/admin/operational-twin/outcome",
         "/api/admin/operational-twin/regional-attention-graduation",
         "/api/admin/operational-twin/regional-attention-outcome",
-        "/api/aircraft/:hex/situation",
-        "/api/operations/situation"
+        "/api/aircraft/:hex/situation"
       ],
       "changelogScopes": [
         "operational-twin",

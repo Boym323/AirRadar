@@ -311,3 +311,13 @@ describe("phase 18 retired API entrypoints", () => {
     ]) expect(existsSync(new URL(path, root)), path).toBe(true);
   });
 });
+
+
+describe("phase 19 retired Flight Intelligence transport", () => {
+  it("does not expose an orphan Flight Intelligence SSE route", () => {
+    expect(existsSync(new URL("app/api/intelligence/stream/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/intelligence-stream-route.test.ts", root))).toBe(false);
+    expect(existsSync(new URL("app/api/stream/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/ogn/stream/route.ts", root))).toBe(true);
+  });
+});

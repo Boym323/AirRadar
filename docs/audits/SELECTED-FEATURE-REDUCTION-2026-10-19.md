@@ -149,3 +149,11 @@ before removal; old external consumers of these removed routes receive 404 after
 
 Do not merge/deploy until the full CI, build and runtime smoke pass against the new head.
 The PR remains draft and release validation/production gates still require explicit review.
+
+## Phase 19 (staged): retire the unused Flight Intelligence SSE endpoint
+
+Remove the Flight Intelligence SSE route and its route-only test after its client UI was deleted.
+Preserve shared SSE capacity management for live radar, OGN and system streams. Retain stored
+FlightEvent history and the shared runtime producer until notification and database dependencies
+have been audited. Retire Time Machine and Flight Intelligence rows from the feature registry;
+update the generated English and localized Czech tables. No DB/schema migration or deploy.
