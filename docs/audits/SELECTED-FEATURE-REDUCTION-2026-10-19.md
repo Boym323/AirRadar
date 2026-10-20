@@ -81,3 +81,7 @@ Following the disabled per-aircraft situation polling, unregister eight Digital 
 ## Phase 8 (staged): remove live Weather Avoidance classification and UI
 
 The rejected W11 Weather Avoidance classification no longer runs in the radar selection/render path, no longer flows through the drawer props, and is no longer shown as a panel. Preserve aircraft SIGMET context (W06), standalone observed trajectory-deviation context, and Navigation Integrity. The pure Weather Avoidance analysis module and existing unit tests are not deleted pending independent audit of possible server-side imports. No history, database schema, ingest or production deployment changes.
+
+## Phase 9 (staged): unregister rejected Digital Twin Regional Attention radar overlays
+
+Remove the orphan regional-attention map source, its line/aircraft layers, client-side focus events, and associated per-snapshot GeoJSON calculation. Preserve ordinary aircraft trails, ATC and Navigation Integrity map overlays. The pure Regional Attention helper remains until all event publishers and server-side consumers are independently audited; the patch does not touch database history or production.

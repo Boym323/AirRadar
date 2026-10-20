@@ -156,6 +156,16 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(panel).toContain("aircraft-sigmet-context");
   });
 
+  it("does not register rejected Digital Twin Regional Attention map lane", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(app).not.toContain("REGIONAL_ATTENTION_MAP_");
+    expect(app).not.toContain("createRegionalAttentionMapFocusGeoJSON");
+    expect(app).not.toContain("regionalAttentionMapFocus");
+    expect(app).toContain("showNavigationIntegrity");
+    expect(app).toContain("showAtc");
+    expect(app).toContain('map.addSource("selected-trail"');
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

@@ -82,3 +82,7 @@ Po vypnutí dotazování vybraného letadla byly vyřazeny predikční vrstvy Di
 ## Fáze 8 (rozpracováno): odstranění živého Weather Avoidance a panelu
 
 Nevyžadovaná klasifikace W11 Weather Avoidance se již nepočítá při výběru/vykreslení letadla, nepředává se přes komponenty detailu ani se nezobrazuje. SIGMET pro letadlo (W06), samostatný zjištěný kontext odchylky trajektorie a Navigation Integrity zůstávají zachovány. Čistá analytická knihovna a její unit testy zůstávají do samostatného auditu serverových importů. Bez změn historie, databázového schématu, příjmu dat a produkce.
+
+## Fáze 9 (rozpracováno): odstranění regionálních mapových vrstev Digital Twin
+
+Odstraněn osiřelý mapový zdroj Regional Attention, vrstvy čar/letadel, klientský posluchač a přepočítávání GeoJSON při snímcích provozu. Běžná stopa letadel, ATC i mapové informace Navigation Integrity jsou zachovány. Čistá knihovna Regional Attention zůstává do auditu všech producentů událostí a serverových konzumentů; bez zásahů do databázové historie či produkce.

@@ -26,15 +26,6 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import {
-  createRegionalAttentionMapFocusGeoJSON,
-  emptyRegionalAttentionMapFocusGeoJSON,
-  REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
-  REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
-  REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
-  REGIONAL_ATTENTION_MAP_SOURCE_ID,
-  type RegionalAttentionMapFocusEventDetail,
-} from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
@@ -451,30 +442,6 @@ export function AirRadarApp() {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
   };
-  const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
-
-  useEffect(() => {
-    const onRegionalAttentionMapFocus = (event: Event) => {
-      setRegionalAttentionMapFocus((event as CustomEvent<RegionalAttentionMapFocusEventDetail>).detail ?? null);
-    };
-    window.addEventListener(REGIONAL_ATTENTION_MAP_FOCUS_EVENT, onRegionalAttentionMapFocus);
-    return () => window.removeEventListener(REGIONAL_ATTENTION_MAP_FOCUS_EVENT, onRegionalAttentionMapFocus);
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const source = map.getSource(REGIONAL_ATTENTION_MAP_SOURCE_ID) as GeoJSONSource | undefined;
-    source?.setData(createRegionalAttentionMapFocusGeoJSON(regionalAttentionMapFocus, snapshot.aircraft));
-    const visible = regionalAttentionMapFocus !== null;
-    if (map.getLayer(REGIONAL_ATTENTION_MAP_LINE_LAYER_ID)) {
-      map.setLayoutProperty(REGIONAL_ATTENTION_MAP_LINE_LAYER_ID, "visibility", visible ? "visible" : "none");
-    }
-    if (map.getLayer(REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID)) {
-      map.setLayoutProperty(REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID, "visibility", visible ? "visible" : "none");
-    }
-  }, [mapReady, regionalAttentionMapFocus, snapshot.aircraft]);
-
   const readRadarLayout = useCallback(() => {
     const mapElement = mapContainerRef.current;
     if (!mapElement || typeof window === "undefined") return null;
@@ -1279,34 +1246,6 @@ export function AirRadarApp() {
       map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 2.6, 13, 3.4] } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addSource(REGIONAL_ATTENTION_MAP_SOURCE_ID, { type: "geojson", data: emptyRegionalAttentionMapFocusGeoJSON() });
-      map.addLayer({
-        id: REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
-        type: "line",
-        source: REGIONAL_ATTENTION_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "line"],
-        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": AIRRADAR_MAP_THEME.warning,
-          "line-opacity": 0.72,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3],
-          "line-dasharray": [2, 2],
-        },
-      });
-      map.addLayer({
-        id: REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
-        type: "circle",
-        source: REGIONAL_ATTENTION_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "aircraft"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": AIRRADAR_MAP_THEME.warning,
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 9, 4.5, 13, 6],
-          "circle-opacity": 0.3,
-          "circle-stroke-color": AIRRADAR_MAP_THEME.selectedStrong,
-          "circle-stroke-width": 1.5,
-        },
-      });
       map.addLayer({
         id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
         type: "line",
