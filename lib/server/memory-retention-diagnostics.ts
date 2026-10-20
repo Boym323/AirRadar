@@ -107,7 +107,6 @@ export function getMemoryRetentionDiagnostics(input: {
   lastHistorySample: ReadonlyMap<string, unknown>;
   predictiveEvaluatedAt: ReadonlyMap<string, unknown>;
   atcResolutionKeys: ReadonlyMap<string, unknown>;
-  atcShadowPredictionKeys: ReadonlyMap<string, unknown>;
   snapshotCacheEntries: number;
   listeners: number;
   now?: number;
@@ -137,7 +136,6 @@ export function getMemoryRetentionDiagnostics(input: {
       lastHistorySample: input.lastHistorySample.size,
       predictiveEvaluatedAt: input.predictiveEvaluatedAt.size,
       atcResolutionKeys: input.atcResolutionKeys.size,
-      atcShadowPredictionKeys: input.atcShadowPredictionKeys.size,
     },
     snapshotCacheEntries: input.snapshotCacheEntries,
     listeners: input.listeners,
