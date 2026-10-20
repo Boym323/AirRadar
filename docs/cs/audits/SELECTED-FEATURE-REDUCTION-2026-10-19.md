@@ -49,3 +49,8 @@ konverzaci ChatGPT ze dne 19. října 2026.
 Zachovaná integrace RXW Hubu E07 pro technická metadata zůstává beze změn. Zamítnutá E08 již v živém radaru neregistruje H1/FPN vrstvy MapLibre ani neprovádí pravidelné dotazy na waypointy (60 s) a trasu vybraného letadla (30 s). Test hlídá odstranění importů, mapových vrstev i dotazů v živém radaru. Živý parser H1/FPN, API dostupnosti a cache byly v navazujícím commitu odstraněny; historické záznamy a jejich validace zůstávají čitelné. PR neprovádí databázovou migraci ani produkční nasazení.
 
 Panel metadat RXW v detailu letadla už nezobrazuje H1/FPN seznam waypointů. Technická metadata komunikace a strukturovaná informace o trase z RXW (E07) zůstávají dostupné. Parsování a kompatibilita historických záznamů zatím zůstávají pro pozdější bezpečné vyřazení E08 na serveru.
+
+Odstraněn byl také osiřelý historický vykreslovač ACARS/FPN pro MapLibre a
+nenapojené uživatelské rozhraní, styly i překlady. **Nejde o mazání uložené
+historie RXW:** soubor `lib/server/rxw-route-history.ts`, jeho validovaný
+dekodér historických záznamů, migrace a data zůstávají nedotčené.

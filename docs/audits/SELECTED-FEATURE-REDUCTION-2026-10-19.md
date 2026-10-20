@@ -48,3 +48,8 @@ the user's explicit keep/remove selection in the ChatGPT conversation on 2026-10
 The retained E07 RXW Hub metadata integration is unchanged. The rejected E08 live H1/FPN map functionality no longer registers FPN MapLibre layers or makes 60-second availability and 30-second selected-aircraft waypoint polling requests. Tests ensure the live radar has no FPN imports, layers or client requests. The live H1/FPN decoder, availability API, and cache have now been retired in a subsequent commit; historical archive rows and validation remain readable. No database migration or production deploy is performed by this PR.
 
 The aircraft detail RXW metadata panel no longer renders H1/FPN waypoint lists. The sanitized RXW communications and reported structured route hint (E07) remain accessible. Parsing and historical compatibility continue pending the server-side E08 retirement phase.
+
+The retired historical ACARS/FPN MapLibre renderer and its no-longer-mounted
+UI/styles/copy are removed. This does **not** delete persisted RXW route history:
+`lib/server/rxw-route-history.ts`, its validated historical decoder, the
+migration definitions and database contents remain intact.

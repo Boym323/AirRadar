@@ -56,6 +56,14 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(existsSync(new URL("app/api/aircraft/[hex]/communications/route.ts", root))).toBe(true);
     expect(existsSync(new URL("app/api/aircraft/communications/waypoints/route.ts", root))).toBe(false);
     expect(existsSync(new URL("lib/server/rxw-fpn-parser.ts", root))).toBe(false);
+    for (const legacyUi of [
+      "lib/radar/rxw-fpn-visual.ts",
+      "components/historical-acars-routes.tsx",
+      "components/historical-acars-routes.module.css",
+      "lib/i18n/rxw-history.ts",
+    ]) {
+      expect(existsSync(new URL(legacyUi, root)), legacyUi).toBe(false);
+    }
     const store = readFileSync(new URL("lib/server/rxw-hub-store.ts", root), "utf8");
     expect(store).not.toContain("parseRxwH1Fpn");
     expect(store).not.toContain("waypointPlanForFlight");
