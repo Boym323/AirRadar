@@ -16,28 +16,6 @@ const message = (uid: string, extra: Record<string, unknown> = {}) => ({
   text: "PRIVATE MESSAGE SHOULD NOT BE EXPOSED",
   decodedText: { formatted: [{ label: "Private", value: "secret" }] },
   ...extra,
-  it("keeps legacy RXW_FPN_ENABLED inert and never decodes ACARS message bodies", () => {
-    process.env.RXW_FPN_ENABLED = "true";
-    try {
-      const store = new RxwHubMessageStore();
-      const callback = vi.fn();
-      const raw = message("fpn-retired", {
-        label: "H1",
-        flight: "CSA123",
-        depa: "LKPR",
-        dsta: "EGLL",
-        text: "FPN/FNCSA123/RP:DA:LKPR:AA:EGLL:F:FOO,N50000E014000..BAR,N51000E012000ABCD",
-      });
-      expect(store.ingest(raw, now, callback)).toBe(true);
-      expect(callback).toHaveBeenCalledOnce();
-      expect(callback.mock.calls[0]?.[1]).toBeNull();
-      expect(JSON.stringify(store.list("4CA123", now))).not.toContain("FPN/");
-      expect(store.stats()).not.toHaveProperty("plans");
-    } finally {
-      delete process.env.RXW_FPN_ENABLED;
-    }
-  });
-
 });
 
 describe("RXW metadata normalization", () => {
@@ -99,5 +77,29 @@ describe("RXW bounded cache", () => {
       store.ingest(message("uid" + i), now);
     }
     expect(store.stats().uids).toBeLessThanOrEqual(RXW_MAX_SEEN_UIDS);
+  });
+});
+
+describe("retired H1/FPN ingestion boundary", () => {
+  it("ignores legacy RXW_FPN_ENABLED and never decodes ACARS message bodies", () => {
+    process.env.RXW_FPN_ENABLED = "true";
+    try {
+      const store = new RxwHubMessageStore();
+      const callback = vi.fn();
+      const raw = message("fpn-retired", {
+        label: "H1",
+        flight: "CSA123",
+        depa: "LKPR",
+        dsta: "EGLL",
+        text: "FPN/FNCSA123/RP:DA:LKPR:AA:EGLL:F:FOO,N50000E014000..BAR,N51000E012000ABCD",
+      });
+      expect(store.ingest(raw, now, callback)).toBe(true);
+      expect(callback).toHaveBeenCalledOnce();
+      expect(callback.mock.calls[0]?.[1]).toBeNull();
+      expect(JSON.stringify(store.list("4CA123", now))).not.toContain("FPN/");
+      expect(store.stats()).not.toHaveProperty("plans");
+    } finally {
+      delete process.env.RXW_FPN_ENABLED;
+    }
   });
 });
