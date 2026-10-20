@@ -9,7 +9,7 @@
       "category": "platform",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Installable mobile PWA with offline last-state caching, browser-local favorite airports, and optional Web Push notifications for emergency squawks, watchlist aircraft, and geofence events.",
+      "summary": "Installable mobile PWA with offline last-state caching, browser-local favorite airports and an optional Web Push subscription transport. Retired rule-based alerts no longer produce notifications.",
       "pages": [
         "/",
         "/airports/:icao"
@@ -289,43 +289,24 @@
       ]
     },
     {
-      "id": "watchlist-alerts",
-      "name": "Watchlist, Alerts & Fleet",
+      "id": "notification-delivery",
+      "name": "Notification Delivery (L11/L12)",
       "category": "alerts",
-      "status": "production",
+      "status": "internal",
       "introducedVersion": null,
-      "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, server-side paginated filtering/search, rationale, reversible aircraft/rule delivery mutes, delivery health diagnostics, authenticated dry-run alert rule simulation, and bounded alert effectiveness analytics.",
+      "summary": "Web Push subscriptions and VAPID endpoint, durable Pushover delivery worker and admin delivery-health diagnostics. Legacy AlertEngine rules, watchlists, fleets, and Notification Center are retired. Existing queued/historical delivery records remain; transports do not themselves generate new alerts.",
       "pages": [],
       "apis": [
-        "/api/alerts",
-        "/api/watchlist",
-        "/api/watchlist/:id",
-        "/api/watchlist/activity",
         "/api/watchlist/session",
-        "/api/admin/alerts/analytics",
-        "/api/admin/alerts/delivery",
-        "/api/admin/alerts/delivery-health",
-        "/api/admin/alerts/simulator",
-        "/api/admin/alerts/fleets",
-        "/api/admin/alerts/fleets/:id",
-        "/api/admin/alerts/fleets/:id/matchers",
-        "/api/admin/alerts/fleets/:id/matchers/:matcherId",
-        "/api/admin/alerts/geofences",
-        "/api/admin/alerts/geofences/:id",
-        "/api/admin/alerts/history",
-        "/api/admin/alerts/rules",
-        "/api/admin/alerts/rules/:id"
+        "/api/admin/alerts/delivery-health"
       ],
       "changelogScopes": [
-        "alerts",
-        "watchlist",
-        "fleet"
+        "notification-delivery"
       ],
       "changelogKeywords": [
-        "watchlist",
-        "alert history",
-        "fleet",
-        "notification center"
+        "Web Push",
+        "Pushover",
+        "delivery health"
       ]
     },
     {

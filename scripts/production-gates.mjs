@@ -2978,8 +2978,15 @@ async function main() {
     const ognState = await get("/api/ogn/state");
     const ognStatePayload = await ognState.json();
     if (!ognState.ok || ognStatePayload.enabled !== false || !Array.isArray(ognStatePayload.targets) || ognStatePayload.targets.length !== 0) throw new Error("Disabled OGN state smoke failed");
-    const watchlistMutation = await get("/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-    if (watchlistMutation.status !== 401) throw new Error("Watchlist mutation was not protected");
+    // Removed alert/watchlist routes must stay absent even with admin auth enabled.
+    for (const [path, init] of [
+      ["/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }],
+      ["/api/alerts", undefined],
+      ["/api/admin/alerts/rules", undefined],
+    ]) {
+      const response = await get(path, init);
+      if (response.status !== 404) throw new Error(`Retired alert API ${path} unexpectedly returned HTTP ${response.status}`);
+    }
     sseSnapshotBytes = await assertSseLifecycle();
     systemSseSnapshotBytes = await assertSystemSseLifecycle();
     sseV2SnapshotBytes = await assertSseV2Lifecycle();
