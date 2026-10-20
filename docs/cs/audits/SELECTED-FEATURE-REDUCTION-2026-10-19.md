@@ -518,3 +518,11 @@ Katalog letišť, aktuální detail, informace o drahách, blízký provoz,
 METAR/TAF a nezávislé historické čtení provozu zůstávají zachovány.
 Přidána negativní regresní kontrola. Bez databázových migrací, merge
 a zásahu do produkce.
+
+## Fáze 53 (postupně): odstranění staré analytiky počasí
+
+Odstraněna nepoužívaná serverová služba Weather Fusion, sdílený výpočetní
+model Fusion a samostatná prediktivní meteorologická koridorová analytika
+včetně izolovaných testů. Zůstává skutečné počasí METAR/TAF/SIGMET,
+meteorologický radar, pozorování z letadel, mapový kontext SIGMET a používaný
+kontext počasí podél trasy. Bez změny uložených dat, schématu nebo produkce.

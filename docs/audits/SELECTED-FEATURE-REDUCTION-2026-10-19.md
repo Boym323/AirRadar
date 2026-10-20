@@ -591,3 +591,12 @@ Preserve canonical airport catalog/detail/infrastructure, nearby-aircraft
 logic, runway metadata, METAR/TAF and independent historic traffic readers.
 Add a negative regression gate for deleted modules and preserved endpoints.
 No database migration or production deployment.
+
+## Phase 53 (staged): retire unused weather-fusion and weather-corridor analytics
+
+Delete the unused on-demand Weather Fusion server, generic fusion evaluator
+and independent meteorological corridor prediction engine, plus their
+isolated tests. Keep the retained METAR/TAF/SIGMET and weather-radar
+providers, aircraft observations, aircraft SIGMET overlays and current
+route-weather context. No hot-path weather calculations are introduced,
+no persistence or schema migrations are modified, and no deployment occurs.
