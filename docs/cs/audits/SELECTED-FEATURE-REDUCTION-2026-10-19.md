@@ -114,3 +114,7 @@ Smazána odpojená komponenta `components/aircraft-weather-fusion.tsx`; testy u�
 ## Fáze 16 (rozpracováno): odstranění nepotřebného analytického modulu W11 Weather Avoidance
 
 Po odstranění W11 z živého radaru a detailu SIGMET smazána osamocená čistá knihovna `lib/weather/avoidance-intelligence.ts` a její scénářové testy. Samostatný výpočet zjištěné odchylky trajektorie, SIGMET (W06), METAR/TAF a profil počasí letadla zůstávají zachovány. Historie, API a databáze nebyly měněny; případné zbývající importy ověří TypeScript a build v CI.
+
+## Fáze 17 (rozpracováno): odstranění osiřelých komponent Operational Focus
+
+Po odstranění posledních živých konzumentů byly smazány mapová karta Operational Focus, souhrn v panelu detailu a jejich samostatná CSS. Ponechány jsou skutečná telemetrie letadel, ATC vrstvy a Navigation Integrity. Backend výsledky, historická data a hodnoticí moduly zůstávají do samostatného auditu serverových závislostí. Regresní test hlídá, že se odstraněné UI nevrátí.

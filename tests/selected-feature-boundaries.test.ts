@@ -225,6 +225,20 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(quick).toContain("aircraft-sigmet-context");
   });
 
+  it("does not ship orphan Operational Focus map/drawer UI or styles", () => {
+    for (const path of [
+      "components/radar/radar-operational-focus-card.tsx",
+      "components/radar/radar-operational-focus-card.module.css",
+      "components/radar/radar-operational-focus-summary.tsx",
+      "components/radar/radar-operational-focus-summary.module.css",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(app).not.toContain("RadarOperationalFocusCard");
+    expect(quick).not.toContain("RadarOperationalFocusSummary");
+    expect(quick).toContain("<NavigationIntegritySection");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

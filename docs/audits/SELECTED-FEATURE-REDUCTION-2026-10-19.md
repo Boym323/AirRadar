@@ -113,3 +113,7 @@ Delete unmounted `components/aircraft-weather-fusion.tsx` and remove its UI-only
 ## Phase 16 (staged): delete the rejected W11 Weather Avoidance analytical module
 
 After removing W11 from live selection and the SIGMET detail panel, delete the now-unreferenced pure `lib/weather/avoidance-intelligence.ts` classifier and its dedicated scenario tests. Preserve the independent observed SIGMET deviation calculations, W06 weather advisories, METAR/TAF, and aircraft weather profile. Keep non-destructive API, database and historical data intact; the CI TypeScript/build gate checks for remaining imports.
+
+## Phase 17 (staged): remove orphan Operational Focus card and drawer summary
+
+Delete unused map focus card and compact drawer summary components and their dedicated CSS, following retirement of their sole live consumers. Keep actual selected-aircraft telemetry, ATC overlay and Navigation Integrity. Outcome/historical back-end data and scorer modules remain intact pending independent server dependency review. Regression tests assert that these removed UI modules do not reappear.
