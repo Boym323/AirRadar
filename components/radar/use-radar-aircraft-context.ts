@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import {
-  compareAircraftOperationalFocus,
-  type AircraftOperationalFocusChangeSummary,
-} from "@/lib/operational-twin/aircraft-operational-focus-change";
-import type { AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
+import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/aircraft-operational-focus-change";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
 
 interface UseRadarAircraftContextOptions {
@@ -17,9 +13,6 @@ interface UseRadarAircraftContextOptions {
 /** Owns the selected aircraft's bounded, selection-scoped context requests. */
 export function useRadarAircraftContext({ aircraftHex, hasPosition }: UseRadarAircraftContextOptions) {
   const [atcContext, setAtcContext] = useState<AtcContextResult | null>(null);
-  const [operationalTwin, setOperationalTwin] = useState<OperationalTwinApiResponse | null>(null);
-  const [operationalFocusChanges, setOperationalFocusChanges] = useState<AircraftOperationalFocusChangeSummary | null>(null);
-  const operationalFocusSnapshotsRef = useRef<Map<string, AircraftOperationalFocusSummary>>(new Map());
 
   useEffect(() => {
     setAtcContext(null);
@@ -55,43 +48,11 @@ export function useRadarAircraftContext({ aircraftHex, hasPosition }: UseRadarAi
     };
   }, [aircraftHex, hasPosition]);
 
-  useEffect(() => {
-    setOperationalTwin(null);
-    setOperationalFocusChanges(null);
-    if (!aircraftHex || !hasPosition) return;
-    let active = true;
-    let timer: number | null = null;
-    const refresh = () => {
-      void fetch(`/api/aircraft/${encodeURIComponent(aircraftHex)}/situation`, { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok && response.status >= 500) throw new Error("operational twin unavailable");
-          return await response.json() as OperationalTwinApiResponse;
-        })
-        .then((value) => {
-          if (!active) return;
-          setOperationalTwin(value);
-          if (value.status !== "available" || !value.operationalFocus) {
-            setOperationalFocusChanges(null);
-            return;
-          }
-          const hex = value.aircraft.icaoHex.toUpperCase();
-          const previous = operationalFocusSnapshotsRef.current.get(hex) ?? null;
-          setOperationalFocusChanges(compareAircraftOperationalFocus(previous, value.operationalFocus));
-          operationalFocusSnapshotsRef.current.set(hex, value.operationalFocus);
-        })
-        .catch(() => {
-          if (!active) return;
-          setOperationalTwin(null);
-          setOperationalFocusChanges(null);
-        });
-    };
-    refresh();
-    const schedule = () => {
-      timer = window.setTimeout(() => { refresh(); schedule(); }, 60_000);
-    };
-    schedule();
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [aircraftHex, hasPosition]);
-
-  return { atcContext, operationalTwin, operationalFocusChanges };
+  // Transitional API shape: the rejected Digital Twin must never poll the
+  // selected aircraft. The visual map consumers are retired separately.
+  return {
+    atcContext,
+    operationalTwin: null as OperationalTwinApiResponse | null,
+    operationalFocusChanges: null as AircraftOperationalFocusChangeSummary | null,
+  };
 }

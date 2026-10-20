@@ -69,3 +69,7 @@ The selected-aircraft context hook no longer fetches Flight Intelligence events 
 ## Phase 6 (staged): retire flight situation summary in the quick aircraft drawer
 
 Remove the rejected synthesized Flight Intelligence situation summary and its UI adapter from the selected-aircraft detail. Preserve separate ATC advisory context, SIGMET raw context and Navigation Integrity details. This patch does not delete the shared analysis library or historical observations; those require a separate server-side dependency review.
+
+## Phase 7a (staged): stop Digital Twin polling in selected-aircraft context
+
+Remove the rejected 60-second per-selection Digital Twin HTTP loop, local outcome-diff state and snapshots from the aircraft context hook. Keep an explicitly null typed compatibility field until the separate map/display removal, so no stale forecast is rendered and no remaining UI integration makes HTTP requests. Do not remove the shared history or operational runtime until its server-side consumers are audited.

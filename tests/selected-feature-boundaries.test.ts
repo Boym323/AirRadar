@@ -128,6 +128,14 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(quick).toContain("<NavigationIntegritySection");
   });
 
+  it("never fetches rejected Digital Twin from the selected-aircraft context hook", () => {
+    const hook = readFileSync(new URL("components/radar/use-radar-aircraft-context.ts", root), "utf8");
+    expect(hook).not.toContain("/situation");
+    expect(hook).not.toContain("setOperationalTwin");
+    expect(hook).toContain("operationalTwin: null");
+    expect(hook).toContain("/context");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

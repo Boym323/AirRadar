@@ -70,3 +70,7 @@ Hook kontextu vybraného letadla již nedotazuje Flight Intelligence ani intelig
 ## Fáze 6 (rozpracováno): odstranění souhrnu Flight Intelligence z detailu letadla
 
 Z rychlého detailu vybraného letadla byl odstraněn nepožadovaný syntetizovaný souhrn letové situace a související UI adaptér. Samostatný kontext ATC, SIGMET a údaje o integritě navigace zůstávají zachovány. Sdílená analytická knihovna ani historická pozorování nebyla odstraněna; ta vyžadují samostatný audit serverových závislostí.
+
+## Fáze 7a (rozpracováno): ukončení dotazů Digital Twin pro vybrané letadlo
+
+Z hooku detailu letadla byla odstraněna nepožadovaná HTTP smyčka Digital Twin po 60 sekundách, stav rozdílů priorit a cache snímků. Do následného odstranění mapových komponent zůstává pouze typově definovaná `null` kompatibilita, takže se nenačítají ani nezobrazují zastaralé predikce. Historická data a serverové zpracování zůstávají do samostatného auditu vazeb.

@@ -17,8 +17,10 @@ describe("selected aircraft context hook", () => {
     expect(app).toContain("useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition })");
   });
 
-  it("retains the existing operational-twin context temporarily pending the dedicated map dependency removal", () => {
-    expect(hook).toContain("/situation");
-    expect(hook).toContain("60_000");
+  it("returns an unavailable Digital Twin while retired map consumers await removal", () => {
+    expect(hook).not.toContain("/situation");
+    expect(hook).not.toContain("setOperationalTwin");
+    expect(hook).not.toContain("60_000");
+    expect(hook).toContain("operationalTwin: null as OperationalTwinApiResponse | null");
   });
 });
