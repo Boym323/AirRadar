@@ -501,3 +501,17 @@ airport detail, weather, `AirportOperationsResponse` types shared by legacy
 airport domain helpers, and actual history records. Retain the unrelated CSP
 security boundary while replacing the obsolete prediction-export test with
 negative regression checks. No migrations or deployment.
+
+## Phase 49 (staged): delete idle Flight Intelligence producer and replay analytics
+
+Remove the unused FlightIntelligenceService singleton allocation and diagnostics
+from AircraftStateService. Delete its obsolete detector/persistence backend,
+retired analytics report, replay/operations/situation helper libraries, old
+standalone CSS and their isolated replay/corpus/quality scripts and tests.
+Keep shared Flight Intelligence event type definitions provisionally for
+remaining historical/notification DTO consumers; preserve destination
+provenance, all persisted Flight and FlightPosition / FlightEvent data,
+Navigation Integrity, retained aircraft history endpoints, ADS-B ingestion and
+Web Push/Pushover transports. No tables, migrations or production config are
+changed. Add a negative source-level guard against re-instantiating the old
+producer from live state.

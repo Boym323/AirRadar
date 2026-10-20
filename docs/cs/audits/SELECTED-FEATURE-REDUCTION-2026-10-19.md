@@ -442,3 +442,13 @@ zrušené API), předpovědní přístupové vrstvy Arrival Sequence V7 a Arriva
 Flow V8 i testy založené na odstraněných prediktivních modulech.
 Zůstává katalog a detail letiště, skutečné počasí, sdílené letištní typy
 a historické záznamy. Bez migrací a nasazení; kontrola CSP zůstala.
+
+## Fáze 49 (postupně): odstranění neaktivního Flight Intelligence a replay
+
+Ze služby AircraftStateService odstraněna nevyužitá instance Flight
+Intelligence a její diagnostika. Odstraněny staré detektory, persistence,
+analytika, replay a související skripty, komponentové styly a testy.
+Sdílené typy událostí Flight Intelligence prozatím zůstávají kvůli
+historickým modelům; zachována destination provenance, databázové záznamy
+Flight/FlightPosition/FlightEvent, Navigation Integrity, historie letadel,
+příjem ADS-B a transporty Web Push/Pushover. Žádné migrace ani produkce.

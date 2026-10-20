@@ -30,7 +30,6 @@ import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverSta
 import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
-import { getFlightIntelligenceService, type FlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
@@ -162,7 +161,6 @@ export class AircraftStateService {
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
   private readonly alerts: AlertEngine;
-  private readonly intelligence = getFlightIntelligenceService();
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
@@ -421,7 +419,6 @@ export class AircraftStateService {
     local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
-    flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
@@ -464,7 +461,6 @@ export class AircraftStateService {
       local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
       altitudeDiagnostics: getAltitudeDiagnostics(),
-      flightIntelligence: this.intelligence.getDiagnostics(),
       destinationProvenance: getDestinationProvenanceDiagnostics(),
       continuity: this.continuity.diagnostics({
         localObserved: this.localObservedHexes.size,
