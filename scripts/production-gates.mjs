@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
@@ -2913,6 +2914,46 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   }
 }
 
+/** Real HTTP readsb wire fixture, confined to this isolated smoke-test process. */
+async function startIsolatedReadsbFixture() {
+  const started = Date.now();
+  const traffic = [
+    { hex: "896139", flight: "UAE139  ", r: "A6-EOG", t: "A388", desc: "Airbus A380-800", lat: 50.113, lon: 14.468, alt_baro: 37000, gs: 462, track: 274, squawk: "1234" },
+    { hex: "3C65A1", flight: "DLH8K   ", r: "D-AIXQ", t: "A359", lat: 50.15, lon: 14.52, alt_baro: 34000, gs: 418, track: 128, squawk: "4521" },
+    { hex: "4CA9A4", flight: "RYR71QH ", r: "EI-DCL", t: "B738", lat: 50.21, lon: 14.59, alt_baro: 21800, gs: 286, track: 228, squawk: "2631" },
+    { hex: "4B1812", flight: "SWR433  ", r: "HB-JDA", t: "A20N", lat: 50.22, lon: 14.22, alt_baro: 31000, gs: 392, track: 46, squawk: "1001" },
+  ];
+  const server = createServer((request, response) => {
+    response.setHeader("Content-Type", "application/json");
+    response.setHeader("Cache-Control", "no-store");
+    if (request.url?.startsWith("/data/aircraft.json")) {
+      const elapsedSeconds = (Date.now() - started) / 1000;
+      response.end(JSON.stringify({
+        now: Date.now() / 1000, messages: Math.floor(elapsedSeconds * 80),
+        aircraft: traffic.map((aircraft) => ({ ...aircraft, seen: 0, seen_pos: 0, messages: 1000 + Math.floor(elapsedSeconds * 8), rssi: -5 })),
+      }));
+    } else if (request.url?.startsWith("/data/receiver.json")) {
+      response.end(JSON.stringify({ lat: 50.0755, lon: 14.4378 }));
+    } else {
+      response.statusCode = 404;
+      response.end(JSON.stringify({ error: "fixture not found" }));
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => { server.off("error", reject); resolve(); });
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Fixture server has no TCP port");
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    close: () => new Promise((resolve, reject) => {
+      server.closeAllConnections?.();
+      server.close((error) => error ? reject(error) : resolve());
+    }),
+  };
+}
+
 async function main() {
   const args = new Set(process.argv.slice(2));
   const mode = args.has("--all") ? "all" : args.has("--browser") ? "browser" : "core";
@@ -2921,13 +2962,14 @@ async function main() {
   const expectedVersion = expectedBuildVersion();
   assertMigrationSource();
   const runtimeStateDirectory = mkdtempSync(resolve(tmpdir(), "airradar-production-gate-"));
+  const receiverFixture = await startIsolatedReadsbFixture();
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", host, "--port", String(port)], {
     cwd: process.cwd(),
     env: {
       ...process.env,
       NODE_ENV: "production",
       DATABASE_URL: "",
-      READSB_BASE_URL: "",
+      READSB_BASE_URL: receiverFixture.baseUrl,
       READSB_BEAST_ENABLED: "false",
       READSB_BEAST_HOST: "",
       ADSBLOL_ENABLED: "false",
@@ -2961,15 +3003,14 @@ async function main() {
     if (mode !== "browser") {
     const health = await get("/api/health");
     const healthPayload = await health.json();
-    // This isolated gate deliberately has NO local or network receiver.
-    // A degraded state is the correct fail-closed behavior after J10 retirement.
-    // Never accept an offline receiver as healthy in a deployed monitoring gate.
+    // The CI browser gate uses its own loopback readsb wire fixture, not J10.
+    // Receiver data must be live while the deliberately absent DB degrades health.
     if (!health.ok || healthPayload.status !== "degraded"
-      || healthPayload.readsb?.provider !== "readsb-unconfigured"
-      || healthPayload.readsb?.status !== "offline"
+      || healthPayload.readsb?.provider !== "readsb"
+      || healthPayload.readsb?.status !== "ok"
       || healthPayload.database?.status !== "not_configured"
-      || healthPayload.aircraftCount !== 0) {
-      throw new Error("Health smoke failed: missing receiver must be degraded without synthetic aircraft");
+      || !(healthPayload.aircraftCount > 0)) {
+      throw new Error("Health smoke failed: isolated readsb fixture not ingested correctly");
     }
     const version = await get("/api/version");
     const versionPayload = await version.json();
@@ -3018,6 +3059,7 @@ async function main() {
   } finally {
     stop();
     await new Promise((resolve) => child.once("exit", resolve));
+    await receiverFixture.close();
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
     rmSync(runtimeStateDirectory, { recursive: true, force: true });

@@ -576,3 +576,14 @@ nenastavenou databázi a nula fiktivních letadel. Pouze tento izolovaný test
 nově ověřuje všechny vlastnosti; reálné monitorování nasazené produkce se
 nesmí oslabovat ani obnovovat syntetický provoz. Samostatný Beast příjem
 zůstává při výslovném nastavení dostupný.
+
+## Fáze 56a: samostatná HTTP fixture readsb pouze pro vizuální testy
+
+Vizuální test výběru letadla musí obsahovat skutečné řádky provozu, ale
+produkční demo J10 už neexistuje. Proto izolovaný testovací skript vytvoří
+výhradně na localhost malý HTTP readsb server poskytující aircraft.json
+a receiver.json. Zachovanou normalizaci, SSE a klikání na řádky tak testuje
+přes reálnou cestu příjmu, nikoliv produkční MockReadsbProvider.
+Health je stále degradovaný, protože test nemá PostgreSQL; readsb jako
+transport však funguje. Testovací server se po dokončení uklidí.
+Nepřipojený produkční přijímač nadále správně selhává bez simulace.

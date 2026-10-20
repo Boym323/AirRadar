@@ -652,3 +652,15 @@ readsb offline, database not configured, and zero fabricated aircraft. Update
 only this isolated gate to assert those exact properties; do not weaken
 real deployment health checks or restore synthesized production traffic.
 Keep explicit Beast-only source support if configured.
+
+## Phase 56a: preserve selected-aircraft smoke with a loopback readsb fixture
+
+The visual smoke targets intentionally select real traffic drawer rows. J10's
+production mock has been deleted, so an isolated gate without input correctly
+had none. Add a tiny localhost-only HTTP readsb wire fixture inside the
+production-gates test harness (not deployed runtime), serving deterministic
+aircraft.json and receiver.json. Run real readsb normalization, SSE and browser
+selection against that fixture; keep public health degraded because the
+isolated PostgreSQL DB is absent and ensure it reports real readsb transport
+rather than mock. The separately tested unconfigured production provider
+still fails closed. Shut down the fixture with the child process.

@@ -23,11 +23,13 @@ describe("retired J10 simulated receiver", () => {
     expect(shouldUseSampleAtcData()).toBe(true);
   });
 
-  it("keeps isolated production gates fail-closed without fake traffic", () => {
+  it("keeps isolated browser gates on a loopback readsb fixture, never the production mock", () => {
     const gate = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(gate).toContain('healthPayload.status !== "degraded"');
-    expect(gate).toContain('healthPayload.readsb?.provider !== "readsb-unconfigured"');
-    expect(gate).toContain('healthPayload.aircraftCount !== 0');
+    expect(gate).toContain("startIsolatedReadsbFixture");
+    expect(gate).toContain("READSB_BASE_URL: receiverFixture.baseUrl");
+    expect(gate).toContain('healthPayload.readsb?.provider !== "readsb"');
+    expect(gate).toContain("healthPayload.aircraftCount > 0");
+    expect(gate).not.toContain("MockReadsbProvider");
   });
 
   it("keeps Beast-only live receiver configuration available", () => {
