@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("Aviation Weather Fusion V1 boundaries", () => {
@@ -19,14 +20,11 @@ describe("Aviation Weather Fusion V1 boundaries", () => {
   });
 
   it("keeps the retired Weather Fusion module isolated from the retained aircraft UI", async () => {
-    const component = await readFile("components/aircraft-weather-fusion.tsx", "utf8");
     const detail = await readFile("components/aircraft-detail-v3.tsx", "utf8");
     const cs = await readFile("lib/i18n/cs.ts", "utf8");
 
-    expect(component).toContain("weatherFusionEvidenceTitle");
-    expect(component).toContain("weatherFusionSourcesTitle");
-    expect(component).toContain("weatherFusionDisclaimer");
     expect(detail).not.toContain("AircraftWeatherFusion");
+    expect(existsSync("components/aircraft-weather-fusion.tsx")).toBe(false);
     expect(detail).toContain("<AircraftAdsbTelemetry");
     expect(detail).toContain("<AircraftAltitudeChart");
     expect(cs).toContain("Nejde o certifikovaný meteorologický produkt");

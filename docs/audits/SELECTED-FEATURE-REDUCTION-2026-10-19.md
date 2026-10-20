@@ -105,3 +105,7 @@ Now that retained aircraft detail no longer imports predictive advisories, delet
 ## Phase 14 (staged): delete orphan Digital Twin client and obsolete UI-only boundary test
 
 Remove `components/aircraft-operational-twin.tsx`, its CSS and its old Operational Focus UI-only test after the component was unmounted and forecast/map layers removed. Keep Navigation Integrity service and source data, aircraft altitude history and ATC overlays. The rate-limited server endpoint, scoring engines, retained archived observations, and server-side tests remain temporarily until dependency/persistence audit. Regression tests assert absent UI, rather than retaining unreachable client predictions.
+
+## Phase 15 (staged): delete orphan W10 Weather Fusion panel
+
+Delete unmounted `components/aircraft-weather-fusion.tsx` and remove its UI-only test assertions, while keeping on-demand weather service contracts, METAR, SIGMET, BDS4.4 aircraft observations and ordinary ADS-B telemetry. The server endpoint, pure computation library and their unit tests are retained until a server import/storage audit; do not delete historical data.

@@ -106,3 +106,7 @@ Po odpojení ze zachovaného detailu letadla byly odstraněny soubory `component
 ## Fáze 14 (rozpracováno): smazání osiřelého klienta Digital Twin a starého UI testu
 
 Odstraněny `components/aircraft-operational-twin.tsx`, příslušné CSS a test určený výhradně pro odstraněné UI Operational Focus. Navigační integrita, výšková historie a ATC vrstvy zůstávají. Serverové API s rate limitingem, analytické knihovny, historická pozorování a serverové testy zůstávají do bezpečného auditu závislostí a persistence. Regresní testy ověřují nepřítomnost zrušeného panelu.
+
+## Fáze 15 (rozpracováno): odstranění osiřelého panelu W10 Weather Fusion
+
+Smazána odpojená komponenta `components/aircraft-weather-fusion.tsx`; testy už nevyžadují její UI, ale kontrolují nepřítomnost. Zachována API rozhraní poskytovatelů METAR/SIGMET, pozorování BDS 4.4, běžná telemetrie a serverové testy. Výpočetní knihovny a serverové API zůstávají do auditu importů a historie; bez mazání dat.
