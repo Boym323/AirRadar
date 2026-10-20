@@ -134,3 +134,19 @@ Vyřazena nepotřebná knihovna `lib/operational-twin/regional-attention-ui.ts` 
 ## Fáze 12 (rozpracováno): odstranění kompatibilního rozhraní Digital Twin
 
 Hook kontextu vybraného letadla nyní vrací pouze zachovaný výsledek ATC. Byly odstraněny dočasné prázdné položky Digital Twin a Operational Focus i související typové importy, protože je již nepoužívá mapa, sledování letu ani detail. Regresní testy zachovávají ATC kontext a hlídají, aby se zrušené typy nevrátily. Historická data a serverová API se nemění.
+
+## Fáze 18 (postupně): odstranění nevyužívaných veřejných API
+
+Odstraněno osm endpointů pro vyřazené funkce Time Machine, Flight Intelligence,
+Operations, počasí na trase letadla a Weather Fusion. Zachovány jsou databázové
+historické záznamy, archivované výsledky, ingestní služby, meteorologické zdroje,
+Navigation Integrity, výškový profil letadel a potřebná ATC geometrie.
+Neprovádí se žádná změna schématu databáze ani nasazení do produkce.
+
+## Fáze 19 (postupně): odstranění SSE endpointu Flight Intelligence
+
+Po odstranění klientského rozhraní byl odstraněn samostatný SSE endpoint
+Flight Intelligence a jeho izolovaný test. Sdílený SSE kapacitní manažer a
+streamy živého radaru, OGN a systému zůstávají. Uložená historie FlightEvent
+se nemaže; zbylé runtime producenty je nutné auditovat kvůli závislostem
+notifikací a perzistence. Registr funkcí a tabulky EN/CS byly synchronizovány.
