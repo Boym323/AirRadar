@@ -415,3 +415,18 @@ describe("phase 29 no autonomous rejected Digital Twin calibration", () => {
     expect(source).toContain("recordAircraftSnapshot");
   });
 });
+
+describe("phase 32 live analytics versus L11/L12 delivery separation", () => {
+  it("keeps the historic tables while no longer invoking removed analytical triggers", () => {
+    const state = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+    const alerts = readFileSync(new URL("lib/server/alert-engine.ts", root), "utf8");
+    expect(state).not.toContain("this.intelligence.observe(");
+    expect(state).not.toContain("this.predictive.evaluate(");
+    expect(state).not.toContain("schedulePredictiveWatchlistAlerts");
+    expect(alerts).not.toContain("observeIntelligenceEvent");
+    expect(alerts).not.toContain("observePredictiveAdvisories");
+    expect(state).toContain("getAlertDeliveryWorker().start()");
+    expect(state).toContain("this.navigationIntegrity.observe(activeAircraft");
+    expect(state).toContain("recordAircraftSnapshot");
+  });
+});

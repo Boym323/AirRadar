@@ -277,3 +277,22 @@ left-to-right-only assertion with a two-dimensional rectangle overlap check.
 The dropdown still must stay outside the open drawer, and failures now report
 measured rectangles for diagnosis. Do not weaken the selected-aircraft drawer,
 accessibility, or responsive smoke checks.
+
+## Phase 32 (staged): decouple rejected analytics from notification transports
+
+Retire the per-snapshot Flight Intelligence detector scan and predictive shadow
+candidate/evaluation loop, including their AlertEngine adapters for discarded
+P01-P15, D01-D23 and L01-L10 analytical notification rules. Remove their old
+FlightEvent-to-occurrence lookup from AlertEngine (no DB rows or history deleted).
+Keep the independent Pushover durable delivery worker and existing Web Push
+notifier/queue, together with local receiver statistics, persisted altitude/
+flight history, Navigation Integrity and retained aircraft telemetry.
+Existing non-analytical AlertEngine.observe transition handling remains a separate
+legacy lane until explicit trigger/transport policy is finalized; neither L11
+nor L12 implies re-enabling selected-out alert rules.
+
+Historical predictive/Flight Intelligence read APIs remain compatibility surfaces
+but will no longer receive newly generated live predictions/events. They require
+an explicit removal/consumer audit. No automatic backfill, data deletion or
+schema migration. Update source-level regression contracts and drop tests that
+assert the retired analytical notifier behavior.

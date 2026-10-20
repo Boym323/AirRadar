@@ -32,9 +32,9 @@ describe("Operational Digital Twin Event Outcome Validation V2 boundary", () => 
     expect(outcomeSource).toContain("refreshDrivenSampling: true");
   });
 
-  it("uses only LOCAL receiver state and existing Flight Intelligence events as truth", () => {
+  it("retains local observations without running rejected Flight Intelligence from receiver snapshots", () => {
     expect(stateSource).toContain("operationalTwinEventOutcome.observeLocal(this.localAircraft, now)");
-    expect(stateSource).toContain("operationalTwinEventOutcome.observeIntelligence(events, snapshotAt)");
+    expect(stateSource).not.toContain("operationalTwinEventOutcome.observeIntelligence(events, snapshotAt)");
     expect(outcomeSource).toContain('truthSources: ["LOCAL_RECEIVER", "FLIGHT_INTELLIGENCE"]');
     expect(outcomeSource).not.toContain("networkAircraft");
   });

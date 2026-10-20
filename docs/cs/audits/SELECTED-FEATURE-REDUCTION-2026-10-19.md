@@ -253,3 +253,14 @@ Prohlížečová kontrola úspěšně vytvořila 28 vizuálních scénářů; na
 kontrola pořadí na ose X je nahrazena skutečnou kontrolou průniku obdélníků
 v osách X a Y. Rozbalené menu musí stále zůstat mimo otevřený boční panel.
 Při selhání se vypíší naměřené souřadnice; ostatní kontroly se neoslabují.
+
+## Fáze 32 (postupně): oddělení zrušené analytiky od L11/L12
+
+Z pravidelného příjmu ADS-B odstraněna detekce Flight Intelligence a výpočet
+predikcí včetně jejich napojení na stará upozornění. AlertEngine již nezávisí
+na prediktivních serializátorech ani na dotazech FlightEvent do DB.
+Samostatné Pushover/Web Push transporty, fronty doručení, statistiky přijímače,
+historické lety a výškové profily i Navigation Integrity zůstávají zachovány.
+Jiná pravidla původního AlertEngine zatím běží odděleně od analytiky a vyžadují
+samostatné rozhodnutí o konfiguraci spouštěčů; zachování L11/L12 samo o sobě
+neznamená návrat odstraněného Watchlistu. Historická data se nemažou.

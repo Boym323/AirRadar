@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { AlertEngine } from "@/lib/server/alert-engine";
 import type { AlertHistoryDetection, AlertHistoryEntry } from "@/lib/server/alert-history";
 import type { Aircraft } from "@/lib/aircraft/types";
-import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 
 function aircraft(): Aircraft {
   return {
@@ -44,16 +43,6 @@ function historyRecorder() {
   };
 }
 
-function intelligenceEvent(type: FlightIntelligenceEvent["type"], lifecycleKey: string, metadata: Record<string, unknown> = {}): FlightIntelligenceEvent {
-  const now = new Date().toISOString();
-  return {
-    id: lifecycleKey, eventKey: lifecycleKey, lifecycleKey, type, phase: type === "GO_AROUND" ? "GO_AROUND" : "CRUISE",
-    icaoHex: "ABC123", flightId: null, callsign: "TEST123", registration: "OK-ABC", occurredAt: now, detectedAt: now,
-    latitude: 50, longitude: 14, altitude: 20_000, confidence: .9, confidenceLevel: "high", airportIcao: null, runway: null,
-    sectorId: null, evidence: [], metadata,
-  };
-}
-
 describe("batch 4 alert transitions", () => {
   it("keeps durable new-aircraft and reception-record events center-only and deduplicated", async () => {
     const history = historyRecorder();
@@ -92,25 +81,10 @@ describe("batch 4 alert transitions", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("alerts once for confirmed holding and permits a separate lifecycle episode", async () => {
+  it("handles receiver recovery plus weather threshold crossing without flight analytics", async () => {
     const history = historyRecorder();
     const engine = new AlertEngine({ rules: [{ id: "watch", enabled: true, type: "icaoHex", value: "ABC123" }], history, notifier: { name: "test", enabled: true, send: vi.fn(async () => undefined) } });
     const item = aircraft();
-    item.lastSeen = new Date().toISOString();
-    engine.observeIntelligenceEvent(item, intelligenceEvent("HOLDING", "hold-1", { holdingStatus: "HOLDING_CONFIRMED" }));
-    engine.observeIntelligenceEvent(item, intelligenceEvent("HOLDING", "hold-1", { holdingStatus: "HOLDING_CONFIRMED" }));
-    engine.observeIntelligenceEvent(item, intelligenceEvent("HOLDING", "hold-2", { holdingStatus: "HOLDING_CONFIRMED" }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(history.detected.map((entry) => entry.type)).toEqual(["intelligence_holding", "intelligence_holding"]);
-  });
-
-  it("rejects stale go-arounds and handles receiver recovery plus weather threshold crossing", async () => {
-    const history = historyRecorder();
-    const engine = new AlertEngine({ rules: [{ id: "watch", enabled: true, type: "icaoHex", value: "ABC123" }], history, notifier: { name: "test", enabled: true, send: vi.fn(async () => undefined) } });
-    const item = aircraft();
-    const stale = intelligenceEvent("GO_AROUND", "go-old");
-    stale.occurredAt = new Date(Date.now() - 300_000).toISOString();
-    engine.observeIntelligenceEvent(item, stale);
     engine.observeReceiverQuality(item, "GOOD", "DEGRADED");
     engine.observeReceiverQuality(item, "DEGRADED", "DEGRADED");
     engine.observeReceiverQuality(item, "DEGRADED", "GOOD");

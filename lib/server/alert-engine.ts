@@ -7,15 +7,10 @@ import { createAlertNotifier, type AlertNotifier, type AircraftAlert } from "@/l
 import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryRecordValue, type AlertHistoryEventType, type JsonlAlertHistoryStore } from "@/lib/server/alert-history";
 import { createAlertStateStore, type AlertStateStore } from "@/lib/server/alert-state";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
-import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
 import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, ruleTargetMatches, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
-import { getPrisma } from "@/lib/server/db";
 import { channelsForNotificationMode, notificationModeForDurableSignal, notificationPreferenceMode } from "@/lib/server/notification-preferences";
 import { getNotificationCenterStateStore } from "@/lib/server/notification-center-state";
-import { evaluateWatchlistPredictiveRule } from "@/lib/watchlist-predictive-alerts-v2";
-import type { PublicEtaAdvisory } from "@/lib/predictive-intelligence/eta-advisory";
-import type { PublicRunwayChangeAdvisory } from "@/lib/predictive-intelligence/runway-change-advisory";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
@@ -65,35 +60,6 @@ function emergencyEvent(squawk: "7500" | "7600" | "7700"): { type: AlertHistoryE
 
 function matchesRuleIgnoringDistance(aircraft: Aircraft, rule: AlertRule): boolean {
   return matchesAircraftRule(aircraft, { type: rule.type, value: rule.value });
-}
-
-const INTELLIGENCE_ALERT_EVENTS = new Set<FlightEventType>([
-  "APPROACH",
-  "LANDING",
-  "TAKEOFF",
-  "GO_AROUND",
-  "HOLDING",
-  "DIVERSION",
-  "TOP_OF_DESCENT",
-]);
-
-function intelligenceAlertEvent(type: FlightEventType): { type: AlertHistoryEventType; reason: AlertHistoryReason } | null {
-  if (type === "APPROACH") return { type: "intelligence_approach", reason: "approach" };
-  if (type === "LANDING") return { type: "intelligence_landing", reason: "landing" };
-  if (type === "TAKEOFF") return { type: "intelligence_takeoff", reason: "takeoff" };
-  if (type === "GO_AROUND") return { type: "intelligence_go_around", reason: "go_around" };
-  if (type === "HOLDING") return { type: "intelligence_holding", reason: "holding" };
-  if (type === "DIVERSION") return { type: "intelligence_diversion", reason: "diversion" };
-  if (type === "TOP_OF_DESCENT") return { type: "intelligence_top_of_descent", reason: "top_of_descent" };
-  return null;
-}
-
-function eventIsFresh(event: FlightIntelligenceEvent, aircraft: Aircraft, now: number): boolean {
-  const occurredAt = Date.parse(event.occurredAt);
-  const observedAt = Date.parse(aircraft.lastSeen);
-  if (!Number.isFinite(occurredAt)) return false;
-  const timestampFresh = Number.isFinite(observedAt) ? Math.abs(observedAt - occurredAt) <= 120_000 : now - occurredAt <= 120_000;
-  return timestampFresh && (aircraft.seenPosSeconds === null || aircraft.seenPosSeconds <= 120);
 }
 
 function watchlistEvent(
@@ -180,57 +146,6 @@ export class AlertEngine {
   getRuleLastTriggeredAt(ruleId: string): string | null {
     const timestamp = this.ruleLastTriggered.get(ruleId);
     return timestamp === undefined ? null : new Date(timestamp).toISOString();
-  }
-
-  hasPredictiveRules(): boolean {
-    return this.rules.some((rule) => rule.etaThresholdMinutes !== undefined || rule.notifyRunwayChange === true);
-  }
-
-  observePredictiveAdvisories(
-    aircraft: Aircraft,
-    input: {
-      destinationIcao: string | null;
-      etaAdvisory: PublicEtaAdvisory | null;
-      runwayChangeAdvisory: PublicRunwayChangeAdvisory | null;
-    },
-  ): void {
-    const matchedRules = this.rules.filter((rule) =>
-      (rule.etaThresholdMinutes !== undefined || rule.notifyRunwayChange === true)
-      && matchesAircraftRule(aircraft, rule)
-    );
-    if (!matchedRules.length) return;
-
-    let stateDirty = false;
-    for (const rule of matchedRules) {
-      const candidates = evaluateWatchlistPredictiveRule({
-        rule,
-        aircraftIcao: aircraft.icaoHex,
-        callsign: aircraft.callsign,
-        destinationIcao: input.destinationIcao,
-        etaAdvisory: input.etaAdvisory,
-        runwayChangeAdvisory: input.runwayChangeAdvisory,
-      });
-      for (const candidate of candidates) {
-        if (this.permanentEvents.has(candidate.eventKey)) continue;
-        const type: AlertHistoryEventType = candidate.kind === "ETA_THRESHOLD" ? "predictive_eta" : "predictive_runway_change";
-        const reason: AlertHistoryReason = candidate.kind === "ETA_THRESHOLD" ? "eta_threshold" : "runway_change";
-        const accepted = this.enqueue({
-          aircraft,
-          matchedRules: [rule],
-          emergency: false,
-          priority: "normal",
-          type,
-          reason,
-          eventId: candidate.eventKey,
-          metadata: candidate.metadata,
-        });
-        if (!accepted) continue;
-        this.rememberPermanentEvent(candidate.eventKey);
-        this.ruleLastTriggered.set(rule.id, this.now());
-        stateDirty = true;
-      }
-    }
-    if (stateDirty) this.persistState();
   }
 
   observe(
@@ -376,76 +291,6 @@ export class AlertEngine {
     } catch {
       // Durable alerts are optional enrichment and must not interrupt live ADS-B.
     }
-  }
-
-  /**
-   * Bridge detector lifecycle events into notifications only for aircraft that
-   * currently match an enabled watchlist rule. Airspace entry/exit is omitted
-   * deliberately because it is too noisy for push notifications.
-   */
-  observeIntelligenceEvent(aircraft: Aircraft, event: FlightIntelligenceEvent): void {
-    void this.persistDurableOccurrence(aircraft, event);
-    if (!INTELLIGENCE_ALERT_EVENTS.has(event.type)) return;
-    if (!eventIsFresh(event, aircraft, this.now())) return;
-    if (event.type === "HOLDING" && event.metadata?.holdingStatus !== "HOLDING_CONFIRMED") return;
-    const matchedRules = this.rules.filter((rule) => matchesAircraftRule(aircraft, rule));
-    if (!matchedRules.length) return;
-    const mapped = intelligenceAlertEvent(event.type);
-    if (!mapped) return;
-    const key = `intelligence:${event.lifecycleKey}:${event.type}:${aircraft.icaoHex}`;
-    if (this.permanentEvents.has(key)) return;
-    const accepted = this.enqueue({
-      aircraft,
-      matchedRules,
-      emergency: false,
-      priority: event.type === "GO_AROUND" || event.type === "DIVERSION" ? "high" : "normal",
-      type: mapped.type,
-      reason: mapped.reason,
-      eventId: key,
-      intelligence: {
-        eventType: event.type,
-        confidenceLevel: event.confidenceLevel,
-        airportIcao: event.airportIcao,
-        sectorId: event.sectorId,
-      },
-    });
-    if (!accepted) return;
-    this.rememberPermanentEvent(key);
-    for (const rule of matchedRules) this.ruleLastTriggered.set(rule.id, this.now());
-    this.persistState();
-  }
-
-  private async persistDurableOccurrence(aircraft: Aircraft, event: FlightIntelligenceEvent): Promise<void> {
-    const flightEventId = await this.resolvePersistedFlightEventId(event);
-    if (flightEventId === null) return;
-    await this.persistDurableSignal({
-        sourceType: "FLIGHT_EVENT",
-        sourceKey: event.eventKey,
-        trigger: "FLIGHT_EVENT",
-        aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null },
-        occurredAt: event.occurredAt,
-        flightEventId,
-        flightEventType: event.type as AlertV1Signal["flightEventType"],
-      });
-  }
-
-  private async resolvePersistedFlightEventId(event: FlightIntelligenceEvent): Promise<number | null> {
-    const numericId = Number(event.id);
-    if (Number.isSafeInteger(numericId) && numericId > 0) return numericId;
-    const database = getPrisma();
-    const table = database?.orm.public.FlightEvent as unknown as { where: (filter: { eventKey: string }) => { first: () => Promise<{ id?: number } | undefined> } } | undefined;
-    if (!table) return null;
-    // FlightEvent persistence and alert evaluation are intentionally separate
-    // optional lanes. The detector event carries a semantic key until the
-    // database assigns its canonical numeric id, so briefly retry the lookup
-    // before applying the FLIGHT_EVENT occurrence invariant.
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      const row = await table.where({ eventKey: event.eventKey }).first();
-      const id = Number(row?.id);
-      if (Number.isSafeInteger(id) && id > 0) return id;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
-    }
-    return null;
   }
 
   private async persistDurableSignal(signal: AlertV1Signal): Promise<void> {

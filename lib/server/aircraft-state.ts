@@ -18,7 +18,6 @@ import {
   isAtcShadowPredictionEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
-import { buildPredictiveShadowInput, isAirportProximity } from "@/lib/server/aircraft-predictive-projection";
 export { predictivePhase, isAirportProximity, buildPredictiveShadowInput } from "@/lib/server/aircraft-predictive-projection";
 import { AircraftContinuityGuard, type AircraftContinuityOrigin, type AircraftMassDropDecision } from "@/lib/server/aircraft-continuity";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
@@ -48,14 +47,7 @@ import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classifica
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-provenance";
-import {
-  PredictiveStateStore,
-  buildPublicEtaAdvisory,
-  buildPublicRunwayChangeAdvisory,
-  getPredictiveGraduationPolicy,
-} from "@/lib/predictive-intelligence";
-import { enforcePredictiveReadiness, readPredictiveReadinessReport } from "@/lib/server/predictive-readiness";
-import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
+import { PredictiveStateStore } from "@/lib/predictive-intelligence";
 import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeV2Validator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildOperationalTwinTrajectoryQualityGraduation, buildOperationalTwinTrajectoryQualityV3Graduation, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
@@ -213,8 +205,6 @@ export class AircraftStateService {
   private readonly intelligence = getFlightIntelligenceService();
   /** Shadow-only predictive state; never serialized into radar SSE frames. */
   private readonly predictive = new PredictiveStateStore();
-  private readonly predictiveEvaluatedAt = new Map<string, number>();
-  private predictiveAlertEvaluationInFlight = false;
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
@@ -521,7 +511,7 @@ export class AircraftStateService {
         sourcePreferences: this.sourcePreferences,
         sourcePreferenceMissingSince: this.sourcePreferenceMissingSince,
         lastHistorySample: this.lastHistorySample,
-        predictiveEvaluatedAt: this.predictiveEvaluatedAt,
+        predictiveEvaluatedAt: new Map<string, number>(),
         atcResolutionKeys: this.atcResolutionKeys,
         atcShadowPredictionKeys: this.atcShadowPredictionKeys,
         snapshotCacheEntries: this.snapshotCache.size,
@@ -988,102 +978,16 @@ export class AircraftStateService {
         () => this.regionalAttentionOutcome.observeTruth(this.localAircraft, now));
     });
     const activeAircraft = [...this.localAircraft.values()];
-    const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) measureRuntime("snapshot.statistics", activeAircraft.length, () => this.statistics.observe(activeAircraft, this.currentReceiver, new Date()));
     this.scheduleReceptionRecordEvaluation();
     measureRuntime("snapshot.alerts", activeAircraft.length, () => this.alerts.observe(previousAircraft, this.localAircraft));
-    this.intelligence.cleanup(activeHexes);
-    const predictiveCandidates: Aircraft[] = [];
-    const predictiveAlertCandidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }> = [];
-    const snapshotAt = Date.parse(snapshot.fetchedAt);
-    measureRuntime("snapshot.intelligence", activeAircraft.length, () => {
-      for (const current of activeAircraft) {
-        const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, snapshotAt);
-        this.operationalTwinEventOutcome.observeIntelligence(events, snapshotAt);
-        this.operationalTwinTruthFirst.observeIntelligence(events, snapshotAt);
-        for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
-        if (this.isPredictiveEvaluationDue(current, snapshotAt)) predictiveCandidates.push(current);
-      }
-    });
-    measureRuntime("snapshot.predictive", predictiveCandidates.length, () => {
-      for (const current of predictiveCandidates) {
-        const prediction = this.evaluatePredictiveShadow(current, snapshotAt, true);
-        if (prediction) predictiveAlertCandidates.push({ aircraft: current, prediction });
-      }
-    });
-    if (predictiveAlertCandidates.length && this.alerts.hasPredictiveRules()) {
-      this.schedulePredictiveWatchlistAlerts(predictiveAlertCandidates);
-    }
-    for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
+    // Rejected Flight Intelligence and predictive watchlist analytics never run
+    // inside the live ADS-B snapshot loop. Alert delivery remains independent.
     this.operationalTwinCalibrationPersistence.scheduleFlush();
     measureRuntime("snapshot.navigationIntegrity", activeAircraft.length, () => this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt), "local"));
     this.operationalFocusOutcome.observe(this.localAircraft, new Date(snapshot.fetchedAt));
     this.invalidateSnapshotCache();
-  }
-
-  private isPredictiveEvaluationDue(aircraft: Aircraft, now: number): boolean {
-    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return false;
-    const previousAt = this.predictiveEvaluatedAt.get(aircraft.icaoHex) ?? 0;
-    return now - previousAt >= 10_000;
-  }
-
-  private evaluatePredictiveShadow(aircraft: Aircraft, now: number, knownDue = false): PredictiveFlightState | null {
-    if (!knownDue && !this.isPredictiveEvaluationDue(aircraft, now)) return null;
-    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return null;
-    this.predictiveEvaluatedAt.set(aircraft.icaoHex, now);
-    const destination = aircraft.enrichment?.route?.destinationAirport;
-    const input = buildPredictiveShadowInput(aircraft, now, destination ? this.intelligence.getRunways(destination.icaoCode) : []);
-    if (!input) return null;
-    input.flightState.lifecycleKey = this.intelligence.getLifecycleKey(aircraft.icaoHex);
-    input.flightState.flightId = null;
-    input.aircraft = aircraft;
-    return this.predictive.evaluate(input);
-  }
-
-  private schedulePredictiveWatchlistAlerts(
-    candidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }>,
-  ): void {
-    if (this.predictiveAlertEvaluationInFlight || this.shuttingDown) return;
-    const configuredPolicy = getPredictiveGraduationPolicy();
-    if (configuredPolicy.ETA !== "PUBLIC" && configuredPolicy.RUNWAY_CHANGE !== "PUBLIC") return;
-
-    this.predictiveAlertEvaluationInFlight = true;
-    void (async () => {
-      const readiness = await readPredictiveReadinessReport();
-      if (this.shuttingDown) return;
-      const effectivePolicy = enforcePredictiveReadiness(configuredPolicy, {
-        thresholdVersion: readiness.thresholds.version,
-        capabilities: readiness.capabilities,
-      });
-      const now = Date.now();
-
-      for (const candidate of candidates) {
-        const current = this.localAircraft.get(candidate.aircraft.icaoHex);
-        if (!current || current.callsign !== candidate.aircraft.callsign) continue;
-        const etaAdvisory = buildPublicEtaAdvisory(
-          candidate.prediction,
-          effectivePolicy,
-          readiness.capabilities.ETA,
-          now,
-        );
-        const runwayChangeAdvisory = buildPublicRunwayChangeAdvisory(
-          candidate.prediction,
-          effectivePolicy,
-          readiness.capabilities.RUNWAY_CHANGE,
-          now,
-        );
-        this.alerts.observePredictiveAdvisories(current, {
-          destinationIcao: current.enrichment?.route?.destinationAirport?.icaoCode ?? null,
-          etaAdvisory,
-          runwayChangeAdvisory,
-        });
-      }
-    })().catch((error) => {
-      logger.debug({ error }, "AirRadar predictive watchlist alert evaluation skipped");
-    }).finally(() => {
-      this.predictiveAlertEvaluationInFlight = false;
-    });
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {

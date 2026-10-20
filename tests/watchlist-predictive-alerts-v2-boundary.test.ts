@@ -1,40 +1,33 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const aircraftStateSource = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
-const alertEngineSource = readFileSync(new URL("../lib/server/alert-engine.ts", import.meta.url), "utf8");
-const evaluatorSource = readFileSync(new URL("../lib/watchlist-predictive-alerts-v2.ts", import.meta.url), "utf8");
+const root = new URL("../", import.meta.url);
+const state = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+const alerts = readFileSync(new URL("lib/server/alert-engine.ts", root), "utf8");
+const worker = readFileSync(new URL("lib/server/alert-delivery-worker.ts", root), "utf8");
+const notifier = readFileSync(new URL("lib/server/alert-notifier.ts", root), "utf8");
 
-describe("Watchlist & Alerts V2 predictive boundary", () => {
-  it("uses the same PUBLIC advisory builders and readiness enforcement as aircraft prediction API", () => {
-    expect(aircraftStateSource).toContain("readPredictiveReadinessReport");
-    expect(aircraftStateSource).toContain("enforcePredictiveReadiness");
-    expect(aircraftStateSource).toContain("buildPublicEtaAdvisory");
-    expect(aircraftStateSource).toContain("buildPublicRunwayChangeAdvisory");
-    expect(aircraftStateSource).not.toContain("buildAdminEtaAdvisoryPreview");
-    expect(aircraftStateSource).not.toContain("buildAdminRunwayChangeAdvisoryPreview");
+describe("selected feature notification transport boundary", () => {
+  it("removes P01-P15 intelligence and predictive alert adapters", () => {
+    for (const source of [state, alerts]) {
+      expect(source).not.toContain("observeIntelligenceEvent");
+      expect(source).not.toContain("observePredictiveAdvisories");
+    }
+    expect(state).not.toContain("schedulePredictiveWatchlistAlerts");
+    expect(state).not.toContain('measureRuntime("snapshot.predictive"');
+    expect(state).not.toContain('measureRuntime("snapshot.intelligence"');
+    expect(alerts).not.toContain("evaluateWatchlistPredictiveRule");
+    expect(alerts).not.toContain("getPrisma");
   });
 
-  it("does not expose predictive alert generation to SHADOW state", () => {
-    expect(alertEngineSource).toContain("observePredictiveAdvisories");
-    expect(alertEngineSource).not.toContain("PredictiveStateStore");
-    expect(evaluatorSource).not.toContain("SHADOW");
-    expect(evaluatorSource).not.toContain("readiness");
-  });
-
-  it("performs one readiness evaluation for a batch, not one per aircraft", () => {
-    const method = aircraftStateSource.slice(
-      aircraftStateSource.indexOf("private schedulePredictiveWatchlistAlerts"),
-      aircraftStateSource.indexOf("private applyNetworkSnapshot"),
-    );
-    expect(method.match(/readPredictiveReadinessReport\(/g)).toHaveLength(1);
-    expect(method).toContain("for (const candidate of candidates)");
-  });
-
-  it("keeps predictive events on the existing alert ledger and notifier path", () => {
-    expect(alertEngineSource).toContain('"predictive_eta"');
-    expect(alertEngineSource).toContain('"predictive_runway_change"');
-    expect(alertEngineSource).toContain("this.enqueue({");
-    expect(alertEngineSource).toContain("this.rememberPermanentEvent(candidate.eventKey)");
+  it("keeps L11/L12 transports and existing notification queue lifecycle", () => {
+    expect(state).toContain("getAlertDeliveryWorker().start()");
+    expect(state).toContain("getAlertDeliveryWorker().stop()");
+    expect(state).toContain("this.alerts.observe(previousAircraft, this.localAircraft)");
+    expect(alerts).toContain("private enqueue(alert: AircraftAlert)");
+    expect(alerts).toContain("this.notifier.send(alert)");
+    expect(worker).toContain("PUSHOVER_ENDPOINT");
+    expect(worker).toContain("getAlertsFleetsRepository");
+    expect(notifier).toContain("push");
   });
 });
