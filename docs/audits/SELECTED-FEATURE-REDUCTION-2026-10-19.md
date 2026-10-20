@@ -219,3 +219,13 @@ ATS routes, navigation data, weather radar and Navigation Integrity sources are
 registered once from the new helper, preserving the tested lifecycle.
 Upstream changelog and historical code metrics are retained; subsequent code
 metrics must be regenerated after release integration and successful CI.
+
+## Phase 27 (staged): align release-preview with retained routes
+
+Replace obsolete Time Machine, History, Watchlist and Operations route smokes with
+selected airport, navigation, navigation-integrity, weather, system and receiver
+pages, and explicitly assert HTTP 404 for removed page routes. Preserve browser
+responsive sweeps, language switching, retained aircraft quick actions, and
+live radar/weather/receiver/aircraft visual evidence. Update assertions referring
+to removed AUP/UUP map hook and presets. Do not merge or deploy until the exact
+head passes all required checks.

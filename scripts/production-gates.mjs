@@ -1104,34 +1104,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
-        { name: "operations-center-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true },
-        { name: "predictive-operations-public-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "public" },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
-        { name: "command-search-desktop", path: "/history", selector: ".history-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historické lety" },
-        { name: "airport-live-board-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
-        { name: "airport-v5-analytics-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
-        { name: "airport-v5-operations-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "operations" },
-        { name: "airport-v5-weather-desktop", path: "/airports/LKPR", selector: ".airport-weather-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "weather" },
-        { name: "airport-v6-media-embed-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockAirportV3: true, mockAviationEmbed: true },
-        { name: "airport-v6-media-embed-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 390, height: 844 }, fullPage: false, mockAirportV3: true, mockAviationEmbed: true },
         { name: "airport-v5-map-desktop", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map", verifyAirportMapShortcut: true },
         { name: "airport-v5-map-mobile", path: "/airports/LKPR", selector: ".airport-map-card", viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "map" },
-        { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         // Visual V3.3: reproducible data, empty, unavailable, locale and menu states.
         { name: "weather-data-desktop", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockWeather: "data" },
         { name: "weather-empty-mobile", path: "/weather", selector: '[data-testid="weather-operations-center-v1"]', viewport: { width: 390, height: 844 }, fullPage: true, mockWeather: "empty" },
-        { name: "watchlist-empty-desktop", path: "/watchlist", selector: ".watchlist-page", viewport: { width: 1366, height: 900 }, fullPage: true, mockWatchlist: true },
-        { name: "watchlist-empty-mobile", path: "/watchlist", selector: ".watchlist-page", viewport: { width: 390, height: 844 }, fullPage: true, mockWatchlist: true },
-        { name: "notifications-empty-desktop", path: "/notifications", selector: '[data-testid="notification-center-v2"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockNotifications: true },
-        { name: "notifications-empty-mobile", path: "/notifications", selector: '[data-testid="notification-center-v2"]', viewport: { width: 390, height: 844 }, fullPage: true, mockNotifications: true },
         { name: "receiver-unavailable-desktop", path: "/receiver/coverage", selector: '[data-testid="receiver-explorer-v2"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockReceiverUnavailable: true },
         { name: "receiver-unavailable-mobile", path: "/receiver/coverage", selector: '[data-testid="receiver-explorer-v2"]', viewport: { width: 390, height: 844 }, fullPage: true, mockReceiverUnavailable: true },
-        { name: "more-menu-desktop-cs", path: "/history", selector: ".history-page", viewport: { width: 1366, height: 900 }, fullPage: false, openMore: "desktop" },
-        { name: "more-menu-mobile-en-320", path: "/history", selector: ".history-page", viewport: { width: 320, height: 568 }, fullPage: false, openMore: "mobile", locale: "en" },
-        { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-320", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false },
         { name: "radar-mobile-320-credits", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 320, height: 568 }, fullPage: false, openMapCredits: true },
@@ -1140,34 +1123,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-v6-light-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "light" },
         { name: "radar-v6-satellite-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "satellite" },
         { name: "radar-v6-g-presentation", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Presentation: true },
-        { name: "airport-v6-h-authorized-media", path: "/airports/LKPR", selector: '[data-testid="airport-media-v6-h"]', viewport: { width: 1366, height: 900 }, fullPage: false, v6Media: true },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
         { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
-        { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
-        { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "radar-mobile-selected-expanded", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true, expandAircraft: true },
-        { name: "command-search-mobile", path: "/history", selector: ".history-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW – provozní přehled" },
-        { name: "airport-live-board-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
-        { name: "airport-v5-arrivals-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
-        { name: "airport-v5-departures-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "departures" },
-        { name: "airport-v5-analytics-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics" },
-        { name: "airport-v5-analytics-en-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true, airportCaptureView: "analytics", locale: "en" },
-        { name: "airport-v5-arrivals-320", path: "/airports/LKPR", selector: '[data-testid="airport-v5-flights-table"]', viewport: { width: 320, height: 568 }, fullPage: true, mockAirportV3: true, airportCaptureView: "arrivals" },
-        { name: "airport-v5-overview-tablet", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 768, height: 1024 }, fullPage: true, mockAirportV3: true },
-        { name: "airport-v5-overview-320", path: "/airports/LKPR", selector: '[data-testid="airport-live-board"]', viewport: { width: 320, height: 568 }, fullPage: false, mockAirportV3: true },
-        { name: "predictive-readiness-mobile", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 390, height: 844 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
-        { name: "predictive-eta-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockEtaAdvisory: "public" },
-        { name: "predictive-runway-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayAdvisory: "public" },
-        { name: "predictive-runway-change-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-change-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayChangeAdvisory: "public" },
-        { name: "predictive-trajectory-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-trajectory-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockTrajectoryAdvisory: "public" },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
-        { name: "predictive-eta-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockEtaAdvisory: "admin" },
-        { name: "predictive-runway-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayAdvisory: "admin" },
-        { name: "predictive-runway-change-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-change-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayChangeAdvisory: "admin" },
-        { name: "predictive-trajectory-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-trajectory-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockTrajectoryAdvisory: "admin" },
         { name: "aircraft-detail-telemetry-expanded", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandTelemetry: true },
         { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
@@ -1979,11 +1941,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       return page;
     };
     const routes = [
-      ["/history", ".history-page"], ["/fleet", ".fleet-page"],
-      ["/time-machine", ".time-machine-page"], ["/intelligence", ".intelligence-page"], ["/watchlist", ".watchlist-page"],
-      ["/alerts", ".alert-history-page"],
-      ["/system", ".system-page"], ["/operations", '[data-testid="operations-dashboard-v1"]'], ["/receiver/coverage", '[data-testid="receiver-explorer-v2"]'],
+      ["/airports", ".browse-page"],
+      ["/navigation", '[data-testid="navigation-reference-explorer-v1"]'],
+      ["/navigation-integrity", "main"],
+      ["/weather", '[data-testid="weather-operations-center-v1"]'],
+      ["/system", ".system-page"],
+      ["/receiver/coverage", '[data-testid="receiver-explorer-v2"]'],
     ];
+    const retiredRoutes = ["/history", "/time-machine", "/flights", "/fleet", "/intelligence", "/watchlist", "/alerts", "/operations", "/notifications", "/procedures", "/airspace"];
+    for (const path of retiredRoutes) {
+      const response = await get(path);
+      if (response.status !== 404) throw new Error(`Retired route ${path} unexpectedly returned HTTP ${response.status}`);
+    }
     const routePages = await Promise.all(Array.from({ length: 3 }, async () => configureRouteSmokePage(await browser.newPage({ viewport: { width: 1280, height: 800 } }))));
     await Promise.all(routePages.map(async (page, workerIndex) => {
       for (let routeIndex = workerIndex; routeIndex < routes.length; routeIndex += routePages.length) {
@@ -2016,9 +1985,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     // The radar shell can expose more than one navigation surface. Resolve
     // the link by its exact href and arm the navigation waiter before the
     // click so a fast client-side transition cannot be missed.
-    const historyLink = routeSmoke.locator('a[href="/history"]:visible').first();
-    await historyLink.waitFor({ state: "visible", timeout: 15_000 });
-    await clickAndWaitForNavigation(routeSmoke, historyLink, new URL("/history", baseUrl), "History link");
+    const airportsLink = routeSmoke.locator('a[href="/airports"]:visible').first();
+    await airportsLink.waitFor({ state: "visible", timeout: 15_000 });
+    await clickAndWaitForNavigation(routeSmoke, airportsLink, new URL("/airports", baseUrl), "Airports link");
     await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
     // Verify a real language change (not merely the presence of two dictionaries),
     // retained selection after navigation and a hard reload, and return to Czech.
@@ -2034,18 +2003,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     // independent pages, server-fed intelligence and receiver empty/loading UI.
     for (const { path, heading } of [
       { path: "/system", heading: "System status" },
-      { path: "/watchlist", heading: "Watchlist rule management" },
-      { path: "/alerts", heading: "Alert history" },
+      { path: "/airports", heading: null },
+      { path: "/navigation", heading: null },
       { path: "/receiver/coverage", heading: "Receiver Analysis V2" },
     ]) {
       await routeSmoke.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });
       await routeSmoke.waitForFunction((expected) =>
         document.documentElement.lang === "en"
-        && document.querySelector("h1")?.textContent?.includes(expected)
+        && (expected === null || document.querySelector("h1")?.textContent?.includes(expected))
         && localStorage.getItem("airradar-language") === "en",
         heading, { timeout: 20_000 });
     }
-    await routeSmoke.goto(`${baseUrl}/history`, { waitUntil: "domcontentloaded" });
+    await routeSmoke.goto(`${baseUrl}/airports`, { waitUntil: "domcontentloaded" });
     await routeSmoke.waitForFunction(() => document.documentElement.lang === "en");
     await desktopLanguageSwitch.locator('button[lang="cs"]').click();
     await routeSmoke.waitForFunction(() => document.documentElement.lang === "cs"
@@ -2199,8 +2168,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               // must still be checked, but a bounded 429 is not a JS crash.
               || /^\/api\/aircraft\/[A-F0-9]{6}\/situation$/i.test(pathname)
               || /^\/api\/history\/[A-F0-9]{6}$/i.test(pathname)
-              || (pathname === "/api/intelligence/events"
-                && new URL(response.url()).searchParams.has("aircraft"));
+              ;
             if (expectedRateLimitedApi) {
               expectedRateLimitedApiErrors += 1;
               console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${response.request().resourceType()} initiator=${response.request().frame()?.url() ?? "(no frame)"}`);
@@ -2642,13 +2610,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           count: element.querySelectorAll("a,button").length,
           mapFollow: Boolean(element.querySelector('[data-testid="aircraft-v5-follow"][aria-pressed]')),
           share: Boolean(element.querySelector('[data-testid="aircraft-v5-share"]')),
-          history: Boolean(element.querySelector('a[href^="/history?hex="]')),
-          alertRules: Boolean(element.querySelector('a[href="/alerts"]')),
           detail: Boolean(element.querySelector('a[href^="/aircraft/"]')),
         }));
-        if (v5ActionContract.count !== 6
+        if (v5ActionContract.count !== 4
           || !v5ActionContract.mapFollow || !v5ActionContract.share
-          || !v5ActionContract.history || !v5ActionContract.alertRules || !v5ActionContract.detail) {
+          || !v5ActionContract.detail) {
           throw new Error(`V5 aircraft quick actions failed at ${viewport.width}px: ${JSON.stringify(v5ActionContract)}`);
         }
         const quickContract = await quickDetail.evaluate((element) => ({

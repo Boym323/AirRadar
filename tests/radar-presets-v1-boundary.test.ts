@@ -18,7 +18,8 @@ describe("Radar Presets V1 boundary", () => {
     expect(app).toContain("setCoverage(preset.coverage)");
     expect(app).toContain("setMapFilters(preset.mapFilters)");
     expect(app).toContain("setShowWeatherRadar(preset.layers.showWeatherRadar)");
-    expect(app).toContain("setShowAupUup(preset.layers.showAupUup)");
+    expect(app).not.toContain("setShowAupUup");
+    expect(model).not.toContain("showAupUup: boolean");
     expect(app).toContain("map.easeTo({");
   });
 

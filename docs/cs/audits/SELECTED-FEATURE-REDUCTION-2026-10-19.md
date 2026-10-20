@@ -205,3 +205,11 @@ Nový modul úmyslně neobnovuje odstraněné kružnice R13 ani SID/STAR T11.
 Zachovány ATS trasy, navigační body, meteorologický radar a Navigation Integrity.
 Changelog a historická metrika kódu pocházejí z main; po dokončení CI je nutné
 vygenerovat nové metriky aktuální redukované větve.
+
+## Fáze 27 (postupně): aktualizace release kontrol zachovaných funkcí
+
+Testy odstraněných stránek Time Machine, Historie, Watchlist a Operations
+nahrazeny kontrolami letišť, navigace, Navigation Integrity, počasí, systému a
+přijímače. Odstraněné stránky musí vracet HTTP 404. Zachovány testy mobilního
+rozložení, jazyků, detailu letadla a mapových vizuálů. Opraveny kontroly starého
+AUP/UUP hooku a presetů. Bez úspěšného CI není možné nasadit produkci.
