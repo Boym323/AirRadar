@@ -278,3 +278,10 @@ Navigation Integrity a počasí.
 `AlertEngine.resolvePersistedFlightEventId`. Test byl odstraněn a nahrazen
 kontrolou, že doručovací engine znovu nezíská přímou závislost na ORM FlightEvent.
 Historická data a samostatný doručovací worker zůstávají beze změny.
+
+## Fáze 35 (postupně): oprava kontrol zrušených mapových vrstev Digital Twin
+
+Úplný prohlížečový test u šířky 821 px ještě očekával mapové zdroje
+Digital Twin (D01–D23). Kontrola nyní vyžaduje jen zachované mapové vrstvy
+letišť, ATC kontextu, ATS tras a SIGMET včetně ověření obsahu geografických
+dat. Vyřazené prediktivní vrstvy se neobnovují.

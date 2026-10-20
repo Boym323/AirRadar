@@ -312,3 +312,12 @@ removed `AlertEngine.resolvePersistedFlightEventId` private helper. Delete it
 and replace it with a negative dependency regression: the delivery engine must
 not import the FlightEvent ORM or recreate that lookup. Keep history tables
 and delivery worker unchanged.
+
+## Phase 35 (staged): retire stale Digital Twin browser data-layer assertions
+
+The full browser release gate reached the 821px data-layer verification but
+still required old D01-D23 `operational-twin-v2` map sources and layers.
+Restrict the authoritative live map data-layer verification to retained
+airport locations, ATC sector map context, ATS routes and SIGMET. Preserve
+fixture-backed feature-content/cross-country checks; do not bring back Twin
+map sources just to satisfy an obsolete browser assertion.

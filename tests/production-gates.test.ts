@@ -206,16 +206,14 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain('[data-product="airport-live-board-v7"]');
   });
 
-  it("tracks the Digital Twin V2 map source contract", () => {
+  it("tracks retained ATC, ATS, airport and SIGMET map sources without retired Twin overlays", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('"operational-twin-v2"');
-    expect(source).toContain('"operational-twin-v2-uncertainty"');
-    expect(source).toContain('"operational-twin-v2-route"');
-    expect(source).toContain('"operational-twin-v2-kinematic"');
-    expect(source).toContain('"operational-twin-v2-milestones"');
-    expect(source).toContain('"operational-twin-v2-events"');
-    expect(source).toContain('"operational-twin-v2-weather-events"');
-    expect(source).toContain('"operational-twin-navigation-integrity-corridor-v1"');
+    expect(source).toContain('const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet"]');
+    expect(source).toContain('const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"]');
+    const layerContract = source.slice(source.indexOf('const sourceIds = ["route-airports"'), source.indexOf('const airports = map.querySourceFeatures("route-airports")'));
+    expect(layerContract).not.toContain("operational-twin");
+    expect(source).toContain('atc.some((feature) => feature.properties?.id === "fixture-sector")');
+    expect(source).toContain('ats.some((feature) => feature.properties?.segmentId === "fixture-segment")');
   });
 
   it("captures radar visual evidence only after basemap features are rendered", () => {
