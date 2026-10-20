@@ -418,3 +418,7 @@ Drop retired ATC shadow counters from memory-retention attribution and align
 current-sector tests. Preserve live ATC sector matching, published sector
 geometry, ATS/NAVAID/FIX, navigation integrity, history and push delivery.
 No database migration, main merge or production deployment.
+
+## Phase 43a: decouple retained aircraft context from ATC shadow validation
+
+Keep the on-demand aircraft/ATC context route and live current-sector matching. Remove its old per-request prediction classifications and validation writes, now that the obsolete shadow worker has been retired. Preserve existing rate limits, aircraft identifier checks, current-airspace context and error handling.

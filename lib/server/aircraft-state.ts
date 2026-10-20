@@ -971,9 +971,7 @@ export class AircraftStateService {
   }
 
   private clearAtcResolutionState(): void {
-    if (!this.atcResolutionStateActive
-      && this.atcResolutionKeys.size === 0
-) return;
+    if (!this.atcResolutionStateActive && this.atcResolutionKeys.size === 0) return;
     for (const [hex, aircraft] of this.localAircraft) {
       if (aircraft.atc === undefined) continue;
       const withoutAtc = { ...aircraft };

@@ -372,3 +372,7 @@ stará konfigurační volba a modul validace predikcí s testy. Upraveny počít
 paměti a testy přiřazení aktuálního ATC sektoru. Zůstává sektorová geometrie,
 ATS/NAVAID/FIX, Navigation Integrity, historie i doručování upozornění.
 Bez databázové migrace, merge do main a nasazení na produkci.
+
+## Fáze 43a: odpojení zachovaného ATC kontextu od shadow validace
+
+Zachováno API kontextu letadla a aktuální sektor, odstraněny pouze výpočty klasifikace ATC predikcí a zápisy do neexistující validace. Omezení požadavků, kontrola ICAO, aktuální vzdušný prostor a zpracování chyb zůstaly.
