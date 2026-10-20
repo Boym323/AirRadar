@@ -6,18 +6,14 @@ import { GET as getAirports } from "@/app/api/airports/route";
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const trafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
 const ognStreamHook = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
-const intelligenceHook = readFileSync(new URL("../components/use-intelligence-stream.ts", import.meta.url), "utf8");
 const airportsRoute = readFileSync(new URL("../app/api/airports/route.ts", import.meta.url), "utf8");
 const historyRoute = readFileSync(new URL("../app/api/history/[hex]/route.ts", import.meta.url), "utf8");
 
 describe("secondary data loading", () => {
-  it("does not mount Intelligence or Logbook before their details are opened", () => {
-    expect(trafficBrowserSource).toContain("{intelligenceOpened && <IntelligenceFeed />}");
+  it("mounts the retained Logbook only on demand and excludes the retired Intelligence feed", () => {
     expect(trafficBrowserSource).toContain("{logbookOpened && <LogbookSummary />}");
-    expect(trafficBrowserSource).toContain("onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}");
     expect(trafficBrowserSource).toContain("onToggle={(event) => setLogbookOpened(event.currentTarget.open)}");
-    expect(intelligenceHook).toContain("source.close()");
-    expect(intelligenceHook).toContain("controller.abort()");
+    expect(trafficBrowserSource).not.toContain("<IntelligenceFeed />");
   });
 
   it("loads OGN only after the layer is explicitly enabled and closes its stream when hidden", () => {

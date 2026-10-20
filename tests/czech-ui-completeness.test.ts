@@ -149,9 +149,6 @@ describe("Czech UI localization coverage", () => {
     const expected = new Map([
       ["components/navigation-integrity-center.tsx", 'title: "Integrita navigačních dat"'],
       ["components/weather-operations-center.tsx", 'title: "Provozní přehled počasí"'],
-      ["components/flight-compare.tsx", 'distance: "Délka zaznamenané stopy"'],
-      ["components/airport-compare.tsx", 'title: "Porovnání letišť"'],
-      ["components/flight-intelligence-analytics.tsx", 'title: "Analýza událostí letů"'],
     ]);
 
     for (const [path, expectedLabel] of expected) {

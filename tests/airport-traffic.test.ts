@@ -324,8 +324,6 @@ describe("airport traffic summary v1", () => {
   it("keeps Czech and English airport traffic copy available", () => {
     expect(getTranslations("cs").airportTraffic).toMatchObject({ title: "Provoz zachycený přijímačem", rangeThirtyDays: "30 dní" });
     expect(getTranslations("en").airportTraffic).toMatchObject({ title: "Observed receiver traffic", rangeThirtyDays: "30 days" });
-    const componentSource = readFileSync(new URL("../components/airport-traffic-summary.tsx", import.meta.url), "utf8");
-    expect(componentSource).toContain("/aircraft/${encodeURIComponent(item.icaoHex)}");
-    expect(componentSource).toContain("aircraftFlightHref(flight.id)");
+
   });
 });

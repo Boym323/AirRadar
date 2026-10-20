@@ -17,11 +17,11 @@ describe("V5-B3 single cross-tab flight action bar", () => {
     expect(quick).toContain('disabled={aircraft.lat === null || aircraft.lon === null}');
     expect(quick).not.toContain('fetch(');
   });
-  it("offers history, alert rule settings, native sharing and full detail on all tabs", () => {
+  it("offers sharing and the retained aircraft detail without retired navigation", () => {
     const nav = quick.slice(quick.indexOf('data-testid="aircraft-v5-quick-actions"'));
     expect(nav.indexOf('data-testid="aircraft-v5-share"')).toBeLessThan(nav.indexOf('<DetailTabs activeTab'));
-    expect(nav).toContain('href={historyHref');
-    expect(nav).toContain('href="/alerts"');
+    expect(nav).not.toContain("href={historyHref");
+    expect(nav).not.toContain('href="/alerts"');
     expect(nav).toContain('href={fullDetailHref');
     expect(quick).toContain("navigator.clipboard.writeText(url)");
     expect(quick).toContain("navigator.share");

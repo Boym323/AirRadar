@@ -9,7 +9,7 @@ describe("aircraft drawer responsive telemetry polish", () => {
   const css = read("app/radar-aircraft-panel.css");
   const polish = css.slice(css.indexOf("Aircraft drawer polish: never overlay"));
 
-  it("keeps all six actions visible within the actual drawer width", () => {
+  it("keeps retained quick actions visible within the actual drawer width", () => {
     expect(polish).toContain("container: aircraft-drawer-header / inline-size");
     expect(polish).toContain("@container aircraft-drawer-header (max-width: 270px)");
     expect(polish).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
@@ -23,10 +23,10 @@ describe("aircraft drawer responsive telemetry polish", () => {
     expect(quick).toContain('data-testid="aircraft-v5-quick-actions"');
     expect(quick).toContain("t.aircraftQuickV5.followMap");
     expect(quick).toContain("t.aircraft.centerOnAircraft");
-    expect(quick).toContain("t.aircraft.showFlightHistory");
     expect(quick).toContain("t.aircraftQuickV5.share");
-    expect(quick).toContain("t.aircraftQuickV5.alerts");
     expect(quick).toContain("t.aircraft.fullDetail");
+    expect(quick).not.toContain('href="/alerts"');
+    expect(quick).not.toContain("href={historyHref");
   });
 
   it("keeps the full live altitude, speed, track and vertical rate visible in a narrow desktop drawer", () => {

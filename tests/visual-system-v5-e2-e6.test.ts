@@ -42,10 +42,8 @@ describe("Visual System V5-E2–E6", () => {
     expect(radar).toContain('"selected-trail"');
   });
 
-  it("reuses airport traffic controller and deep links into existing radar selection", () => {
+  it("keeps the nearby-aircraft radar shortcut without the retired Airport Live Board", () => {
     expect(airport).toContain("<AirportMap airport={airport}");
-    expect(nearby).toContain("useAirportLiveTrafficController");
-    expect(nearby).toContain('item.classification === movement');
     expect(nearby).toContain('aria-pressed={movement === option.key}');
     expect(nearby).toContain('/?aircraft=');
     expect(radar).toContain('searchParams.get("aircraft")');

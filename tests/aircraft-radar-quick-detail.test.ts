@@ -93,7 +93,6 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("stableAltitudeProfile(chartPoints, livePoint)");
     expect(componentSource).toContain('data-testid="aircraft-quick-stable-altitude"');
     expect(componentSource).toContain("<AircraftAltitudeChart points={chartPoints} livePoint={livePoint} />");
-    expect(componentSource).toContain("t.aircraft.showFlightHistory");
     expect(componentSource).toContain("compactVerticalRateLabel(aircraft.verticalRate)");
     expect(componentSource).toContain(" fpm");
     expect(quickCss).toContain(".aircraft-quick-stable-altitude");
