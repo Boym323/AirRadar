@@ -158,9 +158,9 @@ describe("production release metadata gate", () => {
     expect(source).toContain("if (expectedUnavailable) unavailable.push");
   });
 
-  it("keeps Operations Dashboard in secondary smoke and follows the actual mobile More target", () => {
+  it("keeps selected receiver route in secondary smoke and follows the actual mobile More target", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
+    expect(source).not.toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
     expect(source).toContain('["/receiver/coverage", \'[data-testid="receiver-explorer-v2"]\']');
     expect(source).toContain('const mobileMoreHref = await mobileMoreLink.getAttribute("href")');
     expect(source).toContain("const mobileMoreTarget = new URL(mobileMoreHref, baseUrl)");
@@ -174,7 +174,8 @@ describe("production release metadata gate", () => {
     expect(source).toContain('waitUntil: "domcontentloaded"');
     expect(source).toContain("if (matchesTarget(page.url())) return");
     expect(source).toContain("await page.waitForTimeout(500)");
-    expect(source).toContain('clickAndWaitForNavigation(routeSmoke, historyLink, new URL("/history", baseUrl), "History link")');
+    expect(source).not.toContain('new URL("/history", baseUrl)');
+    expect(source).toContain('new URL("/airports", baseUrl)');
     expect(source).toContain("link.click()");
   });
 
@@ -230,9 +231,9 @@ describe("production release metadata gate", () => {
   it("accepts only bounded per-aircraft enrichment rate limits in the visual sweep", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('pathname === "/api/logbook/summary"');
-    expect(source).toContain('pathname === "/api/intelligence/events"');
-    expect(source).toContain("searchParams.has(\"aircraft\")");
-    expect(source).toContain("situation$/i.test(pathname)");
+    expect(source).not.toContain('pathname === "/api/intelligence/events"');
+    expect(source).not.toContain("searchParams.has(\"aircraft\")");
+    expect(source).not.toContain("situation$/i.test(pathname)");
     expect(source).toContain("history\\/[A-F0-9]{6}$/i.test(pathname)");
     expect(source).toContain("expectedRateLimitedApiErrors += 1");
     expect(source).toContain("browserErrors.push(`http ${response.status()}");

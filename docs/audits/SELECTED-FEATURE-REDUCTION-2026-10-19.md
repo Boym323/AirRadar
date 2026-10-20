@@ -239,3 +239,11 @@ detail, weather, receiver and system targets. Retired feature file paths fail
 closed to the full browser gate rather than requesting deleted screenshots.
 The release planner's tests now assert that every targeted screenshot exists in
 the actual production capture registry. No production deployment authorized.
+
+## Phase 22 (staged): repair release-preview checks against retired surfaces
+
+Update outdated test assertions that require removed Operations, History,
+Intelligence or receiver-marker UI. Keep the browser smoke strictly interactive:
+use the visible mobile airport navigation link and restore the desktop viewport
+for locale checks; select retained Navigation from the mobile More menu.
+No deleted page or API is reintroduced.

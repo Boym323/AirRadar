@@ -1985,9 +1985,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     // The radar shell can expose more than one navigation surface. Resolve
     // the link by its exact href and arm the navigation waiter before the
     // click so a fast client-side transition cannot be missed.
-    const airportsLink = routeSmoke.locator('a[href="/airports"]:visible').first();
+    await routeSmoke.setViewportSize({ width: 390, height: 844 });
+    const airportsLink = routeSmoke.locator('.mobile-bottom-nav a[href="/airports"]:visible').first();
     await airportsLink.waitFor({ state: "visible", timeout: 15_000 });
     await clickAndWaitForNavigation(routeSmoke, airportsLink, new URL("/airports", baseUrl), "Airports link");
+    await routeSmoke.setViewportSize({ width: 1280, height: 800 });
     await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
     // Verify a real language change (not merely the presence of two dictionaries),
     // retained selection after navigation and a hard reload, and return to Czech.
@@ -2026,7 +2028,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.waitForFunction(() => document.documentElement.lang === "en"
       && localStorage.getItem("airradar-language") === "en");
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
-    const mobileMoreLink = routeSmoke.locator('.mobile-bottom-more a[href="/airports"]').first();
+    const mobileMoreLink = routeSmoke.locator('.mobile-bottom-more a[href="/navigation"]').first();
     await mobileMoreLink.waitFor({ state: "visible", timeout: 15_000 });
     const mobileMoreHref = await mobileMoreLink.getAttribute("href");
     if (!mobileMoreHref) throw new Error("Mobile More navigation item is missing href");

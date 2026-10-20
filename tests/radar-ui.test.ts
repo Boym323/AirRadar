@@ -177,7 +177,8 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toMatch(/\.aircraft-marker:hover \.aircraft-plane[^}]*transform:\s*scale/);
     expect(globalCss).toMatch(/\.aircraft-marker\.selected \.aircraft-plane[^}]*transform:\s*scale/);
     expect(appSource).toContain("const target: [number, number] = [aircraft.lon, aircraft.lat]");
-    expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
+    expect(appSource).not.toContain("setLngLat([receiver.lon, receiver.lat])");
+    expect(appSource).toContain("shouldRecenterOnReceiver");
   });
 
   it("keeps tar1090 icons colorable and map motion visually continuous", () => {

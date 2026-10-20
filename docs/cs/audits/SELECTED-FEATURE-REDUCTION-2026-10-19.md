@@ -221,3 +221,10 @@ predikčních panelů, Watchlistu, Notification Center a Operations Dashboardu.
 Zachovány kontroly živé mapy, letišť, detailu letadla, počasí, přijímače a
 systému. Změny zrušených oblastí spouštějí plnou kontrolu místo odkazu na
 neexistující screenshot. Produkce zůstává nezměněna.
+
+## Fáze 22 (postupně): oprava release-preview kontrol po odstranění funkcí
+
+Zastaralá očekávání testů byla upravena pro odstraněné Operations, Historii,
+Intelligence a značku přijímače. Prohlížečový smoke nadále ověřuje skutečná
+kliknutí: mobilní odkaz na Letiště, návrat na desktop pro jazykové kontroly
+a zachovanou Navigaci v mobilním menu Více. Odstraněné API se neobnovuje.
