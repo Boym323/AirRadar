@@ -126,3 +126,7 @@ Zrušen zastaralý test pouze odstraněné predikční časové osy a upraveny t
 ## Fáze 13 (rozpracováno): odstranění nedostupných předpovědí Digital Twin z režimu sledování
 
 Flight Follow zůstává dostupný včetně identity, živé telemetrie výšky/rychlosti/vertikálního pohybu, známého cíle, kontextu dalšího bodu trasy, tlačítka sledování a zmenšeného režimu panelu. Odstraněn je vždy prázdný parametr Digital Twin i již nefunkční zobrazování prediktivního ETA, dráhy a počasí. Žádné nové dotazy, změny databáze ani migrace. Testy hlídají zachované sledování a nepřítomnost zrušených predikcí.
+
+## Fáze 14 (rozpracováno): odstranění osiřelého mapového projektoru Regional Attention
+
+Vyřazena nepotřebná knihovna `lib/operational-twin/regional-attention-ui.ts` a její test mapového zobrazení, protože radar již nemá související posluchače ani GeoJSON zdroje. Validátory historických Regional Attention výsledků, kalibrační logika a uložená data zůstávají beze změn; nejde o migraci serveru. Regresní test hlídá nepřítomnost mapového projektoru bez ztráty historických výsledků.

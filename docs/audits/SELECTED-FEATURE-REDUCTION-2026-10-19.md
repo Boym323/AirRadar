@@ -125,3 +125,7 @@ Removed the obsolete prediction-timeline UI-only boundary test, and updated thre
 ## Phase 13 (staged): remove unreachable Digital Twin forecasts from the retained Flight Follow HUD
 
 Flight Follow remains available, with identity, live altitude/speed/vertical-rate telemetry, known destination, the existing route waypoint context, follow toggle and compact drawer mode. The always-null Digital Twin compatibility prop and dead ETA, predicted runway and forecast weather rendering have been removed from this HUD. No additional network requests, database changes or migrations. Tests protect the retained follow interaction and the absence of retired forecast content.
+
+## Phase 14 (staged): prune unused Regional Attention map-only projector
+
+Removed the obsolete `lib/operational-twin/regional-attention-ui.ts` and its dedicated visualization test, which had no radar consumer after removing D-layer event listeners and GeoJSON sources. Preserve historical Regional Attention outcome validators, promotion/graduation logic and stored data; this is not a server/runtime migration. The explicit feature-boundary regression confirms the dead UI projector remains removed without deleting persisted outcome modules.

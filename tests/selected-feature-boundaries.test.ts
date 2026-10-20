@@ -262,6 +262,16 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(app).toContain("<RadarFlightFollowHud");
   });
 
+  it("drops orphan Regional Attention map-only projections without deleting server outcomes", () => {
+    expect(existsSync(new URL("lib/operational-twin/regional-attention-ui.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/regional-attention-ui.test.ts", root))).toBe(false);
+    // Existing stored calibration/outcome data and internal validation remain untouched.
+    expect(existsSync(new URL("lib/operational-twin/regional-attention-outcome.ts", root))).toBe(true);
+    expect(existsSync(new URL("lib/operational-twin/regional-attention-graduation.ts", root))).toBe(true);
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(app).not.toContain("REGIONAL_ATTENTION_MAP");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");
