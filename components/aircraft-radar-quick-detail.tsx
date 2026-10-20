@@ -10,7 +10,6 @@ import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
-import type { WeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { AircraftAltitudeChart } from "@/components/aircraft-detail-shared";
@@ -50,7 +49,6 @@ export interface AircraftRadarQuickDetailProps {
   atcContext: AtcContextResult | null;
   sigmetContext: AircraftSigmetContext[];
   sigmetDeviation: SigmetTrajectoryDeviation | null;
-  weatherAvoidance: WeatherAvoidanceIntelligence | null;
   sigmetStale: boolean;
   routeCorridor?: RouteCorridorSnapshot | null;
   routeConformance?: TrajectoryConformanceSnapshot | null;
@@ -171,37 +169,11 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
   </QuickSection>;
 }
 
-function SigmetSection({ context, deviation, avoidance, stale }: { context: AircraftSigmetContext[]; deviation: SigmetTrajectoryDeviation | null; avoidance: WeatherAvoidanceIntelligence | null; stale: boolean }) {
-  if (!context.length && !deviation && !avoidance) return null;
+function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetContext[]; deviation: SigmetTrajectoryDeviation | null; stale: boolean }) {
+  if (!context.length && !deviation) return null;
   const hasProjection = context.some((item) => item.relation === "projected");
-  const currentExposure = avoidance
-    ? avoidance.currentExposure.intersects === null
-      ? t.weather.weatherAvoidanceCurrentUnknown
-      : avoidance.currentExposure.intersects
-        ? t.weather.weatherAvoidanceCurrentExposed(
-            avoidance.currentExposure.entryMinutes === null ? t.common.emptyValue : formatNumber(avoidance.currentExposure.entryMinutes, 0),
-            avoidance.currentExposure.distanceNm === null ? t.common.emptyValue : formatNumber(avoidance.currentExposure.distanceNm, 0),
-          )
-        : t.weather.weatherAvoidanceCurrentClear
-    : null;
   return <QuickSection id="aircraft-quick-sigmet-title" title={t.weather.sigmetAircraftTitle} className="aircraft-quick-sigmet">
-    {avoidance ? <div className="aircraft-quick-weather-deviation" data-testid="weather-avoidance-intelligence-v1" data-classification={avoidance.classification}>
-      <strong>{t.weather.weatherAvoidanceClassification[avoidance.classification]}</strong>
-      <span>{avoidance.hazard || avoidance.phenomenon || t.weather.sigmetUnknownHazard}</span>
-      <div className="aircraft-quick-detail-grid">
-        <DetailValue label={t.weather.sigmetTurn} value={`${formatNumber(avoidance.headingChangeDeg, 0)}°`} />
-        <DetailValue label={t.weather.sigmetTracks} value={`${formatTrack(avoidance.previousTrackDeg)} → ${formatTrack(avoidance.currentTrackDeg)}`} />
-        <DetailValue label={t.weather.weatherAvoidancePreviousExposure} value={`~${avoidance.previousExposure.entryMinutes ?? t.common.emptyValue} min · ~${avoidance.previousExposure.distanceNm === null ? t.common.emptyValue : formatNumber(avoidance.previousExposure.distanceNm, 0)} NM`} />
-        <DetailValue label={t.weather.weatherAvoidanceCurrentExposure} value={currentExposure} />
-        {avoidance.conformanceStatus && <DetailValue label={t.weather.weatherAvoidanceConformance} value={t.routeConformance.statuses[avoidance.conformanceStatus]} />}
-        <DetailValue label={t.weather.weatherAvoidanceConfidence} value={t.weather.weatherFusionConfidence[avoidance.confidence]} />
-      </div>
-      <p>{avoidance.classification === "POSSIBLE_WEATHER_AVOIDANCE"
-        ? t.weather.weatherAvoidancePossibleSummary
-        : avoidance.classification === "CURRENT_CORRIDOR_EXPOSED"
-          ? t.weather.weatherAvoidanceExposedSummary
-          : t.weather.weatherAvoidanceCorrelatedSummary}</p>
-    </div> : deviation && <div className="aircraft-quick-weather-deviation" data-testid="sigmet-trajectory-deviation">
+    {deviation && <div className="aircraft-quick-weather-deviation" data-testid="sigmet-trajectory-deviation">
       <strong>{t.weather.sigmetDeviationSignal}</strong>
       <span>{deviation.hazard || deviation.phenomenon || t.weather.sigmetUnknownHazard}</span>
       <div className="aircraft-quick-detail-grid">
@@ -233,10 +205,8 @@ function SigmetSection({ context, deviation, avoidance, stale }: { context: Airc
     </div>}
     <p className="aircraft-quick-disclaimer">{stale
       ? t.weather.sigmetStaleWarning
-      : avoidance
-        ? t.weather.weatherAvoidanceDisclaimer
-        : deviation
-          ? t.weather.sigmetDeviationDisclaimer
+      : deviation
+        ? t.weather.sigmetDeviationDisclaimer
         : hasProjection
           ? t.weather.sigmetProjectionDisclaimer
           : t.weather.sigmetAircraftDisclaimer}</p>
@@ -565,7 +535,6 @@ export function AircraftRadarQuickDetail({
   atcContext,
   sigmetContext,
   sigmetDeviation,
-  weatherAvoidance,
   sigmetStale,
   routeCorridor = null,
   routeConformance = null,
@@ -675,7 +644,7 @@ export function AircraftRadarQuickDetail({
         <summary>{t.aircraftQuickV5.advancedContext}</summary>
         {advancedContextOpen && <>
           <NavigationIntegritySection aircraft={aircraft} />
-          <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
+          <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
           <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
         </>}
       </details>

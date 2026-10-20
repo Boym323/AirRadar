@@ -1,27 +1,31 @@
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-describe("Weather Avoidance Intelligence V1 boundaries", () => {
-  it("reuses existing selected-aircraft situation data and adds no stream or persistence path", async () => {
-    const selectedContext = await readFile("components/radar/use-radar-aircraft-context.ts", "utf8");
-    const engine = await readFile("lib/weather/avoidance-intelligence.ts", "utf8");
-    const aircraftState = await readFile("lib/server/aircraft-state.ts", "utf8");
+const read = (path: string) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 
-    expect(selectedContext).not.toContain("/situation");
-    expect(selectedContext).not.toContain("60_000");
-    expect(selectedContext).not.toContain("EventSource(`/api/aircraft/${encodeURIComponent(aircraftHex)}/situation");
-    expect(engine).toContain("CURRENT_30MIN_CORRIDOR_CLEAR");
-    expect(engine).toContain("TRAJECTORY_DEVIATING");
-    expect(aircraftState).not.toContain("weather-avoidance-intelligence");
+describe("Removed Weather Avoidance UI boundary", () => {
+  it("does not compute or pass Weather Avoidance in live radar selection", () => {
+    const app = read("components/airradar-app.tsx");
+    const drawer = read("components/radar/radar-drawer-details.tsx");
+    expect(app).not.toContain("buildWeatherAvoidanceIntelligence");
+    expect(app).not.toContain("selectedWeatherAvoidance");
+    expect(drawer).not.toContain("weatherAvoidance");
   });
 
-  it("keeps crew intent explicitly outside the product contract", async () => {
-    const cs = await readFile("lib/i18n/cs.ts", "utf8");
-    const en = await readFile("lib/i18n/en.ts", "utf8");
-    const ui = await readFile("components/aircraft-radar-quick-detail.tsx", "utf8");
+  it("retains SIGMET aircraft context, observational deviation and navigation integrity", () => {
+    const panel = read("components/aircraft-radar-quick-detail.tsx");
+    expect(panel).toContain("<SigmetSection");
+    expect(panel).toContain("aircraft-sigmet-context");
+    expect(panel).toContain("sigmet-trajectory-deviation");
+    expect(panel).toContain("<NavigationIntegritySection");
+    expect(panel).not.toContain("WeatherAvoidanceIntelligence");
+    expect(panel).not.toContain("weather-avoidance-intelligence-v1");
+    expect(panel).not.toContain("avoidance={");
+  });
 
-    expect(cs).toContain("Neurčuje úmysl posádky");
-    expect(en).toContain("does not infer crew intent");
-    expect(ui).toContain('data-testid="weather-avoidance-intelligence-v1"');
+  it("keeps the legacy analytical module isolated until server-side dependency audit", () => {
+    const source = read("lib/weather/avoidance-intelligence.ts");
+    expect(source).toContain("buildWeatherAvoidanceIntelligence");
+    expect(source).not.toContain("getPrisma");
   });
 });

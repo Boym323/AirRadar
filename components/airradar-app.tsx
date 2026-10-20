@@ -36,7 +36,6 @@ import {
   type RegionalAttentionMapFocusEventDetail,
 } from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
-import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot } from "@/lib/ogn/types";
@@ -2311,14 +2310,6 @@ export function AirRadarApp() {
     atcContext: selectedAtcContext,
     operationalTwin: selectedOperationalTwin,
   } = useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition });
-  const selectedWeatherAvoidance = useMemo(() => buildWeatherAvoidanceIntelligence({
-    deviation: selectedSigmetDeviation,
-    conformance: selectedRouteCorridor.conformance,
-    weatherCorridor: selectedOperationalTwin?.status === "available"
-      ? selectedOperationalTwin.weatherCorridor
-      : null,
-  }), [selectedOperationalTwin, selectedRouteCorridor.conformance, selectedSigmetDeviation]);
-
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
   useEffect(() => {
     const map = mapRef.current;
@@ -2687,7 +2678,6 @@ export function AirRadarApp() {
             atcContext={selectedAtcContext}
             sigmetContext={selectedSigmetContext}
             sigmetDeviation={selectedSigmetDeviation}
-            weatherAvoidance={selectedWeatherAvoidance}
             sigmetStale={sigmetData.stale}
             routeCorridor={selectedRouteCorridor.corridor}
             routeConformance={selectedRouteCorridor.conformance}

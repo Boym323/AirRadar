@@ -78,3 +78,7 @@ Z hooku detailu letadla byla odstraněna nepožadovaná HTTP smyčka Digital Twi
 ## Fáze 7b (rozpracováno): odstranění mapových vrstev Digital Twin a Operational Focus
 
 Po vypnutí dotazování vybraného letadla byly vyřazeny predikční vrstvy Digital Twin, čáry a body Operational Focus, mapové události, automatické přiblížení, URL akce, legenda a již nepoužívaná sekce v detailu letadla. Výběr letadla, jeho stopa, ATC/ATS, SIGMET a Navigation Integrity zůstávají zachovány. Zbylé serverové knihovny a dočasný typový null výstup Digital Twin čekají na samostatný audit závislostí; bez migrací databáze a změn produkce.
+
+## Fáze 8 (rozpracováno): odstranění živého Weather Avoidance a panelu
+
+Nevyžadovaná klasifikace W11 Weather Avoidance se již nepočítá při výběru/vykreslení letadla, nepředává se přes komponenty detailu ani se nezobrazuje. SIGMET pro letadlo (W06), samostatný zjištěný kontext odchylky trajektorie a Navigation Integrity zůstávají zachovány. Čistá analytická knihovna a její unit testy zůstávají do samostatného auditu serverových importů. Bez změn historie, databázového schématu, příjmu dat a produkce.

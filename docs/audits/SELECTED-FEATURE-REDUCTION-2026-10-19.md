@@ -77,3 +77,7 @@ Remove the rejected 60-second per-selection Digital Twin HTTP loop, local outcom
 ## Phase 7b (staged): remove orphan Digital Twin and Operational Focus map layers
 
 Following the disabled per-aircraft situation polling, unregister eight Digital Twin forecast layers, the Operational Focus line/target layers, the event popups, focus camera/URL callbacks, map legend and the unreachable quick-detail focus section. Preserve the selected aircraft trails, ATC/ATS maps, SIGMET and Navigation Integrity overlays. Other projection libraries and the temporary typed-null Digital Twin value remain until the broader server and Flight Follow HUD dependency audit. No database migrations or production changes.
+
+## Phase 8 (staged): remove live Weather Avoidance classification and UI
+
+The rejected W11 Weather Avoidance classification no longer runs in the radar selection/render path, no longer flows through the drawer props, and is no longer shown as a panel. Preserve aircraft SIGMET context (W06), standalone observed trajectory-deviation context, and Navigation Integrity. The pure Weather Avoidance analysis module and existing unit tests are not deleted pending independent audit of possible server-side imports. No history, database schema, ingest or production deployment changes.
