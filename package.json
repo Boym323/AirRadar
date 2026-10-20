@@ -74,8 +74,6 @@
     "benchmark:bounded-enrichment": "JITI_TSCONFIG_PATHS=true node --expose-gc node_modules/jiti/lib/jiti-cli.mjs scripts/benchmark-bounded-enrichment.ts",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
     "intelligence:corpus": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-v1-corpus.ts",
-    "predictive:validate:prospective": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-validate-prospective.ts",
-    "predictive:retention": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-observation-retention.ts",
     "intelligence:quality": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-quality.ts",
     "audit:aircraft-weather": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-aircraft-weather.ts",
     "audit:navigation-integrity": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-quality.ts",

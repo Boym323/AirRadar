@@ -468,3 +468,17 @@ Preserve receiver statistics, sampling and all historical PostgreSQL rows,
 recorded FlightPosition and existing retained public history endpoints.
 Synchronize the feature registry and both EN/CS API inventories. External
 consumers of the retired endpoint will receive 404 after deployment.
+
+## Phase 48 (staged): remove retired predictive research engine and admin evidence
+
+Delete the 31 unconsumed `lib/predictive-intelligence/` modules, orphan server
+readiness/prospective-retention/predictive-projection helpers, stale watchlist
+predictive scoring, retained-only-for-research flight-evidence endpoint/widget,
+and associated replay/validation scripts, timer unit files and direct unit tests.
+Replace the source-level predictive optimization boundary with negative
+regressions; drop obsolete CLI aliases and aircraft-state re-exports. The live
+predictive state and public/admin prediction endpoints were retired in earlier
+phases; this changes no ADS-B or Navigation Integrity behavior. Do not delete
+historic FlightEvent, PredictiveObservation, FlightPosition or existing schema
+migrations; a deployed legacy systemd timer must be disabled as part of the
+later supervised deployment, not while this PR is in draft.

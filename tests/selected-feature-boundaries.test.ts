@@ -248,8 +248,8 @@ describe("explicit selected-feature reduction contracts", () => {
     ]) {
       expect(existsSync(new URL(path, root)), path).toBe(false);
     }
-    // Legacy read-only advisory contracts are reviewed independently from UI.
-    expect(existsSync(new URL("lib/predictive-intelligence/explainability.ts", root))).toBe(true);
+    // Predictive contracts have now been retired with their unused backend.
+    expect(existsSync(new URL("lib/predictive-intelligence/explainability.ts", root))).toBe(false);
   });
 
   it("keeps flight-follow telemetry without rejected Digital Twin forecasts", () => {

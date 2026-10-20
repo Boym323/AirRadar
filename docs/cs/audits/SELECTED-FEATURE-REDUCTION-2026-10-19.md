@@ -416,3 +416,15 @@ denních/týdenních přehledů a jeho samostatný jednotkový test. Statistiky
 přijímače, ukládání historie a data FlightPosition v PostgreSQL zůstávají.
 Synchronizován registr funkcí i anglický a český inventář API. Staré URL
 po nasazení vrátí 404; žádné databázové migrace ani nasazení.
+
+## Fáze 48 (postupně): odstranění nepoužívaného prediktivního enginu
+
+Odstraněno 31 modulů `lib/predictive-intelligence/`, osiřelé servery
+readiness, retence prediktivních pozorování a projekce vstupů, staré
+watchlist predikce, administrátorské API důkazů letu a jeho nepoužívaný panel.
+Odstraněny jednorázové validační skripty, jednotky systemd timeru, související
+testy a neplatné příkazy z package.json. Regresní test nyní kontroluje
+nepřítomnost backendu a zachování Navigation Integrity. Historická data
+FlightEvent, PredictiveObservation, FlightPosition ani migrace se nemažou.
+Při budoucím nasazení je nutné pod dohledem zrušit případně aktivní starý
+systemd timer; v rámci draft PR se nastavení produkce nemění.
