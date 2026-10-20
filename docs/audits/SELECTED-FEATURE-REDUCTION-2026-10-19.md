@@ -61,3 +61,7 @@ Remove orphaned procedure-explorer, ATC airspace-explorer, airport-compare compo
 ## Phase 4 (staged): drop retired investigation deep links
 
 The shared investigation-link helper keeps only Navigation Integrity and NAVAID/ATS route bookmark validation used by the retained views. Deleted airspace-sector, flight comparison, airport comparison, SID/STAR procedure and sector-history parameter parsers/builders, their obsolete types and validation helpers. Regression test guards the kept and removed exports. No API routes, database tables, historical data, or runtime ingestion are changed.
+
+## Phase 5 (staged): stop retired selected-aircraft requests
+
+The selected-aircraft context hook no longer fetches Flight Intelligence events or the removed route-weather intelligence (formerly per selection and at 120-second intervals). Their quick-detail sections, data props and the OD route-weather component are removed. Preserve ATC context, SIGMET observations and Navigation Integrity. The situation summary remains temporarily pending a separate dependency review; server-side ingestion/calculation is not disabled by this patch.

@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 import type { AircraftRadarQuickDetailProps } from "@/components/aircraft-radar-quick-detail";
 import type { RadarDrawerState } from "@/components/radar/use-radar-drawer-interactions";
 import type { AircraftView } from "@/lib/aircraft/types";
-import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { formatAge, formatAltitude, formatCoordinate, formatDistance, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
 import type { OgnTargetView } from "@/lib/ogn/types";
@@ -28,10 +27,8 @@ interface RadarDrawerDetailsProps {
   sigmetDeviation: AircraftRadarQuickDetailProps["sigmetDeviation"];
   weatherAvoidance: AircraftRadarQuickDetailProps["weatherAvoidance"];
   sigmetStale: boolean;
-  routeWeather: AircraftRadarQuickDetailProps["routeWeather"];
   routeCorridor: AircraftRadarQuickDetailProps["routeCorridor"];
   routeConformance: AircraftRadarQuickDetailProps["routeConformance"];
-  intelligenceEvents: FlightIntelligenceEvent[];
   operationalTwin: AircraftRadarQuickDetailProps["operationalTwin"];
   operationalFocusChanges: AircraftRadarQuickDetailProps["operationalFocusChanges"];
   operationalFocusItemId: AircraftRadarQuickDetailProps["operationalFocusItemId"];
@@ -59,10 +56,8 @@ export function RadarDrawerDetails({
   sigmetDeviation,
   weatherAvoidance,
   sigmetStale,
-  routeWeather,
   routeCorridor,
   routeConformance,
-  intelligenceEvents,
   operationalTwin,
   operationalFocusChanges,
   operationalFocusItemId,
@@ -95,10 +90,8 @@ export function RadarDrawerDetails({
       sigmetDeviation={sigmetDeviation}
       weatherAvoidance={weatherAvoidance}
       sigmetStale={sigmetStale}
-      routeWeather={routeWeather}
       routeCorridor={routeCorridor}
       routeConformance={routeConformance}
-      intelligenceEvents={intelligenceEvents}
       operationalTwin={operationalTwin}
       operationalFocusChanges={operationalFocusChanges}
       operationalFocusItemId={operationalFocusItemId}

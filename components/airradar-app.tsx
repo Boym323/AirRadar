@@ -2541,10 +2541,8 @@ export function AirRadarApp() {
   const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
   const {
     atcContext: selectedAtcContext,
-    routeWeather: selectedRouteWeather,
     operationalTwin: selectedOperationalTwin,
     operationalFocusChanges: selectedOperationalFocusChanges,
-    intelligenceEvents: selectedIntelligenceEvents,
   } = useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition });
   const selectedWeatherAvoidance = useMemo(() => buildWeatherAvoidanceIntelligence({
     deviation: selectedSigmetDeviation,
@@ -3018,10 +3016,8 @@ export function AirRadarApp() {
             sigmetDeviation={selectedSigmetDeviation}
             weatherAvoidance={selectedWeatherAvoidance}
             sigmetStale={sigmetData.stale}
-            routeWeather={selectedRouteWeather}
             routeCorridor={selectedRouteCorridor.corridor}
             routeConformance={selectedRouteCorridor.conformance}
-            intelligenceEvents={selectedIntelligenceEvents}
             operationalTwin={selectedOperationalTwin}
             operationalFocusChanges={selectedOperationalFocusChanges}
             operationalFocusItemId={operationalFocusMapId}

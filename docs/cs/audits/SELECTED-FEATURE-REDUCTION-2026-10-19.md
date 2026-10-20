@@ -62,3 +62,7 @@ Po odstranění jejich vstupních stránek byly vyřazeny samostatné komponenty
 ## Fáze 4 (rozpracováno): úklid odkazů na zrušené stránky
 
 Sdílený pomocník pro vyšetřovací odkazy nyní zachovává jen ověřování záložek pro Navigation Integrity a NAVAID/ATS používaných v ponechaném UI. Odstraněny jsou parsování a generování parametrů pro zrušený ATC průzkumník, porovnání letů a letišť, procedury SID/STAR a historii sektorů včetně nepoužívaných typů a validací. Regresní test hlídá zachované i odstraněné exporty. Beze změny API, databáze, historických dat a příjmu provozu.
+
+## Fáze 5 (rozpracováno): vypnutí dotazů odstraněných funkcí
+
+Hook kontextu vybraného letadla již nedotazuje Flight Intelligence ani inteligenci počasí na trase (dříve při výběru a každých 120 sekund). Odstraněny jsou sekce rychlého detailu, předávané parametry a OD route-weather panel. ATC kontext, SIGMET a Navigation Integrity zůstávají zachovány. Souhrn situace zůstává dočasně do samostatného auditu závislostí; tento patch nevypíná serverové výpočty.

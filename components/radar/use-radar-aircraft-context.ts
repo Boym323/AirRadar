@@ -2,14 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import {
   compareAircraftOperationalFocus,
   type AircraftOperationalFocusChangeSummary,
 } from "@/lib/operational-twin/aircraft-operational-focus-change";
 import type { AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
-import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 
 interface UseRadarAircraftContextOptions {
   aircraftHex: string | null;
@@ -19,25 +17,9 @@ interface UseRadarAircraftContextOptions {
 /** Owns the selected aircraft's bounded, selection-scoped context requests. */
 export function useRadarAircraftContext({ aircraftHex, hasPosition }: UseRadarAircraftContextOptions) {
   const [atcContext, setAtcContext] = useState<AtcContextResult | null>(null);
-  const [routeWeather, setRouteWeather] = useState<RouteWeatherContext | null>(null);
   const [operationalTwin, setOperationalTwin] = useState<OperationalTwinApiResponse | null>(null);
   const [operationalFocusChanges, setOperationalFocusChanges] = useState<AircraftOperationalFocusChangeSummary | null>(null);
-  const [intelligenceEvents, setIntelligenceEvents] = useState<FlightIntelligenceEvent[]>([]);
   const operationalFocusSnapshotsRef = useRef<Map<string, AircraftOperationalFocusSummary>>(new Map());
-
-  useEffect(() => {
-    setIntelligenceEvents([]);
-    if (!aircraftHex) return;
-    const controller = new AbortController();
-    void fetch(`/api/intelligence/events?aircraft=${encodeURIComponent(aircraftHex)}&limit=8`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((response) => response.ok ? response.json() as Promise<{ events?: FlightIntelligenceEvent[] }> : null)
-      .then((value) => { if (value?.events) setIntelligenceEvents(value.events); })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [aircraftHex]);
 
   useEffect(() => {
     setAtcContext(null);
@@ -72,28 +54,6 @@ export function useRadarAircraftContext({ aircraftHex, hasPosition }: UseRadarAi
       controller?.abort();
     };
   }, [aircraftHex, hasPosition]);
-
-  useEffect(() => {
-    setRouteWeather(null);
-    if (!aircraftHex || !hasPosition || atcContext?.status !== "available") return;
-    let active = true;
-    let timer: number | null = null;
-    const refresh = () => {
-      void fetch(`/api/aircraft/${encodeURIComponent(aircraftHex)}/route-weather`, { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok && response.status >= 500) throw new Error("route-weather unavailable");
-          return await response.json() as RouteWeatherContext;
-        })
-        .then((value) => { if (active) setRouteWeather(value); })
-        .catch(() => { if (active) setRouteWeather(null); });
-    };
-    refresh();
-    const schedule = () => {
-      timer = window.setTimeout(() => { refresh(); schedule(); }, 120_000);
-    };
-    schedule();
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [aircraftHex, hasPosition, atcContext?.status]);
 
   useEffect(() => {
     setOperationalTwin(null);
@@ -133,5 +93,5 @@ export function useRadarAircraftContext({ aircraftHex, hasPosition }: UseRadarAi
     return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
   }, [aircraftHex, hasPosition]);
 
-  return { atcContext, routeWeather, operationalTwin, operationalFocusChanges, intelligenceEvents };
+  return { atcContext, operationalTwin, operationalFocusChanges };
 }

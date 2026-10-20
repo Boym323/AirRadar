@@ -106,6 +106,19 @@ describe("explicit selected-feature reduction contracts", () => {
     ]) expect(source).not.toContain("export function " + retired);
   });
 
+  it("never polls retired flight-intelligence and route-weather endpoints from selected aircraft", () => {
+    const context = readFileSync(new URL("components/radar/use-radar-aircraft-context.ts", root), "utf8");
+    const detail = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(context).not.toContain("/api/intelligence/events");
+    expect(context).not.toContain("/route-weather");
+    expect(context).toContain("/context");
+    expect(detail).toContain("SigmetSection");
+    expect(detail).toContain("NavigationIntegritySection");
+    expect(detail).not.toContain("IntelligenceSection");
+    expect(detail).not.toContain("RouteWeatherSection");
+    expect(detail).not.toContain("<FlightRouteWeather");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");
