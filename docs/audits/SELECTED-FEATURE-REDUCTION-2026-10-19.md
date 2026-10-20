@@ -534,3 +534,33 @@ projection and prospective terminal-evidence classifier. Both only tested the
 rejected prediction/Flight Intelligence domain, not retained historical
 readers. Delete these two test suites and extend the negative regression guard.
 Leave all FlightEvent and FlightPosition records, migrations and history APIs.
+
+## Phase 50 (staged): decouple the retired AlertEngine from ingest
+
+Remove all live calls to old alert rules from local snapshots, history first-seen
+writes, enrichment updates and reception-record evaluation. The receiver no
+longer instantiates AlertEngine. Preserve aircraft history, statistics, Navigation
+Integrity and the independent durable delivery worker. The legacy status remains
+disabled for system compatibility; no new alert signals are generated.
+
+## Phase 51 (staged): retire legacy alert/watchlist/fleet APIs and state
+
+Remove 16 public/admin rule, watchlist, geofence, fleet, notification-center
+and simulation API routes, six orphaned UI modules, legacy AlertEngine, old
+simulation/effectiveness analytics, obsolete notification-center state and their
+isolated tests. Keep Web Push subscription/VAPID endpoints, Pushover delivery
+worker, delivery queue/database contracts and admin delivery-health API.
+The legacy watchlist session endpoint remains temporarily because system and
+delivery diagnostics still depend on its authentication contract. No destructive
+database migrations, queue purges, deployment or main-branch changes.
+
+## Phase 51a (staged): repair release boundaries and authoritative documentation
+
+Replace the old production watchlist-mutation smoke with 404 assertions for
+retired endpoints. Reconcile docs/features.registry.json and regenerate the
+English feature table, alongside a current Czech feature overview. Both now
+describe retained pages/APIs only and clarify that preserved notification
+transports do not automatically generate new alerts.
+
+CI/CodeQL/load scaling must be checked on the final commit before merge.
+Do not treat reductions in source lines as measured CPU/RAM savings.
