@@ -228,3 +228,13 @@ Zastaralá očekávání testů byla upravena pro odstraněné Operations, Histo
 Intelligence a značku přijímače. Prohlížečový smoke nadále ověřuje skutečná
 kliknutí: mobilní odkaz na Letiště, návrat na desktop pro jazykové kontroly
 a zachovanou Navigaci v mobilním menu Více. Odstraněné API se neobnovuje.
+
+## Fáze 29 (postupně): odstranění automatického vzorkování Digital Twin
+
+Ze zpracování živých dat odstraněn automatický minutový výběr letadla pro
+Digital Twin. Při výběru se procházela a třídila celá mapa letadel a volal se
+výpočet situační projekce. Další perzistence dříve uložených výsledků,
+bezpečné ukončení, historie, statistiky přijímače a Navigation Integrity
+zůstávají zachovány. Ostatní pozorovatele predikcí je ještě nutné samostatně
+prověřit. Kontrola rozložení nyní odpovídá čtyřem zachovaným akcím detailu
+letadla; ochrana před limitací stále existujícího API zůstává aktivní.

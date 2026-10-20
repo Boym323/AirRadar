@@ -1698,7 +1698,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 overflowingActions,
               };
             });
-            if (aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 6
+            if (aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 4
               || !aircraftDrawerLayout.twoMetricRows || aircraftDrawerLayout.overflowingValues.length
               || aircraftDrawerLayout.overflowingActions.length) {
               throw new Error(`Aircraft drawer geometry fails at ${target.viewport.width}px: ${JSON.stringify(aircraftDrawerLayout)}`);

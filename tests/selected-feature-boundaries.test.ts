@@ -401,3 +401,17 @@ describe("phase 25 rejected sector traffic and ATC validation APIs", () => {
     expect(existsSync(new URL("app/api/aircraft/[hex]/context/route.ts", root))).toBe(true);
   });
 });
+
+describe("phase 29 no autonomous rejected Digital Twin calibration", () => {
+  it("removes the periodic full snapshot sampler without touching selected services", () => {
+    const source = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+    expect(source).not.toContain("scheduleOperationalTwinCalibrationSample");
+    expect(source).not.toContain("OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS");
+    expect(source).not.toContain("operationalTwinCalibrationSamplePromise");
+    expect(source).not.toContain('import("@/lib/server/operational-twin")');
+    expect(source).toContain("this.navigationIntegrity.observe(activeAircraft");
+    expect(source).toContain("this.statistics.observe(activeAircraft");
+    expect(source).toContain("this.operationalTwinCalibrationPersistence.stop()");
+    expect(source).toContain("recordAircraftSnapshot");
+  });
+});

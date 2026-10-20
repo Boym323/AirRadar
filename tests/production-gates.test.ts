@@ -233,10 +233,18 @@ describe("production release metadata gate", () => {
     expect(source).toContain('pathname === "/api/logbook/summary"');
     expect(source).not.toContain('pathname === "/api/intelligence/events"');
     expect(source).not.toContain("searchParams.has(\"aircraft\")");
-    expect(source).not.toContain("situation$/i.test(pathname)");
+    expect(source).toContain("situation$/i.test(pathname)");
+    expect(source).not.toContain('pathname === "/api/intelligence/events"');
     expect(source).toContain("history\\/[A-F0-9]{6}$/i.test(pathname)");
     expect(source).toContain("expectedRateLimitedApiErrors += 1");
     expect(source).toContain("browserErrors.push(`http ${response.status()}");
+  });
+
+  it("keeps four retained aircraft drawer actions under overflow checks", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 4");
+    expect(source).toContain("aircraftDrawerLayout.overflowingValues.length");
+    expect(source).toContain("aircraftDrawerLayout.overflowingActions.length");
   });
 
   it("keeps mobile navigation geometry assertions out of the Node global scope", () => {

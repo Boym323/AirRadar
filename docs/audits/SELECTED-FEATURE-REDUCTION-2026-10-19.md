@@ -247,3 +247,16 @@ Intelligence or receiver-marker UI. Keep the browser smoke strictly interactive:
 use the visible mobile airport navigation link and restore the desktop viewport
 for locale checks; select retained Navigation from the mobile More menu.
 No deleted page or API is reintroduced.
+
+## Phase 29 (staged): remove automatic Digital Twin sampling from receiver polling
+
+Remove the rejected D01-D23 background calibration sampler that periodically
+filtered/sorted the entire local aircraft map and called the Operational Twin
+situation builder. The live receiver snapshot loop no longer schedules this
+unused synthetic request, and shutdown no longer waits for the sampler. Keep
+the existing historical outcome persistence and its graceful shutdown, retained
+receiver statistics/history, and Navigation Integrity. This step does not yet
+remove the other predictive/intelligence/twin observers; they require a separate
+import, alert and persistence dependency audit. Also align the release browser
+geometry contract with four retained aircraft quick actions, and keep a bounded
+429 allowance for the still-existing situation API until that endpoint retires.
