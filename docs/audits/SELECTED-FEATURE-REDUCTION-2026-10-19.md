@@ -172,3 +172,12 @@ predictive overview and on-demand Weather Fusion endpoints as negative existence
 checks. Preserve the remaining tests for internal serializers, anonymous outcome
 storage and independent meteorological sources until the backend import/retention
 audit. Do not restore deleted endpoints merely to satisfy obsolete tests.
+
+## Phase 22 (staged): retire T11 SID/STAR client and public API
+
+Removed the retained radar SID/STAR switches, public `/api/procedures` route,
+procedure MapLibre layers, fetch/polling effects and the orphan map geometry helper.
+Preserved ATS route network, NAVAID/FIX references and other selected map overlays.
+Legacy map presets strip the rejected `showSids` and `showStars` fields on parse.
+Pure procedure parsing/repository code is left temporarily until all server/scripts
+consumers are audited; no historical procedure source data is deleted.

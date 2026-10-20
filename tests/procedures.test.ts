@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GET } from "@/app/api/procedures/route";
 import { clearProcedureRepositoryCache, ProcedureParseError, ProcedureValidationError, ProcedureRepository, parseOfficialProcedureSource, validateProcedureDataset } from "@/lib/procedures";
 import type { ProcedureSource } from "@/lib/route-intelligence/contracts";
 
@@ -50,30 +49,12 @@ describe("SID/STAR procedure pipeline", () => {
     expect(() => validateProcedureDataset(dangling)).toThrow(/dangling|conflicting/);
   });
 
-  it("provides airport, type, designator lookups and a bounded API", async () => {
+  it("retains pure repository lookups without a public SID/STAR API", () => {
     const document = parseOfficialProcedureSource(html, { airportIcao: "LKPR", source });
     const repository = new ProcedureRepository(document);
     expect(repository.byAirport("lkpr")).toHaveLength(1);
     expect(repository.byAirportAndType("LKPR", "SID")).toHaveLength(1);
     expect(repository.byAirportAndDesignator("LKPR", "taclo")).toHaveLength(1);
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "airradar-procedures-"));
-    const file = path.join(directory, "procedures.json");
-    fs.writeFileSync(file, JSON.stringify(document));
-    process.env.PROCEDURES_DATASET_PATH = file;
-    clearProcedureRepositoryCache();
-    const response = await GET(new Request("http://localhost/api/procedures?airport=LKPR&type=SID"));
-    expect(response.status).toBe(200);
-    expect((await response.json()).procedures).toHaveLength(1);
-  });
-
-  it("fails soft with an empty successful response when the dataset is unavailable", async () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "airradar-procedures-missing-"));
-    process.env.PROCEDURES_DATASET_PATH = path.join(directory, "procedures.json");
-    clearProcedureRepositoryCache();
-
-    const response = await GET(new Request("http://localhost/api/procedures?airport=LKPR"));
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ available: false, status: "unavailable", procedures: [] });
+    expect(fs.existsSync(new URL("../app/api/procedures/route.ts", import.meta.url))).toBe(false);
   });
 });

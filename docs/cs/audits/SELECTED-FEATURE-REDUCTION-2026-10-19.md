@@ -165,3 +165,11 @@ a Weather Fusion nahrazena kontrolami nepřítomnosti zrušených API.
 Zůstávají testy interních serializátorů, anonymních uložených výsledků
 a nezávislých meteorologických zdrojů do úplného auditu závislostí.
 Odstraněná API se kvůli starým testům znovu nezavádějí.
+
+## Fáze 22 (postupně): odstranění T11 SID/STAR z klienta a veřejného API
+
+Odstraněny přepínače mapových vrstev SID/STAR, veřejné API `/api/procedures`,
+mapové vrstvy, jejich načítání a osamocený generátor geometrie. Zachovány
+jsou ATS trasy, navigační body NAVAID/FIX a ostatní vybrané mapové vrstvy.
+Staré uložené presety při načtení zahodí volby `showSids` a `showStars`.
+Čisté parsovací a repozitářové moduly zůstávají do dalšího auditu závislostí.

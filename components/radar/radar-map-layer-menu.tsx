@@ -43,10 +43,6 @@ interface RadarMapLayerMenuProps {
   onShowNavDataChange: (value: boolean) => void;
   navDataDataset: DatasetState<unknown>;
   atsRoutes: AtsRoutesSummary | null | undefined;
-  showSids: boolean;
-  onShowSidsChange: (value: boolean) => void;
-  showStars: boolean;
-  onShowStarsChange: (value: boolean) => void;
   sigmetEnabled: boolean | null;
   showSigmet: boolean;
   onShowSigmetChange: (value: boolean) => void;
@@ -105,10 +101,6 @@ export function RadarMapLayerMenu({
   onShowNavDataChange,
   navDataDataset,
   atsRoutes,
-  showSids,
-  onShowSidsChange,
-  showStars,
-  onShowStarsChange,
   sigmetEnabled,
   showSigmet,
   onShowSigmetChange,
@@ -154,8 +146,6 @@ export function RadarMapLayerMenu({
         <label data-testid="map-layer-nav-data"><input type="checkbox" checked={showNavData} onChange={(event) => onShowNavDataChange(event.target.checked)} /> {datasetStateLabel(t.layers.navData, navDataDataset, (count) => String(count))}</label>
         {showNavData && navDataDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.navDataUnavailable}</div>}
         {showNavData && <div className="map-layer-sublevel"><small>{t.layers.navDataDescription}</small></div>}
-        <label data-testid="map-layer-sid"><input type="checkbox" checked={showSids} onChange={(event) => onShowSidsChange(event.target.checked)} /> {t.layers.sids}</label>
-        <label data-testid="map-layer-star"><input type="checkbox" checked={showStars} onChange={(event) => onShowStarsChange(event.target.checked)} /> {t.layers.stars}</label>
         {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
         {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
         {sigmetEnabled !== false && <label data-testid="map-layer-sigmet"><input type="checkbox" checked={showSigmet} onChange={(event) => onShowSigmetChange(event.target.checked)} /> {t.layers.sigmet}</label>}

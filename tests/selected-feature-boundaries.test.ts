@@ -335,3 +335,19 @@ describe("phase 20 rejected receiver-position presentation", () => {
     expect(app).toContain("receiverPositionAvailable ?");
   });
 });
+
+describe("phase 22 T11 SID STAR surface retirement", () => {
+  it("does not expose the rejected procedure API or map toggles", () => {
+    const radar = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const menu = readFileSync(new URL("components/radar/radar-map-layer-menu.tsx", root), "utf8");
+    expect(existsSync(new URL("app/api/procedures/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/procedure-visualization.ts", root))).toBe(false);
+    expect(menu).not.toContain("map-layer-sid");
+    expect(menu).not.toContain("map-layer-star");
+    expect(radar).not.toContain("showSids");
+    expect(radar).not.toContain("showStars");
+    expect(radar).not.toContain("/api/procedures");
+    expect(radar).toContain("showAtsRoutes");
+    expect(radar).toContain("showNavData");
+  });
+});

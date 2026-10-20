@@ -76,8 +76,6 @@ import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { createAviationNavGeoJSON } from "@/lib/navigation-data/map";
 import { routeReferencePointIds } from "@/lib/navigation-data/route-reference";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
-import { createProcedureGeoJSON } from "@/lib/procedure-visualization";
-import type { Procedure } from "@/lib/route-intelligence/contracts";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
@@ -139,7 +137,6 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
 };
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
-const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_NAVIGATION_INTEGRITY_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const OGN_LABEL_SOURCE_ID = "ogn-traffic-labels";
 const OGN_LABEL_LAYER_ID = "ogn-traffic-labels-symbol";
@@ -266,9 +263,6 @@ export function AirRadarApp() {
   });
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
   const [showNavData, setShowNavData] = useState(false);
-  const [showSids, setShowSids] = useState(false);
-  const [showStars, setShowStars] = useState(false);
-  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [selectedAtsRoute, setSelectedAtsRoute] = useState<string | null>(null);
   const [showAirports, setShowAirports] = useState(true);
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
@@ -746,8 +740,6 @@ export function AirRadarApp() {
         showAtc,
         showAtsRoutes,
         showNavData,
-        showSids,
-        showStars,
         showSigmet,
         showWeatherRadar,
         showMetar,
@@ -778,11 +770,9 @@ export function AirRadarApp() {
     showNavData,
     showNavigationIntegrity,
     showOgn,
-    showSids,
     showSigmet,
     showSignificantAirports,
     showSmallAirports,
-    showStars,
     showWeatherRadar,
   ]);
 
@@ -798,8 +788,6 @@ export function AirRadarApp() {
     setShowAtc(preset.layers.showAtc);
     setShowAtsRoutes(preset.layers.showAtsRoutes);
     setShowNavData(preset.layers.showNavData);
-    setShowSids(preset.layers.showSids);
-    setShowStars(preset.layers.showStars);
     setShowSigmet(preset.layers.showSigmet);
     setShowWeatherRadar(preset.layers.showWeatherRadar);
     setShowMetar(preset.layers.showMetar);
@@ -1173,10 +1161,6 @@ export function AirRadarApp() {
       map.addLayer({ id: "aviation-nav-data-points", type: "circle", source: "aviation-nav-data", minzoom: 6.5, layout: { visibility: "none" }, paint: { "circle-color": ["case", ["==", ["get", "routeMatched"], true], AIRRADAR_MAP_THEME.accent, ["==", ["get", "kind"], "NAVAID"], AIRRADAR_MAP_THEME.routes.atsCdr, AIRRADAR_MAP_THEME.labelMuted], "circle-radius": ["interpolate", ["linear"], ["zoom"], 6.5, ["case", ["==", ["get", "routeMatched"], true], 3, 2], 10, ["case", ["==", ["get", "routeMatched"], true], 4, 3], 13, ["case", ["==", ["get", "routeMatched"], true], 5, 4]], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1 } });
       map.addLayer({ id: "aviation-nav-data-labels", type: "symbol", source: "aviation-nav-data", minzoom: 8.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 9, "text-offset": [0, 1.1], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.labelMuted, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
       map.addSource("ats-routes", { type: "geojson", data: EMPTY_ATS_GEOJSON });
-      map.addSource("procedures-sid", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
-      map.addLayer({ id: "procedures-sid-line", type: "line", source: "procedures-sid", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": AIRRADAR_MAP_THEME.procedures.sid, "line-opacity": 0.54, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1, 13, 1.8] } });
-      map.addSource("procedures-star", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
-      map.addLayer({ id: "procedures-star-line", type: "line", source: "procedures-star", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": AIRRADAR_MAP_THEME.procedures.star, "line-opacity": 0.54, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1, 13, 1.8], "line-dasharray": [2, 1] } });
       map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", minzoom: 5.5, layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.routes.ats, "line-opacity": 0.58, "line-width": ["interpolate", ["linear"], ["zoom"], 5.5, 0.9, 8, 1.5, 13, 2.2] } });
       map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", minzoom: 5.5, filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.routes.atsCdr, "line-opacity": 0.64, "line-width": ["interpolate", ["linear"], ["zoom"], 5.5, 0.9, 8, 1.6, 13, 2.4], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.96, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.7, 13, 4] } });
@@ -2007,24 +1991,6 @@ export function AirRadarApp() {
     map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: prefersReducedMotion() ? 0 : 700 });
   }, [atsPointFocus, atsRoutes, mapReady]);
 
-  useEffect(() => {
-    if (!showSids && !showStars) { setProcedures([]); return; }
-    const controller = new AbortController();
-    fetch("/api/procedures", { cache: "force-cache", signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ procedures?: Procedure[] }> : { procedures: [] })
-      .then((result) => setProcedures(result.procedures ?? []))
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [showSids, showStars]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    (map.getSource("procedures-sid") as GeoJSONSource | undefined)?.setData(createProcedureGeoJSON(procedures.filter((procedure) => procedure.type === "SID"), "SID"));
-    (map.getSource("procedures-star") as GeoJSONSource | undefined)?.setData(createProcedureGeoJSON(procedures.filter((procedure) => procedure.type === "STAR"), "STAR"));
-    if (map.getLayer("procedures-sid-line")) map.setLayoutProperty("procedures-sid-line", "visibility", showSids ? "visible" : "none");
-    if (map.getLayer("procedures-star-line")) map.setLayoutProperty("procedures-star-line", "visibility", showStars ? "visible" : "none");
-  }, [mapReady, procedures, showSids, showStars]);
 
   // Data payloads depend on ATC data/plan activity, not on camera padding,
   // drawer state or MapLibre readiness. Avoid re-creating sector polygons and
@@ -2370,10 +2336,6 @@ export function AirRadarApp() {
                 showNavData={showNavData}
                 onShowNavDataChange={setShowNavData}
                 navDataDataset={navDataDataset}
-                showSids={showSids}
-                onShowSidsChange={setShowSids}
-                showStars={showStars}
-                onShowStarsChange={setShowStars}
                 sigmetEnabled={sigmetEnabled}
                 showSigmet={showSigmet}
                 onShowSigmetChange={setShowSigmet}
