@@ -2189,10 +2189,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const pathname = new URL(response.url()).pathname;
             const expectedRateLimitedApi =
               pathname === "/api/logbook/summary"
-              // The receiver-local RXW availability badge is optional and
-              // fails softly. The multi-viewport smoke opens many fresh radar
-              // pages quickly, legitimately exhausting its request budget.
-              || pathname === "/api/aircraft/communications/waypoints"
               // RXW Hub metadata is optional, per-aircraft, and intentionally
               // fail-soft in AircraftCommunications. Repeated viewport sessions
               // may exhaust the shared anonymous aircraft rate-limit bucket.
