@@ -28,9 +28,9 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).not.toContain("RouteIntelligencePanel");
     expect(componentSource).not.toContain("routeIntelligence");
     expect(componentSource).toContain("useEffect");
-    expect(componentSource).toContain('setActiveTab("situation")');
-    expect(componentSource).toContain("[operationalFocusItemId, operationalFocusRevealVersion]");
     expect(componentSource).not.toContain("fetch(");
+    expect(componentSource).not.toContain("operationalFocusItemId");
+    expect(componentSource).not.toContain("operationalFocusRevealVersion");
     expect(componentSource).toContain('useState<DetailTab>("flight")');
     expect((renderSource.match(/<RouteSection/g) ?? []).length).toBe(1);
     expect(renderSource).toContain('className="aircraft-quick-route-state"');
