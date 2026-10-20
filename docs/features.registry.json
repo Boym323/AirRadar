@@ -336,18 +336,12 @@
       "category": "atc",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Selected published ATC map geometry, ATS route reference data and NAVAID/FIX navigation sources without planned AUP/UUP display.",
+      "summary": "Published ATC map geometry and retained ATS route/navaid references; standalone traffic, sector-transition, prediction-validation and AUP/UUP endpoints are removed.",
       "pages": [
         "/navigation"
       ],
       "apis": [
         "/api/atc/sectors",
-        "/api/atc/sectors/:id/history",
-        "/api/atc/sectors/:id/traffic",
-        "/api/atc/sectors/history",
-        "/api/atc/sectors/traffic",
-        "/api/atc/sectors/transitions",
-        "/api/atc/validation",
         "/api/ats/routes",
         "/api/navigation/data"
       ],

@@ -385,3 +385,19 @@ describe("phase 24 retired T12 planned airspace surface", () => {
     expect(app).toContain("mapReplayRef.current.atc.setData(atcGeoJson)");
   });
 });
+
+describe("phase 25 rejected sector traffic and ATC validation APIs", () => {
+  it("does not expose retired T02-T07 endpoints but retains selected map/ATS data", () => {
+    for (const path of [
+      "app/api/atc/sectors/history/route.ts",
+      "app/api/atc/sectors/traffic/route.ts",
+      "app/api/atc/sectors/transitions/route.ts",
+      "app/api/atc/sectors/[id]/history/route.ts",
+      "app/api/atc/sectors/[id]/traffic/route.ts",
+      "app/api/atc/validation/route.ts"
+]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    expect(existsSync(new URL("app/api/atc/sectors/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/ats/routes/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/aircraft/[hex]/context/route.ts", root))).toBe(true);
+  });
+});

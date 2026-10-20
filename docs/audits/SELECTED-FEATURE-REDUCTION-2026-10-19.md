@@ -200,3 +200,12 @@ Simplify ATC GeoJSON to published sector geometry only while retaining map
 selection, transmitter and ATS reference layers. Historical plan archives,
 persistence, and shared ATC sector data remain unchanged pending an independent
 server ownership audit. No schema changes or data deletion.
+
+## Phase 25 (staged): retire T02-T07 standalone ATC diagnostics and traffic APIs
+
+Delete sector history, traffic, transition and prediction-validation public endpoints.
+Keep published sector data for the explicitly retained radar ATC geometry and
+ATS route sources; preserve aircraft context and existing historical observations.
+The former endpoint-specific rate-limit tests are removed; shared rate limiter
+and bounded internal service tests remain. This does not remove ATC background
+parsing or history tables; those require a later import/persistence audit.

@@ -190,3 +190,10 @@ hook, přepínače, uložené volby a vrstvy plánovaných aktivací. Publikovan
 geometrie ATC sektorů, vysílače, ATS trasy a navigační zdroje zůstávají.
 Historické archivy, databázové záznamy a sdílené ATC informace se nemění.
 Bez migrací a mazání dat.
+
+## Fáze 25 (postupně): odstranění T02–T07 API provozu a diagnostiky ATC
+
+Zrušena veřejná API historie sektorů, provozu, přechodů a validace predikcí ATC.
+Zachována publikovaná data sektorů potřebná pro mapu, ATS trasy, kontext
+letadel i uložené historické údaje. Odstraněny izolované testy rate limitů
+starých endpointů; společné testy zůstávají. Bez změn databáze a migrací.
