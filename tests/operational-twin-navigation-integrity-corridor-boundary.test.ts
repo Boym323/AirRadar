@@ -5,7 +5,6 @@ const intelligenceSource = readFileSync(new URL("../lib/operational-twin/navigat
 const serverSource = readFileSync(new URL("../lib/server/operational-twin.ts", import.meta.url), "utf8");
 const mapSource = readFileSync(new URL("../lib/operational-twin/map.ts", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
-const panelSource = readFileSync(new URL("../components/aircraft-operational-twin.tsx", import.meta.url), "utf8");
 
 describe("Navigation Integrity Corridor V1 boundary", () => {
   it("is a pure sampled projection over existing corridor and Navigation Integrity snapshot data", () => {
@@ -29,7 +28,7 @@ describe("Navigation Integrity Corridor V1 boundary", () => {
     expect(mapSource).toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
     expect(appSource).not.toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
     expect(appSource).toContain("showNavigationIntegrity");
-    expect(panelSource).toContain('data-testid="navigation-integrity-corridor-v1"');
+    expect(appSource).toContain("showNavigationIntegrity");
   });
 
   it("keeps semantics descriptive rather than asserting GNSS interference or safety", () => {

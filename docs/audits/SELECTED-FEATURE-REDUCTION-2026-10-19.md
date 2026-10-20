@@ -101,3 +101,7 @@ Remove the W12-style origin/destination FlightRouteWeather component from retain
 ## Phase 13 (staged): delete orphan client-side prediction panel
 
 Now that retained aircraft detail no longer imports predictive advisories, delete `components/predictive-aircraft-advisories.tsx` and its CSS. Retain server prediction endpoints and predictive models/output tests temporarily pending independent runtime dependency and historical-data retention audit; update UI-only tests to assert absence rather than testing retired component timers. No destructive schema changes or production deploy.
+
+## Phase 14 (staged): delete orphan Digital Twin client and obsolete UI-only boundary test
+
+Remove `components/aircraft-operational-twin.tsx`, its CSS and its old Operational Focus UI-only test after the component was unmounted and forecast/map layers removed. Keep Navigation Integrity service and source data, aircraft altitude history and ATC overlays. The rate-limited server endpoint, scoring engines, retained archived observations, and server-side tests remain temporarily until dependency/persistence audit. Regression tests assert absent UI, rather than retaining unreachable client predictions.

@@ -102,3 +102,7 @@ Zachovaný detail letadla již nevykresluje komponentu FlightRouteWeather pro po
 ## Fáze 13 (rozpracováno): odstranění osiřelého klientského panelu predikcí
 
 Po odpojení ze zachovaného detailu letadla byly odstraněny soubory `components/predictive-aircraft-advisories.tsx` a příslušné CSS. Serverová API a výpočetní knihovny predikcí i jejich testy zůstávají do auditu sdílených vazeb a zachování historických dat. Testy již neověřují časovače zrušeného panelu, ale jeho nepřítomnost. Bez destruktivních migrací a nasazení produkce.
+
+## Fáze 14 (rozpracováno): smazání osiřelého klienta Digital Twin a starého UI testu
+
+Odstraněny `components/aircraft-operational-twin.tsx`, příslušné CSS a test určený výhradně pro odstraněné UI Operational Focus. Navigační integrita, výšková historie a ATC vrstvy zůstávají. Serverové API s rate limitingem, analytické knihovny, historická pozorování a serverové testy zůstávají do bezpečného auditu závislostí a persistence. Regresní testy ověřují nepřítomnost zrušeného panelu.

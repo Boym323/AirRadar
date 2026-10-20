@@ -1,10 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const serverSource = readFileSync(new URL("../lib/server/operational-twin.ts", import.meta.url), "utf8");
 const routeSource = readFileSync(new URL("../app/api/aircraft/[hex]/situation/route.ts", import.meta.url), "utf8");
 const corridorSource = readFileSync(new URL("../lib/operational-twin/corridor.ts", import.meta.url), "utf8");
-const panelSource = readFileSync(new URL("../components/aircraft-operational-twin.tsx", import.meta.url), "utf8");
 const weatherCorridorSource = readFileSync(new URL("../lib/weather/corridor-intelligence.ts", import.meta.url), "utf8");
 
 describe("Operational Digital Twin V1 boundary", () => {
@@ -45,15 +44,13 @@ describe("Operational Digital Twin V1 boundary", () => {
     expect(serverSource).toContain("buildWeatherCorridorIntelligence");
     expect(weatherCorridorSource).not.toContain("fetch(");
     expect(weatherCorridorSource).not.toContain("process.env");
-    expect(panelSource).toContain('data-testid="weather-corridor-intelligence-v1"');
   });
 
-  it("protects the public endpoint and adds no client timer or stream", () => {
+  it("leaves the temporary public endpoint rate-limited while not shipping the retired client", () => {
     expect(routeSource).toContain('checkPublicRateLimit("aircraft", request)');
-    expect(panelSource.match(/fetch\(/g)).toHaveLength(1);
-    expect(panelSource).not.toContain("setInterval");
-    expect(panelSource).not.toContain("setTimeout");
-    expect(panelSource).not.toContain("EventSource");
-    expect(panelSource).toContain('data-testid="operational-digital-twin-v1"');
+    expect(existsSync(new URL("../components/aircraft-operational-twin.tsx", import.meta.url))).toBe(false);
+    const detail = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
+    expect(detail).not.toContain("AircraftOperationalTwin");
+    expect(detail).toContain("<AircraftAltitudeChart");
   });
 });
