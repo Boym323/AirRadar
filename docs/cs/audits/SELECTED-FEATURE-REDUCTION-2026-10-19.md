@@ -264,3 +264,10 @@ historické lety a výškové profily i Navigation Integrity zůstávají zachov
 Jiná pravidla původního AlertEngine zatím běží odděleně od analytiky a vyžadují
 samostatné rozhodnutí o konfiguraci spouštěčů; zachování L11/L12 samo o sobě
 neznamená návrat odstraněného Watchlistu. Historická data se nemažou.
+
+## Fáze 33 (postupně): odstranění zastaralého browser testu W12
+
+Produkční prohlížečový test čekal na již odstraněný widget počasí na trase
+vybraného letu. Odstraněn falešný API fixture i staré selektory. Test nadále
+kontroluje ATC panel, rozbalení pokročilého kontextu a zachované podklady
+Navigation Integrity a počasí.

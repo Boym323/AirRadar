@@ -296,3 +296,11 @@ but will no longer receive newly generated live predictions/events. They require
 an explicit removal/consumer audit. No automatic backfill, data deletion or
 schema migration. Update source-level regression contracts and drop tests that
 assert the retired analytical notifier behavior.
+
+## Phase 33 (staged): retire W12 route-weather browser fixture
+
+The responsive browser sweep still waited for removed W12 route-weather widgets
+inside the selected-aircraft Situation tab. Remove the obsolete mocked API,
+widget selectors and flight-situation summary expectation. Preserve the real
+ATC panel, retained advanced-disclosure navigation integrity/weather evidence
+and the quick-detail tab interaction test.

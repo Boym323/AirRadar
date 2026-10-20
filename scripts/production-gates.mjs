@@ -2304,31 +2304,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }),
         });
       });
-      await page.route("**/api/aircraft/*/route-weather", (route) => route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          status: "available",
-          routeStatus: "MATCHED",
-          routeCoveragePercent: 100,
-          routeSource: "browser fixture",
-          unresolvedRouteTokens: [],
-          stale: false,
-          matches: [{
-            sigmetId: "fixture-sigmet-route",
-            hazard: "Fixture route turbulence",
-            firName: "Prague FIR",
-            validTo: "2026-09-12T23:59:59.000Z",
-            routeDesignator: "FIXTURE1",
-            fromName: "A",
-            toName: "B",
-            segmentId: "fixture-segment",
-            segmentConfidence: "HIGH",
-            verticalMatch: "matched",
-            distanceAlongRouteNm: 12,
-          }],
-        }),
-      }));
       await page.route("**/api/weather/sigmet", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -2660,7 +2635,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
         await quickDetail.getByRole("tab", { name: "Situace", exact: true }).click();
         await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
-        await quickDetail.getByTestId("route-weather-match").waitFor({ state: "visible" });
         const advancedContext = quickDetail.getByTestId("aircraft-v5-advanced-context");
         await advancedContext.waitFor({ state: "visible" });
         if (await advancedContext.evaluate((element) => (element).open)) {
@@ -2670,15 +2644,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (!await advancedContext.evaluate((element) => (element).open)) {
           throw new Error("V5 aircraft advanced context disclosure failed to open");
         }
-        await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
         const situationContract = await quickDetail.evaluate((element) => ({
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
           atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
-          situationSummary: Boolean(element.querySelector('[data-testid="flight-situation-summary"]')),
+          advancedDisclosure: Boolean(element.querySelector('[data-testid="aircraft-v5-advanced-context"]')),
         }));
         if (situationContract.activePanel !== "aircraft-tabpanel-situation"
           || !situationContract.atcPrimary
-          || !situationContract.situationSummary) {
+          || !situationContract.advancedDisclosure) {
           throw new Error(`Aircraft situation contract failed at ${viewport.width}px: ${JSON.stringify(situationContract)}`);
         }
 

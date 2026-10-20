@@ -248,6 +248,15 @@ describe("production release metadata gate", () => {
     expect(source).toContain("|| controlsOverlap");
   });
 
+  it("checks selected ATC situation without retired W12 route-weather fixture", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).not.toContain("route-weather-match");
+    expect(source).not.toContain("route-weather-summary");
+    expect(source).not.toContain("flight-situation-summary");
+    expect(source).toContain("aircraft-quick-atc");
+    expect(source).toContain("advancedDisclosure");
+  });
+
   it("keeps four retained aircraft drawer actions under overflow checks", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 4");
