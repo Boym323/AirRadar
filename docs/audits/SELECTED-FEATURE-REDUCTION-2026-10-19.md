@@ -209,3 +209,13 @@ ATS route sources; preserve aircraft context and existing historical observation
 The former endpoint-specific rate-limit tests are removed; shared rate limiter
 and bounded internal service tests remain. This does not remove ATC background
 parsing or history tables; those require a later import/persistence audit.
+
+## Phase 26 (staged): reconcile newer main map-base extraction
+
+Merged upstream main bc2f5fc17277 through an explicit two-parent commit, with
+manual adaptation of the new base-overlay module. Unlike upstream, this module
+must not register retired R13 receiver rings or T11 SID/STAR sources. Published
+ATS routes, navigation data, weather radar and Navigation Integrity sources are
+registered once from the new helper, preserving the tested lifecycle.
+Upstream changelog and historical code metrics are retained; subsequent code
+metrics must be regenerated after release integration and successful CI.

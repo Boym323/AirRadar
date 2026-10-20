@@ -197,3 +197,11 @@ Zrušena veřejná API historie sektorů, provozu, přechodů a validace predikc
 Zachována publikovaná data sektorů potřebná pro mapu, ATS trasy, kontext
 letadel i uložené historické údaje. Odstraněny izolované testy rate limitů
 starých endpointů; společné testy zůstávají. Bez změn databáze a migrací.
+
+## Fáze 26 (postupně): integrace nové mapové architektury z main
+
+Převzata extrakce základních mapových vrstev z aktuálního main bc2f5fc17277.
+Nový modul úmyslně neobnovuje odstraněné kružnice R13 ani SID/STAR T11.
+Zachovány ATS trasy, navigační body, meteorologický radar a Navigation Integrity.
+Changelog a historická metrika kódu pocházejí z main; po dokončení CI je nutné
+vygenerovat nové metriky aktuální redukované větve.

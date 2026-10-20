@@ -17,6 +17,63 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.544] - 2026-10-19
+
+Changes since v1.0.543.
+
+**Features touched:** Live Radar.
+
+### Changed
+
+- Extract base MapLibre overlay graph and deduplicate legacy CSS (32eb28c5)
+
+### Maintenance
+
+- Sync generated repository metadata (#1097) (077cf6aa)
+- Follow extracted navigation MapLibre source registration (e2f9c70d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#1097) (077cf6aa)
+- refactor(radar): extract base MapLibre overlay graph and deduplicate legacy CSS (32eb28c5)
+- test(radar): follow extracted navigation MapLibre source registration (e2f9c70d)
+
+</details>
+## [1.0.543] - 2026-10-19
+
+Changes since v1.0.542.
+
+**Features touched:** Live Radar, Mobile / PWA mode.
+
+### Added
+
+- Unify AirRadar visual system and responsive navigation (83246429)
+
+### Fixed
+
+- Keep browser and PWA chrome consistent with refreshed theme (ed082a77)
+- Keep traffic control clickable behind expanded map menu (78ef984a)
+- Place Layers flyout below full HUD to preserve Traffic hit target (ef3e6041)
+
+### Maintenance
+
+- Align semantic map colors and guard visual refresh (595cd666)
+- Sync generated repository metadata (#1094) (ffbdee55)
+- Harmonize secondary pages and responsive controls (#1095) (f86e3df4)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(ui): unify AirRadar visual system and responsive navigation (83246429)
+- test(ui): align semantic map colors and guard visual refresh (595cd666)
+- chore(metadata): sync generated repository metadata (#1094) (ffbdee55)
+- fix(ui): keep browser and PWA chrome consistent with refreshed theme (ed082a77)
+- fix(radar-ui): keep traffic control clickable behind expanded map menu (78ef984a)
+- style(ui): harmonize secondary pages and responsive controls (#1095) (f86e3df4)
+- fix(radar): place Layers flyout below full HUD to preserve Traffic hit target (ef3e6041)
+
+</details>
 ## [1.0.542] - 2026-10-19
 
 Changes since v1.0.541.
