@@ -54,3 +54,7 @@ Odstraněn byl také osiřelý historický vykreslovač ACARS/FPN pro MapLibre a
 nenapojené uživatelské rozhraní, styly i překlady. **Nejde o mazání uložené
 historie RXW:** soubor `lib/server/rxw-route-history.ts`, jeho validovaný
 dekodér historických záznamů, migrace a data zůstávají nedotčené.
+
+## Fáze 3 (rozpracováno): odstranění osiřelých UI modulů
+
+Po odstranění jejich vstupních stránek byly vyřazeny samostatné komponenty průzkumníku procedur, ATC průzkumníku a porovnání letišť včetně vlastních CSS. Samostatný prohlížeč NAVAID/ATS, geometrie ATC sektorů pro mapu, katalog i detail letiště a referenční importní procesy zůstávají zachovány. Regresní test brání návratu odstraněných komponent. Bez změny schématu a bez mazání historie.

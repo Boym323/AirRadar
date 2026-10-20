@@ -53,3 +53,7 @@ The retired historical ACARS/FPN MapLibre renderer and its no-longer-mounted
 UI/styles/copy are removed. This does **not** delete persisted RXW route history:
 `lib/server/rxw-route-history.ts`, its validated historical decoder, the
 migration definitions and database contents remain intact.
+
+## Phase 3 (staged): retire standalone UI modules
+
+Remove orphaned procedure-explorer, ATC airspace-explorer, airport-compare components and their dedicated CSS after removal of their original page entrypoints. Preserve independent NAVAID/ATS navigation browser, published ATC map geometry, airport catalog/airport detail, and all non-UI reference and import pipelines. Add a regression guard so obsolete standalone components do not return. No schema changes or history deletions.

@@ -77,6 +77,19 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(panel).not.toContain("snapshot.waypointPlan");
   });
 
+  it("removes standalone UI modules for retired procedures, ATC exploration and airport comparisons", () => {
+    for (const path of [
+      "components/procedure-explorer.tsx",
+      "components/airport-compare.tsx",
+      "components/atc-airspace-explorer.tsx",
+    ]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+    // The requested retained navigation and ATC map overlays remain independent.
+    expect(existsSync(new URL("components/navigation-reference-explorer.tsx", root))).toBe(true);
+    expect(existsSync(new URL("lib/radar/airspace-geojson.ts", root))).toBe(true);
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");
