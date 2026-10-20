@@ -6,15 +6,13 @@ describe("Aviation Weather Fusion V1 boundaries", () => {
   it("keeps fusion on-demand and outside the ADS-B hot path", async () => {
     const service = await readFile("lib/server/weather-fusion.ts", "utf8");
     const state = await readFile("lib/server/aircraft-state.ts", "utf8");
-    const route = await readFile("app/api/aircraft/[hex]/weather-fusion/route.ts", "utf8");
 
     expect(service).toContain("Promise.allSettled");
     expect(service).toContain("defaultPirepProvider.getPireps");
     expect(service).toContain("defaultAviationWeatherProvider.getSigmets");
     expect(service).toContain("defaultWindAloftProvider.getWind");
     expect(service).toContain("queryAircraftWeatherObservations");
-    expect(route).toContain('checkPublicRateLimit("weather", request)');
-    expect(route).toContain('"Cache-Control": "no-store"');
+    expect(existsSync("app/api/aircraft/[hex]/weather-fusion/route.ts")).toBe(false);
     expect(state).not.toContain("weather-fusion");
     expect(state).not.toContain("buildWeatherFusion");
   });

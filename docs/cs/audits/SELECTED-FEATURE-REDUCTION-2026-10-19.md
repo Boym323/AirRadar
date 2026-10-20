@@ -157,3 +157,11 @@ Odstraněna veřejná značka přijímače, kružnice dosahu, přepínač vrstvy
 volba v mapových presetech, pomocný modul a příslušné testy. Interní souřadnice
 přijímače zůstávají pro okolní letiště a počáteční vycentrování mapy.
 Dříve uložené presety jsou kompatibilní a zastaralou volbu zahazují.
+
+## Fáze 21 (postupně): úprava testů po odstranění veřejných API
+
+Zastaralá testovací očekávání pro regionální Operations, prediktivní přehled
+a Weather Fusion nahrazena kontrolami nepřítomnosti zrušených API.
+Zůstávají testy interních serializátorů, anonymních uložených výsledků
+a nezávislých meteorologických zdrojů do úplného auditu závislostí.
+Odstraněná API se kvůli starým testům znovu nezavádějí.

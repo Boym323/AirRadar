@@ -164,3 +164,11 @@ Remove public receiver marker rendering, MapLibre ring layers, menu control,
 preset flag, helper and dedicated tests. Preserve internal receiver coordinates
 for local airport proximity and initial map centering. Previously saved presets
 with the retired ring flag remain loadable and silently discard it.
+
+## Phase 21 (staged): align old route-boundary tests with retired APIs
+
+Rewrite stale public API contract assertions for discontinued regional Operations,
+predictive overview and on-demand Weather Fusion endpoints as negative existence
+checks. Preserve the remaining tests for internal serializers, anonymous outcome
+storage and independent meteorological sources until the backend import/retention
+audit. Do not restore deleted endpoints merely to satisfy obsolete tests.

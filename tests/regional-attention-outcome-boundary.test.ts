@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const outcomeSource = readFileSync(
@@ -7,10 +7,6 @@ const outcomeSource = readFileSync(
 );
 const stateSource = readFileSync(
   new URL("../lib/server/aircraft-state.ts", import.meta.url),
-  "utf8",
-);
-const routeSource = readFileSync(
-  new URL("../app/api/operations/situation/route.ts", import.meta.url),
   "utf8",
 );
 const adminRouteSource = readFileSync(
@@ -33,10 +29,8 @@ describe("Regional Attention Outcome Validation V1 boundary", () => {
     expect(outcomeSource).not.toContain("setTimeout");
   });
 
-  it("captures only from the existing regional situation request", () => {
-    expect(routeSource).toContain("const attention = buildOperationalAttention(graph)");
-    expect(routeSource).toContain("service.captureRegionalAttentionOutcome(attention)");
-    expect(routeSource).not.toContain("RegionalAttentionOutcomeValidator");
+  it("has no retired public regional situation endpoint", () => {
+    expect(existsSync(new URL("../app/api/operations/situation/route.ts", import.meta.url))).toBe(false);
   });
 
   it("resolves truth only from canonical LOCAL aircraft state", () => {

@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8");
-const operationsRouteSource = readFileSync(new URL("../app/api/operations/predictive/route.ts", import.meta.url), "utf8");
 const graduationSource = readFileSync(new URL("../lib/predictive-intelligence/graduation.ts", import.meta.url), "utf8");
 
 describe("Predictive Trajectory Advisory V1 boundary", () => {
@@ -15,8 +14,7 @@ describe("Predictive Trajectory Advisory V1 boundary", () => {
   it("serializes public trajectory only through readiness-aware builders", () => {
     expect(routeSource).toContain("buildPublicTrajectoryAdvisory(predictionState, effectivePolicy, trajectoryReadiness)");
     expect(routeSource).toContain("enforcePredictiveReadiness");
-    expect(operationsRouteSource).toContain('configuredPolicy.TRAJECTORY === "PUBLIC"');
-    expect(operationsRouteSource).toContain("buildPublicTrajectoryAdvisory");
+    expect(existsSync(new URL("../app/api/operations/predictive/route.ts", import.meta.url))).toBe(false);
   });
 
   it("keeps the legacy serializer fail-closed for LOW and UNKNOWN trajectory output", () => {

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const rolloutSource = readFileSync(new URL("../lib/predictive-intelligence/runway-rollout.ts", import.meta.url), "utf8");
@@ -8,7 +8,6 @@ const readinessSource = readFileSync(new URL("../lib/server/predictive-readiness
 
 const publicSurfaces = [
   readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8"),
-  readFileSync(new URL("../app/api/operations/predictive/route.ts", import.meta.url), "utf8"),
 ].join("\n");
 
 describe("Runway Public Rollout V1 boundary", () => {
@@ -26,6 +25,7 @@ describe("Runway Public Rollout V1 boundary", () => {
     expect(readinessSource).toContain('evaluation.capabilities[capability].decision !== "PASS"');
     expect(readinessSource).toContain('effective[capability] = "SHADOW"');
     expect(publicSurfaces).not.toContain("buildRunwayPublicRolloutDecision");
+    expect(existsSync(new URL("../app/api/operations/predictive/route.ts", import.meta.url))).toBe(false);
   });
 
   it("requires explicit config after manual review and exposes fail-closed fallback", () => {
