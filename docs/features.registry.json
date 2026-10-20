@@ -263,11 +263,10 @@
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Legacy receiver statistics and recap APIs retained for internal consumers and compatibility; all standalone statistics, chart, records, airline/type explorer, and daily/weekly recap pages have been retired.",
+      "summary": "Receiver statistics APIs retained for internal consumers and compatible reception/history views; standalone recap pages and their public API are retired.",
       "pages": [],
       "apis": [
         "/api/logbook/summary",
-        "/api/recap",
         "/api/reception-records",
         "/api/statistics",
         "/api/statistics/coverage-intelligence",

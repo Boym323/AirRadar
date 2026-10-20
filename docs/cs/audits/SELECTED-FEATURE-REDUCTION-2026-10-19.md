@@ -408,3 +408,11 @@ Zastaralé testy konfiguračního přepínače ATC shadow, veřejného predikčn
 API, administrátorského readiness panelu a starých browser očekávání byly
 nahrazeny kontrolami zachovaných služeb a nepřítomnosti odstraněných cest.
 Zůstává kontrola aktuálních sektorů, stavu systému i bezpečnostních podmínek.
+
+## Fáze 43 (postupně): odstranění osiřelého API a sestavovače rekapitulací
+
+Odstraněn endpoint `/api/recap`, starý 448řádkový serverový sestavovač
+denních/týdenních přehledů a jeho samostatný jednotkový test. Statistiky
+přijímače, ukládání historie a data FlightPosition v PostgreSQL zůstávají.
+Synchronizován registr funkcí i anglický a český inventář API. Staré URL
+po nasazení vrátí 404; žádné databázové migrace ani nasazení.

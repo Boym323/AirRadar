@@ -459,3 +459,12 @@ boundary checks and browser contracts that required the removed admin
 readiness dashboard. Retain coverage for current ATC sector enablement,
 system status polling, historical safety checks and the canonical production
 fixtures. Do not restore rejected endpoints or config solely for old tests.
+
+## Phase 43 (staged): retire the orphan recap read endpoint and assembler
+
+Remove the orphan daily/weekly `/api/recap` read endpoint, its 448-line
+server-only recap assembler, and the now-obsolete isolated recap unit test.
+Preserve receiver statistics, sampling and all historical PostgreSQL rows,
+recorded FlightPosition and existing retained public history endpoints.
+Synchronize the feature registry and both EN/CS API inventories. External
+consumers of the retired endpoint will receive 404 after deployment.
