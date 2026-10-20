@@ -260,3 +260,11 @@ remove the other predictive/intelligence/twin observers; they require a separate
 import, alert and persistence dependency audit. Also align the release browser
 geometry contract with four retained aircraft quick actions, and keep a bounded
 429 allowance for the still-existing situation API until that endpoint retires.
+
+## Phase 30 (staged): retire stale autonomous-calibration test expectation
+
+Update the Digital Twin Event Outcome boundary to assert absence of the removed
+periodic sampler rather than require that retired background computation.
+Retain request-driven outcome capture, existing truth-source boundaries and
+persistence-shutdown assertions. The old descriptive source marker
+`refreshDrivenSampling` is historical diagnostic metadata, not an active sampler.

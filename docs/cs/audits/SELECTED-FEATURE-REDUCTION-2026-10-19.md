@@ -238,3 +238,10 @@ bezpečné ukončení, historie, statistiky přijímače a Navigation Integrity
 zůstávají zachovány. Ostatní pozorovatele predikcí je ještě nutné samostatně
 prověřit. Kontrola rozložení nyní odpovídá čtyřem zachovaným akcím detailu
 letadla; ochrana před limitací stále existujícího API zůstává aktivní.
+
+## Fáze 30 (postupně): úprava testu odstraněného kalibračního časovače
+
+Testy Digital Twin Event Outcome nyní kontrolují, že samostatné periodické
+vzorkování již neexistuje. Zůstává kontrola požadované perzistence, bezpečného
+ukončení, hranic zdrojů pravdy a dosavadního zpracování událostí na vyžádání.
+Historický diagnostický popisek není aktivním spouštěčem výpočtu.
