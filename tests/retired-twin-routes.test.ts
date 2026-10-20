@@ -33,6 +33,10 @@ describe("Retired Digital Twin API regression", () => {
     expect(weather).toContain("export interface WeatherCorridorPath");
   });
 
+  it("does not retain isolated regional focus queue tests", () => {
+    expect(existsSync(new URL("../tests/regional-focus-queue.test.ts", import.meta.url))).toBe(false);
+  });
+
   it("retains canonical navigation integrity and historical recording without Twin calibration", () => {
     const state = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
     expect(state).toContain("this.navigationIntegrity.observe(");
