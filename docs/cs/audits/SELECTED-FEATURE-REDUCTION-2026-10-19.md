@@ -285,3 +285,25 @@ Historická data a samostatný doručovací worker zůstávají beze změny.
 Digital Twin (D01–D23). Kontrola nyní vyžaduje jen zachované mapové vrstvy
 letišť, ATC kontextu, ATS tras a SIGMET včetně ověření obsahu geografických
 dat. Vyřazené prediktivní vrstvy se neobnovují.
+
+## Fáze 36 (postupně): odstranění validací Digital Twin z živých ADS-B snímků
+
+Pět validátorů Digital Twin (výsledky, kvalita trajektorie V1/V2, události,
+regionální pozornost) již neběží při každém lokálním snímku přijímače.
+Odstraněno bylo také pozorování Aircraft Operational Focus a plánování
+zápisu kalibrace při každém snímku. Zůstává příjem poloh, statistika,
+doručovací infrastruktura, Navigation Integrity, letové stopy, historie
+a přepínání zdrojů. Regresní testy vyžadují nepřítomnost měření
+`snapshot.operationalTwin` a `twin.*` a zachování statistik a navigační
+integrity. Stále existují stará API, výpočty na vyžádání, inicializace
+kalibrace a moduly. Ty se odstraní zvlášť po kontrole závislostí.
+Bez databázové migrace a mazání historických záznamů.
+
+## Fáze 37 (postupně): odstranění syntetických benchmarků Digital Twin
+
+Odstraněn samostatný workflow T57, jeho test a syntetický benchmark.
+Zátěžový test 1×/2×/4× nyní měří pouze používaný příjem snímků, SSE
+a geometrii ATC; výstup má schéma verze 2. Neaktivní měření Digital Twin
+a zastaralý příkaz CLI již nejsou součástí testu. Diagnostika
+zpracování snímku používá zachované provozní části. Žádná číselná
+úspora CPU se bez srovnatelného měření před/po netvrdí.
