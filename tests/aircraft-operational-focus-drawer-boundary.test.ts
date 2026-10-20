@@ -10,9 +10,11 @@ const enSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "ut
 const csSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
 
 describe("Aircraft Operational Focus drawer V1 boundary", () => {
-  it("derives change intelligence from the existing situation refresh", () => {
-    expect(selectedContextSource).toContain("compareAircraftOperationalFocus(previous, value.operationalFocus)");
-    expect(selectedContextSource).toContain("operationalFocusSnapshotsRef");
+  it("stops Digital Twin refreshes before removing its still-unused drawer presentation", () => {
+    expect(selectedContextSource).not.toContain("compareAircraftOperationalFocus(previous, value.operationalFocus)");
+    expect(selectedContextSource).not.toContain("operationalFocusSnapshotsRef");
+    expect(selectedContextSource).not.toContain("/situation");
+    expect(selectedContextSource).toContain("operationalTwin: null as OperationalTwinApiResponse | null");
     expect(appSource).toContain("operationalFocusChanges={selectedOperationalFocusChanges}");
     expect(summarySource).toContain('data-testid="aircraft-operational-focus-changes"');
     expect(summarySource).not.toContain("fetch(");

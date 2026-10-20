@@ -15,10 +15,10 @@ describe("Operational Digital Twin V2 map boundary", () => {
     expect(mapSource).not.toContain("/api/");
   });
 
-  it("reuses the radar's existing selected Operational Twin request without another timer", () => {
-    expect(selectedContextSource).toContain("setOperationalTwin(value)");
-    expect(selectedContextSource).toContain('/situation');
-    expect(selectedContextSource.match(/\/situation/g)).toHaveLength(1);
+  it("disables the rejected selected Operational Twin request until retired map layers are deleted", () => {
+    expect(selectedContextSource).not.toContain("setOperationalTwin(value)");
+    expect(selectedContextSource).not.toContain('/situation');
+    expect(selectedContextSource.match(/\/situation/g)).toBeNull();
     expect(radarSource).toContain("useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition })");
     expect(radarSource).toContain("createOperationalTwinMapGeoJSON(availableTwin)");
     expect(radarSource).toContain("map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID");

@@ -7,8 +7,8 @@ describe("Weather Avoidance Intelligence V1 boundaries", () => {
     const engine = await readFile("lib/weather/avoidance-intelligence.ts", "utf8");
     const aircraftState = await readFile("lib/server/aircraft-state.ts", "utf8");
 
-    expect(selectedContext).toContain("/situation");
-    expect(selectedContext).toContain("60_000");
+    expect(selectedContext).not.toContain("/situation");
+    expect(selectedContext).not.toContain("60_000");
     expect(selectedContext).not.toContain("EventSource(`/api/aircraft/${encodeURIComponent(aircraftHex)}/situation");
     expect(engine).toContain("CURRENT_30MIN_CORRIDOR_CLEAR");
     expect(engine).toContain("TRAJECTORY_DEVIATING");
