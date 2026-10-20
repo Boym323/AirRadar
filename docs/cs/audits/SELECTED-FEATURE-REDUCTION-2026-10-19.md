@@ -467,3 +467,26 @@ Kompletní Vitest odhalil dva testy importující zrušený Operations Center
 a prediktivní validátor terminálních událostí. Jde pouze o zrušené
 analytické funkce, proto byly testy odstraněny a negativní regresní
 kontrola rozšířena. Historická data a API zůstávají.
+
+## Fáze 50 (postupně): odpojení AlertEngine od živého příjmu
+
+Odstraněna volání starého vyhodnocovače upozornění ze snímků ADS-B,
+uložení nových letadel do historie, doplňování metadat a vyhodnocování
+denních i celkových rekordů. Samotné sledování a ukládání historických
+dat, statistiky přijímače a Navigation Integrity zůstaly zachovány.
+Samostatný worker doručování nebyl odstraněn.
+
+## Fáze 51 (postupně): odstranění starých API a analytiky alertů
+
+Odstraněno 16 API tras watchlistu, flotil, geofence, pravidel, simulátoru
+a centra notifikací, osiřelé UI komponenty a neaktivní AlertEngine
+s analytikou a specializovanými testy. Zachovány Web Push, Pushover,
+fronta a databázové kontrakty doručování, diagnostické API a historická
+data. Kompatibilní session endpoint zůstává kvůli ochraně diagnostiky.
+
+## Fáze 51a (postupně): aktualizace dokumentace a kontrol produkce
+
+Registr funkcí, anglický a český přehled a produkční kontrola odpovídají
+zachovaným trasám. Zrušené API musí odpovědět 404, nikoliv úspěšně
+provést starou mutaci watchlistu. PR je stále draft bez merge a nasazení.
+Zachování transportu neznamená automatické vytváření nových alertů.
