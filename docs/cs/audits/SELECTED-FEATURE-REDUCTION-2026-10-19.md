@@ -118,3 +118,7 @@ Po odstranění W11 z živého radaru a detailu SIGMET smazána osamocená čist
 ## Fáze 17 (rozpracováno): odstranění osiřelých komponent Operational Focus
 
 Po odstranění posledních živých konzumentů byly smazány mapová karta Operational Focus, souhrn v panelu detailu a jejich samostatná CSS. Ponechány jsou skutečná telemetrie letadel, ATC vrstvy a Navigation Integrity. Backend výsledky, historická data a hodnoticí moduly zůstávají do samostatného auditu serverových závislostí. Regresní test hlídá, že se odstraněné UI nevrátí.
+
+## Fáze 12 (rozpracováno): oprava CI po odstranění UI predikcí a Digital Twin
+
+Zrušen zastaralý test pouze odstraněné predikční časové osy a upraveny tři zbývající testovací soubory tak, aby neimportovaly smazané komponenty PredictiveAircraftAdvisories/AircraftOperationalTwin. Kontroly stávajícího seznamu povolených serverových podkladů predikcí a ochrany kalibrace Digital Twin zůstávají do auditu závislostí API a uložených dat. Lokalizační test už nevyžaduje text ve smazaném UI. Nový regresní test hlídá nepřítomnost odstraněných panelů a starého testu. Bez změn DB.

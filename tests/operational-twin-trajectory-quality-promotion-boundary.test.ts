@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const serverSource = readFileSync(new URL("../lib/server/operational-twin.ts", import.meta.url), "utf8");
@@ -9,7 +9,6 @@ const promotionSource = readFileSync(
 const configSource = readFileSync(new URL("../lib/server/config.ts", import.meta.url), "utf8");
 const envSource = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
 const typesSource = readFileSync(new URL("../lib/operational-twin/types.ts", import.meta.url), "utf8");
-const panelSource = readFileSync(new URL("../components/aircraft-operational-twin.tsx", import.meta.url), "utf8");
 
 describe("Trajectory Quality Promotion V1 boundaries", () => {
   it("is explicit opt-in and defaults to canonical", () => {
@@ -54,8 +53,9 @@ describe("Trajectory Quality Promotion V1 boundaries", () => {
     expect(typesSource).toContain('"operational-digital-twin-trajectory-quality-promotion-v1"');
     expect(typesSource).toContain("canonicalCalibrationRemainsActive: true");
     expect(typesSource).toContain("horizontalGeometryUnchanged: true");
-    expect(panelSource).toContain('data-testid="operational-twin-trajectory-quality-promotion-v1"');
-    expect(panelSource).toContain("trajectoryQualityPromotion.effectivePolicy");
+    expect(existsSync(new URL("../components/aircraft-operational-twin.tsx", import.meta.url))).toBe(false);
+    const detail = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
+    expect(detail).not.toContain("AircraftOperationalTwin");
     expect(promotionSource).not.toContain("process.env");
   });
 });

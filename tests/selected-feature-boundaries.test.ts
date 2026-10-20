@@ -239,6 +239,18 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(quick).toContain("<NavigationIntegritySection");
   });
 
+  it("does not keep obsolete prediction-timeline and retired UI files", () => {
+    for (const path of [
+      "components/predictive-aircraft-advisories.tsx",
+      "components/aircraft-operational-twin.tsx",
+      "tests/prediction-timeline-v1-boundary.test.ts",
+    ]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+    // Legacy read-only advisory contracts are reviewed independently from UI.
+    expect(existsSync(new URL("lib/predictive-intelligence/explainability.ts", root))).toBe(true);
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

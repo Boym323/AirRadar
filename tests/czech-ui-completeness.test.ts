@@ -113,14 +113,6 @@ describe("Czech UI localization coverage", () => {
     expect(simulator).not.toContain('<button className="primary-button" type="submit">Simulate</button>');
   });
 
-  it("keeps predictive explanations readable in Czech", () => {
-    const predictive = source("components/predictive-aircraft-advisories.tsx");
-
-    expect(predictive).toContain('subtitle: "Podklady použité hlavním predikčním modelem"');
-    expect(predictive).toContain('adminGate: "Administrátorský náhled"');
-    expect(predictive).toContain('readiness: "Důvody hodnocení připravenosti"');
-  });
-
   it("renders Czech receiver coverage text including SVG and dynamic health", () => {
     const explorer = source("components/receiver-coverage-page.tsx");
     const polar = source("components/receiver-coverage-polar.tsx");

@@ -117,3 +117,7 @@ After removing W11 from live selection and the SIGMET detail panel, delete the n
 ## Phase 17 (staged): remove orphan Operational Focus card and drawer summary
 
 Delete unused map focus card and compact drawer summary components and their dedicated CSS, following retirement of their sole live consumers. Keep actual selected-aircraft telemetry, ATC overlay and Navigation Integrity. Outcome/historical back-end data and scorer modules remain intact pending independent server dependency review. Regression tests assert that these removed UI modules do not reappear.
+
+## Phase 12 (staged): repair CI after retired predictive/Digital Twin UI deletion
+
+Removed the obsolete prediction-timeline UI-only boundary test, and updated three surviving test suites to stop importing deleted PredictiveAircraftAdvisories/AircraftOperationalTwin components. Retain read-only checks of the legacy server prediction evidence whitelist and Digital Twin promotion safeguards, until their API dependencies and persistence are reviewed. Czech UI test no longer demands copy inside removed UI. New feature-boundary assertion protects against accidental restoration of discarded panels and the obsolete test. No DB changes.
