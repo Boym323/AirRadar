@@ -316,7 +316,8 @@ describe("radar UI polish helpers", () => {
     expect(radarMapLayerMenuSource).toContain("checked={showAirports}");
     expect(radarMapLayerMenuSource).toContain("checked={showAtc}");
     expect(appSource).toContain("useDatasetQuery");
-    expect(radarAtcMapContextSource).toContain('url: "/api/airspace/activity"');
+    expect(radarAtcMapContextSource).toContain("export function createAtcGeoJSON");
+    expect(radarAtcMapContextSource).not.toContain("buildAirspacePlanMapIndex");
     expect(appSource).toContain('url: "/api/ats/routes?view=map"');
     expect(datasetSource).toContain('"retrying"');
     expect(datasetSource).toContain("retry-after");
