@@ -422,3 +422,13 @@ No database migration, main merge or production deployment.
 ## Phase 43a: decouple retained aircraft context from ATC shadow validation
 
 Keep the on-demand aircraft/ATC context route and live current-sector matching. Remove its old per-request prediction classifications and validation writes, now that the obsolete shadow worker has been retired. Preserve existing rate limits, aircraft identifier checks, current-airspace context and error handling.
+
+## Phase 44 (staged): retire unconsumed aircraft prediction endpoint
+
+Delete the legacy `/api/aircraft/:hex/prediction` endpoint whose client and
+advisory panels have already been removed. Drop obsolete advisory API boundary
+tests and generated registry references, including the stale Explainable
+Prediction feature. Update outcome/readiness boundary tests to enforce 404.
+Do not remove the independent system admin readiness endpoint in this phase;
+that retained page must be decoupled before deleting the predictive library.
+Historical PostgreSQL records and migrations are untouched.

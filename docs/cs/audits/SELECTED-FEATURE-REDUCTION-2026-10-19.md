@@ -376,3 +376,11 @@ Bez databázové migrace, merge do main a nasazení na produkci.
 ## Fáze 43a: odpojení zachovaného ATC kontextu od shadow validace
 
 Zachováno API kontextu letadla a aktuální sektor, odstraněny pouze výpočty klasifikace ATC predikcí a zápisy do neexistující validace. Omezení požadavků, kontrola ICAO, aktuální vzdušný prostor a zpracování chyb zůstaly.
+
+## Fáze 44 (postupně): odstranění nepoužívaného predikčního API letadla
+
+Odstraněno dříve odpojené `/api/aircraft/:hex/prediction` a staré hraniční
+testy prediktivních doporučení. Vyčištěn registr funkcí a záznam Explainable
+Prediction; zbývající testy nyní ověřují nepřítomnost veřejného API.
+Administrátorské vyhodnocení readiness v systémové stránce zatím zůstává,
+dokud nebude odpojeno ve vlastní fázi. Historické záznamy a migrace beze změn.

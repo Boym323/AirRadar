@@ -1,9 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const truthSource = readFileSync(new URL("../lib/predictive-intelligence/outcome-truth.ts", import.meta.url), "utf8");
 const readinessSource = readFileSync(new URL("../lib/server/predictive-readiness.ts", import.meta.url), "utf8");
-const predictionRouteSource = readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8");
 
 describe("Predictive Outcome Truth V1 boundary", () => {
   it("keeps truth scoring independent from the predictive engine and server state", () => {
@@ -21,11 +20,8 @@ describe("Predictive Outcome Truth V1 boundary", () => {
     expect(readinessSource).toContain("PREDICTIVE_READINESS_OUTCOME_TYPES");
   });
 
-  it("keeps public prediction serialization isolated from raw outcome events", () => {
-    expect(predictionRouteSource).not.toContain("outcome-truth");
-    expect(predictionRouteSource).not.toContain("FlightEvent");
-    expect(predictionRouteSource).toContain("readPredictiveReadinessReport");
-    expect(predictionRouteSource).toContain("enforcePredictiveReadiness");
+  it("does not expose the retired public prediction route", () => {
+    expect(existsSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url))).toBe(false);
   });
 
   it("does not add a write or historical FlightPosition lane to readiness", () => {

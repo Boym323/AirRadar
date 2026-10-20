@@ -1,9 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { getEffectivePredictiveGraduationPolicy } from "@/lib/server/predictive-readiness";
 
 const collectorSource = readFileSync(new URL("../lib/server/predictive-readiness.ts", import.meta.url), "utf8");
-const publicRouteSource = readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8");
 const adminRouteSource = readFileSync(new URL("../app/api/admin/predictive/readiness/route.ts", import.meta.url), "utf8");
 const systemPageSource = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
 const calibrationSource = readFileSync(new URL("../lib/predictive-intelligence/graduation-calibration.ts", import.meta.url), "utf8");
@@ -46,16 +45,7 @@ describe("Predictive Graduation Readiness boundary", () => {
   it("keeps graduation calibration admin-only and advisory", () => {
     expect(calibrationSource).toContain("manualReviewEligible");
     expect(calibrationSource).toContain("buildPredictiveGraduationCalibration");
-    expect(publicRouteSource).not.toContain("graduation-calibration");
-    expect(publicRouteSource).not.toContain("manualReviewEligible");
-  });
-
-  it("guards public prediction exposure with one shared readiness report", () => {
-    expect(publicRouteSource).toContain("readPredictiveReadinessReport");
-    expect(publicRouteSource).toContain("enforcePredictiveReadiness");
-    expect(publicRouteSource).toContain("toPublicPredictiveState(predictionState, effectivePolicy)");
-    expect(publicRouteSource).toContain("buildPublicEtaAdvisory(predictionState, effectivePolicy, etaReadiness)");
-    expect(publicRouteSource).toContain("buildPublicTrajectoryAdvisory(predictionState, effectivePolicy, trajectoryReadiness)");
+    expect(existsSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url))).toBe(false);
   });
 
   it("keeps the readiness report admin-only and no-store", () => {
