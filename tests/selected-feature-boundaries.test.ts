@@ -175,6 +175,13 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(detail).toContain("<AircraftAdsbTelemetry");
   });
 
+  it("does not mount the rejected W10 Weather Fusion detail panel", () => {
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("AircraftWeatherFusion");
+    expect(detail).toContain("<AircraftAdsbTelemetry");
+    expect(detail).toContain("<AircraftAltitudeChart");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

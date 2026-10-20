@@ -18,7 +18,7 @@ describe("Aviation Weather Fusion V1 boundaries", () => {
     expect(state).not.toContain("buildWeatherFusion");
   });
 
-  it("keeps source evidence visible in the aircraft UI", async () => {
+  it("keeps the retired Weather Fusion module isolated from the retained aircraft UI", async () => {
     const component = await readFile("components/aircraft-weather-fusion.tsx", "utf8");
     const detail = await readFile("components/aircraft-detail-v3.tsx", "utf8");
     const cs = await readFile("lib/i18n/cs.ts", "utf8");
@@ -26,7 +26,9 @@ describe("Aviation Weather Fusion V1 boundaries", () => {
     expect(component).toContain("weatherFusionEvidenceTitle");
     expect(component).toContain("weatherFusionSourcesTitle");
     expect(component).toContain("weatherFusionDisclaimer");
-    expect(detail).toContain("<AircraftWeatherFusion");
+    expect(detail).not.toContain("AircraftWeatherFusion");
+    expect(detail).toContain("<AircraftAdsbTelemetry");
+    expect(detail).toContain("<AircraftAltitudeChart");
     expect(cs).toContain("Nejde o certifikovaný meteorologický produkt");
   });
 });

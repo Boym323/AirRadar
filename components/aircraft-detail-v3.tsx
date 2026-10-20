@@ -11,7 +11,6 @@ import { formatAircraftManufacturerModel } from "@/lib/aircraft/display-name";
 import { formatAge, formatAltitude, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
-import { AircraftWeatherFusion } from "@/components/aircraft-weather-fusion";
 import { AircraftCommunications } from "@/components/aircraft-communications";
 import {
   AircraftAltitudeChart,
@@ -517,7 +516,6 @@ export function AircraftDetailV3({
         </section>
 
         <AirspaceCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
-        <AircraftWeatherFusion aircraftHex={icaoHex} enabled={Boolean(liveAircraft && icaoHex !== t.common.emptyValue)} />
         {hasRouteData && route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       </aside>
     </div>

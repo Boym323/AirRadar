@@ -90,3 +90,7 @@ Odstraněn osiřelý mapový zdroj Regional Attention, vrstvy čar/letadel, klie
 ## Fáze 10 (rozpracováno): odstranění panelů predikcí a Digital Twin z detailu letadla
 
 Z ponechaného detailu letadla byly odpojeny komponenty PredictiveAircraftAdvisories a AircraftOperationalTwin. Prohlížeč už z této stránky neposílá jejich požadavky na zrušená API predikcí a situace. Fotografie letadla, telemetrie ADS-B, historický výškový graf, kontext přijímače a běžná metadata zůstávají zachovány. UI soubory, serverová API, historická kalibrační data i výpočtové moduly dočasně zůstávají kvůli auditu vazeb a retence dat. Testy brání opětovnému připojení panelů.
+
+## Fáze 11 (rozpracováno): odstranění panelu W10 Weather Fusion z detailu letadla
+
+Odpojením komponenty ze zachovaného detailu letadla se již automaticky nedotazuje vyřazený endpoint W10 Aviation Weather Fusion. Zachovaný ATC kontext, METAR/SIGMET, pozorovaná data počasí BDS 4.4, historický graf výšky i telemetrie ADS-B zůstávají. Samostatná knihovna/panel/API a historie zatím nejsou mazány kvůli auditu importů a retence; regresní test hlídá, že se panel nevrátí.

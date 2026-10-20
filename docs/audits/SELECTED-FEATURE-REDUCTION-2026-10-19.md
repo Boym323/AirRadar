@@ -89,3 +89,7 @@ Remove the orphan regional-attention map source, its line/aircraft layers, clien
 ## Phase 10 (staged): unmount rejected Predictive and Digital Twin detail panels
 
 The retained aircraft detail no longer mounts PredictiveAircraftAdvisories or AircraftOperationalTwin. This removes their live browser requests to the rejected prediction and situation APIs without affecting the aircraft hero photo, ADS-B telemetry, historical altitude profile, receiver context or normal aircraft metadata. Their UI modules, API routes, historical outcome/audit data, and supporting analytical engines remain untouched until server dependencies and data retention are reviewed. Tests assert these panels are not remounted.
+
+## Phase 11 (staged): unmount rejected W10 Weather Fusion in aircraft detail
+
+Stop the retained aircraft detail from auto-requesting the retired W10 Aviation Weather Fusion endpoint by unmounting its component. Keep existing ATC context, public METAR/SIGMET sources, observed BDS 4.4 aircraft weather, historical altitude chart and ADS-B telemetry unchanged. Pure fusion UI/service/API and history are preserved until the cross-import and storage retention audit. Add negative mount regression coverage.
