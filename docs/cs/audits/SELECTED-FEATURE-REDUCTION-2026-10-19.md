@@ -393,3 +393,11 @@ Aktualizovány tabulky funkcí EN/CS a odstraněna nefunkční diagnostická kar
 Digital Twin. Zachována diagnostika přijímače, ATC/Navigation Integrity,
 časová osa výkonu, meteorologie i databázová historie. Samostatné knihovny
 a testy predikcí zbývají na další fázi.
+
+## Fáze 46 (postupně): odstranění nevyužitého prediktivního stavu serveru
+
+Ze služby letadel odstraněno vytváření PredictiveStateStore, ukládání při
+vypnutí, přístupové metody i nepotřebná diagnostika. Příjem ADS-B již žádný
+prediktivní stav nevlastní a systémový stav nezobrazuje historickou validaci.
+Samostatná modelová knihovna a staré databázové záznamy zatím zůstávají pro
+následující kontrolu závislostí. Historie a zachované funkce beze změny.

@@ -442,3 +442,12 @@ outcome card that was already unsupported by the server. Preserve live
 receiver diagnostics, ATC/Navigation Integrity health, runtime timeline,
 weather observability and historical database schema. Predictive collector
 libraries and old unit tests still require a separate retirement phase.
+
+## Phase 46 (staged): stop constructing idle predictive state on server startup
+
+Remove the orphan PredictiveStateStore instance from the retained aircraft service,
+its shutdown flush, dead accessors and diagnostics. The live ADS-B pipeline no
+longer instantiates or owns a predictor; the retained system status no longer
+publishes the old prospective validation field. This does not delete the still
+imported prediction model library or historical outcome/observation rows;
+these have independent tests and require a separate dependency-checked removal.

@@ -44,7 +44,6 @@ import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classifica
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-provenance";
-import { PredictiveStateStore } from "@/lib/predictive-intelligence";
 import { getMemoryRetentionDiagnostics, type MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 import { mapBounded, mapSettledBounded } from "@/lib/server/bounded-batch";
 import { historyAircraftForSnapshot } from "@/lib/server/history-aircraft-payload";
@@ -165,8 +164,6 @@ export class AircraftStateService {
   private readonly atc: AtcSectorService;
   private readonly alerts: AlertEngine;
   private readonly intelligence = getFlightIntelligenceService();
-  /** Shadow-only predictive state; never serialized into radar SSE frames. */
-  private readonly predictive = new PredictiveStateStore();
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
@@ -248,7 +245,6 @@ export class AircraftStateService {
     await this.awaitUntil(this.initialRefresh, deadline);
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
-    await this.awaitUntil(this.predictive.flushProspective(), deadline);
     // Weather coalescing is intentionally lossy on crashes, but a normal
     // restart gets a bounded best-effort flush of representative samples.
     await this.awaitUntil(flushAircraftWeatherPersistence(deadline), deadline);
@@ -426,7 +422,6 @@ export class AircraftStateService {
     local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
-    predictiveIntelligence: ReturnType<PredictiveStateStore["diagnostics"]>;
     flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
@@ -470,7 +465,6 @@ export class AircraftStateService {
       local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
       altitudeDiagnostics: getAltitudeDiagnostics(),
-      predictiveIntelligence: this.predictive.diagnostics(),
       flightIntelligence: this.intelligence.getDiagnostics(),
       destinationProvenance: getDestinationProvenanceDiagnostics(),
       continuity: this.continuity.diagnostics({
@@ -522,15 +516,6 @@ export class AircraftStateService {
       now: Date.now(),
       preferredOrigin: this.sourcePreferences.get(normalized),
     });
-  }
-
-  /** Read the last bounded live prediction; the API must never recompute it. */
-  getPredictiveState(icaoHex: string) {
-    return this.predictive.get(icaoHex);
-  }
-
-  getPredictiveDiagnostics() {
-    return this.predictive.diagnostics();
   }
 
   getNetworkDiagnostics() {

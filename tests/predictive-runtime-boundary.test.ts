@@ -6,6 +6,9 @@ const predictiveStateSource = readFileSync(new URL("../lib/predictive-intelligen
 
 describe("predictive runtime optimization boundary", () => {
   it("keeps rejected predictive evaluation out of the live ADS-B hot path", () => {
+    expect(aircraftStateSource).not.toContain("PredictiveStateStore");
+    expect(aircraftStateSource).not.toContain("getPredictiveState");
+    expect(aircraftStateSource).not.toContain("this.predictive.flushProspective");
     expect(aircraftStateSource).not.toContain("predictiveCandidates");
     expect(aircraftStateSource).not.toContain("isPredictiveEvaluationDue");
     expect(aircraftStateSource).not.toContain('measureRuntime("snapshot.predictive"');
