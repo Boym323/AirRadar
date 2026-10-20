@@ -217,6 +217,14 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(detail).toContain("<AircraftAdsbTelemetry");
   });
 
+  it("does not ship the rejected W11 weather avoidance analytical module", () => {
+    expect(existsSync(new URL("lib/weather/avoidance-intelligence.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/weather-avoidance-intelligence.test.ts", root))).toBe(false);
+    const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(quick).toContain("sigmet-trajectory-deviation");
+    expect(quick).toContain("aircraft-sigmet-context");
+  });
+
   it("does not expose removed navigation targets in main menus", () => {
     const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
     const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");

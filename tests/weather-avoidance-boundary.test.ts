@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const read = (path: string) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
@@ -23,9 +23,9 @@ describe("Removed Weather Avoidance UI boundary", () => {
     expect(panel).not.toContain("avoidance={");
   });
 
-  it("keeps the legacy analytical module isolated until server-side dependency audit", () => {
-    const source = read("lib/weather/avoidance-intelligence.ts");
-    expect(source).toContain("buildWeatherAvoidanceIntelligence");
-    expect(source).not.toContain("getPrisma");
+  it("removes the rejected standalone W11 calculation and its dedicated tests", () => {
+    expect(existsSync(new URL("../lib/weather/avoidance-intelligence.ts", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../tests/weather-avoidance-intelligence.test.ts", import.meta.url))).toBe(false);
+    expect(read("components/airradar-app.tsx")).not.toContain("buildWeatherAvoidanceIntelligence");
   });
 });

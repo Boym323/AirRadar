@@ -109,3 +109,7 @@ Remove `components/aircraft-operational-twin.tsx`, its CSS and its old Operation
 ## Phase 15 (staged): delete orphan W10 Weather Fusion panel
 
 Delete unmounted `components/aircraft-weather-fusion.tsx` and remove its UI-only test assertions, while keeping on-demand weather service contracts, METAR, SIGMET, BDS4.4 aircraft observations and ordinary ADS-B telemetry. The server endpoint, pure computation library and their unit tests are retained until a server import/storage audit; do not delete historical data.
+
+## Phase 16 (staged): delete the rejected W11 Weather Avoidance analytical module
+
+After removing W11 from live selection and the SIGMET detail panel, delete the now-unreferenced pure `lib/weather/avoidance-intelligence.ts` classifier and its dedicated scenario tests. Preserve the independent observed SIGMET deviation calculations, W06 weather advisories, METAR/TAF, and aircraft weather profile. Keep non-destructive API, database and historical data intact; the CI TypeScript/build gate checks for remaining imports.

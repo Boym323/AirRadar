@@ -110,3 +110,7 @@ Odstraněny `components/aircraft-operational-twin.tsx`, příslušné CSS a test
 ## Fáze 15 (rozpracováno): odstranění osiřelého panelu W10 Weather Fusion
 
 Smazána odpojená komponenta `components/aircraft-weather-fusion.tsx`; testy už nevyžadují její UI, ale kontrolují nepřítomnost. Zachována API rozhraní poskytovatelů METAR/SIGMET, pozorování BDS 4.4, běžná telemetrie a serverové testy. Výpočetní knihovny a serverové API zůstávají do auditu importů a historie; bez mazání dat.
+
+## Fáze 16 (rozpracováno): odstranění nepotřebného analytického modulu W11 Weather Avoidance
+
+Po odstranění W11 z živého radaru a detailu SIGMET smazána osamocená čistá knihovna `lib/weather/avoidance-intelligence.ts` a její scénářové testy. Samostatný výpočet zjištěné odchylky trajektorie, SIGMET (W06), METAR/TAF a profil počasí letadla zůstávají zachovány. Historie, API a databáze nebyly měněny; případné zbývající importy ověří TypeScript a build v CI.
