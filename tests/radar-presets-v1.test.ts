@@ -31,7 +31,6 @@ function input(name = "PRG arrivals") {
       showMetar: true,
       showAircraftWeather: false,
       showNavigationIntegrity: false,
-      showAupUup: true,
     },
     display: { colorMode: "altitude" as const, radarOpacity: 0.65 },
   };
@@ -52,13 +51,14 @@ describe("Radar Presets V1", () => {
 
   it("parses old V1 presets without re-enabling retired map traffic", () => {
     const preset = createRadarPreset(input(), new Date("2026-10-06T18:00:00Z"), "legacy");
-    const legacy = { ...preset, layers: { ...preset.layers, showAtcTraffic: true, showRangeRings: true, showSids: true, showStars: true } };
+    const legacy = { ...preset, layers: { ...preset.layers, showAtcTraffic: true, showRangeRings: true, showSids: true, showStars: true, showAupUup: true } };
     const [parsed] = parseRadarPresets([legacy]);
     expect(parsed?.layers.showAtc).toBe(true);
     expect(parsed?.layers).not.toHaveProperty("showAtcTraffic");
     expect(parsed?.layers).not.toHaveProperty("showRangeRings");
     expect(parsed?.layers).not.toHaveProperty("showSids");
     expect(parsed?.layers).not.toHaveProperty("showStars");
+    expect(parsed?.layers).not.toHaveProperty("showAupUup");
   });
 
   it("rejects malformed stored presets and caps the list", () => {

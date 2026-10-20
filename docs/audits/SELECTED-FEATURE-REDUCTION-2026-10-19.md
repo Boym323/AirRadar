@@ -191,3 +191,12 @@ Flight/FlightPosition rows. Pure server aggregation/flight-history helpers remai
 while shared callers and database writer contracts are audited. Removed only
 route-owned tests; retained query/persistence regression tests and no migrations.
 Existing external consumers of removed URLs will see 404 after deployment.
+
+## Phase 24 (staged): retire T12 planned AUP/UUP map and API paths
+
+Remove public current/historical AUP API routes, the radar query hook,
+planned-airspace UI toggles, stored map preset fields and MapLibre plan overlays.
+Simplify ATC GeoJSON to published sector geometry only while retaining map
+selection, transmitter and ATS reference layers. Historical plan archives,
+persistence, and shared ATC sector data remain unchanged pending an independent
+server ownership audit. No schema changes or data deletion.

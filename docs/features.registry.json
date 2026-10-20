@@ -212,13 +212,12 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Radar imagery, METAR/TAF, SIGMET, aircraft-observed weather, and bounded PIREP/AIREP context; standalone Weather Fusion and flight-route weather endpoints are retired.",
+      "summary": "Current radar imagery, METAR/TAF and SIGMET, observed aircraft weather, bounded PIREP/AIREP and navigation safety overlays.",
       "pages": [
         "/weather"
       ],
       "apis": [
         "/api/map-context/at",
-        "/api/map-context/aup",
         "/api/map-context/metar",
         "/api/map-context/radar",
         "/api/map-context/radar/frame/:id",
@@ -337,12 +336,11 @@
       "category": "atc",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Published ATC map context and ATS route reference data, retained NAVAID/FIX navigation sources; retired standalone SID/STAR procedure APIs are excluded.",
+      "summary": "Selected published ATC map geometry, ATS route reference data and NAVAID/FIX navigation sources without planned AUP/UUP display.",
       "pages": [
         "/navigation"
       ],
       "apis": [
-        "/api/airspace/activity",
         "/api/atc/sectors",
         "/api/atc/sectors/:id/history",
         "/api/atc/sectors/:id/traffic",

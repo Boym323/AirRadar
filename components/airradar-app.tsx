@@ -22,7 +22,6 @@ import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import { aircraftMapLabelLevel, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
-import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
@@ -67,7 +66,6 @@ import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft
 import { useRadarAircraftContext } from "@/components/radar/use-radar-aircraft-context";
 import { useRadarOgnStream } from "@/components/radar/use-radar-ogn-stream";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
-import { useRadarAtcMapContext } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
 import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
@@ -191,12 +189,6 @@ function collapseNarrowRadarAttribution(map: maplibregl.Map): void {
   credits.classList.remove("maplibregl-compact-show");
 }
 
-function formatAirspaceUtc(value: string): string {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
-  return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 16)} UTC`;
-}
-
 export function AirRadarApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -237,10 +229,6 @@ export function AirRadarApp() {
   const [aircraftWeatherMapObservations, setAircraftWeatherMapObservations] = useState<AircraftWeatherMapObservation[]>([]);
   const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
-  const [showAupUup, setShowAupUup] = useState(false);
-  const { airspaceDataset, airspaceActivity } = useRadarAtcMapContext({
-    showAupUup,
-  });
   const {
     radarCatalog,
     radarFrameId,
@@ -544,7 +532,7 @@ export function AirRadarApp() {
   });
   const atcDataset = useDatasetQuery<AtcDataResponse>({
     url: "/api/atc/sectors",
-    enabled: showAtc || showAupUup,
+    enabled: showAtc,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtcDataset),
     itemCount: (value) => value.sectors.length,
@@ -587,7 +575,6 @@ export function AirRadarApp() {
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
-      setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
       setShowNavData(window.localStorage.getItem("airradar-nav-data-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
@@ -666,7 +653,6 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
-  useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
   useEffect(() => { try { window.localStorage.setItem("airradar-nav-data-layer", String(showNavData)); } catch { /* optional */ } }, [showNavData]);
   useEffect(() => {
     const map = mapRef.current;
@@ -745,7 +731,6 @@ export function AirRadarApp() {
         showMetar,
         showAircraftWeather,
         showNavigationIntegrity,
-        showAupUup,
       },
       display: { colorMode, radarOpacity },
     });
@@ -764,7 +749,6 @@ export function AirRadarApp() {
     showAirports,
     showAtc,
     showAtsRoutes,
-    showAupUup,
     showHeliports,
     showMetar,
     showNavData,
@@ -793,7 +777,6 @@ export function AirRadarApp() {
     setShowMetar(preset.layers.showMetar);
     setShowAircraftWeather(preset.layers.showAircraftWeather);
     setShowNavigationIntegrity(preset.layers.showNavigationIntegrity);
-    setShowAupUup(preset.layers.showAupUup);
     setColorMode(preset.display.colorMode);
     setRadarOpacity(preset.display.radarOpacity);
     setRadarPlaying(false);
@@ -1277,33 +1260,10 @@ export function AirRadarApp() {
         const activation = properties.activationStatus === "ACTIVE" ? t.atc.activationValues.active : properties.activationStatus === "INACTIVE" ? t.atc.activationValues.inactive : t.atc.activationValues.unknown;
         body.textContent = `${t.atc.activation}: ${activation} · ${String(properties.service ?? "")} · ${altitude} · ${t.atc.primaryFrequency}: ${String(properties.primaryFrequency ?? t.common.emptyValue)} · ${t.atc.alternates}: ${String(properties.alternateFrequencies || t.common.emptyValue)} · ${t.atc.source}: ${String(properties.source ?? t.common.emptyValue)} · ${t.atc.sourceReference}: ${String(properties.sourceReference ?? t.common.emptyValue)} · ${t.atc.effectiveDate}: ${String(properties.validFrom ?? t.common.emptyValue)} · ${t.atc.lastVerified}: ${String(properties.lastVerifiedAt ?? t.common.emptyValue)}`;
         content.append(title, body);
-        const planState = String(properties.airspacePlanState ?? "none");
-        if (planState === "planned-now" || planState === "upcoming") {
-          const plan = document.createElement("span");
-          const planStatus = planState === "planned-now" ? activityT.plannedNow : activityT.upcoming;
-          const staleNote = properties.airspacePlanStale === true ? ` · ${activityT.stale}: ${activityT.staleNote}` : "";
-          const responsibleUnit = properties.airspacePlanResponsibleUnit ? ` · ${activityT.responsibleUnit}: ${String(properties.airspacePlanResponsibleUnit)}` : "";
-          const activity = properties.airspacePlanActivity ? ` · ${activityT.activity}: ${String(properties.airspacePlanActivity)}` : "";
-          plan.textContent = `${activityT.plannedAllocation}: ${planStatus} · ${activityT.timeWindow}: ${formatAirspaceUtc(String(properties.airspacePlanStartsAt))}–${formatAirspaceUtc(String(properties.airspacePlanEndsAt))} · ${activityT.levels}: ${String(properties.airspacePlanLowerLimit)}–${String(properties.airspacePlanUpperLimit)} · ${activityT.source}: ${String(properties.airspacePlanSource)} #${String(properties.airspacePlanSequence)}${responsibleUnit}${activity}${staleNote}. ${activityT.disclaimer}`;
-          content.append(plan);
-        }
         new maplibregl.Popup({ closeButton: true, maxWidth: "360px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
       });
       map.on("mouseenter", "atc-sectors-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
-      map.on("click", "airspace-plan-fill", (event: MapLayerMouseEvent) => {
-        const properties = event.features?.[0]?.properties;
-        if (!properties) return;
-        const content = document.createElement("div"); content.className = "map-popup";
-        const title = document.createElement("strong"); title.textContent = String(properties.name ?? t.layers.airspaceActivity);
-        const body = document.createElement("span");
-        const planned = String(properties.airspacePlanState ?? "") === "planned-now";
-        body.textContent = `${planned ? t.layers.airspacePlannedActive : t.layers.airspaceUnknown} · ${t.layers.valid}: ${formatAirspaceUtc(String(properties.airspacePlanStartsAt ?? ""))}–${formatAirspaceUtc(String(properties.airspacePlanEndsAt ?? ""))} · ${t.layers.source}: ${String(properties.airspacePlanSource ?? t.common.emptyValue)} · ${t.layers.airspaceDisclaimer}`;
-        content.append(title, body);
-        new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
-      });
-      map.on("mouseenter", "airspace-plan-fill", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "airspace-plan-fill", () => { map.getCanvas().style.cursor = ""; });
       map.on("click", "metar-symbols", (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties;
         if (!properties) return;
@@ -1992,14 +1952,10 @@ export function AirRadarApp() {
   }, [atsPointFocus, atsRoutes, mapReady]);
 
 
-  // Data payloads depend on ATC data/plan activity, not on camera padding,
-  // drawer state or MapLibre readiness. Avoid re-creating sector polygons and
-  // re-sending them to WebGL when only the overlay visibility changes.
-  const atcVisible = showAtc || showAupUup;
-  const visibleAirspaceActivity = showAupUup ? airspaceActivity : null;
+  // Keep published ATC sector geometry independent from retired planned-activity feeds.
   const atcGeoJson = useMemo(
-    () => createAtcGeoJSON(atcData.sectors, atcVisible, visibleAirspaceActivity),
-    [atcData.sectors, atcVisible, visibleAirspaceActivity],
+    () => createAtcGeoJSON(atcData.sectors, showAtc),
+    [atcData.sectors, showAtc],
   );
   const transmitterGeoJson = useMemo<FeatureCollection>(() => ({
     type: "FeatureCollection",
@@ -2027,10 +1983,7 @@ export function AirRadarApp() {
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-    for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
-    }
-  }, [mapReady, showAtc, showAupUup]);
+  }, [mapReady, showAtc]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2357,9 +2310,6 @@ export function AirRadarApp() {
                 onShowAircraftWeatherChange={setShowAircraftWeather}
                 showNavigationIntegrity={showNavigationIntegrity}
                 onShowNavigationIntegrityChange={setShowNavigationIntegrity}
-                showAupUup={showAupUup}
-                onShowAupUupChange={setShowAupUup}
-                airspaceDataset={airspaceDataset}
                 colorMode={colorMode}
                 onColorModeChange={setColorMode}
               />
@@ -2416,8 +2366,8 @@ export function AirRadarApp() {
               </div> : <div className="map-layer-notice" role="status">{weatherView.state === "unavailable" ? t.layers.radarUnavailable : t.radarQuickActions.weatherLoading}</div>}
             </div> : null}
             {networkNotice && <div className="map-source-notice"><span className="network-notice">{networkNotice}</span></div>}
-            {colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
-              {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
+            {colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showMetar || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
+              {showAtc && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span></span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
               {showMetar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.metar}</strong><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span></span>}
               {showNavigationIntegrity && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.navigationIntegrity}</strong><span><i className="legend-line planned" /> {t.layers.navigationIntegrityReduced}</span><small>{t.layers.navigationIntegrityDisclaimer}</small></span>}

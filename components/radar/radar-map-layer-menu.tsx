@@ -61,9 +61,6 @@ interface RadarMapLayerMenuProps {
   onShowAircraftWeatherChange: (value: boolean) => void;
   showNavigationIntegrity: boolean;
   onShowNavigationIntegrityChange: (value: boolean) => void;
-  showAupUup: boolean;
-  onShowAupUupChange: (value: boolean) => void;
-  airspaceDataset: DatasetState<unknown>;
   colorMode: AircraftColorMode;
   onColorModeChange: (value: AircraftColorMode) => void;
 }
@@ -119,9 +116,6 @@ export function RadarMapLayerMenu({
   onShowAircraftWeatherChange,
   showNavigationIntegrity,
   onShowNavigationIntegrityChange,
-  showAupUup,
-  onShowAupUupChange,
-  airspaceDataset,
   colorMode,
   onColorModeChange,
 }: RadarMapLayerMenuProps) {
@@ -164,12 +158,6 @@ export function RadarMapLayerMenu({
         <label data-testid="map-layer-navigation-integrity"><input type="checkbox" checked={showNavigationIntegrity} onChange={(event) => onShowNavigationIntegrityChange(event.target.checked)} /> {t.layers.navigationIntegrity}</label>
         {showMetar && metarStatus === "unavailable" && <div className="map-layer-sublevel">{t.layers.metarUnavailable}</div>}
         {showMetar && <div className="map-layer-sublevel metar-legend"><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span><span><i className="metar-dot lifr" /> {t.layers.lifr}</span></div>}
-      </div>
-      <div className="map-layer-group">
-        <span className="map-layer-group-title">{t.layers.groups.operationalAirspace}</span>
-        <label data-testid="map-layer-aup-uup"><input type="checkbox" checked={showAupUup} onChange={(event) => onShowAupUupChange(event.target.checked)} /> {t.layers.airspaceActivity}</label>
-        {showAupUup && airspaceDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.airspaceUnavailable}</div>}
-        {showAupUup && <div className="map-layer-sublevel">{t.layers.airspacePlannedActive} · {t.layers.airspaceDisclaimer}</div>}
       </div>
       <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.display}</span>

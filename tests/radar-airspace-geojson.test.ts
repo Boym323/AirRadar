@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/airspace-geojson";
 import type { AtcSector } from "@/lib/atc/types";
-import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 
 describe("radar airspace map GeoJSON parity", () => {
   const sector = {
@@ -16,13 +15,8 @@ describe("radar airspace map GeoJSON parity", () => {
     source: "test", activationStatus: "ACTIVE",
   } as unknown as AtcSector;
 
-  it("returns the previous empty contract without touching hidden planned activity", () => {
-    const activity = new Proxy({} as AirspaceActivityResponse, {
-      get() { throw new Error("hidden ATC must not index airspace windows"); },
-    });
-    expect(createAtcGeoJSON([sector], false, activity)).toEqual({
-      type: "FeatureCollection", features: [],
-    });
+  it("returns empty geometry whenever ATC display is disabled", () => {
+    expect(createAtcGeoJSON([sector], false)).toEqual({ type: "FeatureCollection", features: [] });
   });
 
   it("preserves visible published ATC geometry and metadata", () => {
@@ -32,7 +26,7 @@ describe("radar airspace map GeoJSON parity", () => {
       type: "Feature",
       properties: {
         id: "LKTRA36", countryCode: "CZ", name: "LKTRA36",
-        label: "LKTRA36", airspacePlanState: "none",
+        label: "LKTRA36",
         activationStatus: "ACTIVE",
       },
       geometry: { type: "Polygon", coordinates: [[[14, 50], [15, 50], [15, 51]]] },

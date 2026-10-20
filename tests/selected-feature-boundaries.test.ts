@@ -370,3 +370,18 @@ describe("phase 23 retired airport operations and flight-history listing APIs", 
     }
   });
 });
+
+describe("phase 24 retired T12 planned airspace surface", () => {
+  it("removes the AUP/UUP polling API and map layers without affecting selected ATC geometry", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const geo = readFileSync(new URL("lib/radar/airspace-geojson.ts", root), "utf8");
+    expect(existsSync(new URL("app/api/airspace/activity/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("app/api/map-context/aup/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("components/radar/use-radar-atc-map-context.ts", root))).toBe(false);
+    expect(app).not.toContain("showAupUup");
+    expect(app).not.toContain("airspace-plan-fill");
+    expect(geo).not.toContain("buildAirspacePlanMapIndex");
+    expect(geo).toContain("sector.polygons");
+    expect(app).toContain("mapReplayRef.current.atc.setData(atcGeoJson)");
+  });
+});

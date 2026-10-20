@@ -2,25 +2,21 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const app = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
-const hook = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
 const selectedContextHook = readFileSync(new URL("../components/radar/use-radar-aircraft-context.ts", import.meta.url), "utf8");
 const menu = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const quick = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 
 describe("lightweight radar ATC map boundary", () => {
-  it("loads published sectors and planned airspace only when enabled", () => {
-    expect(app).toContain("useRadarAtcMapContext");
-    expect(app).toContain("enabled: showAtc || showAupUup");
-    expect(hook).toContain('url: "/api/airspace/activity"');
-    expect(hook).toContain("enabled: showAupUup");
-    expect(hook).not.toContain("showAtc: boolean");
+  it("loads published ATC sectors without retired AUP/UUP polling", () => {
+    expect(app).toContain("enabled: showAtc");
+    expect(app).not.toContain("/api/airspace/activity");
+    expect(app).not.toContain("showAupUup");
     expect(menu).toContain('data-testid="map-layer-atc"');
-    expect(menu).toContain('data-testid="map-layer-aup-uup"');
-    expect(app).toContain("showAupUup ? airspaceActivity : null");
+    expect(menu).not.toContain('data-testid="map-layer-aup-uup"');
   });
 
   it("keeps live sector-traffic and transition analytics out of the map", () => {
-    for (const source of [app, hook, menu]) {
+    for (const source of [app, menu]) {
       expect(source).not.toContain("/api/atc/sectors/traffic");
       expect(source).not.toContain("/api/atc/sectors/transitions");
       expect(source).not.toContain("showAtcTraffic");
@@ -35,7 +31,7 @@ describe("lightweight radar ATC map boundary", () => {
 
   it("memoizes ATC geometry and sends each payload through one MapLibre replay path", () => {
     expect(app).toContain("const atcGeoJson = useMemo(");
-    expect(app).toContain("[atcData.sectors, atcVisible, visibleAirspaceActivity]");
+    expect(app).toContain("[atcData.sectors, showAtc]");
     expect(app).toContain("const transmitterGeoJson = useMemo<FeatureCollection>");
     expect(app).toContain("[atcData.transmitters, showAtc]");
     expect(app).toContain("mapReplayRef.current.atc.setData(atcGeoJson)");

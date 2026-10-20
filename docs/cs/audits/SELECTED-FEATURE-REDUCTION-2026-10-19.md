@@ -182,3 +182,11 @@ letišť, detail aktuálního letadla, `/api/history/:hex`, statistické služby
 i uložené záznamy Flight/FlightPosition. Sdílené serverové funkce zůstávají
 do auditu volajících a databázových zápisů. Bez migrací a mazání dat.
 Po nasazení budou vyřazené veřejné adresy vracet HTTP 404.
+
+## Fáze 24 (postupně): odstranění T12 AUP/UUP mapy a API
+
+Odstraněna veřejná API aktuálních a historických AUP/UUP, mapový dotazovací
+hook, přepínače, uložené volby a vrstvy plánovaných aktivací. Publikovaná
+geometrie ATC sektorů, vysílače, ATS trasy a navigační zdroje zůstávají.
+Historické archivy, databázové záznamy a sdílené ATC informace se nemění.
+Bez migrací a mazání dat.
