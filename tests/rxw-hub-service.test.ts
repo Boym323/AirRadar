@@ -76,7 +76,7 @@ describe("RXW Hub adapter", () => {
     expect(hub.getDiagnostics()).toMatchObject({
       receivedEvents: 3, receivedItems: 4, accepted: 2,
       rejectedDuplicate: 1, rejectedInvalid: 1,
-      unsupportedPayloads: 0, connectCount: 1, fpnEnabled: false,
+      unsupportedPayloads: 0, connectCount: 1,
     });
     expect(hub.getDiagnostics().lastEventAt).not.toBeNull();
     expect(JSON.stringify(hub.getDiagnostics())).not.toContain("SENSITIVE CONTENT");

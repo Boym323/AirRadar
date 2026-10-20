@@ -54,6 +54,12 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(app).not.toContain("createRxwFpn");
     expect(app).not.toContain("/api/aircraft/communications/waypoints");
     expect(existsSync(new URL("app/api/aircraft/[hex]/communications/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/aircraft/communications/waypoints/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/server/rxw-fpn-parser.ts", root))).toBe(false);
+    const store = readFileSync(new URL("lib/server/rxw-hub-store.ts", root), "utf8");
+    expect(store).not.toContain("parseRxwH1Fpn");
+    expect(store).not.toContain("waypointPlanForFlight");
+    expect(store).not.toContain("RXW_FPN_ENABLED");
   });
 
   it("keeps RXW communication metadata without the rejected H1/FPN detail panel", () => {

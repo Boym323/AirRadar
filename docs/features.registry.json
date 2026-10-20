@@ -721,13 +721,12 @@
       "category": "aircraft / communications",
       "status": "optional",
       "introducedVersion": null,
-      "summary": "Optional RXW ACARS Hub metadata and independently parsed H1/FPN waypoint reports with bounded in-memory caches, aircraft plan badges and a non-authoritative map overlay. Disabled by default; requires provider authorization.",
+      "summary": "Optional RXW Hub ACARS/VDL2 metadata and structured airport-pair route hints, backed by bounded in-memory caches. H1/FPN live decoding and radar overlays are retired; legacy archive rows remain readable. Disabled by default and subject to provider authorization.",
       "pages": [
         "/aircraft/:hex"
       ],
       "apis": [
-        "/api/aircraft/:hex/communications",
-        "/api/aircraft/communications/waypoints"
+        "/api/aircraft/:hex/communications"
       ],
       "changelogScopes": [
         "rxw-acars"
@@ -736,7 +735,6 @@
         "RXW Hub",
         "ACARS communications",
         "VDL2 communications",
-        "FPN waypoints",
         "RXW route plan"
       ]
     }
