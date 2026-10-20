@@ -409,3 +409,12 @@ the minimal structurally equivalent corridor input types into the independent
 PIREP/SIGMET test coverage and semantics. This is *not* removal of the retained
 `lib/server/navigation-integrity` service, receiver weather observations,
 METAR, SIGMET or historical PostgreSQL aircraft positions.
+
+## Phase 43: remove ATC shadow prediction without removing current-sector matching
+
+Remove 165 lines of on-receiver ATC shadow worker queue/validation and state,
+the unnecessary config flag, prediction validation library and its tests.
+Drop retired ATC shadow counters from memory-retention attribution and align
+current-sector tests. Preserve live ATC sector matching, published sector
+geometry, ATS/NAVAID/FIX, navigation integrity, history and push delivery.
+No database migration, main merge or production deployment.

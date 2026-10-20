@@ -364,3 +364,11 @@ Minimální kompatibilní typy meteorologického koridoru byly přesunuty do
 samostatného modelu `lib/weather/corridor-intelligence.ts`. Zachovány testy
 PIREP/SIGMET a jejich dosavadní význam, skutečná Navigation Integrity,
 METAR, pozorované počasí i historické polohy v PostgreSQL.
+
+## Fáze 43: odstranění ATC shadow predikcí bez ztráty aktuálního sektoru
+
+Ze služby příjmu bylo odstraněno 165 řádků front a validací ATC shadow,
+stará konfigurační volba a modul validace predikcí s testy. Upraveny počítadla
+paměti a testy přiřazení aktuálního ATC sektoru. Zůstává sektorová geometrie,
+ATS/NAVAID/FIX, Navigation Integrity, historie i doručování upozornění.
+Bez databázové migrace, merge do main a nasazení na produkci.

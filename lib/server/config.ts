@@ -232,11 +232,6 @@ export function isAtcResolutionEnabled(): boolean {
   return process.env.AIRRADAR_ATC_RESOLUTION_ENABLED?.trim().toLowerCase() !== "false";
 }
 
-/** Shadow prediction follows assignment unless explicitly disabled. */
-export function isAtcShadowPredictionEnabled(): boolean {
-  const configured = process.env.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED?.trim().toLowerCase();
-  return configured === undefined || configured === "" ? isAtcResolutionEnabled() : configured === "true";
-}
 export type OperationalTwinTrajectoryQualityPolicy = "CANONICAL" | "TRAJECTORY_QUALITY_V2";
 export function getOperationalTwinTrajectoryQualityPolicy(): OperationalTwinTrajectoryQualityPolicy {
   return process.env.AIRRADAR_DIGITAL_TWIN_TRAJECTORY_QUALITY_POLICY?.trim().toUpperCase() === "TRAJECTORY_QUALITY_V2"

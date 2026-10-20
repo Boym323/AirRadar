@@ -29,7 +29,6 @@ describe("memory retention diagnostics", () => {
       lastHistorySample: new Map([["ABC123", now]]),
       predictiveEvaluatedAt: new Map(),
       atcResolutionKeys: new Map([["ABC123", "key"]]),
-      atcShadowPredictionKeys: new Map(),
       snapshotCacheEntries: 2,
       listeners: 3,
       now,
@@ -70,7 +69,6 @@ describe("memory retention diagnostics", () => {
       lastHistorySample: empty,
       predictiveEvaluatedAt: empty,
       atcResolutionKeys: empty,
-      atcShadowPredictionKeys: empty,
       snapshotCacheEntries: 0,
       listeners: 0,
       now,
@@ -105,7 +103,6 @@ describe("memory retention diagnostics", () => {
       lastHistorySample: empty,
       predictiveEvaluatedAt: empty,
       atcResolutionKeys: empty,
-      atcShadowPredictionKeys: empty,
       snapshotCacheEntries: 0,
       listeners: 0,
       now,
@@ -135,7 +132,7 @@ describe("memory retention diagnostics", () => {
       networkTrailMaxAgeMs: 60_000,
       sourcePreferences: empty, sourcePreferenceMissingSince: empty,
       lastHistorySample: empty, predictiveEvaluatedAt: empty,
-      atcResolutionKeys: empty, atcShadowPredictionKeys: empty,
+      atcResolutionKeys: empty,
       snapshotCacheEntries: 0, listeners: 0, now,
     };
     const original = getMemoryRetentionDiagnostics(input);
