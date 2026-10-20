@@ -444,13 +444,12 @@
       "category": "operations",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration.",
+      "summary": "Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics, and receiver mass-drop guard state.",
       "pages": [
         "/system"
       ],
       "apis": [
         "/api/admin/altitude/:hex",
-        "/api/admin/flights/:id/evidence",
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/runtime-performance",

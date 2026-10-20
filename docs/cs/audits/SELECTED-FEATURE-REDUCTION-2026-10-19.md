@@ -428,3 +428,9 @@ nepřítomnost backendu a zachování Navigation Integrity. Historická data
 FlightEvent, PredictiveObservation, FlightPosition ani migrace se nemažou.
 Při budoucím nasazení je nutné pod dohledem zrušit případně aktivní starý
 systemd timer; v rámci draft PR se nastavení produkce nemění.
+
+## Fáze 48a (postupně): aktualizace registru systémových funkcí
+
+Odstraněno zrušené API důkazů predikce letu z registru a obou tabulek
+funkcí. Systémová diagnostika již neslibuje neexistující prediktivní
+readiness ani graduation. Zachována skutečná diagnostika příjmu ADS-B.

@@ -482,3 +482,10 @@ phases; this changes no ADS-B or Navigation Integrity behavior. Do not delete
 historic FlightEvent, PredictiveObservation, FlightPosition or existing schema
 migrations; a deployed legacy systemd timer must be disabled as part of the
 later supervised deployment, not while this PR is in draft.
+
+## Phase 48a (staged): sync the retained system feature registry
+
+Remove the deleted admin flight-prediction evidence route from the system
+observability registry and both generated/localized feature tables. The
+system feature description now lists only supported receiver diagnostics;
+predictive readiness and graduation no longer appear as active promises.
