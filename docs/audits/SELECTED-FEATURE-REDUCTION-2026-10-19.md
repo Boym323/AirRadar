@@ -564,3 +564,30 @@ transports do not automatically generate new alerts.
 
 CI/CodeQL/load scaling must be checked on the final commit before merge.
 Do not treat reductions in source lines as measured CPU/RAM savings.
+
+## Phase 51b (staged): strip legacy alert rule write repository
+
+Remove all unused fleet, matcher, geofence, rule and AlertOccurrence creation
+methods and the V1 evaluation engine/types. Keep the existing AlertOccurrence
+and AlertDelivery database records and migrations intact. Retain historical
+occurrence reads and the delivery worker's claim, retry, stale claim recovery
+and health contracts. The receiver logbook no longer loads legacy server
+watchlists; its deprecated wire counter is zero pending compatibility removal.
+
+## Phase 51c (staged): retire unused server watchlist storage
+
+Remove the JSON rule config reader, server watchlist store and mutation
+validation endpoint helper, along with their now irrelevant tests. Preserve
+the separate browser-local watchlist matcher: it is still used by live radar
+filters and does not evaluate server rules or produce alerts.
+
+## Phase 52 (staged): remove obsolete Airport Intelligence analytics
+
+Remove the old airport movement inference pipeline, Airport Operations V1
+projection, terminal-demand horizon V9, V3 Airport Intelligence inference
+and standalone Movement Analytics UI/CSS/copy. Delete their abandoned
+standalone unit suites, obsolete quality CLI and generated quality artifact.
+Preserve canonical airport catalog/detail/infrastructure, nearby-aircraft
+logic, runway metadata, METAR/TAF and independent historic traffic readers.
+Add a negative regression gate for deleted modules and preserved endpoints.
+No database migration or production deployment.

@@ -490,3 +490,31 @@ Registr funkcí, anglický a český přehled a produkční kontrola odpovídaj�
 zachovaným trasám. Zrušené API musí odpovědět 404, nikoliv úspěšně
 provést starou mutaci watchlistu. PR je stále draft bez merge a nasazení.
 Zachování transportu neznamená automatické vytváření nových alertů.
+
+## Fáze 51b (postupně): odstranění starých zápisových cest pravidel
+
+Z databázového repozitáře odstraněny metody pro vytváření a změnu
+flotil, pravidel, geofence a událostí AlertOccurrence i nepoužívaný
+vyhodnocovač V1. Historické tabulky, čtení událostí, fronta AlertDelivery
+a její potvrzování, opakování i obnovování zatuhlých položek zůstávají.
+Logbook už nenačítá stará serverová pravidla; kompatibilní počitadlo
+dočasně vrací nulu, místo aby provádělo zbytečné dotazy.
+
+## Fáze 51c (postupně): odstranění serverového úložiště watchlistu
+
+Odstraněno čtení starého souboru alerts.json, úložiště pravidel na
+serveru a jeho validační helper spolu s historickými testy.
+Naopak se zachovává zcela samostatné lokální označování letadel
+v prohlížeči: toto filtrování je součástí živého radaru a nevyhodnocuje
+serverová pravidla ani samo neposílá upozornění.
+
+## Fáze 52 (postupně): odstranění nadbytečné analytiky letišť
+
+Odstraněna stará pipeline pohybů letadel u letišť, projekce Airport
+Operations V1, Terminal Demand Horizon V9, Airport Intelligence V3
+a osiřelá komponenta Movement Analytics včetně stylů, překladů,
+testů a jednorázového auditního skriptu a výstupního souboru.
+Katalog letišť, aktuální detail, informace o drahách, blízký provoz,
+METAR/TAF a nezávislé historické čtení provozu zůstávají zachovány.
+Přidána negativní regresní kontrola. Bez databázových migrací, merge
+a zásahu do produkce.
