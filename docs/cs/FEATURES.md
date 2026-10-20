@@ -45,4 +45,12 @@ Ze současné pracovní větve byly odstraněny Digital Twin, Predictive Intelli
 
 **L11/L12 zůstávají:** Web Push (VAPID a registrace), Pushover worker, trvalá doručovací fronta a diagnostické API. Dočasný endpoint `/api/watchlist/session` nadále chrání systémovou a doručovací diagnostiku. Živý receiver už nevyhodnocuje stará pravidla, takže zachované transporty samy nevytvářejí nové alerty. Historické databázové záznamy se nemažou.
 
+## Omezení
+
+- **Nesmazat historická data:** záznamy Flight, FlightPosition, FlightEvent ani dřívější uložená upozornění nejsou součástí destruktivních migrací. Historické tabulky AlertOccurrence, AlertDelivery a AlertRule zůstávají zachované pro bezpečnou kompatibilitu.
+- **Neporušit hlavní smyčku ADS-B:** zpracování nových zpráv nesmí znovu aktivovat staré vyhodnocování watchlistu, geofence, predikcí nebo Digital Twin. Příjem, ukládání historie, integrita navigace a metriky přijímače musí fungovat samostatně.
+- **Neodstraňovat potřebná navigační data:** zachovat aktuální ATC geometrii používanou mapou, ATS trasy, navigační body a vybrané meteorologické vrstvy.
+- **Oddělit transport od událostí:** Web Push a Pushover zůstávají technicky dostupné, ale bez aktivního producenta starých alertů nezaručují nová upozornění. Doručovací worker pouze zpracovává zachovanou frontu.
+- **Chránit provoz:** veškeré změny probíhají ve stále rozpracovaném PR. Slučování do main, migrace databáze a nasazení na produkci vyžadují dokončené CI, CodeQL a regresní testy. Redukce řádků sama o sobě není měřením úspory CPU nebo RAM.
+
 Dokumentace popisuje draft PR #1096, nikoli již nasazenou produkci.
