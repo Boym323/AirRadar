@@ -268,3 +268,12 @@ periodic sampler rather than require that retired background computation.
 Retain request-driven outcome capture, existing truth-source boundaries and
 persistence-shutdown assertions. The old descriptive source marker
 `refreshDrivenSampling` is historical diagnostic metadata, not an active sampler.
+
+## Phase 31 (staged): preserve real Traffic/Layers collision checks at 821px
+
+The release browser sweep confirmed all 28 static visual targets but hit the
+821px desktop breakpoint where HUD controls can wrap. Replace the obsolete
+left-to-right-only assertion with a two-dimensional rectangle overlap check.
+The dropdown still must stay outside the open drawer, and failures now report
+measured rectangles for diagnosis. Do not weaken the selected-aircraft drawer,
+accessibility, or responsive smoke checks.

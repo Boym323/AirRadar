@@ -245,3 +245,11 @@ Testy Digital Twin Event Outcome nyní kontrolují, že samostatné periodické
 vzorkování již neexistuje. Zůstává kontrola požadované perzistence, bezpečného
 ukončení, hranic zdrojů pravdy a dosavadního zpracování událostí na vyžádání.
 Historický diagnostický popisek není aktivním spouštěčem výpočtu.
+
+## Fáze 31 (postupně): přesnější kontrola překrývání ovladačů při 821 px
+
+Prohlížečová kontrola úspěšně vytvořila 28 vizuálních scénářů; na hranici
+821 px se mohou ovladače Provoz a Vrstvy zalomit do dvou řádků. Původní
+kontrola pořadí na ose X je nahrazena skutečnou kontrolou průniku obdélníků
+v osách X a Y. Rozbalené menu musí stále zůstat mimo otevřený boční panel.
+Při selhání se vypíší naměřené souřadnice; ostatní kontroly se neoslabují.

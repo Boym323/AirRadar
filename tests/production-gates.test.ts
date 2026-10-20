@@ -240,6 +240,14 @@ describe("production release metadata gate", () => {
     expect(source).toContain("browserErrors.push(`http ${response.status()}");
   });
 
+  it("checks 2D Traffic/Layers overlap without rejecting wrapped controls", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const controlsOverlap = Boolean(trafficBounds && layersBounds");
+    expect(source).toContain("trafficBounds.y + trafficBounds.height > layersBounds.y + 1");
+    expect(source).toContain("drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1");
+    expect(source).toContain("|| controlsOverlap");
+  });
+
   it("keeps four retained aircraft drawer actions under overflow checks", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 4");

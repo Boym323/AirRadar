@@ -2591,12 +2591,19 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const drawerBounds = await sidebar.boundingBox();
         const trafficBounds = await trafficTrigger.boundingBox();
         const layersBounds = await page.locator("details.map-layers > summary").boundingBox();
+        // Wrapped controls can occupy separate rows at the desktop/tablet boundary.
+        // Reject a real two-dimensional overlap instead of comparing x only.
+        const controlsOverlap = Boolean(trafficBounds && layersBounds
+          && trafficBounds.x < layersBounds.x + layersBounds.width - 1
+          && trafficBounds.x + trafficBounds.width > layersBounds.x + 1
+          && trafficBounds.y < layersBounds.y + layersBounds.height - 1
+          && trafficBounds.y + trafficBounds.height > layersBounds.y + 1);
         if (!drawerLayerMenuBounds || !drawerBounds || !trafficBounds || !layersBounds
           || drawerLayerMenuBounds.x < 0
           || drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1
-          || trafficBounds.x + trafficBounds.width > layersBounds.x + 1
+          || controlsOverlap
           || layersBounds.x + layersBounds.width > drawerBounds.x + 1) {
-          throw new Error(`Traffic/Layers geometry failed at ${viewport.width}px`);
+          throw new Error(`Traffic/Layers geometry failed at ${viewport.width}px: ${JSON.stringify({ menu: drawerLayerMenuBounds, drawer: drawerBounds, traffic: trafficBounds, layers: layersBounds, controlsOverlap })}`);
         }
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
 
