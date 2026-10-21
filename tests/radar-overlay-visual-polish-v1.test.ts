@@ -5,15 +5,12 @@ const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.ur
 
 describe("Radar overlay visual polish", () => {
   const app = read("components/airradar-app.tsx");
-  const presets = read("components/radar/radar-preset-menu.tsx");
   const layers = read("components/radar/radar-map-layer-menu.tsx");
   const mapStyles = read("app/globals.css");
-  const presetStyles = read("components/radar/radar-preset-menu.module.css");
   const followStyles = read("components/radar/radar-flight-follow-hud.module.css");
   const drawerStyles = read("app/radar-aircraft-panel.css");
 
-  it("keeps Presets and Layers in one native, mutually exclusive details group", () => {
-    expect(presets).toContain('name="radar-map-menus"');
+  it("keeps the remaining Layers dropdown dismissible with keyboard and pointer", () => {
     expect(layers).toContain('name="radar-map-menus"');
     expect(app).toContain('details[name="radar-map-menus"][open]');
     expect(app).toContain('document.addEventListener("pointerdown", onPointerDown)');
@@ -45,10 +42,7 @@ describe("Radar overlay visual polish", () => {
   it("bounds scrollable map menus and retains 320px responsiveness", () => {
     expect(mapStyles).toContain('.map-overlay-primary .map-layers-menu');
     expect(mapStyles).toContain('max-height: min(52svh, 480px)');
-    expect(presetStyles).toContain('max-height: min(65svh, 520px)');
-    expect(presetStyles).toContain('overflow-y: auto');
     expect(mapStyles).toContain('max-height: min(48svh, 430px)');
-    expect(presets).not.toContain("fetch(");
     expect(layers).not.toContain("getPrisma(");
   });
 });
