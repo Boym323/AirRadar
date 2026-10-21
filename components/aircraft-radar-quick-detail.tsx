@@ -5,11 +5,9 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
 import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { AircraftAltitudeChart } from "@/components/aircraft-detail-shared";
@@ -48,7 +46,6 @@ export interface AircraftRadarQuickDetailProps {
   historyTrail: QuickHistoryTrail | null;
   atcContext: AtcContextResult | null;
   sigmetContext: AircraftSigmetContext[];
-  sigmetDeviation: SigmetTrajectoryDeviation | null;
   sigmetStale: boolean;
   selectedRoute?: RouteIntelligenceViewDTO | null;
   watchlisted: boolean;
@@ -126,9 +123,7 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
   const primaryFrequency = frequencies[0] ?? assignment?.primaryFrequencyMhz ?? null;
   const additionalFrequencies = frequencies.length > 0 ? frequencies.slice(1) : assignment?.alternateFrequenciesMhz ?? [];
   const route = context?.status === "available" ? context.atsRoute ?? context.nearestAtsCandidate : null;
-  const nextSector = context?.status === "available" ? context.nextSector : null;
-  const handoff = buildAtcHandoffEstimate(context);
-  const next = nextSector ?? (context?.status === "available" ? context.nextPoint ?? context.ahead : null);
+  const next = context?.status === "available" ? context.nextPoint : null;
   if (!airspaceName && !fir && !route && !next && !primaryFrequency) return null;
 
   const lowerLimit = contextAirspace?.lowerLimitFt ?? assignment?.lowerAltitudeFt ?? null;
@@ -149,40 +144,20 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
     </div>
     {(route || next) && <div className="aircraft-quick-atc-context">
       {route && <DetailValue label={route === context?.atsRoute ? t.atc.contextAts : t.atc.contextNearestAts} value={`${route.routeId} · ${formatNumber(route.distanceNm, 1)} NM`} />}
-      {handoff && <div className="aircraft-quick-atc-handoff" data-testid="atc-handoff-estimate">
-        <DetailValue label={t.atc.handoffEstimate} value={handoff.toSectorName} />
-        {handoff.publishedUnit && <DetailValue label={t.atc.handoffUnit} value={formatAtcService(handoff.publishedUnit)} />}
-        {handoff.primaryFrequencyMhz !== null && <DetailValue label={t.atc.handoffFrequency} value={formatAtcFrequency(handoff.primaryFrequencyMhz)} />}
-        <DetailValue label={t.atc.handoffEta} value={`~${formatNumber(handoff.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(handoff.estimatedSeconds / 60))} min`} />
-        <DetailValue label={t.atc.relevantConfidence} value={t.atc.relevantConfidenceValues[handoff.confidence]} />
-      </div>}
-      {!handoff && nextSector && <DetailValue label={t.atc.nextSector} value={`${nextSector.airspace.name} · ~${formatNumber(nextSector.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(nextSector.estimatedSeconds / 60))} min`} />}
-      {!nextSector && next && <DetailValue label={t.atc.contextNext} value={"identifier" in next ? `${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM` : `${next.airspace.name} · ${formatNumber(next.distanceNm, 0)} NM`} />}
+      {next && <DetailValue label={t.atc.contextNext} value={`${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM`} />}
     </div>}
     {additionalFrequencies.length > 0 && <details className="aircraft-quick-atc-more">
       <summary>{t.atc.moreFrequencies}</summary>
       <div className="aircraft-quick-frequency-list">{additionalFrequencies.map((frequency) => <span key={frequency}>{formatAtcFrequency(frequency)}</span>)}</div>
     </details>}
-    {handoff && <p className="aircraft-quick-disclaimer">{t.atc.handoffDisclaimer}</p>}
     <p className="aircraft-quick-disclaimer">{t.atc.contextDisclaimer}</p>
   </QuickSection>;
 }
 
-function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetContext[]; deviation: SigmetTrajectoryDeviation | null; stale: boolean }) {
-  if (!context.length && !deviation) return null;
+function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; stale: boolean }) {
+  if (!context.length) return null;
   const hasProjection = context.some((item) => item.relation === "projected");
   return <QuickSection id="aircraft-quick-sigmet-title" title={t.weather.sigmetAircraftTitle} className="aircraft-quick-sigmet">
-    {deviation && <div className="aircraft-quick-weather-deviation" data-testid="sigmet-trajectory-deviation">
-      <strong>{t.weather.sigmetDeviationSignal}</strong>
-      <span>{deviation.hazard || deviation.phenomenon || t.weather.sigmetUnknownHazard}</span>
-      <div className="aircraft-quick-detail-grid">
-        <DetailValue label={t.weather.sigmetTurn} value={`${formatNumber(deviation.headingChangeDeg, 0)}°`} />
-        <DetailValue label={t.weather.sigmetTracks} value={`${formatTrack(deviation.previousTrackDeg)} → ${formatTrack(deviation.currentTrackDeg)}`} />
-        <DetailValue label={t.weather.sigmetPreviousProjection} value={`~${deviation.previousProjectedEntryMinutes} min · ~${formatNumber(deviation.previousProjectedEntryDistanceNm, 0)} NM`} />
-        <DetailValue label={t.weather.sigmetCorrelationConfidence} value={deviation.confidence === "medium" ? t.weather.sigmetCorrelationMedium : t.weather.sigmetCorrelationLow} />
-      </div>
-      <p>{t.weather.sigmetDeviationSummary}</p>
-    </div>}
     {context.length > 0 && <div className="aircraft-quick-detail-grid">
       {context.map((item) => {
         const hazard = item.hazard || item.phenomenon || t.weather.sigmetUnknownHazard;
@@ -204,11 +179,9 @@ function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetC
     </div>}
     <p className="aircraft-quick-disclaimer">{stale
       ? t.weather.sigmetStaleWarning
-      : deviation
-        ? t.weather.sigmetDeviationDisclaimer
-        : hasProjection
-          ? t.weather.sigmetProjectionDisclaimer
-          : t.weather.sigmetAircraftDisclaimer}</p>
+      : hasProjection
+        ? t.weather.sigmetProjectionDisclaimer
+        : t.weather.sigmetAircraftDisclaimer}</p>
   </QuickSection>;
 }
 
@@ -515,7 +488,6 @@ export function AircraftRadarQuickDetail({
   historyTrail,
   atcContext,
   sigmetContext,
-  sigmetDeviation,
   sigmetStale,
   selectedRoute = null,
   watchlisted,
@@ -623,7 +595,7 @@ export function AircraftRadarQuickDetail({
         <summary>{t.aircraftQuickV5.advancedContext}</summary>
         {advancedContextOpen && <>
           <NavigationIntegritySection aircraft={aircraft} />
-          <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
+          <SigmetSection context={sigmetContext} stale={sigmetStale} />
           <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
         </>}
       </details>

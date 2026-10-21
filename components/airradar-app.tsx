@@ -25,7 +25,6 @@ import type { AtcDataResponse } from "@/lib/atc/types";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot } from "@/lib/ogn/types";
@@ -2064,11 +2063,6 @@ export function AirRadarApp() {
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
   const selectedRoute = useSelectedRoute(selectedAircraft);
   const selectedSigmetContext = useMemo(() => aircraftSigmetContext(selectedAircraft, sigmetData), [selectedAircraft, sigmetData]);
-  const selectedSigmetDeviation = useMemo(() => detectSigmetTrajectoryDeviation(
-    selectedAircraft,
-    selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
-    sigmetData,
-  ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
@@ -2430,7 +2424,6 @@ export function AirRadarApp() {
             historyTrail={selectedAircraft && selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
             atcContext={selectedAtcContext}
             sigmetContext={selectedSigmetContext}
-            sigmetDeviation={selectedSigmetDeviation}
             sigmetStale={sigmetData.stale}
             selectedRoute={selectedRoute.route}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
