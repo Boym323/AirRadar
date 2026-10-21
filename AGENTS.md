@@ -35,6 +35,14 @@ writing or changing documentation.
 
 ## Non-negotiable rules
 
+- **V1 maintenance freeze:** all new feature work belongs in
+  https://github.com/Boym323/AirRadarV2, with separate GitHub repository,
+  infrastructure, databases, and release pipeline. V1 receives only verified
+  security/regression fixes, tests, and archival documentation. Do not
+  classify it as stabilized or change GitHub's `archived` flag until the
+  [archive preflight](docs/audits/V1-ARCHIVE-PREFLIGHT-2026-10-21.md) is
+  complete. Existing main CI can automatically deploy runtime changes.
+
 - ICAO hex is aircraft identity; callsign is an observation. Live state and
   the single `AircraftStateService` poller stay in one Node process.
 - The live path is `readsb → RAM → SSE`; PostgreSQL receives sampled history,
