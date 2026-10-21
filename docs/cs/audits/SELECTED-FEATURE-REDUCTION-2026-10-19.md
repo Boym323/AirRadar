@@ -620,9 +620,11 @@ Produkční aplikace a databáze se nemění.
 
 Odstraněno 25 historických souborů reportů Flight Intelligence, Predictive
 Intelligence, prospective ground truth a Digital Twin, které nebyly součástí
-produkčního běhu. Odstraněny čtyři samostatné syntetické mikrobenchmarky
-kolizí štítků letadel, kontextu ATC, přetížení ATC polygonů a aktualizace
-síťových stop. Neměly zaregistrovaný příkaz npm ani použití v GitHub Actions.
+produkčního běhu. Odstraněny tři samostatné syntetické mikrobenchmarky
+kolizí štítků letadel, offline kontextu ATC a aktualizace síťových stop.
+Benchmark přetížení ATC polygonů zůstává, protože ho přímo importuje
+aktuální zátěžový test škálování 1×/2×/4×. Odstraněné skripty nebyly
+navázány na npm příkazy ani běžící CI.
 Zachovány testy štítků, ATC, stop a Navigation Integrity, aktuální zátěžový
 benchmark, diagnostika T58, veškerá historická databázová data a migrace.
 Beze změny živého příjmu ADS-B, dat na disku, schématu a produkčního provozu.

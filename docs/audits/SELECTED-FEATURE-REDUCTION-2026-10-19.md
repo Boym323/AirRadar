@@ -697,10 +697,11 @@ opener from the release smoke worker. The application and database are unchanged
 ## Phase 58: remove retired research artifacts and one-off microbenchmarks
 
 Delete 25 checked-in, non-runtime Flight Intelligence, Predictive Intelligence,
-prospective truth and Digital Twin research report artifacts. Drop four
-standalone synthetic microbenchmarks for aircraft label collisions, ATC context,
-ATC ring stalls and network trail mutation. They have no registered npm entrypoint
-or GitHub Actions invocation; they are not used by the production receiver.
+prospective truth and Digital Twin research report artifacts. Drop three
+standalone synthetic microbenchmarks for aircraft label collisions, offline ATC context
+and network trail mutation. The ATC ring-stall scenario is retained because the
+synthetic 1x/2x/4x load scaling benchmark imports it. The removed scripts have no
+registered npm entrypoint or CI consumer and are not used by the receiver.
 Preserve source-backed aircraft label, ATC, trail and Navigation Integrity tests,
 the official benchmark:load-scaling workflow, maintained ATC and T58 benchmarks,
 all FlightPosition/FlightEvent/AlertOccurrence history and existing migrations.

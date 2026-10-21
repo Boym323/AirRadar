@@ -246,7 +246,7 @@
     "prNumber": 1096,
     "baselineHead": "d1d8a38eeeae49d69d5535592d54c9e01ffd0860",
     "retiredResearchReports": 25,
-    "retiredOneOffMicrobenchmarks": 4,
+    "retiredOneOffMicrobenchmarks": 3,
     "stillRequired": [
       "R11 selected-aircraft published route and route conformance visualization",
       "L11/L12 delivery transports and historic notification contract",
@@ -258,6 +258,7 @@
       "Notification trigger policy for preserved delivery transports",
       "Exact production-only LOC and measured live A/B performance",
       "Review of external clients and production rollout"
-    ]
+    ],
+    "retainedScalingDependency": "scripts/benchmark-atc-ring-stalls.ts (imported by scripts/benchmark-load-scaling.ts)"
   }
 }

@@ -25,7 +25,6 @@ describe("Retired Flight Intelligence backend boundary", () => {
     for (const path of [
       "scripts/benchmark-aircraft-label-collision.ts",
       "scripts/benchmark-atc-context-offline.ts",
-      "scripts/benchmark-atc-ring-stalls.ts",
       "scripts/benchmark-network-trail-update.ts",
       "artifacts/flight-intelligence-v1-audit.json",
       "artifacts/predictive-intelligence-v1-replay.json",
@@ -35,6 +34,7 @@ describe("Retired Flight Intelligence backend boundary", () => {
     for (const path of [
       "scripts/benchmark-live-performance.ts",
       "scripts/benchmark-load-scaling.ts",
+      "scripts/benchmark-atc-ring-stalls.ts",
       "scripts/t58-report.mjs",
       "lib/route-intelligence/conformance.ts",
       "lib/server/alert-delivery-worker.ts",
