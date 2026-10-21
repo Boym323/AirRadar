@@ -3,8 +3,6 @@
 const SAFE_DOCUMENTATION_FILES = new Set([
   "README.md",
   "CHANGELOG.md",
-  "docs/metrics/code-history.json",
-  "docs/metrics/code-growth.svg",
   // Human-readable optimization notes and bounded benchmark evidence do not
   // affect the shipped runtime. Keep this a literal allowlist, not a glob.
   "artifacts/performance/OPTIMIZATION-PROGRESS.md",

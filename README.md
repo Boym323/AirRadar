@@ -28,31 +28,6 @@ Dated audit/performance documents are historical evidence, not live production s
 - [`docs/features.registry.json`](docs/features.registry.json) — machine-checked feature ownership and changelog scopes
 - [`docs/VISUAL-SYSTEM.md`](docs/VISUAL-SYSTEM.md) — design tokens, shared primitives, visual debt budget, and CI screenshots
 
-## Codebase growth
-
-The chart tracks non-empty physical source lines and separates production code
-from test code. Production excludes documentation, migrations, generated output,
-and public/vendor assets; test code includes `tests/**`, `*.test.*`,
-`*.spec.*`, `__tests__`, and test-runner configuration.
-
-The timeline is reconstructed from the repository's first available commit
-using the last first-parent `main` commit of each day. After the initial
-backfill, the workflow keeps at most one point per day and replaces that day's
-point with the newest measured state, so the graph stays readable as the
-project grows.
-
-![AirRadar codebase growth](docs/metrics/code-growth.svg)
-
-The history is stored in
-[`docs/metrics/code-history.json`](docs/metrics/code-history.json). After a
-successful `main` CI run, the unified Repository Metadata workflow refreshes
-both the changelog and codebase metrics on `automation/repository-metadata`,
-opens a single audit PR, and merges that generated metadata automatically.
-Metadata-only merges are excluded from production deployment. Run
-`npm run metrics:code` for the current snapshot or
-`npm run metrics:code:backfill` to rebuild the daily timeline from Git
-history.
-
 ## Quick start — demo mode
 
 Demo mode is automatic when `READSB_BASE_URL` is empty or absent.
