@@ -1295,9 +1295,9 @@
     {
       "id": "P05_P06_SELECTED_SCOPE_MISMATCH",
       "severity": "P1",
-      "status": "ACTIVE_DESELECTED_RUNTIME",
-      "evidence": "P05 buildRouteCorridorIntelligence and P06 buildTrajectoryConformance are invoked in selected-aircraft client hook; P06 displayed in drawer/HUD and registered as production. User explicitly selected REMOVE both.",
-      "action": "Separate R11 minimum route display from P04/P05/P06 analytical controllers; remove P05/P06 live inference before merge."
+      "status": "RESOLVED_IN_SOURCE_PENDING_FINAL_CI",
+      "evidence": "Independent P05/P06 corridor and conformance modules, hook calculations and UI removed; R11 uses published route DTO next point and progress.",
+      "action": "Verify final CI, browser gate and rollout smoke. Original R11 route matching retained."
     }
   ],
   "productionMetrics": {
@@ -1350,7 +1350,8 @@
     "originalNames": "90/90 REMOVE and 88/88 KEEP confirmed 2026-10-21",
     "unresolvedNames": 0,
     "inventory": "178/178 exact user-provided titles; 88 KEEP and 90 REMOVE",
-    "activeScopeFinding": "P05/P06 runtime still active; P04 shared R11 minimal route parsing; must resolve before merge"
+    "activeScopeFinding": "P05/P06 dedicated runtime removed in source; CI pending; R11 route geometry/progress retained",
+    "pendingRuntimeGap": "P04 route interpreter shared with R11 by design; do not delete blindly"
   },
   "originalRemoveNames": {
     "count": 90,

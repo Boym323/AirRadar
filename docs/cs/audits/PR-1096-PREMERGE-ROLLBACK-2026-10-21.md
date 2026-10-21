@@ -13,9 +13,9 @@
 - Oproti `bc2f5fc17277f7571b90e358bab3177467e93312` se nemění `prisma/migrations/**`, `prisma/schema.prisma`, `deploy/release.sh`, `deploy/recover-previous-build.sh` ani `deploy/airradar.service`.
 - Historie ADS-B, AUP archiv, OGN cache, Web Push předplatné, doručovací záznamy Pushover a migrace se nesmí mazat.
 
-## Nově objevený blokující rozpor (P05/P06)
+## Odstranění P05/P06 ve zdrojovém kódu (čeká na závěrečné CI)
 
-Přesný katalog 178 názvů odhalil stále aktivní vyřazené analytiky P05 (koridor) a P06 (Trajectory Conformance) v zachované mapě R11. Detail je v `docs/cs/audits/SELECTED-FEATURE-P04-P06-SCOPE-GAP-2026-10-21.md`. **Před merge vyřešit P05/P06 bez poškození R11.** Samotné zelené testy nedokazují odstranění těchto funkcí.
+Přesný katalog 178 názvů odhalil stále aktivní vyřazené analytiky P05 (koridor) a P06 (Trajectory Conformance) v zachované mapě R11. Detail je v `docs/cs/audits/SELECTED-FEATURE-P04-P06-SCOPE-GAP-2026-10-21.md`. Samostatný běh P05/P06 byl odstraněn, zobrazení trasy R11 zůstává. **Před merge dokončit poslední CI a ověření R11 v reálném provozu.**
 
 ## Podmínky pro merge
 

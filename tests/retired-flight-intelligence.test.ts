@@ -11,7 +11,7 @@ describe("Retired Flight Intelligence backend boundary", () => {
   });
 
   it("never reintroduces discarded Flight Intelligence services while keeping history", () => {
-    for (const path of ["lib/server/flight-intelligence.ts", "lib/server/flight-intelligence-analytics.ts", "lib/intelligence/detector.ts", "lib/intelligence/replay.ts", "lib/intelligence/operations-center.ts", "lib/intelligence/terminal-evidence.ts", "tests/operations-center.test.ts", "tests/prospective-ground-truth.test.ts", "lib/intelligence-analytics.ts", "components/use-intelligence-stream.ts"]) {
+    for (const path of ["lib/server/flight-intelligence.ts", "lib/server/flight-intelligence-analytics.ts", "lib/intelligence/detector.ts", "lib/route-intelligence/conformance.ts", "lib/route-intelligence/corridor.ts", "lib/intelligence/replay.ts", "lib/intelligence/operations-center.ts", "lib/intelligence/terminal-evidence.ts", "tests/operations-center.test.ts", "tests/prospective-ground-truth.test.ts", "lib/intelligence-analytics.ts", "components/use-intelligence-stream.ts"]) {
       expect(existsSync(new URL("../" + path, import.meta.url)), path).toBe(false);
     }
     expect(existsSync(new URL("../lib/server/history.ts", import.meta.url))).toBe(true);
@@ -36,7 +36,6 @@ describe("Retired Flight Intelligence backend boundary", () => {
       "scripts/benchmark-load-scaling.ts",
       "scripts/benchmark-atc-ring-stalls.ts",
       "scripts/t58-report.mjs",
-      "lib/route-intelligence/conformance.ts",
       "lib/server/alert-delivery-worker.ts",
       "lib/server/history.ts",
     ]) expect(existsSync(new URL("../" + path, import.meta.url)), path).toBe(true);

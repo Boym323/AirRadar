@@ -37,3 +37,8 @@ buildTrajectoryConformance still computes in the active selected-aircraft hook a
 After targeted implementation, keep R11 published ATS route map, flight plan geometry, and remaining-route display operational. Remove P06 active conformance state-machine computation and product UI; remove independent P05 analytic classification without destroying plain R11 route progress; retain parsed filed-route data needed for R11 but avoid restoring separate P04 analytics. Update generated feature registry and EN/CS docs, retire obsolete conformance tests, introduce negative regression tests. Gate with TypeScript, full Vitest/browser CI, CodeQL and synthetic load 1×/2×/4×. No main/production changes until owner-approved merge.
 
 **Current disposition:** NOT IMPLEMENTED; PR #1096 remains draft and should not be merged simply because previous CI is green. This finding results from accurate user feature semantics, not a CI failure.
+
+
+## Source remediation committed (CI verification pending)
+
+Dedicated P05 `lib/route-intelligence/corridor.ts` and P06 `lib/route-intelligence/conformance.ts` are deleted; the previous selected-aircraft corridor/conformance tracker is replaced by the smaller `components/radar/use-selected-route.ts` that retains R11 published route geometry, next waypoint and dynamic route-progress percentage. The radar drawer and Follow HUD no longer display P05 deviation states or P06 probable-direct/rejoin status. Their source exports, retired tests and production feature registry entry were removed, with negative R11/P05/P06 regression tests in their place. P04 basic parsing still serves R11. This is source-level remediation: full CI and live smoke results must be reviewed before merge. No deployment is authorized.

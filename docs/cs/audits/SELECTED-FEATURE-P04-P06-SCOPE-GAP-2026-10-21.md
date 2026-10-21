@@ -37,3 +37,8 @@ buildTrajectoryConformance still computes in the active selected-aircraft hook a
 Po úpravě musí fungovat mapa publikované ATS trasy R11 a základní průběh letu. Výpočet a zobrazení P06 se musí vypnout, stejně jako nadbytečné analytické klasifikace P05. Pro R11 zachovat nezbytné zpracování letového plánu, ale neponechávat samostatné analytiky P04. Upravit registr funkcí i EN/CS dokumentaci, odstranit zastaralé conformance testy, doplnit negativní regresní testy a pustit TypeScript, Vitest, browser CI, CodeQL a zátěž 1×/2×/4×.
 
 **Aktuální stav:** IMPLEMENTACE JEŠTĚ NEOPRAVENA. Draft PR #1096 nemergovat pouze na základě předchozího zeleného CI; jde o rozpor se zadáním, nikoli o chybu, kterou stávající testy odhalí.
+
+
+## Oprava zdrojového kódu (čeká na závěrečné CI)
+
+Samostatné moduly P05 `lib/route-intelligence/corridor.ts` a P06 `lib/route-intelligence/conformance.ts` byly smazány. Dřívější mapový hook s odvozováním odchylek byl nahrazen menším `components/radar/use-selected-route.ts`, který zachovává R11: publikovanou geometrii trasy, další bod a dostupný procentní průběh letu. Drawer a Follow HUD již neukazují analytické odchylky P05 ani stavy návratu/pravděpodobného DCT P06. Odstraněny exporty, zastaralé testy i položka produkčního registru. Nové regresní testy brání návratu P05/P06 do živé mapy. Základní parsování P04 nutné pro R11 zůstává. Jde o opravu ve zdrojovém kódu: před merge ověřit závěrečné CI a živé R11 chování. Produkce se nemění.

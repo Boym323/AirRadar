@@ -32,8 +32,9 @@ describe("Visual System V5-E2–E6", () => {
 
   it("exposes estimated route progress without replacing observed tracks", () => {
     expect(aircraft).toContain('data-testid="aircraft-v5-route-progress"');
-    expect(aircraft).toContain("t.routeCorridor.disclaimer");
-    expect(aircraft).toContain("routeCorridor.confidence");
+    expect(aircraft).toContain("t.route.contextDisclaimer");
+    expect(aircraft).toContain("selectedRoute?.routeProgressPercent");
+    expect(aircraft).not.toContain("t.routeConformance");
     expect(aircraft).toContain("aria-label={visual.flightProgress}");
     expect(radar).toContain('data-testid="radar-v5-route-evidence"');
     expect(radar).toContain("routeObserved");

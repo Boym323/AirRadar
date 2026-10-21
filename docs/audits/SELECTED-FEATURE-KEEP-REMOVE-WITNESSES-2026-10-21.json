@@ -2,7 +2,7 @@
   "version": 2,
   "auditDate": "2026-10-21",
   "purpose": "Source-backed KEEP/REMOVE runtime witnesses with exact full 178-feature descriptions from user",
-  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain. Identified concrete deselected runtime behavior for P05 and P06; do not merge until scope is resolved with R11.",
+  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain. Dedicated P05/P06 runtime is disconnected and deleted in source. R11 published route rendering remains; CI and production verification required.",
   "keepItems": [
     {
       "id": "J01",
@@ -1678,7 +1678,12 @@
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false,
       "basicSystem": false,
-      "activeRuntimeFinding": "LIVE_DESELECTED_ANALYTICS"
+      "activeRuntimeFinding": "DEDICATED_RUNTIME_REMOVED_PENDING_FINAL_CI",
+      "specificEvidence": [
+        "lib/route-intelligence/corridor.ts absent",
+        "new components/radar/use-selected-route.ts uses only R11 published route matcher",
+        "negative regression tests guard absence and displayed status"
+      ]
     },
     {
       "id": "P06",
@@ -1688,7 +1693,12 @@
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false,
       "basicSystem": false,
-      "activeRuntimeFinding": "ACTIVE_DESELECTED_RUNTIME"
+      "activeRuntimeFinding": "DEDICATED_RUNTIME_REMOVED_PENDING_FINAL_CI",
+      "specificEvidence": [
+        "lib/route-intelligence/conformance.ts absent",
+        "new components/radar/use-selected-route.ts uses only R11 published route matcher",
+        "negative regression tests guard absence and displayed status"
+      ]
     },
     {
       "id": "P07",
@@ -2161,29 +2171,31 @@
     {
       "id": "P04",
       "title": "Route Intelligence – interpretace letového plánu",
-      "severity": "SHARED_OWNERSHIP_REVIEW",
+      "severity": "SHARED_R11_MINIMUM",
       "source": [
         "components/radar/use-route-corridor-intelligence.ts:130-149",
         "lib/route-intelligence/index.ts"
       ],
-      "current": "analyzePublishedRoute is invoked while rendering retained R11 route geometry.",
-      "action": "Separate minimum published route reconstruction needed by R11 from independent rejected predictive/interpretative extras. Do not remove core route geometry."
+      "current": "Retain minimal published-route parsing for R11; do not reintroduce P04 standalone analytical views.",
+      "action": "Review that R11 uses only necessary route presentation.",
+      "remediationCodeHead": "914d444aec6e82ffee78be102643a6bbda9bdb05"
     },
     {
       "id": "P05",
       "title": "Route Corridor Intelligence – odchylka od plánované trasy",
-      "severity": "LIVE_DESELECTED_ANALYTICS",
+      "severity": "RESOLVED_DEDICATED_RUNTIME_REMOVED",
       "source": [
         "components/radar/use-route-corridor-intelligence.ts:151-161",
         "components/aircraft-radar-quick-detail.tsx:222-249"
       ],
-      "current": "buildRouteCorridorIntelligence actively computes corridor deviation/status and presents analytic labels. The user selected REMOVE P05 but KEEP R11 route display.",
-      "action": "Remove P05 deviation inference and excess status UI, retaining straightforward published route and optional position/progress needed by R11."
+      "current": "The P05 corridor and P06 conformance state-machine modules, selected-aircraft computations and classified UI were removed. R11 retains basic route progress and next waypoint.",
+      "action": "Confirm CI and user-selected R11 smoke, then retain negative regression tests.",
+      "remediationCodeHead": "914d444aec6e82ffee78be102643a6bbda9bdb05"
     },
     {
       "id": "P06",
       "title": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
-      "severity": "ACTIVE_DESELECTED_RUNTIME",
+      "severity": "RESOLVED_DEDICATED_RUNTIME_REMOVED",
       "source": [
         "components/radar/use-route-corridor-intelligence.ts:163-175",
         "components/aircraft-radar-quick-detail.tsx:240-248",
@@ -2191,8 +2203,9 @@
         "lib/route-intelligence/conformance.ts",
         "docs/features.registry.json:185"
       ],
-      "current": "buildTrajectoryConformance still computes in the active selected-aircraft hook and is displayed in radar drawer and Follow HUD; feature registry lists Trajectory Conformance as production. P06 is REMOVE.",
-      "action": "Disconnect and remove P06 hook computation, consumers, registry entry, now-orphan source and corresponding obsolete tests, preserving R11 route rendering and selected-weather safety displays."
+      "current": "The P05 corridor and P06 conformance state-machine modules, selected-aircraft computations and classified UI were removed. R11 retains basic route progress and next waypoint.",
+      "action": "Confirm CI and user-selected R11 smoke, then retain negative regression tests.",
+      "remediationCodeHead": "914d444aec6e82ffee78be102643a6bbda9bdb05"
     }
   ]
 }
