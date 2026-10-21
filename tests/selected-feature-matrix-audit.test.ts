@@ -46,9 +46,15 @@ describe("selected-feature ID audit", () => {
   });
 
   it("captures the canonical tracked nonempty production LOC without equating it to PR diff", async () => {
-    // @ts-ignore: canonical metrics script is a JavaScript module without TypeScript declarations.
-    const { scanCodebase } = await import("../scripts/code-metrics.mjs");
-    const totals = await scanCodebase();
+    const output = execFileSync(process.execPath, [
+      "--input-type=module",
+      "--eval",
+      "import { scanCodebase } from './scripts/code-metrics.mjs'; console.log(JSON.stringify(await scanCodebase()));",
+    ], { encoding: "utf8" });
+    const totals = JSON.parse(output) as {
+      production: { files: number; loc: number };
+      tests: { files: number; loc: number };
+    };
     const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     console.info("AIRRADAR_AUDIT_CANONICAL_LOC " + JSON.stringify({ commit, ...totals }));
     expect(totals.production.files).toBeGreaterThan(0);
