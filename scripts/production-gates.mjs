@@ -33,8 +33,21 @@ export async function ensureRadarTrafficRowVisible(page, viewportWidth, targetNa
       await trigger.waitFor({ state: "visible", timeout: 15_000 });
       await trigger.click();
     }
-    await page.locator('[data-testid="radar-sidebar"].drawer-traffic')
-      .waitFor({ state: "visible", timeout: 15_000 });
+    const trafficDrawer = page.locator('[data-testid="radar-sidebar"].drawer-traffic');
+    try {
+      await trafficDrawer.waitFor({ state: "visible", timeout: 5_000 });
+    } catch {
+      // On a loaded but not yet hydrated Next.js page the first real click
+      // can be lost. Retry only if BOTH button and drawer still say closed;
+      // never toggle an already-open (or inconsistently opening) drawer.
+      const trigger = page.locator('[data-testid="traffic-trigger"]');
+      if (await sidebar.getAttribute("aria-hidden") === "true"
+        && await trigger.getAttribute("aria-expanded") === "false") {
+        console.warn(`[production-gates] ${targetName} traffic drawer click ignored before hydration; retrying once`);
+        await trigger.click();
+      }
+      await trafficDrawer.waitFor({ state: "visible", timeout: 15_000 });
+    }
     if (viewportWidth <= 820) {
       const expand = sidebar.locator(".mobile-collapse");
       // Wait for the *open* drawer before reading the expand button. The
