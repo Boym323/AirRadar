@@ -13,7 +13,6 @@ interface RadarMapHudProps {
   drawerOpen: boolean;
   trafficTriggerRef: Ref<HTMLButtonElement>;
   onOpenTraffic: () => void;
-  presetMenu: ReactNode;
   children: ReactNode;
 }
 
@@ -21,7 +20,7 @@ interface RadarMapHudProps {
 export function RadarMapHud({
   aircraftCount, activeTrafficCount, showSourceBreakdown, sourceStats,
   drawerOpen, trafficTriggerRef, onOpenTraffic,
-  presetMenu, children,
+  children,
 }: RadarMapHudProps) {
   return (
     <div className="map-overlay-primary" data-testid="radar-map-hud">
@@ -60,7 +59,6 @@ export function RadarMapHud({
           <strong>{formatNumber(activeTrafficCount)}</strong>
         </button>
       </MapControlGroup>
-      {presetMenu}
       {children}
     </div>
   );

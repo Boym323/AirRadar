@@ -59,7 +59,6 @@ import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/
 import { createAirportGeoJSON, createMetarGeoJSON, createAircraftWeatherGeoJSON } from "@/lib/radar/map-context-geojson";
 import { registerRadarAviationLayers } from "@/lib/radar/aviation-map-layers";
 import { registerRadarBaseOverlays } from "@/lib/radar/base-map-overlays";
-import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
@@ -105,7 +104,6 @@ import { parseAirportDataset, parseAtcDataset, parseAtsDataset, parseJsonDataset
 import { radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
 import { aircraftColor } from "@/lib/aircraft/color-mode";
-import { addRadarPreset, createRadarPreset, readRadarPresets, writeRadarPresets, type RadarPreset } from "@/lib/radar/presets";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -302,10 +300,8 @@ export function AirRadarApp() {
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
-  const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
-  // Native details[name] keeps Presets and Layers mutually exclusive.
-  // Dismiss the active map menu outside the HUD and restore focus on Escape.
+  // Dismiss the active map layer menu outside the HUD and restore focus on Escape.
   useEffect(() => {
     const selector = 'details[name="radar-map-menus"][open]';
     const onPointerDown = (event: PointerEvent) => {
@@ -486,7 +482,6 @@ export function AirRadarApp() {
     try {
       const stored = window.localStorage.getItem("airradar-watchlist");
       if (stored) setWatchlist(JSON.parse(stored) as Array<{ kind: string; value: string }>);
-      setRadarPresets(readRadarPresets(window.localStorage));
       const storedCoverage = window.localStorage.getItem("airradar-coverage");
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
       const storedSource = window.localStorage.getItem("airradar-source-filter");
@@ -630,98 +625,6 @@ export function AirRadarApp() {
     (aircraft: AircraftView) => normalizedWatchlist.some((rule) => matchesAircraftRule(aircraft, rule)),
     [normalizedWatchlist],
   );
-
-  const saveCurrentRadarPreset = useCallback((name: string) => {
-    const map = mapRef.current;
-    if (!map) return;
-    const center = map.getCenter();
-    const preset = createRadarPreset({
-      name,
-      camera: { longitude: center.lng, latitude: center.lat, zoom: map.getZoom() },
-      coverage,
-      mapFilters,
-      layers: {
-        showAircraft,
-        showOgn,
-        showAirports,
-        showSignificantAirports,
-        showSmallAirports,
-        showHeliports,
-        showAtc,
-        showAtsRoutes,
-        showNavData,
-        showSigmet,
-        showWeatherRadar,
-        showMetar,
-        showAircraftWeather,
-        showNavigationIntegrity,
-      },
-      display: { colorMode, radarOpacity },
-    });
-    setRadarPresets((current) => {
-      const next = addRadarPreset(current, preset);
-      writeRadarPresets(window.localStorage, next);
-      return next;
-    });
-  }, [
-    colorMode,
-    coverage,
-    mapFilters,
-    radarOpacity,
-    showAircraft,
-    showAircraftWeather,
-    showAirports,
-    showAtc,
-    showAtsRoutes,
-    showHeliports,
-    showMetar,
-    showNavData,
-    showNavigationIntegrity,
-    showOgn,
-    showSigmet,
-    showSignificantAirports,
-    showSmallAirports,
-    showWeatherRadar,
-  ]);
-
-  const applyRadarPreset = useCallback((preset: RadarPreset) => {
-    setCoverage(preset.coverage);
-    setMapFilters(preset.mapFilters);
-    setShowAircraft(preset.layers.showAircraft);
-    setShowOgn(preset.layers.showOgn);
-    setShowAirports(preset.layers.showAirports);
-    setShowSignificantAirports(preset.layers.showSignificantAirports);
-    setShowSmallAirports(preset.layers.showSmallAirports);
-    setShowHeliports(preset.layers.showHeliports);
-    setShowAtc(preset.layers.showAtc);
-    setShowAtsRoutes(preset.layers.showAtsRoutes);
-    setShowNavData(preset.layers.showNavData);
-    setShowSigmet(preset.layers.showSigmet);
-    setShowWeatherRadar(preset.layers.showWeatherRadar);
-    setShowMetar(preset.layers.showMetar);
-    setShowAircraftWeather(preset.layers.showAircraftWeather);
-    setShowNavigationIntegrity(preset.layers.showNavigationIntegrity);
-    setColorMode(preset.display.colorMode);
-    setRadarOpacity(preset.display.radarOpacity);
-    setRadarPlaying(false);
-    const map = mapRef.current;
-    if (map) {
-      map.easeTo({
-        center: [preset.camera.longitude, preset.camera.latitude],
-        zoom: preset.camera.zoom,
-        padding: currentRadarPadding(),
-        duration: prefersReducedMotion() ? 0 : 500,
-      });
-    }
-  }, [currentRadarPadding, setRadarPlaying]);
-
-  const deleteRadarPreset = useCallback((id: string) => {
-    setRadarPresets((current) => {
-      const next = current.filter((preset) => preset.id !== id);
-      writeRadarPresets(window.localStorage, next);
-      return next;
-    });
-  }, []);
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
@@ -2147,7 +2050,6 @@ export function AirRadarApp() {
               drawerOpen={drawerState !== "closed"}
               trafficTriggerRef={trafficTriggerRef}
               onOpenTraffic={openTrafficDrawer}
-              presetMenu={<RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />}
             >
               <RadarMapLayerMenu
                 mapAppearance={mapAppearance}

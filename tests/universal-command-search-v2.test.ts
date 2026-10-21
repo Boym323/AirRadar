@@ -21,7 +21,8 @@ describe("Universal Command Search V2", () => {
     expect(server).toContain('/navigation?route=');
     expect(server).not.toContain('/airspace/sectors/');
     expect(navigation).toContain("searchedRoute");
-    expect(navigation).toContain("state.route");
+    expect(navigation).toContain("routeMatches");
+    expect(navigation).toContain("searchedRoute");
   });
 
   it("keeps ATS route recents browser-local", () => {

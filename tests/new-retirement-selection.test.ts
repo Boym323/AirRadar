@@ -20,12 +20,18 @@ describe("additional user-authorized removals (PR #1096)", () => {
   it("prevents obsolete historical heatmap, recap and pilot report endpoints from returning", () => {
     for (const path of [
       "lib/i18n/statistics-heatmap.ts",
+      "lib/radar/presets.ts",
+      "components/radar/radar-preset-menu.tsx",
+      "components/radar/radar-preset-menu.module.css",
       "app/api/statistics/heatmap/route.ts",
       "app/api/statistics/traffic-profile/route.ts",
       "app/api/recap/daily/route.ts",
       "app/api/recap/weekly/route.ts",
       "app/api/weather/pirep/route.ts",
     ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const radar = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(radar).not.toContain("RadarPresetMenu");
+    expect(radar).not.toContain("createRadarPreset");
     for (const path of [
       "app/api/statistics/route.ts",
       "app/api/weather/radar/frames/route.ts",

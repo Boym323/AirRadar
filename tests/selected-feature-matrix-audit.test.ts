@@ -119,12 +119,12 @@ describe("selected-feature ID audit", () => {
     const output = execFileSync(process.execPath, [
       "--input-type=module",
       "--eval",
-      "import { scanCodebase } from './scripts/code-metrics.mjs'; console.log(JSON.stringify(await scanCodebase()));",
+      "process.argv.push('--json'); await import('./scripts/audit-code-footprint.mjs');",
     ], { encoding: "utf8" });
-    const totals = JSON.parse(output) as {
-      production: { files: number; loc: number };
-      tests: { files: number; loc: number };
+    const report = JSON.parse(output.trim().split("\n").at(-1) ?? "{}") as {
+      totals: { production: { files: number; loc: number }; tests: { files: number; loc: number } };
     };
+    const totals = report.totals;
     const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     console.info("AIRRADAR_AUDIT_CANONICAL_LOC " + JSON.stringify({ commit, ...totals }));
     expect(totals.production.files).toBeGreaterThan(0);
