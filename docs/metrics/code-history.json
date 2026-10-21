@@ -1,0 +1,545 @@
+{
+  "schemaVersion": 1,
+  "metric": "non-empty-physical-lines",
+  "description": "Tracked non-empty physical source lines. Production excludes tests, docs, migrations, generated output and public vendor assets.",
+  "snapshots": [
+    {
+      "day": "2026-09-06",
+      "timestamp": "2026-09-06T22:33:36+02:00",
+      "commit": "38c4f8ab644b",
+      "production": {
+        "files": 63,
+        "loc": 7478
+      },
+      "tests": {
+        "files": 18,
+        "loc": 1207
+      },
+      "totalLoc": 8685
+    },
+    {
+      "day": "2026-09-07",
+      "timestamp": "2026-09-07T20:58:52+02:00",
+      "commit": "57882442061a",
+      "production": {
+        "files": 75,
+        "loc": 9849
+      },
+      "tests": {
+        "files": 22,
+        "loc": 2402
+      },
+      "totalLoc": 12251
+    },
+    {
+      "day": "2026-09-08",
+      "timestamp": "2026-09-08T22:50:12+02:00",
+      "commit": "ca0bf9ef623e",
+      "production": {
+        "files": 141,
+        "loc": 19113
+      },
+      "tests": {
+        "files": 48,
+        "loc": 5413
+      },
+      "totalLoc": 24526
+    },
+    {
+      "day": "2026-09-09",
+      "timestamp": "2026-09-09T21:17:55+02:00",
+      "commit": "6387cba35dcc",
+      "production": {
+        "files": 168,
+        "loc": 23563
+      },
+      "tests": {
+        "files": 65,
+        "loc": 6856
+      },
+      "totalLoc": 30419
+    },
+    {
+      "day": "2026-09-10",
+      "timestamp": "2026-09-10T23:01:37+02:00",
+      "commit": "45acacd07b3e",
+      "production": {
+        "files": 203,
+        "loc": 31545
+      },
+      "tests": {
+        "files": 86,
+        "loc": 9198
+      },
+      "totalLoc": 40743
+    },
+    {
+      "day": "2026-09-11",
+      "timestamp": "2026-09-11T21:55:12+02:00",
+      "commit": "32c43744e959",
+      "production": {
+        "files": 229,
+        "loc": 35529
+      },
+      "tests": {
+        "files": 99,
+        "loc": 10545
+      },
+      "totalLoc": 46074
+    },
+    {
+      "day": "2026-09-12",
+      "timestamp": "2026-09-12T20:36:36+02:00",
+      "commit": "1c5c9863b86f",
+      "production": {
+        "files": 262,
+        "loc": 39814
+      },
+      "tests": {
+        "files": 108,
+        "loc": 11437
+      },
+      "totalLoc": 51251
+    },
+    {
+      "day": "2026-09-14",
+      "timestamp": "2026-09-14T22:00:14+02:00",
+      "commit": "272406784f87",
+      "production": {
+        "files": 264,
+        "loc": 40317
+      },
+      "tests": {
+        "files": 109,
+        "loc": 11551
+      },
+      "totalLoc": 51868
+    },
+    {
+      "day": "2026-09-15",
+      "timestamp": "2026-09-15T18:59:26+02:00",
+      "commit": "1d4d28225927",
+      "production": {
+        "files": 269,
+        "loc": 42094
+      },
+      "tests": {
+        "files": 111,
+        "loc": 11629
+      },
+      "totalLoc": 53723
+    },
+    {
+      "day": "2026-09-16",
+      "timestamp": "2026-09-16T19:35:55+02:00",
+      "commit": "e63b93a54f2a",
+      "production": {
+        "files": 269,
+        "loc": 42097
+      },
+      "tests": {
+        "files": 111,
+        "loc": 11629
+      },
+      "totalLoc": 53726
+    },
+    {
+      "day": "2026-09-17",
+      "timestamp": "2026-09-17T23:54:24+02:00",
+      "commit": "6246ce5bdc3f",
+      "production": {
+        "files": 283,
+        "loc": 43778
+      },
+      "tests": {
+        "files": 117,
+        "loc": 11970
+      },
+      "totalLoc": 55748
+    },
+    {
+      "day": "2026-09-18",
+      "timestamp": "2026-09-18T16:37:05+02:00",
+      "commit": "f1d19fdb12bc",
+      "production": {
+        "files": 308,
+        "loc": 47428
+      },
+      "tests": {
+        "files": 126,
+        "loc": 12715
+      },
+      "totalLoc": 60143
+    },
+    {
+      "day": "2026-09-19",
+      "timestamp": "2026-09-19T23:09:49+02:00",
+      "commit": "f1399e4c6e53",
+      "production": {
+        "files": 355,
+        "loc": 50908
+      },
+      "tests": {
+        "files": 139,
+        "loc": 13432
+      },
+      "totalLoc": 64340
+    },
+    {
+      "day": "2026-09-20",
+      "timestamp": "2026-09-20T19:21:21+02:00",
+      "commit": "7317b3b15754",
+      "production": {
+        "files": 365,
+        "loc": 52848
+      },
+      "tests": {
+        "files": 149,
+        "loc": 14030
+      },
+      "totalLoc": 66878
+    },
+    {
+      "day": "2026-09-22",
+      "timestamp": "2026-09-22T16:10:29+02:00",
+      "commit": "050ee791f451",
+      "production": {
+        "files": 367,
+        "loc": 53831
+      },
+      "tests": {
+        "files": 157,
+        "loc": 14689
+      },
+      "totalLoc": 68520
+    },
+    {
+      "day": "2026-09-23",
+      "timestamp": "2026-09-23T20:31:27+02:00",
+      "commit": "aede090a165f",
+      "production": {
+        "files": 380,
+        "loc": 55701
+      },
+      "tests": {
+        "files": 162,
+        "loc": 15319
+      },
+      "totalLoc": 71020
+    },
+    {
+      "day": "2026-09-26",
+      "timestamp": "2026-09-26T23:00:05+02:00",
+      "commit": "64866b1a933c",
+      "production": {
+        "files": 403,
+        "loc": 60530
+      },
+      "tests": {
+        "files": 185,
+        "loc": 17318
+      },
+      "totalLoc": 77848
+    },
+    {
+      "day": "2026-09-27",
+      "timestamp": "2026-09-27T20:24:08.143Z",
+      "commit": "14a17d902642",
+      "production": {
+        "files": 427,
+        "loc": 66966
+      },
+      "tests": {
+        "files": 200,
+        "loc": 18777
+      },
+      "totalLoc": 85743
+    },
+    {
+      "day": "2026-09-28",
+      "timestamp": "2026-09-28T17:11:56.074Z",
+      "commit": "016491f91866",
+      "production": {
+        "files": 461,
+        "loc": 70680
+      },
+      "tests": {
+        "files": 206,
+        "loc": 19217
+      },
+      "totalLoc": 89897
+    },
+    {
+      "day": "2026-09-29",
+      "timestamp": "2026-09-29T19:42:22.012Z",
+      "commit": "111a3c2cf76b",
+      "production": {
+        "files": 469,
+        "loc": 72012
+      },
+      "tests": {
+        "files": 214,
+        "loc": 20050
+      },
+      "totalLoc": 92062
+    },
+    {
+      "day": "2026-10-02",
+      "timestamp": "2026-10-02T16:03:07.418Z",
+      "commit": "b39afe9171e7",
+      "production": {
+        "files": 501,
+        "loc": 74314
+      },
+      "tests": {
+        "files": 223,
+        "loc": 20413
+      },
+      "totalLoc": 94727
+    },
+    {
+      "day": "2026-10-03",
+      "timestamp": "2026-10-03T17:26:10.231Z",
+      "commit": "99b00bcd38ba",
+      "production": {
+        "files": 507,
+        "loc": 75404
+      },
+      "tests": {
+        "files": 226,
+        "loc": 20976
+      },
+      "totalLoc": 96380
+    },
+    {
+      "day": "2026-10-04",
+      "timestamp": "2026-10-04T19:44:06.408Z",
+      "commit": "b53bfcd85c38",
+      "production": {
+        "files": 542,
+        "loc": 86701
+      },
+      "tests": {
+        "files": 270,
+        "loc": 25686
+      },
+      "totalLoc": 112387
+    },
+    {
+      "day": "2026-10-05",
+      "timestamp": "2026-10-05T19:07:27.448Z",
+      "commit": "a345357f102b",
+      "production": {
+        "files": 590,
+        "loc": 98969
+      },
+      "tests": {
+        "files": 314,
+        "loc": 30860
+      },
+      "totalLoc": 129829
+    },
+    {
+      "day": "2026-10-06",
+      "timestamp": "2026-10-06T21:19:14.944Z",
+      "commit": "a6094d6168e0",
+      "production": {
+        "files": 651,
+        "loc": 111940
+      },
+      "tests": {
+        "files": 365,
+        "loc": 35253
+      },
+      "totalLoc": 147193
+    },
+    {
+      "day": "2026-10-07",
+      "timestamp": "2026-10-07T20:06:05.900Z",
+      "commit": "bbff2d030f5d",
+      "production": {
+        "files": 778,
+        "loc": 129193
+      },
+      "tests": {
+        "files": 430,
+        "loc": 38926
+      },
+      "totalLoc": 168119
+    },
+    {
+      "day": "2026-10-08",
+      "timestamp": "2026-10-08T20:27:23.563Z",
+      "commit": "201823d06b7d",
+      "production": {
+        "files": 801,
+        "loc": 133047
+      },
+      "tests": {
+        "files": 451,
+        "loc": 40536
+      },
+      "totalLoc": 173583
+    },
+    {
+      "day": "2026-10-09",
+      "timestamp": "2026-10-09T18:43:17.223Z",
+      "commit": "2e34f7e5fc74",
+      "production": {
+        "files": 825,
+        "loc": 134954
+      },
+      "tests": {
+        "files": 471,
+        "loc": 41477
+      },
+      "totalLoc": 176431
+    },
+    {
+      "day": "2026-10-10",
+      "timestamp": "2026-10-10T20:40:11.847Z",
+      "commit": "09cef7267c81",
+      "production": {
+        "files": 893,
+        "loc": 143930
+      },
+      "tests": {
+        "files": 518,
+        "loc": 43997
+      },
+      "totalLoc": 187927
+    },
+    {
+      "day": "2026-10-11",
+      "timestamp": "2026-10-11T19:45:23.726Z",
+      "commit": "e36f07b8b0e8",
+      "production": {
+        "files": 910,
+        "loc": 146379
+      },
+      "tests": {
+        "files": 532,
+        "loc": 45135
+      },
+      "totalLoc": 191514
+    },
+    {
+      "day": "2026-10-12",
+      "timestamp": "2026-10-12T18:50:35.998Z",
+      "commit": "86f3998fe0bc",
+      "production": {
+        "files": 910,
+        "loc": 146511
+      },
+      "tests": {
+        "files": 532,
+        "loc": 45262
+      },
+      "totalLoc": 191773
+    },
+    {
+      "day": "2026-10-13",
+      "timestamp": "2026-10-13T20:16:45.974Z",
+      "commit": "e3b0bf9ea59d",
+      "production": {
+        "files": 913,
+        "loc": 147655
+      },
+      "tests": {
+        "files": 534,
+        "loc": 45858
+      },
+      "totalLoc": 193513
+    },
+    {
+      "day": "2026-10-14",
+      "timestamp": "2026-10-14T19:19:17.332Z",
+      "commit": "e8260a6a607d",
+      "production": {
+        "files": 917,
+        "loc": 148962
+      },
+      "tests": {
+        "files": 536,
+        "loc": 46354
+      },
+      "totalLoc": 195316
+    },
+    {
+      "day": "2026-10-15",
+      "timestamp": "2026-10-15T21:07:55.853Z",
+      "commit": "c5539b03cfcc",
+      "production": {
+        "files": 940,
+        "loc": 153104
+      },
+      "tests": {
+        "files": 552,
+        "loc": 48490
+      },
+      "totalLoc": 201594
+    },
+    {
+      "day": "2026-10-16",
+      "timestamp": "2026-10-16T19:23:07.386Z",
+      "commit": "f19d457bc2d3",
+      "production": {
+        "files": 953,
+        "loc": 154427
+      },
+      "tests": {
+        "files": 558,
+        "loc": 49251
+      },
+      "totalLoc": 203678
+    },
+    {
+      "day": "2026-10-17",
+      "timestamp": "2026-10-17T23:49:00.257Z",
+      "commit": "1e1bb86b6c17",
+      "production": {
+        "files": 960,
+        "loc": 155497
+      },
+      "tests": {
+        "files": 561,
+        "loc": 49816
+      },
+      "totalLoc": 205313
+    },
+    {
+      "day": "2026-10-18",
+      "timestamp": "2026-10-18T20:29:11.180Z",
+      "commit": "0eddfcf474c7",
+      "production": {
+        "files": 874,
+        "loc": 142001
+      },
+      "tests": {
+        "files": 515,
+        "loc": 45980
+      },
+      "totalLoc": 187981
+    },
+    {
+      "day": "2026-10-19",
+      "timestamp": "2026-10-19T19:20:55.962Z",
+      "commit": "e2f9c70ddefd",
+      "production": {
+        "files": 815,
+        "loc": 135145
+      },
+      "tests": {
+        "files": 502,
+        "loc": 45596
+      },
+      "totalLoc": 180741
+    }
+  ],
+  "gitBackfill": {
+    "version": 1,
+    "strategy": "daily-last-first-parent",
+    "throughCommit": "c266f2227aac",
+    "generatedAt": "2026-09-27T07:00:00.404Z"
+  }
+}

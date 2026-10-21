@@ -28,6 +28,20 @@ Dated audit/performance documents are historical evidence, not live production s
 - [`docs/features.registry.json`](docs/features.registry.json) — machine-checked feature ownership and changelog scopes
 - [`docs/VISUAL-SYSTEM.md`](docs/VISUAL-SYSTEM.md) — design tokens, shared primitives, visual debt budget, and CI screenshots
 
+## Codebase growth
+
+![AirRadar codebase growth](docs/metrics/code-growth.svg)
+
+Daily count of non-empty physical source lines, separately for production and tests.
+Documentation, migrations, generated output and vendor assets are excluded.
+[Historical measurements](docs/metrics/code-history.json) are preserved.
+
+After successful `main` CI, the standalone
+[Codebase Growth Chart](.github/workflows/code-growth.yml) workflow refreshes
+the latest daily point and SVG. It updates **only these two metric files**,
+never the changelog or the application runtime. For a local refresh use
+`node docs/metrics/update-code-growth.mjs`.
+
 ## Quick start — demo mode
 
 Demo mode is automatic when `READSB_BASE_URL` is empty or absent.
