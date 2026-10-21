@@ -1,0 +1,36 @@
+name: T58 Public Preflight
+
+on:
+  pull_request:
+    paths:
+      - scripts/t57-production-soak.mjs
+      - scripts/t57-soak-analysis.mjs
+      - scripts/t58-report.mjs
+      - .github/workflows/t58-public-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  token-free-read-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22 }
+      - name: Verify token-free public diagnostics in production
+        shell: bash
+        env:
+          T57_PUBLIC_ONLY: "1"
+          T57_BASE_URL: https://airradar.pomykal.cz
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          node --check scripts/t57-production-soak.mjs
+          node --check scripts/t57-soak-analysis.mjs
+          node --check scripts/t58-report.mjs
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/public-preflight.json"
+          node scripts/t58-report.mjs preflight "$RUNNER_TEMP/public-preflight.json"
+          rm -f "$RUNNER_TEMP/public-preflight.json"
