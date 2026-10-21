@@ -1,19 +1,8 @@
+import type { AircraftProvider } from "@/lib/ports/aircraft-provider";
+export type { AircraftProvider, ExternalAdsbProvider } from "@/lib/ports/aircraft-provider";
 import type { AircraftMetadata, CoverageMode, FlightPlan, FlightRoute, NetworkProviderDiagnostics, ProviderSnapshot } from "@/lib/aircraft/types";
 import type { AtcActivity, AtcSector } from "@/lib/atc/types";
 import type { NetworkSourceValueDiagnostics } from "@/lib/server/network-source-value";
-
-export interface AircraftProvider {
-  readonly name: string;
-  getSnapshot(): Promise<ProviderSnapshot>;
-  /** Cancel an in-flight read without necessarily closing provider resources. */
-  abort?(): void;
-  close?(): Promise<void>;
-  getDiagnostics?(): unknown;
-}
-
-export interface ExternalAdsbProvider extends AircraftProvider {
-  readonly kind: "external-adsb";
-}
 
 export interface NetworkAircraftSnapshot {
   aircraft: ProviderSnapshot["aircraft"];
