@@ -5,7 +5,6 @@ import type { FormEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import { formatNumber, t } from "@/lib/i18n";
-import { buildNavigationReferenceInvestigation, investigationHref, parseNavigationReferenceInvestigation } from "@/lib/investigation-links";
 import {
   EmptyState,
   MetricCard,
@@ -224,45 +223,6 @@ export function NavigationReferenceExplorer() {
     if (!controller.signal.aborted) setLoading(false);
   }, []);
 
-  useEffect(() => {
-    const restore = () => {
-      const state = parseNavigationReferenceInvestigation(window.location.search);
-      setValidation(null);
-      requestRef.current?.abort();
-      if (state.route) {
-        setInput(state.route);
-        setSearchedId(null);
-        setSearchedRoute(state.route);
-        void search(state.route);
-      } else if (state.id) {
-        setInput(state.id);
-        setSearchedId(state.id);
-        setSearchedRoute(null);
-        void search(state.id);
-      } else {
-        setInput("");
-        setSearchedId(null);
-        setSearchedRoute(null);
-        setPoints([]);
-        setNearby([]);
-        setAts(null);
-        setNavFailed(false);
-        setAtsFailed(false);
-        setLoading(false);
-      }
-      const canonical = investigationHref("/navigation", buildNavigationReferenceInvestigation(state));
-      if (window.location.pathname + window.location.search !== canonical) {
-        window.history.replaceState(null, "", canonical);
-      }
-    };
-    restore();
-    window.addEventListener("popstate", restore);
-    return () => {
-      window.removeEventListener("popstate", restore);
-      requestRef.current?.abort();
-    };
-  }, [search]);
-
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const identifier = normalizeIdentifier(input);
@@ -274,8 +234,6 @@ export function NavigationReferenceExplorer() {
     setInput(identifier);
     setSearchedId(identifier);
     setSearchedRoute(null);
-    const query = buildNavigationReferenceInvestigation({ id: identifier, route: null });
-    window.history.pushState(null, "", investigationHref("/navigation", query));
     void search(identifier);
   }
 
