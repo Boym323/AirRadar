@@ -67,3 +67,10 @@ The script checks build readiness and version preconditions, holds locks, replac
 ## Decision at writing
 
 Reviewable PR **with explicitly documented limitations**; no merge, database mutation or deployment authorized. Original REMOVE names are restored for all 90; residual proof gap is individual retired implementation call graph for 82 IDs and individual KEEP implementation semantics. Live receiver A/B must follow approved release.
+
+
+## T05/W11 targeted source retirement (CI pending)
+
+T05: Deleted handoff helper and future 30–300 second sector prediction/2–45 NM ahead-sector loops. `ahead` and `nextSector` remain null in the aircraft-context API for compatibility; R17 current-sector geometry/frequencies and T08–T10 ATS navigation remain.
+
+W11: Deleted the SIGMET course-change/avoidance inference and its source module. Current advisories W06, projected informational SIGMET context and R18 map weather layers remain. No DB migrations or history deletion. Added negative tests; final CI is required before merge.

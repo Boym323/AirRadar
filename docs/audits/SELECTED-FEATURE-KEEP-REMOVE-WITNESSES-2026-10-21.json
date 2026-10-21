@@ -1494,14 +1494,22 @@
       "id": "T05",
       "recoveredTitle": "ATC handoff – odhad přechodu mezi sektory",
       "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
-      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
         "app/api/ats/routes/route.ts",
         "app/api/navigation/data/route.ts"
       ],
-      "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "moduleDeleted": "lib/atc-context/handoff.ts",
+        "retained": "R17 current sector geometry and published frequencies",
+        "tests": [
+          "tests/selected-feature-t05-w11.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
     },
     {
       "id": "T06",
@@ -1585,14 +1593,22 @@
       "id": "W11",
       "recoveredTitle": "Weather Avoidance – vyhodnocení možné odchylky kvůli počasí",
       "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
-      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
       "witnessFiles": [
         "app/weather/page.tsx",
         "app/api/weather/metar-map/route.ts",
         "app/api/weather/sigmet/route.ts"
       ],
-      "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "moduleDeleted": "lib/weather/sigmet-trajectory-deviation.ts",
+        "retained": "W06 SIGMET advisories and R18 informational context",
+        "tests": [
+          "tests/selected-feature-t05-w11.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
     },
     {
       "id": "W12",

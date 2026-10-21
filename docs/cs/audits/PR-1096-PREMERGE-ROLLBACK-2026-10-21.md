@@ -66,3 +66,10 @@ Skript zkontroluje sestavení, zámky, přepne runtime, restartuje systemd a ote
 ## Stav
 
 PR je připraven ke kontrolnímu rozhodnutí, nikoli automaticky k merge: původních 90 názvů REMOVE už je doloženo; zbývá ověření konkrétních implementací 82 ID, individuální KEEP sémantiky a produkční T58 porovnání po schváleném nasazení. Bez merge, migrace či zásahu do produkce.
+
+
+## Odstranění T05/W11 ve zdrojovém kódu (čeká na CI)
+
+T05: Smazán odhad předání mezi ATC sektory a simulace dalšího sektoru v horizontu 30–300 sekund i 2–45 NM. Kvůli kompatibilitě API zůstávají `ahead` a `nextSector` s hodnotou null. Aktuální sektory a frekvence R17 a ATS T08–T10 jsou zachovány.
+
+W11: Smazán výpočet, který spojoval změnu kurzu se SIGMETem jako odhad vyhnutí se počasí. Aktuální SIGMET W06, informační kontext a mapové vrstvy R18 zůstávají. Bez mazání historie či změn databáze. Doplněny regresní testy; finální CI je podmínkou merge.

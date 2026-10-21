@@ -46,7 +46,8 @@ describe("lightweight radar ATC map boundary", () => {
     expect(app).toContain('"atc-sectors-context-highlight"');
     expect(app).toContain('mapRef.current?.getSource("atc-sectors")');
     expect(selectedContextHook).toContain("/context");
-    expect(quick).toContain("buildAtcHandoffEstimate");
+    expect(quick).not.toContain("buildAtcHandoffEstimate");
+    expect(quick).toContain("t.atc.moreFrequencies");
     expect(selectedContextHook).toContain("30_000");
   });
 });
