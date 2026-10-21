@@ -76,6 +76,12 @@ jobs:
       - name: Verify V2-01 architecture boundaries
         if: steps.scope.outputs.docs_only != 'true'
         run: npm run architecture:check
+      - name: Verify V2-01 targeted contract tests and static types
+        if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'v2/01-') && steps.scope.outputs.docs_only != 'true'
+        run: |
+          npx eslint scripts/v2-architecture-graph.mjs tests/v2-architecture-boundaries.test.ts lib/contracts/history.ts lib/contracts/weather-radar.ts lib/ports/aircraft-provider.ts
+          npm run test:targeted -- tests/v2-architecture-boundaries.test.ts
+          npm run typecheck
       - name: Compare V2-01 static dependency graph to merge base
         if: github.event_name == 'pull_request' && steps.scope.outputs.docs_only != 'true'
         shell: bash
