@@ -425,17 +425,8 @@ export interface ReceiverStatisticsCoverageSummary {
   bestDirections: ReceiverStatisticsCoverageBucket[];
 }
 
-export interface ReceiverReceptionRecord {
-  date: string;
-  distanceKm: number;
-  icaoHex: string;
-  registration: string | null;
-  recordedAt: string;
-  bearing: number;
-}
-
 export type LogbookLabel = "new" | "rare" | "returning";
-export type LogbookInterestingReason = LogbookLabel | "record" | "watchlisted" | "emergency";
+export type LogbookInterestingReason = LogbookLabel | "watchlisted" | "emergency";
 
 export interface LogbookInterestingAircraft {
   icaoHex: string;
@@ -460,122 +451,6 @@ export interface LogbookSummaryResponse {
   returningAircraftToday: number;
   watchlistedLiveAircraft: number;
   interestingAircraft: LogbookInterestingAircraft[];
-  todayReceptionRecord: ReceiverReceptionRecord | null;
-  lifetimeReceptionRecord: ReceiverReceptionRecord | null;
-}
-
-export interface RecapRankingItem {
-  name: string;
-  count: number;
-}
-
-export interface RecapRouteItem {
-  origin: string;
-  destination: string;
-  count: number;
-}
-
-export interface RecapInterestingItem {
-  icaoHex: string;
-  callsign: string | null;
-  registration: string | null;
-  reason: LogbookInterestingReason;
-}
-
-export interface ReceiverRecapComparison {
-  hasData: boolean;
-  uniqueAircraft: number | null;
-  observedFlights: number | null;
-  maxDistanceKm: number | null;
-}
-
-export type RecapDailyHighlightKind = "flight_event" | "emergency" | "reception_record" | "new_aircraft" | "watchlist";
-
-export interface RecapDailyHighlight {
-  key: string;
-  kind: RecapDailyHighlightKind;
-  occurredAt: string;
-  icaoHex: string;
-  callsign: string | null;
-  registration: string | null;
-  eventType: string | null;
-  airportIcao: string | null;
-  runway: string | null;
-  confidenceLevel: "low" | "medium" | "high" | null;
-  squawk: string | null;
-  distanceKm: number | null;
-}
-
-export interface RecapDailyAirportItem {
-  icao: string;
-  movements: number;
-  arrivals: number;
-  departures: number;
-}
-
-export type RecapDailyWeatherHighlightKind = "turbulence" | "strong_wind";
-
-export interface RecapDailyWeatherHighlight {
-  key: string;
-  kind: RecapDailyWeatherHighlightKind;
-  observedAt: string;
-  icaoHex: string;
-  callsign: string | null;
-  altitudeFt: number;
-  turbulenceLevel: number | null;
-  windSpeedKt: number | null;
-  windDirectionDeg: number | null;
-  quality: "HIGH" | "GOOD";
-  source: string;
-}
-
-export interface RecapDailyIntelligence {
-  complete: boolean;
-  busiestHour: { hour: number; flights: number } | null;
-  topAirlines: RecapRankingItem[];
-  topAirports: RecapDailyAirportItem[];
-  eventCounts: {
-    goArounds: number;
-    holdings: number;
-    diversions: number;
-    emergencies: number;
-    unusualTurns: number;
-    orbits: number;
-  };
-  weatherStatus: "available" | "truncated" | "unavailable";
-  weatherHighlights: RecapDailyWeatherHighlight[];
-  highlights: RecapDailyHighlight[];
-}
-
-export interface ReceiverRecapResponse {
-  source: "postgres" | "unavailable";
-  range: "daily" | "weekly";
-  from: string;
-  to: string;
-  timezone: string;
-  isCurrentDay: boolean;
-  hasData: boolean;
-  uniqueAircraft: number | null;
-  observedFlights: number | null;
-  newAircraft: number | null;
-  rareOrReturning: number | null;
-  maxDistanceKm: number | null;
-  coverageKm: number | null;
-  topAircraftTypes: RecapRankingItem[];
-  topRoutes: RecapRouteItem[];
-  interestingAircraft: RecapInterestingItem[];
-  bestReception: ReceiverReceptionRecord | null;
-  alertCount: number | null;
-  dailyIntelligence: RecapDailyIntelligence | null;
-  comparison: ReceiverRecapComparison | null;
-}
-
-export interface ReceiverReceptionRecordsResponse {
-  source: "postgres" | "memory" | "unavailable";
-  today: ReceiverReceptionRecord | null;
-  lifetime: ReceiverReceptionRecord | null;
-  top: ReceiverReceptionRecord[];
-  historicalRecordCount: number;
 }
 
 export type ReceiverStatisticsRange = "7d" | "30d";

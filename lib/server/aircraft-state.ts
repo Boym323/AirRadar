@@ -24,7 +24,7 @@ import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot
 import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
 import type { AlertStatus } from "@/lib/server/alert-status";
-import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
+import { ReceiverStatistics, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { coverageStats, mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
@@ -475,10 +475,6 @@ export class AircraftStateService {
 
   getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus {
     return this.statistics.getPersistenceStatus();
-  }
-
-  getDailyReceptionRecord(): ReceiverDailyReceptionRecord | null {
-    return this.statistics.getDailyReceptionRecord();
   }
 
   getStatisticsCurrentDaySnapshot() {

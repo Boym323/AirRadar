@@ -229,28 +229,25 @@
     },
     {
       "id": "statistics-recaps",
-      "name": "Statistics & Recaps",
+      "name": "Statistics & Logbook",
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Receiver live/aggregate statistics, coverage, traffic and compatible reception/logbook summaries; historical heatmap and traffic-profile APIs are retired.",
+      "summary": "Receiver live and aggregate statistics, coverage, traffic and logbook summaries. Reception records, daily/weekly recaps, historical heatmap and traffic-profile APIs are retired.",
       "pages": [],
       "apis": [
         "/api/logbook/summary",
-        "/api/reception-records",
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic"
       ],
       "changelogScopes": [
         "statistics",
-        "recap",
         "logbook",
         "analytics"
       ],
       "changelogKeywords": [
-        "statistics",
-        "reception records"
+        "statistics"
       ]
     },
     {

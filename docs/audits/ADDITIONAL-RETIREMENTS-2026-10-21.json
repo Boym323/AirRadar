@@ -35,8 +35,8 @@
     {
       "id": "S05",
       "title": "Receiver distance and aircraft records",
-      "assessment": "ACTIVE_STANDALONE_API",
-      "action": "Retire /api/reception-records and record-only repository after resolving shared statistics/serialization references"
+      "assessment": "RECEPTION_RECORDS_API_UI_AND_AGGREGATION_CONSUMER_RETIRED",
+      "action": "Removed record-only API, repository, dashboard display, old logbook matching and obsolete recap wire contracts; retained aggregate maxDistanceKm for coverage and legacy database persistence schema."
     },
     {
       "id": "W07",
@@ -83,6 +83,18 @@
     {
       "path": "tests/new-retirement-selection.test.ts",
       "reason": "Regression test recording current decisions and guarded absent endpoints"
+    },
+    {
+      "path": "app/api/reception-records/route.ts",
+      "reason": "S05 retired standalone record endpoint"
+    },
+    {
+      "path": "lib/server/reception-records.ts",
+      "reason": "S05 retired record repository"
+    },
+    {
+      "path": "lib/aircraft/types.ts",
+      "reason": "S08 obsolete recap and S05 record wire types"
     }
   ],
   "notClaimed": "This decision file does not certify nine independent code retirements. Shared paths remain until separately verified; historical selection audit is unchanged."

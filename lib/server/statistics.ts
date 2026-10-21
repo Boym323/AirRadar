@@ -23,15 +23,6 @@ export interface DailyCoverageStatisticsRecord {
   maxDistanceKm: number;
 }
 
-export interface ReceiverDailyReceptionRecord {
-  date: string;
-  distanceKm: number;
-  icaoHex: string;
-  registration: string | null;
-  recordedAt: string;
-  bearing: number;
-}
-
 export interface ReceiverStatisticsPersistenceSnapshot {
   date: string;
   uniqueAircraftCount: number;
@@ -370,19 +361,6 @@ export class ReceiverStatistics {
       aircraftTypes: sortBreakdown(this.typeCounts),
       airlines: sortBreakdown(this.airlineCounts),
       messagesPerSecond,
-    };
-  }
-
-  getDailyReceptionRecord(): ReceiverDailyReceptionRecord | null {
-    this.ensureDay(this.clock());
-    if (this.maxDistanceKm <= 0 || !this.maxDistanceIcaoHex || !this.maxDistanceAt || this.maxDistanceBearing === null) return null;
-    return {
-      date: this.currentDate,
-      distanceKm: this.maxDistanceKm,
-      icaoHex: this.maxDistanceIcaoHex,
-      registration: this.maxDistanceRegistration,
-      recordedAt: this.maxDistanceAt.toISOString(),
-      bearing: this.maxDistanceBearing,
     };
   }
 

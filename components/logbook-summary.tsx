@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { LogbookInterestingReason, LogbookLabel, LogbookSummaryResponse, ReceiverReceptionRecord } from "@/lib/aircraft/types";
-import { formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
+import type { LogbookInterestingReason, LogbookLabel, LogbookSummaryResponse } from "@/lib/aircraft/types";
+import { formatNumber, t } from "@/lib/i18n";
 
 function labelText(label: LogbookLabel): string {
   if (label === "new") return t.logbook.newAircraft;
@@ -13,16 +13,6 @@ function labelText(label: LogbookLabel): string {
 
 function reasonText(reason: LogbookInterestingReason): string {
   return t.dashboard.reasons[reason];
-}
-
-function DashboardRecord({ title, record }: { title: string; record: ReceiverReceptionRecord | null }) {
-  return <div className="dashboard-record">
-    <span>{title}</span>
-    {record ? <Link href={`/aircraft/${encodeURIComponent(record.icaoHex)}`}>
-      <strong>{formatDistance(record.distanceKm)}</strong>
-      <small>{record.icaoHex} · {record.registration ?? t.common.emptyValue} · {formatTrack(record.bearing)} · {formatDateTime(record.recordedAt)}</small>
-    </Link> : <small>{t.common.emptyValue}</small>}
-  </div>;
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
@@ -71,10 +61,6 @@ export function LogbookSummary() {
         <div className="dashboard-logbook-highlights">
           <h3>{t.dashboard.interesting}</h3>
           {data.interestingAircraft.length ? <ul>{data.interestingAircraft.slice(0, 5).map((aircraft) => <li key={aircraft.icaoHex}><Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{aircraft.callsign ?? aircraft.registration ?? aircraft.icaoHex}</Link><span className="dashboard-logbook-reasons">{aircraft.reasons.map((reason) => <span className={`dashboard-logbook-label ${reason}`} key={reason}>{aircraft.labels.includes(reason as LogbookLabel) ? labelText(reason as LogbookLabel) : reasonText(reason)}</span>)}</span></li>)}</ul> : <p>{t.dashboard.noInteresting}</p>}
-        </div>
-        <div className="dashboard-logbook-records">
-          <DashboardRecord title={t.dashboard.todayRecord} record={data.todayReceptionRecord} />
-          <DashboardRecord title={t.dashboard.lifetimeRecord} record={data.lifetimeReceptionRecord} />
         </div>
       </div>
     </>}

@@ -91,7 +91,6 @@ describe("receiver statistics", () => {
     const response = stats.getResponse(2, 486);
     expect(response.daily).toMatchObject({ maxConcurrentAircraft: 2, maxDistanceKm: 312.4 });
     expect(response.live).toEqual({ aircraftCount: 2, messagesPerSecond: 486 });
-    expect(stats.getDailyReceptionRecord()).toMatchObject({ distanceKm: 312.4, icaoHex: "BBB002", bearing: expect.any(Number), registration: null });
   });
 
   it("persists the best reception record with its bearing and registration", async () => {
@@ -104,7 +103,7 @@ describe("receiver statistics", () => {
 
     const restarted = new ReceiverStatistics({ persistence, clock: () => at });
     await restarted.load();
-    expect(restarted.getDailyReceptionRecord()).toMatchObject({ distanceKm: 123.4, icaoHex: "ABC001", bearing: 271, registration: "OK-ABC" });
+    expect(restarted.getResponse(0, null).daily.maxDistanceKm).toBe(123.4);
   });
 
   it("puts north and the 359 degree edge in the expected buckets", () => {

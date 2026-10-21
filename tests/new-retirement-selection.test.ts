@@ -27,11 +27,17 @@ describe("additional user-authorized removals (PR #1096)", () => {
       "app/api/statistics/traffic-profile/route.ts",
       "app/api/recap/daily/route.ts",
       "app/api/recap/weekly/route.ts",
+      "app/api/reception-records/route.ts",
+      "lib/server/reception-records.ts",
+      "tests/reception-records.test.ts",
       "app/api/weather/pirep/route.ts",
     ]) expect(existsSync(new URL(path, root)), path).toBe(false);
     const radar = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
     expect(radar).not.toContain("RadarPresetMenu");
     expect(radar).not.toContain("createRadarPreset");
+    const logbook = readFileSync(new URL("lib/server/logbook-summary.ts", root), "utf8");
+    expect(logbook).not.toContain("todayReceptionRecord");
+    expect(logbook).not.toContain("getReceptionRecords");
     for (const path of [
       "app/api/statistics/route.ts",
       "app/api/weather/radar/frames/route.ts",

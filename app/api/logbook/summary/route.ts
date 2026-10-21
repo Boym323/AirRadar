@@ -1,6 +1,5 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
-import { getReceptionRecords } from "@/lib/server/reception-records";
 import { getLogbookSummary } from "@/lib/server/logbook-summary";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +10,6 @@ export async function GET(request: Request): Promise<Response> {
   const service = getAircraftStateService();
   await service.waitForReady();
   const snapshot = service.getSnapshot();
-  const reception = await getReceptionRecords(service.getDailyReceptionRecord());
-  const summary = await getLogbookSummary(snapshot.aircraft, snapshot.stats, reception);
+  const summary = await getLogbookSummary(snapshot.aircraft, snapshot.stats);
   return Response.json(summary, { headers: { "Cache-Control": "no-store" } });
 }
