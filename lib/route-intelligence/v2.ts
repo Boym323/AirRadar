@@ -8,6 +8,7 @@ import type {
   InterpretedRoutePoint,
   RouteElementSource,
   RouteIntelligenceV2Snapshot,
+  RoutePhase,
   RunwayContextInput,
 } from "./contracts";
 import { createRunwayContext } from "./contracts";
