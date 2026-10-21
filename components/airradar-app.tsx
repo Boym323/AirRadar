@@ -23,9 +23,9 @@ import { aircraftMapLabelLevel, trafficMapLabelText } from "@/lib/aircraft/map-l
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
-import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
+import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/contracts/history";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
+import { WEATHER_RADAR_BOUNDS } from "@/lib/contracts/weather-radar";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
