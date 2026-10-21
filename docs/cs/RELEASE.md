@@ -83,8 +83,7 @@ vydání. Po úspěchu produkčních health kontrol workflow vytvoří GitHub Re
 s vygenerovanými release notes cílený na přesný commit z ověřeného manifestu
 produkčního artefaktu. Publisher vyřeší výsledný tag a při jiném cíli skončí
 chybou; existující release lze znovu použít jen tehdy, pokud jeho tag stále
-ukazuje na stejný commit artefaktu. Po úspěchu celého main CI workflow
-Publikování release je idempotentní: už existující GitHub Release pro
+ukazuje na stejný commit artefaktu. Publikování release je idempotentní: už existující GitHub Release pro
 vyřešený tag se považuje za úspěch, včetně případů rerun/race. Verzované
 stable/RC releasy nadále používají běžný příkaz výše.
 

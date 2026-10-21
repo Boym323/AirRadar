@@ -95,8 +95,8 @@ production health checks pass, the workflow creates a GitHub Release with
 generated release notes, targeting the exact commit recorded by the validated
 production-build manifest. The publisher resolves the resulting tag and
 fails closed if it points anywhere else; an existing release is reusable only
-when its tag still resolves to that same artifact commit. Release publishing is idempotent: an
-already-existing GitHub Release for the resolved tag is treated as success,
+when its tag still resolves to that same artifact commit.
+Release publishing is idempotent: an already-existing GitHub Release for the resolved tag is treated as success,
 including rerun/race cases. Versioned stable/RC releases continue to use the
 normal command above.
 
