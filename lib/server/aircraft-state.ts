@@ -421,7 +421,6 @@ export class AircraftStateService {
         sourcePreferences: this.sourcePreferences,
         sourcePreferenceMissingSince: this.sourcePreferenceMissingSince,
         lastHistorySample: this.lastHistorySample,
-        predictiveEvaluatedAt: new Map<string, number>(),
         atcResolutionKeys: this.atcResolutionKeys,
         snapshotCacheEntries: this.snapshotCache.size,
         listeners: this.listeners.size,

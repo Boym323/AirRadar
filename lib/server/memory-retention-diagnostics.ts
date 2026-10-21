@@ -105,7 +105,6 @@ export function getMemoryRetentionDiagnostics(input: {
   sourcePreferences: ReadonlyMap<string, unknown>;
   sourcePreferenceMissingSince: ReadonlyMap<string, unknown>;
   lastHistorySample: ReadonlyMap<string, unknown>;
-  predictiveEvaluatedAt: ReadonlyMap<string, unknown>;
   atcResolutionKeys: ReadonlyMap<string, unknown>;
   snapshotCacheEntries: number;
   listeners: number;
@@ -134,7 +133,7 @@ export function getMemoryRetentionDiagnostics(input: {
       sourcePreferences: input.sourcePreferences.size,
       sourcePreferenceMissingSince: input.sourcePreferenceMissingSince.size,
       lastHistorySample: input.lastHistorySample.size,
-      predictiveEvaluatedAt: input.predictiveEvaluatedAt.size,
+      predictiveEvaluatedAt: 0, // Retained serialized field; producer retired.
       atcResolutionKeys: input.atcResolutionKeys.size,
     },
     snapshotCacheEntries: input.snapshotCacheEntries,

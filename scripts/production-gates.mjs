@@ -485,22 +485,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await visualPage.route(pattern, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }));
             }
           }
-          if (target.mockWatchlist) {
-            await visualPage.route("**/api/watchlist/session", (route) => route.fulfill({
-              status: 200, contentType: "application/json", body: JSON.stringify({ configured: false, authenticated: false }),
-            }));
-            await visualPage.route("**/api/watchlist", (route) => route.fulfill({
-              status: 200, contentType: "application/json", body: JSON.stringify({ rules: [], cooldownMs: 3600000, emergency: { enabled: false } }),
-            }));
-          }
-          if (target.mockNotifications) {
-            await visualPage.route("**/api/alerts?*", (route) => route.fulfill({
-              status: 200, contentType: "application/json", body: JSON.stringify({ items: [], page: 0, pageSize: 50, nextPage: null, total: 0 }),
-            }));
-            await visualPage.route("**/api/admin/alerts/delivery?*", (route) => route.fulfill({
-              status: 403, contentType: "application/json", body: JSON.stringify({ error: "forbidden" }),
-            }));
-          }
           if (target.mockReceiverUnavailable) {
             for (const pattern of ["**/api/statistics/coverage-intelligence?*", "**/api/receiver/coverage?*"]) {
               await visualPage.route(pattern, (route) => route.fulfill({
@@ -815,17 +799,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.mockWeather === "empty") {
             await visualPage.getByText("Data nejsou aktuálně dostupná.", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-          }
-          if (target.mockWatchlist) {
-            await visualPage.waitForFunction(() => {
-              const text = document.querySelector(".watchlist-rules-card .watchlist-empty")?.textContent;
-              return Boolean(text && !/Načít|Loading/i.test(text));
-            }, undefined, { timeout: 15_000 });
-          }
-          if (target.mockNotifications) {
-            await visualPage.waitForFunction(() =>
-              document.querySelector('[data-testid="notification-center-v2"] .ui-metric-value')?.textContent?.trim() === "0",
-              undefined, { timeout: 15_000 });
           }
           if (target.mockReceiverUnavailable) {
             await visualPage.locator('[data-testid="receiver-explorer-summary"] .ui-empty-state')

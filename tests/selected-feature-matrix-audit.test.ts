@@ -25,7 +25,7 @@ describe("selected-feature ID audit", () => {
       expect(item.evidenceSet).toBe(item.family);
       expect(audit.groups[item.evidenceSet]?.context).toBeTruthy();
       expect(["EXPLICIT_ID_IN_REDUCTION_NOTES", "GROUP_LEVEL_ONLY"]).toContain(item.reviewLevel);
-      if (item.id === "T12") expect(item.assessment).toBe("INCOMPLETE_ACTIVE_SCHEDULED_FETCH");
+      if (item.id === "T12") expect(item.assessment).toBe("LIVE_COLLECTION_DISABLED_HISTORIC_ARCHIVE_RETAINED");
     }
   });
 

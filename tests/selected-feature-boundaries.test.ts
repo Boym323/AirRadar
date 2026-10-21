@@ -383,6 +383,10 @@ describe("phase 24 retired T12 planned airspace surface", () => {
     expect(app).not.toContain("airspace-plan-fill");
     expect(geo).not.toContain("buildAirspacePlanMapIndex");
     expect(geo).toContain("sector.polygons");
+    const context = readFileSync(new URL("lib/server/map-context.ts", root), "utf8");
+    expect(context).not.toContain("pollAup()");
+    expect(context).not.toContain("getAirspaceActivity");
+    expect(context).toContain("async resolveAupAt(");
     expect(app).toContain("mapReplayRef.current.atc.setData(atcGeoJson)");
   });
 });
