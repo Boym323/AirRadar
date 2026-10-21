@@ -280,9 +280,7 @@
     "perIdReviewedCount": 90,
     "perIdExplicitEvidence": 8,
     "perIdGroupEvidenceOnly": 82,
-    "unresolvedRuntime": [
-      "T12 MapContextArchiveService.pollAup still fetches and stores new AUP/UUP"
-    ],
+    "unresolvedRuntime": [],
     "unresolvedExternalContractReview": "50 deleted HTTP API routes; access logs and external clients not observed",
     "unresolvedDocumentation": [
       "docs/ARCHITECTURE.md",
@@ -303,6 +301,11 @@
       "82 original per-ID detailed names/call graphs missing",
       "external client/access-log verification pending",
       "live T58 A/B production not measured"
-    ]
+    ],
+    "T12Result": "Scheduled ingestion disconnected; old AUP archive read preserved; CI pending",
+    "architectureStatus": "Rewritten EN/CZ, CI pending",
+    "externalUsageResult": "NOT VERIFIED: authorized production reverse-proxy logs not available",
+    "cleanedVisualFixtures": true,
+    "removedPredictiveDiagAllocation": true
   }
 }

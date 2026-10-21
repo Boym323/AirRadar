@@ -43,3 +43,8 @@ GitHub Actions [CI běh 39564699980](https://github.com/Boym323/AirRadar/actions
 ## Podmínky dokončení
 
 Doplnit původní názvy a konkrétní cesty všech 82 ID zatím ověřených jen skupinově, vyřešit běhové načítání T12, zkontrolovat externí odběratele API a změřit přesný počet produkčních řádků i skutečný T58 výkon. Do té doby **nelze úplné odstranění všech funkcí podepsat**, i když CI prochází. Audit nemění databázi, historická data, `main` ani produkci.
+
+
+## Následná implementace – 21. října 2026
+
+Pravidelné stahování T12 AUP/UUP bylo odpojeno od služby kontextu mapy. Historické AUP JSON záznamy, formát archivu a časové DTO zůstávají dostupné. Samostatná historická implementace síťového čtení Czech AIM již není časově spouštěna. Odstraněny nevyužívané browser fixture stránek Watchlist a Notifications. Zrušena zbytečná alokace predikční diagnostické mapy, zachováno kompatibilní pole s hodnotou 0. Architektura EN/CZ je přepsaná. Využití 50 zrušených HTTP API externími klienty **není ověřené**, protože nejsou dostupné produkční proxy logy; pro oprávněné provedení je přiložen read-only skript `scripts/audit-retired-api-access.py`. Původní jednoznačné názvy 82 vybraných REMOVE ID nebyly dohledány; skupinový důkaz nenahrazuje individuální audit. Změny čekají na navazující CI.

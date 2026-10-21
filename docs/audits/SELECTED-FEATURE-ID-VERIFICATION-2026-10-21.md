@@ -43,3 +43,8 @@ GitHub Actions [release CI run 39564699980](https://github.com/Boym323/AirRadar/
 ## Completion gate
 
 Record an original ID-to-name-to-code-path inventory for the 82 group-level entries, resolve T12's active polling policy, inspect affected external API clients and measure canonical production LOC plus live T58 metrics. Until then **the selected-feature cleanup is not fully signed off**, despite passing source CI. No migration, saved data, main branch or production state is modified by this audit.
+
+
+## Follow-up implementation — 21 October 2026
+
+T12 planned AUP/UUP polling was disconnected from the periodic map-context service, while historical AUP JSON reads, the archive format and time-resolution DTO remain. The old isolated Czech AIM network implementation is not scheduled and must not be confused with active data ingestion. Browser fixtures for removed Watchlist and Notifications pages were pruned. An unused predictive diagnostic Map allocation was removed, preserving the response field with the fixed value 0. EN/CZ architecture was rewritten. External-client usage for 50 retired HTTP routes is **not verified**, because production reverse-proxy logs were unavailable; the read-only aggregator `scripts/audit-retired-api-access.py` is supplied for authorized execution. The exact original names for 82 selected REMOVE IDs were not recovered; per-ID family evidence is not individual certification. The changes await CI for this follow-up commit.

@@ -430,7 +430,7 @@
       "family": "T",
       "requested": "REMOVE",
       "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
-      "assessment": "INCOMPLETE_ACTIVE_SCHEDULED_FETCH",
+      "assessment": "LIVE_COLLECTION_DISABLED_HISTORIC_ARCHIVE_RETAINED",
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
     },
@@ -1058,27 +1058,27 @@
     {
       "id": "T12_ACTIVE_POLL",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "RESOLVED_IN_SOURCE_PENDING_CI",
       "source": "lib/server/map-context.ts:409-428",
-      "evidence": "MapContextArchiveService.poll() runs pollAup(), calling getAirspaceActivity and writing planned AUP archival records even after removing /api/map-context/aup",
-      "action": "Decide whether new planned AUP ingestion is still required for retained historical map-context. If not, stop scheduling it and keep old archive read compatibility; test all modes.",
+      "evidence": "MapContextArchiveService.poll no longer invokes pollAup or getAirspaceActivity; archived AUP reads and DTO remain unchanged.",
+      "action": "Confirm CI regression and production deployment when authorized; preserve historical archives.",
       "noDataDeletion": true
     },
     {
       "id": "ARCHITECTURE_STALE",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "RESOLVED_IN_SOURCE_PENDING_CI",
       "source": "docs/ARCHITECTURE.md",
-      "evidence": "Documentation still claims MockReadsbProvider fallback, Flight Story read boundary, AlertEngine, predictive modules and Digital Twin actively run",
+      "evidence": "EN/CZ docs/ARCHITECTURE.md rewritten from selected route/ingress architecture.",
       "action": "Rewrite EN/CS architecture from current source and generated registry"
     },
     {
       "id": "EXTERNAL_CLIENTS_UNKNOWN",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "PENDING_PRODUCTION_LOG_ACCESS",
       "source": "deletedApiRoutes",
       "evidence": "50 removed HTTP routes were present in PR diff; no server access logs/client inventory were reviewed",
-      "action": "Inspect gateway access logs, API consumers and bookmarks before merging; intentional 404 for retired routes"
+      "action": "Run scripts/audit-retired-api-access.py on authorized reverse proxy logs; review traffic for all 50 retired API route templates, including dynamic paths."
     },
     {
       "id": "PRODUCTION_AB_UNMEASURED",
@@ -1099,17 +1099,17 @@
     {
       "id": "PREDICTIVE_DIAGNOSTICS_PLACEHOLDER",
       "priority": "P2",
-      "status": "CANDIDATE",
+      "status": "RESOLVED_IN_SOURCE_PENDING_CI",
       "source": "lib/server/aircraft-state.ts:424",
-      "evidence": "predictiveEvaluatedAt empty Map created for memory retention diagnostics",
+      "evidence": "Stopped allocating an empty Map per diagnostics call; preserved serialized predictiveEvaluatedAt:0.",
       "action": "Check diagnostic schema clients before deleting placeholder"
     },
     {
       "id": "STALE_VISUAL_FIXTURES",
       "priority": "P2",
-      "status": "CANDIDATE",
+      "status": "RESOLVED_IN_SOURCE_PENDING_CI",
       "source": "scripts/production-gates.mjs:488-503,819-829",
-      "evidence": "mockWatchlist and mockNotifications branches for removed pages remain but no matching visualTargets observed",
+      "evidence": "Removed unreachable mockWatchlist/mockNotifications browser fixture branches.",
       "action": "Prove full target inventory unused and remove obsolete fixture branches in separate test-only patch"
     }
   ],
@@ -1147,5 +1147,18 @@
     "auditConclusion": "SUCCESS: CI, CodeQL, 1x/2x/4x synthetic load",
     "auditTestsPassed": 1880,
     "auditTestsSkipped": 15
+  },
+  "followup": {
+    "date": "2026-10-21",
+    "codeHead": "261e276099440741a66c71480970c94025220918",
+    "liveAupCollection": "DISABLED_IN_SOURCE",
+    "historicAupRead": "PRESERVED",
+    "visualFixtures": "REMOVED",
+    "predictiveDiag": "ZERO_COMPATIBILITY_NO_ALLOCATION",
+    "architecture": "EN_CS_REWRITTEN",
+    "removedIds": "90 inventoried; 82 lack canonical original names, only grouped evidence",
+    "externalClients": "NOT_VERIFIED_NO_PRODUCTION_ACCESS_LOGS",
+    "liveAB": "NOT_MEASURED",
+    "ci": "PENDING"
   }
 }
