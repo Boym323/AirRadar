@@ -157,10 +157,3 @@ describe("coverage intelligence", () => {
   });
 
 });
-
-    expect(result.records.peakConcurrent).toEqual({ date: "2026-09-10", count: 88 });
-    expect(result.records.farthestReception?.distanceKm).toBe(310);
-    expect(result.records.farthestReception?.icaoHex).toBe("AAAAAA");
-    expect(result.records.highestFlight).toEqual(highestFlight);
-  });
-});
