@@ -11,6 +11,15 @@ export async function GET(request: Request): Promise<Response> {
   const to = params.get("to") ? Date.parse(params.get("to")!) : Date.now();
   const from = params.get("from") ? Date.parse(params.get("from")!) : to - 24 * 60 * 60_000;
   if (!Number.isFinite(from) || !Number.isFinite(to) || from >= to || to - from > MAX_RANGE_MS) return Response.json({ error: "Invalid or unbounded navigation integrity history range" }, { status: 400, headers: { "Cache-Control": "no-store" } });
-  const anomalies = (await getNavigationIntegrityService().getHistory(new Date(from), new Date(to))).slice(0, 200);
-  return Response.json({ from: new Date(from).toISOString(), to: new Date(to).toISOString(), anomalies }, { headers: { "Cache-Control": "no-store" } });
+  const results = await getNavigationIntegrityService().getHistory(new Date(from), new Date(to));
+  const anomalies = results.anomalies.slice(0, 200);
+  const truncated = results.anomalies.length > anomalies.length;
+  return Response.json({
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+    anomalies,
+    source: results.source,
+    complete: results.complete && !truncated,
+    truncated: truncated || !results.complete,
+  }, { headers: { "Cache-Control": "no-store" } });
 }

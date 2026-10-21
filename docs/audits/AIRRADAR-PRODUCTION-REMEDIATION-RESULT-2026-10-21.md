@@ -1,0 +1,37 @@
+# AirRadar production remediation — execution result
+
+**Decision: NO-GO for production deployment.** Work was performed in the isolated development checkout `/tmp/airradar-remediation`, based on `main` at `82de3fa798a7da3934a51d95b047e17c6ae7c6b7`. The automatic deploy was not triggered. The baseline production service remains on version `1.0.545`, commit `ede0ec1a11a27778546006722d0e736c958bb979` (observed 2026-10-21); no production files, configuration, database, or service were modified.
+
+## Deployment blockers
+
+1. The requested T58 baseline workflow [run 39633253019](https://github.com/Boym323/AirRadar/actions/runs/39633253019) failed in preflight job `119336768265`. It collected no T58 sample, so there is no valid production before/after performance comparison. The workflow does not expose the failed preflight field in its log. The configured T58 secret exists, but this alone does not satisfy the diagnostic preflight.
+2. The Prisma mapping audit found 31 models and one explicit mapping, but no read-only production catalog was available (`catalogProvided=false`, `compatibilityVerified=false`). The development checkout has no `DATABASE_URL`; production secrets were not read. Schema compatibility and rollback readiness therefore remain unproven.
+3. The baseline audit of the revised feature selection reports 79 KEEP and 99 REMOVE, but the static audit says exact original semantics are not established for 82 IDs; its separate `originalPerIdMappingMissing` count is 80. Static anchors are not proof that each behavior works. See the [feature matrix](AIRRADAR-PRODUCTION-REMEDIATION-FEATURE-MATRIX-2026-10-21.json).
+
+These are required safety gates in the task prompt. A push to `main` can deploy automatically, so no main push or release was made. Production version, health, system diagnostics, and public site were read before the work; the observed health endpoint returned `ok` with the database and readsb paths available. Production was not reconfigured to make a diagnostic pass.
+
+## Implemented fixes
+
+- **Alert dispatch:** explicit supported-channel dispatch; unknown channels fail instead of being marked sent. Pushover 2xx responses count as accepted only when the provider JSON reports `status: 1`. Added cases for unknown channels, malformed/negative success bodies, 429/503, timeouts, and worker state transitions. The existing database advisory-lock claim path and stale-claim recovery were reviewed, but competing-worker, stale-claim recovery, and restart behavior lack dedicated end-to-end regression tests in this candidate. No duplicate-delivery guarantee beyond the existing repository semantics is claimed; complete those tests before a deploy-bearing push.
+- **Admin access:** strict admin-session checks now protect six privileged `/api/admin` reads even when the legacy auth opt-out is disabled. Sanitized public system status and SSE remain public. Added route/auth regression coverage.
+- **Web Push:** serialized in-process writes, unique exclusive temp files with restrictive permissions, atomic replacement and cleanup, plus bounded request-body and subscription validation. Diagnostics now report configured delivery as unavailable when no event producer exists; delivery health becomes degraded. The missing producer remains an explicit functional limitation; no removed alert engine was restored.
+- **System status SSE:** one shared polling service now distinguishes public and full admin projections, retaining shared polling and coalescing a full refresh when an admin joins an in-flight public poll. Per-client DB polling was not added.
+- **Delivery health:** status and retry counts, attempts, timestamps, and latest failure are aggregated in the database rather than loading all delivery rows into Node. A large synthetic fixture compares the aggregate result with the previous projection; production-scale latency/memory was not measured.
+- **Navigation history:** database time bounds are applied before the capped query, with stable ordering. The API now exposes source/completeness/truncation metadata; memory fallback is explicitly incomplete.
+- **Small cleanup:** removed the unused `useEffect` import, the unused `diagnosticOptionalNumber` helper, and three unused test imports/constants. No production files were deleted; there was not enough reachability evidence to safely delete larger modules, CSS, dependencies, or one of the 36 manually reviewed candidates. No dependency or schema changes were made.
+
+## Validation
+
+Checks already observed passing in this isolated checkout: `npm ci`; production dependency audit (`npm audit --omit=dev --audit-level=high`, zero reported vulnerabilities); `npm run prisma:generate`; Prisma migration check; `npm run typecheck`; `npm run lint` (zero errors, four existing warnings); `npm run features:check` (9 pages, 52 APIs); `npm run docs:check`; `npm run visual:check`; `npm run icons:audit`; revised selected-feature static audit; targeted regression tests (30 passed); `npm run test:production:all` (27 visual targets, 14 viewports); and a production build in the isolated checkout. The full `npm run test:full` passed: 292 test files passed, 5 skipped; 1,919 tests passed, 15 skipped. Synthetic load-scaling on the final tree completed at 1x/2x/4x (100/200/400 aircraft; 5/10/20 SSE clients): snapshot P95 5.282/2.304/5.607 ms and SSE CPU 0.195/0.385/0.812 ms. These are single local samples with a non-monotonic snapshot result, not production evidence or a speedup claim. T58 production performance remains unmeasured.
+
+The build's MapLibre sync rewrote generated `next-env.d.ts` and public worker assets locally. Those build-generated changes are excluded from the source change set and should be restored before committing. Four existing Turbopack warnings about dynamic filesystem access remain.
+
+## Scope and feature retention
+
+The 79 KEEP / 99 REMOVE selection files were not changed, and no KEEP feature was deliberately removed. The individual behavior of every KEEP feature was not fully validated, so the matrix records `PARTIAL` conservatively rather than claiming complete preservation. The reviewed footprint was 86,598 production LOC and 28,000 test LOC before the implementation; at the latest source measurement it was 86,749 and 28,028 respectively. The net LOC increase reflects regression coverage and safety metadata, not an optimization claim. No T58 performance improvement is claimed.
+
+## Production status and next gate
+
+Production remains on baseline version `1.0.545` / commit `ede0ec1a11a27778546006722d0e736c958bb979`; no post-change production check is possible because deployment was correctly stopped. Before a deploy-bearing push, restore authenticated T58 preflight with representative samples, obtain a safe read-only production catalog compatibility result and rollback evidence, complete required KEEP behavior validation, rerun all gates on the final candidate, inspect the complete diff, and classify it with `scripts/release-scope.mjs`. Then follow `docs/RELEASE.md` and wait for checks on the exact pushed SHA.
+
+**Git state:** the remediation is prepared locally on the isolated checkout; it has not been pushed to `main`. This result must not be read as approval to deploy.

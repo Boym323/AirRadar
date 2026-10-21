@@ -3,11 +3,7 @@ import { getWatchlistAdminToken } from "@/lib/server/config";
 
 export const WATCHLIST_SESSION_COOKIE = "airradar_watchlist_session";
 
-/**
- * The private receiver deployment uses open administration by default.
- * Opt in to signed admin sessions explicitly (and configure WATCHLIST_ADMIN_TOKEN).
- * This governs all callers of isWatchlistSessionValid, including /system diagnostics.
- */
+/** Administrator routes fail closed, even when the legacy opt-in flag is off. */
 export function isAdminAuthEnabled(): boolean {
   return process.env.AIRRADAR_ADMIN_AUTH_ENABLED?.trim().toLowerCase() === "true";
 }
@@ -61,9 +57,7 @@ export function isWatchlistAuthConfigured(): boolean {
 }
 
 export function isWatchlistSessionValid(request: Request, now = Date.now()): boolean {
-  if (!isAdminAuthEnabled()) return true;
-  const secret = getWatchlistAdminToken();
-  return Boolean(secret && validSession(request, secret, now));
+  return isWatchlistAdminSessionValid(request, now);
 }
 
 /** Strict administrator check for privileged reads and every mutation. */

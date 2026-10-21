@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-const root = new URL("../", import.meta.url);
 const ciWorkflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 describe("retired O14 repository metadata automation", () => {
   it("keeps automatic changelog and legacy metadata PR workflow retired", () => {

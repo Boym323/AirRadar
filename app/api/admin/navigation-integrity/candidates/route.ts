@@ -1,10 +1,10 @@
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
-import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { isWatchlistAdminSessionValid } from "@/lib/server/watchlist-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  if (!isWatchlistSessionValid(request)) return Response.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  if (!isWatchlistAdminSessionValid(request)) return Response.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   const params = new URL(request.url).searchParams;
   const rawWindow = params.get("window") ?? "15m";
   const rawLimit = params.get("limit") ?? "20";

@@ -64,7 +64,7 @@ export async function GET(request: Request): Promise<Response> {
         }
       };
 
-      unsubscribe = getSystemStatusStream().subscribe(send);
+      unsubscribe = getSystemStatusStream().subscribe(send, admin ? "full" : "public");
       heartbeat = setInterval(() => {
         if (closed || (controller.desiredSize ?? 0) <= 0) return;
         try {

@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const root = new URL("../", import.meta.url);
 const read = (relativePath: string) => readFileSync(new URL("../" + relativePath, import.meta.url), "utf8");
 const report = JSON.parse(read("docs/audits/PR1096-RELEASE-READINESS-2026-10-21.json")) as {
   selection: {keep:number;remove:number;sourceAnchors:number};
