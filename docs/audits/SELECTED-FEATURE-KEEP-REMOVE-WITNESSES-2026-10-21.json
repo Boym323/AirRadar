@@ -2,7 +2,7 @@
   "version": 2,
   "auditDate": "2026-10-21",
   "purpose": "Source-backed KEEP/REMOVE runtime witnesses with exact full 178-feature descriptions from user",
-  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain.",
+  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain. Identified concrete deselected runtime behavior for P05 and P06; do not merge until scope is resolved with R11.",
   "keepItems": [
     {
       "id": "J01",
@@ -1667,7 +1667,8 @@
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "basicSystem": false,
+      "activeRuntimeFinding": "SHARED_OWNERSHIP_REVIEW"
     },
     {
       "id": "P05",
@@ -1676,7 +1677,8 @@
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "basicSystem": false,
+      "activeRuntimeFinding": "LIVE_DESELECTED_ANALYTICS"
     },
     {
       "id": "P06",
@@ -1685,7 +1687,8 @@
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "basicSystem": false,
+      "activeRuntimeFinding": "ACTIVE_DESELECTED_RUNTIME"
     },
     {
       "id": "P07",
@@ -2153,5 +2156,43 @@
     "T01 sector geometry is retained for R17"
   ],
   "originalKeepTitleCount": 88,
-  "originalInventorySource": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json"
+  "originalInventorySource": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+  "scopeGaps": [
+    {
+      "id": "P04",
+      "title": "Route Intelligence – interpretace letového plánu",
+      "severity": "SHARED_OWNERSHIP_REVIEW",
+      "source": [
+        "components/radar/use-route-corridor-intelligence.ts:130-149",
+        "lib/route-intelligence/index.ts"
+      ],
+      "current": "analyzePublishedRoute is invoked while rendering retained R11 route geometry.",
+      "action": "Separate minimum published route reconstruction needed by R11 from independent rejected predictive/interpretative extras. Do not remove core route geometry."
+    },
+    {
+      "id": "P05",
+      "title": "Route Corridor Intelligence – odchylka od plánované trasy",
+      "severity": "LIVE_DESELECTED_ANALYTICS",
+      "source": [
+        "components/radar/use-route-corridor-intelligence.ts:151-161",
+        "components/aircraft-radar-quick-detail.tsx:222-249"
+      ],
+      "current": "buildRouteCorridorIntelligence actively computes corridor deviation/status and presents analytic labels. The user selected REMOVE P05 but KEEP R11 route display.",
+      "action": "Remove P05 deviation inference and excess status UI, retaining straightforward published route and optional position/progress needed by R11."
+    },
+    {
+      "id": "P06",
+      "title": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
+      "severity": "ACTIVE_DESELECTED_RUNTIME",
+      "source": [
+        "components/radar/use-route-corridor-intelligence.ts:163-175",
+        "components/aircraft-radar-quick-detail.tsx:240-248",
+        "components/radar/radar-flight-follow-hud.tsx:43-77",
+        "lib/route-intelligence/conformance.ts",
+        "docs/features.registry.json:185"
+      ],
+      "current": "buildTrajectoryConformance still computes in the active selected-aircraft hook and is displayed in radar drawer and Follow HUD; feature registry lists Trajectory Conformance as production. P06 is REMOVE.",
+      "action": "Disconnect and remove P06 hook computation, consumers, registry entry, now-orphan source and corresponding obsolete tests, preserving R11 route rendering and selected-weather safety displays."
+    }
+  ]
 }

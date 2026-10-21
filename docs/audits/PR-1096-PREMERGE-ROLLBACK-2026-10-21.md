@@ -13,6 +13,10 @@
 - No changed tracked `prisma/migrations/**`, `prisma/schema.prisma`, `deploy/release.sh`, `deploy/recover-previous-build.sh` or `deploy/airradar.service` relative to baseline `bc2f5fc17277f7571b90e358bab3177467e93312`.
 - This cleanup must not delete stored ADS-B history, map-context AUP JSON, OGN DDB caches, Web Push subscriptions, Pushover occurrences or existing migrations.
 
+## Newly discovered runtime scope blocker (P05/P06)
+
+The full 178-title user catalog exposed active deselected P05 corridor analytical classification and P06 trajectory-conformance state machine in the retained R11 route view. See `docs/audits/SELECTED-FEATURE-P04-P06-SCOPE-GAP-2026-10-21.md`. **Do not merge before reviewing/remediating P05/P06** while retaining R11. Existing green tests alone do not certify removal.
+
 ## Merge acceptance gate
 
 1. Verify branch tip against PR #1096 and check `main` has not advanced. If it did, reconcile in a separate commit and rerun everything.

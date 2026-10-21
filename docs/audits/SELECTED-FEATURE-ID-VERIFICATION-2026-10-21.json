@@ -1291,6 +1291,13 @@
       "source": "scripts/production-gates.mjs:488-503,819-829",
       "evidence": "Removed unreachable mockWatchlist/mockNotifications browser fixture branches.",
       "action": "Prove full target inventory unused and remove obsolete fixture branches in separate test-only patch"
+    },
+    {
+      "id": "P05_P06_SELECTED_SCOPE_MISMATCH",
+      "severity": "P1",
+      "status": "ACTIVE_DESELECTED_RUNTIME",
+      "evidence": "P05 buildRouteCorridorIntelligence and P06 buildTrajectoryConformance are invoked in selected-aircraft client hook; P06 displayed in drawer/HUD and registered as production. User explicitly selected REMOVE both.",
+      "action": "Separate R11 minimum route display from P04/P05/P06 analytical controllers; remove P05/P06 live inference before merge."
     }
   ],
   "productionMetrics": {
@@ -1342,7 +1349,8 @@
     "ci": "PENDING",
     "originalNames": "90/90 REMOVE and 88/88 KEEP confirmed 2026-10-21",
     "unresolvedNames": 0,
-    "inventory": "178/178 exact user-provided titles; 88 KEEP and 90 REMOVE"
+    "inventory": "178/178 exact user-provided titles; 88 KEEP and 90 REMOVE",
+    "activeScopeFinding": "P05/P06 runtime still active; P04 shared R11 minimal route parsing; must resolve before merge"
   },
   "originalRemoveNames": {
     "count": 90,
