@@ -65,13 +65,7 @@ export function useSelectedRoute(aircraft: AircraftView | null): SelectedRouteSt
     getRouteIntelligenceUpdateSnapshot,
     () => 0,
   );
-  const identifiers = useMemo(() => routeReferenceIdentifiers(aircraft), [
-    aircraft?.icaoHex,
-    aircraft?.enrichment?.flightPlan?.filedRoute,
-    aircraft?.enrichment?.flightPlan?.waypoints,
-    aircraft?.enrichment?.route?.origin,
-    aircraft?.enrichment?.route?.destination,
-  ]);
+  const identifiers = useMemo(() => routeReferenceIdentifiers(aircraft), [aircraft]);
   const identifierKey = identifiers.join(",");
   const [referenceSnapshot, setReferenceSnapshot] = useState<{ key: string; points: AviationNavPoint[] }>({ key: "", points: [] });
   const [referenceLoading, setReferenceLoading] = useState(false);
@@ -114,6 +108,8 @@ export function useSelectedRoute(aircraft: AircraftView | null): SelectedRouteSt
   }, [identifierKey]);
 
   const analysis = useMemo(() => {
+    // Keep ATS store invalidation as an explicit dependency of this memo.
+    void atsVersion;
     const enrichment = aircraft?.enrichment;
     const plan = enrichment?.flightPlan;
     if (!aircraft || !enrichment || (!plan?.filedRoute && !plan?.waypoints.length)) return null;
@@ -140,7 +136,7 @@ export function useSelectedRoute(aircraft: AircraftView | null): SelectedRouteSt
     if (analysis?.v2 && aircraft && Number.isFinite(Date.parse(aircraft.lastSeen))) {
       previousDynamicRef.current = analysis.v2.dynamic;
     }
-  }, [analysis, aircraft?.lastSeen]);
+  }, [analysis, aircraft]);
 
   return {
     route: analysis ? toRouteIntelligenceViewDTO(analysis, aircraft?.enrichment?.route ?? null) : null,

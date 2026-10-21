@@ -22,7 +22,6 @@ Aktuální rozsah API je definován v [`features.registry.json`](../features.reg
 | Receiver Coverage | production | receiver | Před registrem | `/receiver/coverage` | `/api/receiver/coverage` | Analýza dosahu přijímače a samostatný přehled pokrytí. |
 | Statistics & Recaps | production | analytics | Před registrem | — | `/api/logbook/summary`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap`<br>`/api/statistics/traffic-profile` | Zachovaná API statistik přijímače a historie; samostatné rekapitulační stránky jsou odstraněné. |
 | System Observability | production | operations | Před registrem | `/system` | `/api/admin/altitude/:hex`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/runtime-performance`<br>`/api/system/integrations`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Provozní diagnostika, stav zdrojů a historické metriky aplikace. |
-| Trajectory Conformance | production | navigation / intelligence | Před registrem | `/` | — | Vyhodnocení souladu trasy na mapě bez odstraněných prediktivních služeb. |
 <!-- feature-registry:end -->
 
 ## Zachované stránky
