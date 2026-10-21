@@ -15,6 +15,10 @@ describe("additional user-authorized removals (PR #1096)", () => {
     expect(original.keepIds).toHaveLength(88);
     expect(original.removeIds).toHaveLength(90);
     expect(decisions.removedFromKeep.every((id) => original.keepIds.includes(id))).toBe(true);
+    const current = JSON.parse(readFileSync(new URL("docs/audits/SELECTED-FEATURE-CURRENT-2026-10-21.json", root), "utf8")) as {count:number;counts:{KEEP:number;REMOVE:number};items:Array<{id:string;decision:"KEEP"|"REMOVE"}>};
+    expect(current.count).toBe(178);
+    expect(current.counts).toEqual({KEEP:79,REMOVE:99});
+    expect(current.items.filter(x=>x.decision==="REMOVE").map(x=>x.id)).toEqual(expect.arrayContaining(decisions.removedFromKeep));
   });
 
   it("prevents obsolete historical heatmap, recap and pilot report endpoints from returning", () => {
@@ -49,6 +53,7 @@ describe("additional user-authorized removals (PR #1096)", () => {
     for (const locale of [en, cs]) {
       expect(locale).not.toContain("  recap: {");
       expect(locale).not.toContain("    pirepTitle:");
+      expect(locale).not.toContain("    favoriteAdd:");
       expect(locale).not.toContain("    receptionRecordsLegacyNote:");
     }
     for (const path of [

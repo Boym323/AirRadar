@@ -23,8 +23,8 @@
     {
       "id": "R16",
       "title": "Map presentation mode",
-      "assessment": "NO_DEDICATED_SOURCE_FOUND",
-      "action": "Keep ordinary map rendering, aircraft labels and layer visuals; any mode-specific remnants need further review"
+      "assessment": "NO_ACTIVE_PRESENTATION_MODE_ENTRYPOINT",
+      "action": "No dedicated presentation-mode toggle or module remains. Preserve ordinary R14 map style and R01 rendering."
     },
     {
       "id": "S08",
@@ -47,14 +47,14 @@
     {
       "id": "U06",
       "title": "Favorite airports and preferences",
-      "assessment": "SHARED_PREFERENCES",
-      "action": "Remove only favorites features, preserve layout/locale/appearance preferences necessary for U01/U04/R14"
+      "assessment": "BROWSER_PRESETS_AND_FAVORITES_RETIRED",
+      "action": "Removed persisted radar preset model, UI, CSS, tests and favorite-airport locale fields; keep R14 layer toggle and basic preferences."
     },
     {
       "id": "U07",
       "title": "Shareable filter and analysis bookmarks",
-      "assessment": "SHARED_ROUTING",
-      "action": "Remove specialized URL filter persistence while keeping ordinary navigation and selected-aircraft links"
+      "assessment": "NO_SEPARATE_FILTER_LINK_IMPLEMENTATION",
+      "action": "No specialized shareable saved-filter implementation remains. Preserve selected-aircraft and NAVAID/ATS deep links required by U05/T10/R11."
     },
     {
       "id": "O14",
@@ -71,8 +71,8 @@
     {
       "id": "W04",
       "title": "Echo Top weather radar layer",
-      "assessment": "NO_DEDICATED_SOURCE_FOUND",
-      "action": "Preserve W03 real radar and timeline; isolate any Echo Top-only configuration"
+      "assessment": "NO_ECHO_TOP_PRODUCT_PRESENT",
+      "action": "Radar contract only has MAX_Z_MASKED and PSEUDOCAPPI_2KM; no Echo Top product, API or toggle. Preserve W03 live radar."
     }
   ],
   "applied": [
@@ -111,7 +111,19 @@
     {
       "path": "lib/server/statistics.ts",
       "reason": "S05 removed tracking/persistence of individual reception-record metadata"
+    },
+    {
+      "path": "components/airradar-app.tsx",
+      "reason": "U06 browser radar presets disconnected"
+    },
+    {
+      "path": "lib/i18n/en.ts",
+      "reason": "U06 favorite airport locale entries retired"
+    },
+    {
+      "path": "lib/i18n/cs.ts",
+      "reason": "U06 favorite airport locale entries retired"
     }
   ],
-  "notClaimed": "This decision file does not certify nine independent code retirements. Shared paths remain until separately verified; historical selection audit is unchanged."
+  "notClaimed": "All nine requested feature surfaces have been retired or were already absent. This audit does not prove production behavior or authorize deploy; shared core dependencies and legacy database schema remain."
 }

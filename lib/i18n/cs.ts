@@ -144,9 +144,6 @@ export const cs = {
     enablePush: "Povolit push upozornění",
     pushEnabled: "Push upozornění jsou zapnutá",
     offline: "Offline režim: poslední stav je k dispozici",
-    favorites: "Oblíbené letiště",
-    favoriteAdd: "Přidat do oblíbených letišť",
-    favoriteRemove: "Odebrat z oblíbených letišť",
   },
   notificationCenter: {
     title: "Centrum oznámení",

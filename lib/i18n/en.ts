@@ -146,9 +146,6 @@ export const en = {
     enablePush: "Enable push notifications",
     pushEnabled: "Push notifications are enabled",
     offline: "Offline mode: last state is available",
-    favorites: "Favorite airport",
-    favoriteAdd: "Add to favorite airports",
-    favoriteRemove: "Remove from favorite airports",
   },
   notificationCenter: {
     title: "Notification Center",
