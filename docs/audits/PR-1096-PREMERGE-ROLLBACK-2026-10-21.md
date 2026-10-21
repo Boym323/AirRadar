@@ -6,7 +6,7 @@
 
 - User-selected matrix: exactly **88 KEEP** and **90 REMOVE** identifiers, all represented in `docs/audits/SELECTED-FEATURE-KEEP-REMOVE-WITNESSES-2026-10-21.json`.
 - Positive witnesses cover 88 KEEP IDs **at family/runtime boundary level**. They establish that relevant entrypoints and shared modules survive, not that each of the 88 individual original feature descriptions is semantically certified.
-- Recovered names for **17 / 90 REMOVE** IDs; **73 original names remain unavailable**. Separately, the existing retirement audit has detailed reduction-note evidence for 8 IDs and group evidence for 82. These measure different things and are not interchangeable.
+- All **90 / 90 REMOVE original titles** were recovered from the user's original 2026-10-19 selection and recorded in `docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json`. Separately, detailed implementation-removal evidence exists for 8 IDs and only group-level evidence for 82. Recovering the original names does **not** certify removal of each individual implementation.
 - Known overlaps are intentional: retained aircraft detail/history H03/H07/H14 needs components also named in removed H01/H02; R11 retains route and OD/DO context also present in removed H04; R17 retains ATC sector polygons also named in removed T01. Removing these shared dependencies would violate KEEP selection.
 - The previous static contract sweep covers 50 deleted Next API routes and 21 deleted pages. `scripts/selected-feature-premerge-audit.mjs` now scans active application/server source strings against the 56 available API route files, plus selected bootstrap and worker lifecycle anchors. AWC upstream `/api/data/*` calls are **not** AirRadar endpoints: they are allowlisted exclusively in the three actual remote provider modules.
 - TypeScript/compiler and full browser gates check more than the literal scanner can. Dynamic strings, user state, databases and live ingress still require smoke verification.
@@ -16,7 +16,7 @@
 ## Merge acceptance gate
 
 1. Verify branch tip against PR #1096 and check `main` has not advanced. If it did, reconcile in a separate commit and rerun everything.
-2. Review the open title-mapping limitation (73 IDs) and the intentional shared dependencies above. Do not claim 178 individually proven names. Obtain an explicit risk decision before merging if the original catalog remains unavailable.
+2. Review the now-recovered 90 original REMOVE titles, the 82 group-only implementation proofs and intentional shared dependencies above. Do not claim 178 individually proven implementations. Obtain an explicit risk decision before merging if any per-ID call graph remains unverified.
 3. Require successful **CI**, **CodeQL** and **Runtime load scaling benchmarks** at the **same final PR head**. CI must include build/typecheck, Vitest, browser/release validation and performance regression. A past green run on another commit does not count.
 4. Execute `node scripts/selected-feature-premerge-audit.mjs` and `npm run features:check`. Every unresolved hardcoded internal API reference is a blocker; the report explicitly distinguishes AWC remote URLs from local Next routes.
 5. Confirm receiver/feed freshness, radar SSE, radar map tiles, current ADS-B list, aircraft detail/history/route, ATC/ATS, navigation integrity, airports, current METAR/SIGMET/CHMI, OGN if configured, RXW Hub if enabled, /system sanitized output, saved Web Push subscriptions/Pushover delivery queue.
@@ -62,4 +62,4 @@ The script checks build readiness and version preconditions, holds locks, replac
 
 ## Decision at writing
 
-Reviewable PR **with explicitly documented limitations**; no merge, database mutation or deployment authorized. Residual proof gap: individual original feature-name mapping; live receiver A/B must follow approved release.
+Reviewable PR **with explicitly documented limitations**; no merge, database mutation or deployment authorized. Original REMOVE names are restored for all 90; residual proof gap is individual retired implementation call graph for 82 IDs and individual KEEP implementation semantics. Live receiver A/B must follow approved release.

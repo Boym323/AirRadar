@@ -254,10 +254,9 @@
       "live radar, ATC geometry and FlightPosition history"
     ],
     "outstanding": [
-      "Per-ID KEEP/REMOVE parity review",
-      "Notification trigger policy for preserved delivery transports",
-      "Exact production-only LOC and measured live A/B performance",
-      "Review of external clients and production rollout"
+      "One-to-one per-ID implementation proof (82 family-only REMOVE IDs)",
+      "Notification triggers for L11/L12 transports",
+      "Measured production T58 A/B and rollout approval"
     ],
     "retainedScalingDependency": "scripts/benchmark-atc-ring-stalls.ts (imported by scripts/benchmark-load-scaling.ts)",
     "latestCleanupPhase": 61,
@@ -281,7 +280,7 @@
     "perIdExplicitEvidence": 8,
     "perIdGroupEvidenceOnly": 82,
     "unresolvedRuntime": [],
-    "unresolvedExternalContractReview": "50 deleted HTTP API routes; access logs and external clients not observed",
+    "unresolvedExternalContractReview": "User confirmed no external API clients; maintain internal API contract tests.",
     "unresolvedDocumentation": [
       "docs/ARCHITECTURE.md",
       "docs/cs/ARCHITECTURE.md"
@@ -297,15 +296,18 @@
     "sourceAuditCodeQLStatus": "PASS",
     "sourceAuditSyntheticLoadStatus": "PASS",
     "sourceAuditUnresolved": [
-      "T12 periodic AUP polling",
-      "82 original per-ID detailed names/call graphs missing",
-      "external client/access-log verification pending",
+      "82 REMOVE IDs still have family-only implementation retirement evidence",
+      "88 KEEP IDs have family positive runtime anchors, not original one-to-one implementation certification",
       "live T58 A/B production not measured"
     ],
     "T12Result": "Scheduled ingestion disconnected; old AUP archive read preserved; CI pending",
     "architectureStatus": "Rewritten EN/CZ, CI pending",
     "externalUsageResult": "NOT VERIFIED: authorized production reverse-proxy logs not available",
     "cleanedVisualFixtures": true,
-    "removedPredictiveDiagAllocation": true
+    "removedPredictiveDiagAllocation": true,
+    "originalRemoveNameMappings": 90,
+    "originalRemoveNamesMissing": 0,
+    "originalRemoveNameSource": "docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json",
+    "remainingImplementationMappingGroupOnly": 82
   }
 }

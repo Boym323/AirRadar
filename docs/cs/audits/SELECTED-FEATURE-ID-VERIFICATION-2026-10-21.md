@@ -48,3 +48,8 @@ Doplnit původní názvy a konkrétní cesty všech 82 ID zatím ověřených je
 ## Následná implementace – 21. října 2026
 
 Pravidelné stahování T12 AUP/UUP bylo odpojeno od služby kontextu mapy. Historické AUP JSON záznamy, formát archivu a časové DTO zůstávají dostupné. Samostatná historická implementace síťového čtení Czech AIM již není časově spouštěna. Odstraněny nevyužívané browser fixture stránek Watchlist a Notifications. Zrušena zbytečná alokace predikční diagnostické mapy, zachováno kompatibilní pole s hodnotou 0. Architektura EN/CZ je přepsaná. Využití 50 zrušených HTTP API externími klienty **není ověřené**, protože nejsou dostupné produkční proxy logy; pro oprávněné provedení je přiložen read-only skript `scripts/audit-retired-api-access.py`. Původní jednoznačné názvy 82 vybraných REMOVE ID nebyly dohledány; skupinový důkaz nenahrazuje individuální audit. Změny čekají na navazující CI.
+
+
+## Obnovené původní názvy REMOVE — 21. 10. 2026
+
+Bylo obnoveno všech **90/90 původních názvů REMOVE** z výběru uživatele z 19. 10. 2026. Seznam 73 chybějících názvů je tím **vyřešený**. Přesná vazba ID a názvu je uložena v `docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json`. **Důkaz odstranění je samostatná kontrola:** pouze 8 ID má individuální poznámky, zbývajících 82 má stále jen skupinové důkazy, nikoli prokázané individuální odstranění implementace. Sdílené moduly požadované schválenými funkcemi KEEP musí zůstat. Nejde o povolení merge/nasazení.

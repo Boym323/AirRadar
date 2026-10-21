@@ -48,3 +48,8 @@ Record an original ID-to-name-to-code-path inventory for the 82 group-level entr
 ## Follow-up implementation — 21 October 2026
 
 T12 planned AUP/UUP polling was disconnected from the periodic map-context service, while historical AUP JSON reads, the archive format and time-resolution DTO remain. The old isolated Czech AIM network implementation is not scheduled and must not be confused with active data ingestion. Browser fixtures for removed Watchlist and Notifications pages were pruned. An unused predictive diagnostic Map allocation was removed, preserving the response field with the fixed value 0. EN/CZ architecture was rewritten. External-client usage for 50 retired HTTP routes is **not verified**, because production reverse-proxy logs were unavailable; the read-only aggregator `scripts/audit-retired-api-access.py` is supplied for authorized execution. The exact original names for 82 selected REMOVE IDs were not recovered; per-ID family evidence is not individual certification. The changes await CI for this follow-up commit.
+
+
+## Restored original user REMOVE titles — 2026-10-21
+
+All **90/90** original REMOVE names have now been recovered from the user's original 19 October 2026 selection. The missing-title backlog of 73 is **closed**. The complete original ID-to-title source mapping is in `docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json`. **Retirement verification remains distinct:** only 8 IDs have individual notes, 82 remain family-level evidence and are not validated as one-to-one removal of every implementation. Shared modules needed by selected KEEP functions must survive. This restoration does not grant merge/deploy approval.

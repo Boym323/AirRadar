@@ -44,6 +44,28 @@ describe("selected-feature ID audit", () => {
     }
   });
 
+  it("recovers the exact original user-title mapping for all 90 REMOVE IDs without confusing names with implementation proof", () => {
+    const source = JSON.parse(readFileSync(new URL("docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json", root), "utf8")) as {
+      count:number; sourceDate:string; items:Array<{id:string;title:string;source:string}>;
+    };
+    const witnesses = JSON.parse(readFileSync(new URL("docs/audits/SELECTED-FEATURE-KEEP-REMOVE-WITNESSES-2026-10-21.json", root), "utf8")) as {
+      originalTitleCount:number; remainingWithoutOriginalTitle:number;
+      removeItems:Array<{id:string;recoveredTitle:string;originalPerIdImplementationVerified:boolean}>;
+    };
+    expect(source.count).toBe(90);
+    expect(source.sourceDate).toBe("2026-10-19T19:01:21Z");
+    expect(source.items.map(item=>item.id)).toEqual(matrix.removeIds);
+    expect(source.items.every(item => item.title.length > 8 && item.source === "user-original-selection")).toBe(true);
+    expect(new Set(source.items.map(item=>item.title)).size).toBe(90);
+    expect(witnesses.originalTitleCount).toBe(90);
+    expect(witnesses.remainingWithoutOriginalTitle).toBe(0);
+    for (let i=0; i<90; i++) {
+      expect(witnesses.removeItems[i].id).toBe(source.items[i].id);
+      expect(witnesses.removeItems[i].recoveredTitle).toBe(source.items[i].title);
+      expect(witnesses.removeItems[i].originalPerIdImplementationVerified).toBe(false);
+    }
+  });
+
   it("guards all explicitly retired page and API entrypoints", () => {
     expect(audit.deletedApiRoutes).toHaveLength(50);
     expect(audit.deletedPageEntrypoints).toHaveLength(21);

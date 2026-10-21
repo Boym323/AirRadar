@@ -2,7 +2,7 @@
   "version": 1,
   "auditDate": "2026-10-21",
   "purpose": "KEEP/REMOVE source witnesses (no fabricated original descriptions)",
-  "interpretation": "Every ID has a concrete preserved or retired family boundary, not a separately validated original feature implementation.",
+  "interpretation": "All 90 original REMOVE titles have been recovered from the user's selection. Original titles establish intent, not proof of each retired call graph. KEEP 88 are still supported by family-level positive runtime witnesses; retained shared dependencies remain intentional.",
   "keepItems": [
     {
       "id": "J01",
@@ -966,7 +966,7 @@
     {
       "id": "J10",
       "recoveredTitle": "Demo provoz se simulovanými letadly",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/providers.ts",
@@ -978,7 +978,7 @@
     {
       "id": "R13",
       "recoveredTitle": "Poloha přijímače, kružnice dosahu a měřítko",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "components/airradar-app.tsx",
@@ -989,8 +989,8 @@
     },
     {
       "id": "H01",
-      "recoveredTitle": "Samostatný detail letadla",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Samostatný detail letadla – registrace, typ, operátor",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1001,8 +1001,8 @@
     },
     {
       "id": "H02",
-      "recoveredTitle": "Katalog a automatické doplňování metadat",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Katalog a automatické doplňování metadat letadel",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1014,7 +1014,7 @@
     {
       "id": "H04",
       "recoveredTitle": "Letový plán, volací znak a letiště OD/DO",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1025,8 +1025,8 @@
     },
     {
       "id": "H05",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historie konkrétního letadla a jeho letů",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1037,8 +1037,8 @@
     },
     {
       "id": "H06",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Detail jednotlivého letu (Flight Story V2)",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1049,8 +1049,8 @@
     },
     {
       "id": "H08",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historické přehrávání konkrétního letu",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1061,8 +1061,8 @@
     },
     {
       "id": "H09",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Seznam a vyhledávání historických letů",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1073,8 +1073,8 @@
     },
     {
       "id": "H10",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Porovnání dvou letů",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1085,8 +1085,8 @@
     },
     {
       "id": "H11",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Time Machine – přehrávání všech letadel v čase",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1097,8 +1097,8 @@
     },
     {
       "id": "H12",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Event Replay – ±10 minut kolem události",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1109,8 +1109,8 @@
     },
     {
       "id": "H13",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historická identita NEW / RARE / RETURNING",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/aircraft/[hex]/page.tsx",
@@ -1121,8 +1121,8 @@
     },
     {
       "id": "A03",
-      "recoveredTitle": "Airport Live Board",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Airport Live Board – přehled provozu letiště",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1133,8 +1133,8 @@
     },
     {
       "id": "A04",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Odvozené přílety, odlety a průlety",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1145,8 +1145,8 @@
     },
     {
       "id": "A05",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Vyhodnocení použitých přistávacích drah",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1157,8 +1157,8 @@
     },
     {
       "id": "A06",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Arrival Sequence / Approach Queue",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1169,8 +1169,8 @@
     },
     {
       "id": "A07",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Arrival Flow, vytížení a stabilita drah (V8)",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1181,8 +1181,8 @@
     },
     {
       "id": "A08",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Odhad terminálové poptávky / příletů (V9)",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1193,8 +1193,8 @@
     },
     {
       "id": "A09",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Provozní výjimky a konfliktní údaje letiště",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1205,8 +1205,8 @@
     },
     {
       "id": "A10",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Live Airport Network – okolní aktivní letiště",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1217,8 +1217,8 @@
     },
     {
       "id": "A11",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Porovnání letišť",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1229,8 +1229,8 @@
     },
     {
       "id": "A12",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historická statistika provozu letiště za 7/30 dní",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/airports/page.tsx",
@@ -1242,7 +1242,7 @@
     {
       "id": "T01",
       "recoveredTitle": "ATC sektory včetně geometrie a výškových hranic",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1253,8 +1253,8 @@
     },
     {
       "id": "T02",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Samostatný detail ATC sektoru",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1265,8 +1265,8 @@
     },
     {
       "id": "T03",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "ATC frekvence, vysílače a publikované služby",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1277,8 +1277,8 @@
     },
     {
       "id": "T04",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Pravděpodobné ATC přiřazení vybraného letadla",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1289,8 +1289,8 @@
     },
     {
       "id": "T05",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "ATC handoff – odhad přechodu mezi sektory",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1301,8 +1301,8 @@
     },
     {
       "id": "T06",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historie provozu a přechodů mezi sektory – API",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1313,8 +1313,8 @@
     },
     {
       "id": "T07",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Validace a diagnostika ATC dat",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1325,8 +1325,8 @@
     },
     {
       "id": "T11",
-      "recoveredTitle": "SID/STAR postupy a importer",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Letové procedury SID/STAR a procedurální data",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1337,8 +1337,8 @@
     },
     {
       "id": "T12",
-      "recoveredTitle": "Plánované AUP/UUP vzdušného prostoru",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "AUP/UUP – plánovaná aktivace vzdušného prostoru",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
@@ -1350,7 +1350,7 @@
     {
       "id": "W05",
       "recoveredTitle": "Model větru ICON-EU v různých letových hladinách",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/weather/page.tsx",
@@ -1361,8 +1361,8 @@
     },
     {
       "id": "W10",
-      "recoveredTitle": "Aviation Weather Fusion",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Weather Fusion – spojení více zdrojů počasí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/weather/page.tsx",
@@ -1373,8 +1373,8 @@
     },
     {
       "id": "W11",
-      "recoveredTitle": "Weather Avoidance klasifikace",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Weather Avoidance – vyhodnocení možné odchylky kvůli počasí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/weather/page.tsx",
@@ -1385,8 +1385,8 @@
     },
     {
       "id": "W12",
-      "recoveredTitle": "Počasí na trase a letištích odletu/příletu",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Počasí na trase zvoleného letu",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/weather/page.tsx",
@@ -1397,8 +1397,8 @@
     },
     {
       "id": "W13",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historické mapové počasí v Time Machine",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/weather/page.tsx",
@@ -1409,8 +1409,8 @@
     },
     {
       "id": "W14",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Weather Corridor – počasí v předpokládaném koridoru",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "app/weather/page.tsx",
@@ -1421,120 +1421,120 @@
     },
     {
       "id": "P01",
-      "recoveredTitle": "Flight Intelligence – automatické události letu",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Flight Intelligence – automatické události",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P02",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Rozpoznávání holding, go-around, diversion, orbit a neobvyklých zatáček",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P03",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Přehled událostí a analytická stránka",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P04",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Route Intelligence – interpretace letového plánu",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P05",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Route Corridor Intelligence – odchylka od plánované trasy",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P06",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P07",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Predikce času příletu ETA",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P08",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Predikce přistávací dráhy",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P09",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Predikce změny přistávací dráhy",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P10",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Predikce budoucí trajektorie",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P11",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Explainable Prediction – vysvětlení podkladů predikcí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P12",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Prospektivní sběr a validace predikcí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P13",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Readiness a pravidla pro zveřejnění predikcí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P14",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Kalibrace a porovnání predikcí s výsledky",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "P15",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Predictive Operations Center – souhrn předpovědí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
@@ -1542,191 +1542,191 @@
     {
       "id": "D01",
       "recoveredTitle": "Digital Twin – základní projekce letu na 30 minut",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D02",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "4D koridor – budoucí poloha, výška a čas",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D03",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Prediction Timeline v detailu letadla",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D04",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Budoucí průniky ATC sektorů a ATS tras",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D05",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Průniky s plánovanými AUP/UUP prostory",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D06",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Průniky s Navigation Integrity anomáliemi",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D07",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Operational Focus – prioritní situace letadla",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D08",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Operational Focus Change – změny priorit",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D09",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Regional Situation Graph – vazby mezi letadly",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D10",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Operational Attention – regionální upozornění",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D11",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Regional Focus Queue – pořadí prioritních letadel",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D12",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Regionální projekce za 5/15/30 minut",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D13",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Validace koridoru proti pozdějším pozicím",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D14",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Validace predikovaných událostí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D15",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Truth-first Validation – vyhodnocování podle skutečných událostí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D16",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Ukládání anonymních výsledků kalibrace",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D17",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Regional Attention Outcome – kontrola regionálních predikcí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D18",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Regional Attention Graduation – pravidla povýšení modelu",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D19",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Trajectory Quality V2 – alternativní vertikální model",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D20",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Trajectory Quality V3 – výkonově orientovaný shadow model",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D21",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Outcome Validation pro modely V2 a V3",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D22",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Graduation/Promotion – výběr schváleného modelu",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "D23",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Admin Calibration Center – diagnostika modelů",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [],
       "originalPerIdImplementationVerified": false
     },
     {
       "id": "L01",
-      "recoveredTitle": "Watchlist",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "recoveredTitle": "Watchlist – pravidla sledování",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1736,8 +1736,8 @@
     },
     {
       "id": "L02",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Hlídání ICAO, registrace, callsignu, typu a aerolinky",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1747,8 +1747,8 @@
     },
     {
       "id": "L03",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Upozornění podle vzdálenosti od přijímače",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1758,8 +1758,8 @@
     },
     {
       "id": "L04",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Fleet Explorer – vlastní sledované flotily",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1769,8 +1769,8 @@
     },
     {
       "id": "L05",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Geofencing – vlastní sledované geografické oblasti",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1780,8 +1780,8 @@
     },
     {
       "id": "L06",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Emergency squawk 7500/7600/7700",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1791,8 +1791,8 @@
     },
     {
       "id": "L07",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Historie upozornění a událostí",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1802,8 +1802,8 @@
     },
     {
       "id": "L08",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Pravidla cooldownu a odstranění duplicit",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1813,8 +1813,8 @@
     },
     {
       "id": "L09",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Notification Center – přijaté/nepřečtené zprávy",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1824,8 +1824,8 @@
     },
     {
       "id": "L10",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Ztlumení oznámení pro letadlo nebo pravidlo",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1835,8 +1835,8 @@
     },
     {
       "id": "L13",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Delivery Health – stav doručování zpráv",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1846,8 +1846,8 @@
     },
     {
       "id": "L14",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Alert Rule Simulator – testování pravidel",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1857,8 +1857,8 @@
     },
     {
       "id": "L15",
-      "recoveredTitle": null,
-      "titleProvenance": "unavailable",
+      "recoveredTitle": "Alert Effectiveness Analytics – účinnost upozornění",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/alert-delivery-worker.ts",
@@ -1869,7 +1869,7 @@
     {
       "id": "E08",
       "recoveredTitle": "ACARS H1/FPN waypointy a mapová vrstva",
-      "titleProvenance": "original user inventory or phase reduction notes",
+      "titleProvenance": "user original KEEP/REMOVE selection 2026-10-19",
       "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
       "witnessFiles": [
         "lib/server/enrichment-cache.ts",
@@ -1878,8 +1878,8 @@
       "originalPerIdImplementationVerified": false
     }
   ],
-  "originalTitleCount": 17,
-  "remainingWithoutOriginalTitle": 73,
+  "originalTitleCount": 90,
+  "remainingWithoutOriginalTitle": 0,
   "knownSharedDependencyConflicts": [
     "H01 retained aircraft detail is also required by H03/H07/H14",
     "H02 identity/enrichment used by retained E integrations",
