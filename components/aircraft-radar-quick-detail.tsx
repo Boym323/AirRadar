@@ -113,23 +113,24 @@ function trackingSummary(aircraft: AircraftView, historyTrail: QuickHistoryTrail
   ].filter((value): value is string => Boolean(value));
 }
 
-function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: AtcContextResult | null }) {
+function AtcSection({ context }: { context: AtcContextResult | null }) {
   const contextAirspace = context?.status === "available" ? context.primaryAirspace : null;
-  const assignment = contextAirspace ? null : aircraft.atc ?? null;
+  // T04 retired: use only published data for sectors containing the current position.
+  // Do not infer that any controller is actually communicating with this aircraft.
   const fir = context?.status === "available" ? context.fir?.name : null;
-  const airspaceName = contextAirspace?.name ?? assignment?.name ?? null;
-  const service = contextAirspace?.publishedUnit ?? assignment?.service ?? assignment?.callsign ?? null;
+  const airspaceName = contextAirspace?.name ?? null;
+  const service = contextAirspace?.publishedUnit ?? null;
   const frequencies = contextAirspace?.publishedFrequenciesMhz ?? [];
-  const primaryFrequency = frequencies[0] ?? assignment?.primaryFrequencyMhz ?? null;
-  const additionalFrequencies = frequencies.length > 0 ? frequencies.slice(1) : assignment?.alternateFrequenciesMhz ?? [];
+  const primaryFrequency = frequencies[0] ?? null;
+  const additionalFrequencies = frequencies.slice(1);
   const route = context?.status === "available" ? context.atsRoute ?? context.nearestAtsCandidate : null;
   const next = context?.status === "available" ? context.nextPoint : null;
   if (!airspaceName && !fir && !route && !next && !primaryFrequency) return null;
 
-  const lowerLimit = contextAirspace?.lowerLimitFt ?? assignment?.lowerAltitudeFt ?? null;
-  const upperLimit = contextAirspace?.upperLimitFt ?? assignment?.upperAltitudeFt ?? null;
-  const lowerReference = contextAirspace?.lowerLimitReference ?? assignment?.lowerAltitudeReference;
-  const upperReference = contextAirspace?.upperLimitReference ?? assignment?.upperAltitudeReference;
+  const lowerLimit = contextAirspace?.lowerLimitFt ?? null;
+  const upperLimit = contextAirspace?.upperLimitFt ?? null;
+  const lowerReference = contextAirspace?.lowerLimitReference ?? null;
+  const upperReference = contextAirspace?.upperLimitReference ?? null;
   const hasLimits = lowerLimit !== null || upperLimit !== null;
 
   return <QuickSection id="aircraft-quick-atc-title" title={t.atc.contextTitle} className="aircraft-quick-atc" >
@@ -590,7 +591,7 @@ export function AircraftRadarQuickDetail({
       <FlightStateSection aircraft={aircraft} />
     </div>}
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
-      <AtcSection aircraft={aircraft} context={atcContext} />
+      <AtcSection context={atcContext} />
       <details className="aircraft-quick-deep-context" data-testid="aircraft-v5-advanced-context" onToggle={(event) => setAdvancedContextOpen(event.currentTarget.open)}>
         <summary>{t.aircraftQuickV5.advancedContext}</summary>
         {advancedContextOpen && <>

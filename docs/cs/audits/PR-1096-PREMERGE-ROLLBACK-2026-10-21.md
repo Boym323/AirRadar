@@ -73,3 +73,10 @@ PR je připraven ke kontrolnímu rozhodnutí, nikoli automaticky k merge: původ
 T05: Smazán odhad předání mezi ATC sektory a simulace dalšího sektoru v horizontu 30–300 sekund i 2–45 NM. Kvůli kompatibilitě API zůstávají `ahead` a `nextSector` s hodnotou null. Aktuální sektory a frekvence R17 a ATS T08–T10 jsou zachovány.
 
 W11: Smazán výpočet, který spojoval změnu kurzu se SIGMETem jako odhad vyhnutí se počasí. Aktuální SIGMET W06, informační kontext a mapové vrstvy R18 zůstávají. Bez mazání historie či změn databáze. Doplněny regresní testy; finální CI je podmínkou merge.
+
+
+## Cílené odstranění T04/W12 (CI čeká)
+
+T04: Z detailu vybraného letadla odstraněna náhradní heuristika `aircraft.atc`. Zůstává pouze geografický sektor z aktuální polohy `context.primaryAirspace` a publikované frekvence, nikoli tvrzení o skutečném řídícím. Mapové R17 a ATS T08–T10 zůstávají; bez změn příjmu dat a databáze.
+
+W12: Odstraněn osamocený výpočet počasí na trase `lib/weather/route-weather-context.ts` a jeho zastaralý test. Samostatné API W12 a detailový panel byly odstraněny dříve. SIGMET W06 a počasí v mapě R18 zůstávají. Přidán regresní test `tests/selected-feature-t04-w12.test.ts`. Před merge ověřit CI, CodeQL a zátěž finálního commitu.

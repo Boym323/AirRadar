@@ -2,7 +2,7 @@
   "version": 2,
   "auditDate": "2026-10-21",
   "purpose": "Source-backed KEEP/REMOVE runtime witnesses with exact full 178-feature descriptions from user",
-  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain. Dedicated P05/P06 runtime is disconnected and deleted in source. R11 published route rendering remains; CI and production verification required.",
+  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain. Dedicated P05/P06 runtime is disconnected and deleted in source. R11 published route rendering remains; CI and production verification required. Targeted T04 selected-detail fallback and W12 route-weather inference were deleted. Four REMOVE IDs (T04/T05/W11/W12) now have specific source-level retirement evidence; other KEEP shared mappings remain active. CI and live production verification are still required.",
   "keepItems": [
     {
       "id": "J01",
@@ -1481,14 +1481,22 @@
       "id": "T04",
       "recoveredTitle": "Pravděpodobné ATC přiřazení vybraného letadla",
       "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
-      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
       "witnessFiles": [
         "app/api/atc/sectors/route.ts",
         "app/api/ats/routes/route.ts",
         "app/api/navigation/data/route.ts"
       ],
-      "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "selectedDetailFallbackRemoved": "components/aircraft-radar-quick-detail.tsx",
+        "retained": "R17 map and current-sector published frequencies; T08–T10 ATS",
+        "tests": [
+          "tests/selected-feature-t04-w12.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
     },
     {
       "id": "T05",
@@ -1614,14 +1622,23 @@
       "id": "W12",
       "recoveredTitle": "Počasí na trase zvoleného letu",
       "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
-      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
       "witnessFiles": [
         "app/weather/page.tsx",
         "app/api/weather/metar-map/route.ts",
         "app/api/weather/sigmet/route.ts"
       ],
-      "originalPerIdImplementationVerified": false,
-      "basicSystem": false
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "moduleDeleted": "lib/weather/route-weather-context.ts",
+        "legacyTestDeleted": "tests/route-weather-context.test.ts",
+        "retained": "W06 SIGMET and R18 map layers",
+        "tests": [
+          "tests/selected-feature-t04-w12.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
     },
     {
       "id": "W13",

@@ -62,9 +62,9 @@ describe("selected-feature ID audit", () => {
     for (let i=0; i<90; i++) {
       expect(witnesses.removeItems[i].id).toBe(source.items[i].id);
       expect(witnesses.removeItems[i].recoveredTitle).toBe(source.items[i].title);
-      // A recovered name alone is not source proof. T05/W11 have separate
-      // negative source/CI evidence, while the remaining mapping stays unproven.
-      const independentlyVerified = source.items[i].id === "T05" || source.items[i].id === "W11";
+      // Original names alone are not proof. Four removals have targeted regression
+      // evidence; other one-to-one implementation mappings are not proven.
+      const independentlyVerified = ["T04", "T05", "W11", "W12"].includes(source.items[i].id);
       expect(witnesses.removeItems[i].originalPerIdImplementationVerified).toBe(independentlyVerified);
     }
   });

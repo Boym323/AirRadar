@@ -74,3 +74,10 @@ Reviewable PR **with explicitly documented limitations**; no merge, database mut
 T05: Deleted handoff helper and future 30–300 second sector prediction/2–45 NM ahead-sector loops. `ahead` and `nextSector` remain null in the aircraft-context API for compatibility; R17 current-sector geometry/frequencies and T08–T10 ATS navigation remain.
 
 W11: Deleted the SIGMET course-change/avoidance inference and its source module. Current advisories W06, projected informational SIGMET context and R18 map weather layers remain. No DB migrations or history deletion. Added negative tests; final CI is required before merge.
+
+
+## T04/W12 targeted source retirement (CI pending)
+
+T04: Removed the selected-aircraft quick-detail fallback to heuristic `aircraft.atc` when current sector context is unavailable. It now displays current-position airspace and published frequencies from `context.primaryAirspace` only, not a claimed observed radio-controller assignment. R17 map and shared geometric mapping and T08–T10 ATS remain. Ingestion and DB unchanged.
+
+W12: Removed orphaned `lib/weather/route-weather-context.ts` (route-leg future SIGMET intersections) and its obsolete `tests/route-weather-context.test.ts`. Its dedicated API and detail panel had already been retired. W06 current SIGMET and R18 map layers remain. New `tests/selected-feature-t04-w12.test.ts` guards both reductions. Recheck final-head CI, CodeQL and load tests before merge.
