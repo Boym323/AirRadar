@@ -4,7 +4,7 @@ import { ensureRadarTrafficRowVisible, waitForCompactRadarTrafficDrawer } from "
 
 afterEach(() => vi.unstubAllGlobals());
 
-function fixture({ open = false, expanded = false, viewportWidth = 390 } = {}) {
+function fixture({ open = false, expanded = false, viewportWidth = 390, ignoreFirstTriggerClick = false } = {}) {
   const steps: string[] = [];
   let trafficOpen = open;
   let mobileExpanded = expanded;
@@ -38,10 +38,12 @@ function fixture({ open = false, expanded = false, viewportWidth = 390 } = {}) {
   };
   const trigger = {
     waitFor: vi.fn(async () => { steps.push("trigger-visible"); }),
+    getAttribute: vi.fn(async () => trafficOpen ? "true" : "false"),
     click: vi.fn(async () => {
+      steps.push("trigger-click");
+      if (ignoreFirstTriggerClick && trigger.click.mock.calls.length === 1) return;
       trafficOpen = true;
       mobileExpanded = false;
-      steps.push("trigger-click");
     }),
   };
   const page = {
@@ -110,6 +112,21 @@ describe("mobile traffic drawer production smoke synchronization", () => {
       "trigger-visible", "trigger-click", "traffic-visible",
       "collapse-visible", "expand-click", "expanded-visible", "row-visible",
     ]);
+  });
+
+  it("retries a single ignored pre-hydration traffic click without relaxing visibility", async () => {
+    const { page, steps, trigger, aircraftRow } = fixture({ ignoreFirstTriggerClick: true });
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const row = await ensureRadarTrafficRowVisible(page, 390, "radar-tablet-portrait-selected");
+      expect(row).toBe(aircraftRow);
+      expect(trigger.click).toHaveBeenCalledTimes(2);
+      expect(trigger.getAttribute).toHaveBeenCalledWith("aria-expanded");
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("retrying once"));
+      expect(steps.filter(s => s === "traffic-visible")).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("does not collapse an already-expanded traffic drawer", async () => {
