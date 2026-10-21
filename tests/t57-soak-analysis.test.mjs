@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeT57Soak, newT57Windows, projectT57SoakSample } from "../scripts/t57-soak-analysis.mjs";
+import { analyzeT57Soak, newT57Windows, projectT57SoakSample, projectT57PublicSoakSample } from "../scripts/t57-soak-analysis.mjs";
 import { verifyT57ExpectedCommit, classifyT57Failure, isTransientT57Failure } from "../scripts/t57-production-soak.mjs";
 
 const MiB = 1024 * 1024;
@@ -346,5 +346,60 @@ describe("T5.7C 24-hour read-only soak", () => {
     const over = records();
     over[8].value.networkTrailOverLimitAircraft = 1;
     expect(analyzeT57Soak(over)).toMatchObject({ verdict: "FAIL", overLimit: true });
+  });
+});
+
+describe("T58 anonymous public observation", () => {
+  const publicInput = (minute) => ({
+    status: {
+      detailLevel: "public", status: "ok", application: {
+        commit: "a".repeat(40), version: "1.0.550", startedAt: at(-20),
+      }, database: { status: "ok" }, receiver: { status: "ok" },
+      secret: "HIDDEN_VALUE",
+    },
+    metrics: {
+      schemaVersion: 1, scope: "process-local",
+      runtime: {
+        status: "enabled", rssBytes: (800 + minute) * MiB,
+        heapUsedBytes: 400 * MiB, cpuIntervalPercent: 35,
+        eventLoopLagWindows: [{
+          from: at(minute - 1), to: at(minute),
+          p95Ms: 5, p99Ms: 25, maxMs: 45,
+        }],
+        privateKey: "HIDDEN_VALUE",
+      },
+    },
+  });
+  it("projects only already-public telemetry and never private fields", () => {
+    const { status, metrics } = publicInput(1);
+    const value = projectT57PublicSoakSample(status, metrics, at(1));
+    expect(value.sample.telemetryMode).toBe("public");
+    expect(value.sample.cpuPercent).toBe(35);
+    expect(value.sample.retention).toBeNull();
+    expect(value.sample.processIdentity).toMatch(/^[0-9a-f]{24}$/);
+    expect(JSON.stringify(value)).not.toContain("HIDDEN_VALUE");
+    expect(JSON.stringify(value)).not.toContain("token");
+    expect(() => projectT57PublicSoakSample({ ...status, detailLevel: "admin" }, metrics)).toThrow("t57_public_telemetry_unavailable");
+    expect(() => projectT57PublicSoakSample(status, { ...metrics, runtime: { ...metrics.runtime, cpuIntervalPercent: null } }))
+      .toThrow("t57_public_telemetry_unavailable");
+  });
+  it("analyzes public CPU/RSS/event-loop windows but leaves private evidence unmeasured", () => {
+    const seen = new Map();
+    const rows = [{ type: "header", schemaVersion: 1, telemetryMode: "public",
+      seconds: 3600, intervalSeconds: 60, warmupSeconds: 0 }];
+    for (let i = 0; i <= 60; i++) {
+      const { status, metrics } = publicInput(i);
+      const o = projectT57PublicSoakSample(status, metrics, at(i));
+      rows.push({ type: "sample", value: newT57Windows({ ...o.sample, segment: 1 }, seen) });
+    }
+    const report = analyzeT57Soak(rows);
+    expect(report.telemetryMode).toBe("public");
+    expect(report.verdict).toBe("PASS_WITH_LIMITATIONS");
+    expect(report.majorGcBaselines).toBe(0);
+    expect(report.overLimit).toBeNull();
+    expect(report.operationalTwinForensics.enabled).toBe(false);
+    expect(report.caveats.join(" ")).toContain("NOT MEASURED");
+    rows[1].value.telemetryMode = "admin";
+    expect(() => analyzeT57Soak(rows)).toThrow("t57_telemetry_mode_mismatch");
   });
 });

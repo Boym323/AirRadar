@@ -36,7 +36,13 @@ const webPushHealth = {
 };
 
 export function getWebPushDiagnostics() {
-  return { configured: isWebPushConfigured(), ...webPushHealth };
+  const configured = isWebPushConfigured();
+  return {
+    configured,
+    producerAvailable: false,
+    deliveryState: configured ? "UNAVAILABLE" as const : "DISABLED" as const,
+    ...webPushHealth,
+  };
 }
 
 export class WebPushNotifier {

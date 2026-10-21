@@ -21,7 +21,7 @@ describe("optional AirRadar administrator authentication", () => {
     vi.stubEnv("WATCHLIST_ADMIN_TOKEN", "old-admin-token");
     expect(isAdminAuthEnabled()).toBe(false);
     expect(isWatchlistAuthConfigured()).toBe(false);
-    expect(isWatchlistSessionValid(request())).toBe(true);
+    expect(isWatchlistSessionValid(request())).toBe(false);
     expect(requireWatchlistMutation(request({ origin: "https://radar.example" }))?.status).toBe(503);
     expect(verifyWatchlistAdminToken("old-admin-token")).toBe(false);
   });

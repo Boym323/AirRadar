@@ -18,6 +18,17 @@ These are behavior and safety contracts for changes to the current system.
   not warm optional caches or trigger weather, radar, wind, or enrichment
   requests.
 
+## Administrator authorization
+
+- Disabling `AIRRADAR_ADMIN_AUTH_ENABLED` never grants privileged access.
+  Sensitive `/api/admin` reads and every administrative mutation fail closed
+  unless a signed administrator session is configured and valid.
+- Sanitized, read-only `/api/system/*` projections remain available without a
+  session. Public projections must omit secrets, provider error text, private
+  host identifiers, and exact receiver coordinates by default.
+- Origin checks supplement authentication for state-changing browser requests;
+  they do not replace administrator authorization.
+
 ## Time Machine
 
 - Time Machine is read-only and never controls `AircraftStateService`.
@@ -25,6 +36,9 @@ These are behavior and safety contracts for changes to the current system.
   notification dispatch.
 - Historical API windows and returned rows are bounded; browser playback keeps
   bounded window state and uses UTC instants.
+- Navigation Integrity history applies both time bounds before its per-window
+  cap, uses stable output ordering, and marks database truncation or an
+  in-memory fallback as incomplete in the response.
 - Historical database failure is fail-soft for live radar, SSE, and ingest.
 
 ## Identity and flight semantics

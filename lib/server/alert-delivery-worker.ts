@@ -53,11 +53,38 @@ export async function sendPushoverDelivery(
       url_title: "Otevřít detail v AirRadaru",
     }),
   });
-  if (response.ok) return;
+  if (response.ok) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    if (payload && typeof payload === "object" && "status" in payload && payload.status === 1) return;
+    const error: RetryableError = new Error("Pushover provider did not confirm delivery");
+    error.status = response.status;
+    error.retryable = false;
+    throw error;
+  }
   const error: RetryableError = new Error(`Pushover provider returned ${response.status}`);
   error.status = response.status;
   error.retryable = response.status === 429 || response.status >= 500;
   throw error;
+}
+
+export async function dispatchAlertDelivery(
+  delivery: AlertV1Delivery,
+  repository: Pick<ReturnType<typeof getAlertsFleetsRepository>, "getOccurrenceForDelivery">,
+  sendPushover: typeof sendPushoverDelivery = sendPushoverDelivery,
+): Promise<void> {
+  if (delivery.channel !== "PUSHOVER") {
+    const error: RetryableError = new Error(`Unsupported delivery channel: ${delivery.channel}`);
+    error.retryable = false;
+    throw error;
+  }
+  const occurrence = await repository.getOccurrenceForDelivery(delivery.occurrenceId);
+  if (!occurrence) {
+    const error: RetryableError = new Error("alert occurrence not found");
+    error.retryable = false;
+    throw error;
+  }
+  await sendPushover(delivery, occurrence);
 }
 
 export class AlertDeliveryWorker {
@@ -108,11 +135,7 @@ export class AlertDeliveryWorker {
         if (!delivery) break;
         this.processed += 1;
         try {
-          if (delivery.channel === "PUSHOVER") {
-            const occurrence = await repo.getOccurrenceForDelivery(delivery.occurrenceId);
-            if (!occurrence) throw Object.assign(new Error("alert occurrence not found"), { retryable: false });
-            await sendPushoverDelivery(delivery, occurrence);
-          }
+          await dispatchAlertDelivery(delivery, repo);
           await repo.markDeliverySent(delivery.id);
           this.sent += 1;
           this.lastSuccessAt = new Date().toISOString();

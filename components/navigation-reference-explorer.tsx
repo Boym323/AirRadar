@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import { formatNumber, t } from "@/lib/i18n";
 import {

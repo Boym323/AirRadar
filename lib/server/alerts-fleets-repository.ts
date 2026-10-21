@@ -10,6 +10,21 @@ type Table = {
   update: (value: Row) => Promise<Row>;
 };
 
+type AggregateBuilder = {
+  count: () => unknown;
+  sum: (field: string) => unknown;
+  max: (field: string) => unknown;
+};
+type AggregateTable = Table & {
+  aggregate: (select: (aggregate: AggregateBuilder) => Record<string, unknown>) => Promise<Row>;
+  groupBy: (...fields: string[]) => {
+    aggregate: (select: (aggregate: AggregateBuilder) => Record<string, unknown>) => Promise<Row[]>;
+  };
+};
+type RetriedPendingTable = AggregateTable & {
+  where: (predicate: (row: { attemptCount: { gt(value: number): unknown } }) => unknown) => RetriedPendingTable;
+};
+
 function table(name: string): Table | null {
   const database = getPrisma();
   return database ? (database.orm.public as unknown as Record<string, Table>)[name] ?? null : null;
@@ -76,31 +91,36 @@ export class AlertsFleetsRepository {
   }> {
     const t = table("AlertDelivery");
     if (!t) return { queueDepth: 0, processing: 0, sent: 0, failed: 0, retryPending: 0, totalAttempts: 0, terminalFailures: 0, lastSuccessAt: null, lastFailureAt: null, lastError: null };
-    const rows = await t.where({}).all();
-    let queueDepth = 0, processing = 0, sent = 0, failed = 0, retryPending = 0, totalAttempts = 0;
-    let lastSuccessAt: string | null = null, lastFailureAt: string | null = null, lastError: string | null = null;
-    for (const row of rows) {
-      const status = String(row.status ?? "");
-      const attempts = Number(row.attemptCount ?? 0);
-      totalAttempts += Number.isFinite(attempts) ? attempts : 0;
-      if (status === "PENDING") {
-        queueDepth += 1;
-        if (attempts > 0) retryPending += 1;
-      } else if (status === "PROCESSING") processing += 1;
-      else if (status === "SENT") {
-        sent += 1;
-        const at = row.sentAt ? iso(row.sentAt) : null;
-        if (at && (!lastSuccessAt || Date.parse(at) > Date.parse(lastSuccessAt))) lastSuccessAt = at;
-      } else if (status === "FAILED") {
-        failed += 1;
-        const at = row.updatedAt ? iso(row.updatedAt) : null;
-        if (at && (!lastFailureAt || Date.parse(at) > Date.parse(lastFailureAt))) {
-          lastFailureAt = at;
-          lastError = typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null;
-        }
-      }
-    }
-    return { queueDepth, processing, sent, failed, retryPending, totalAttempts, terminalFailures: failed, lastSuccessAt, lastFailureAt, lastError };
+    const aggregateTable = t as AggregateTable;
+    const retriedPendingTable = aggregateTable.where({ status: "PENDING" }) as RetriedPendingTable;
+    const sentTable = aggregateTable.where({ status: "SENT" }) as AggregateTable;
+    const failedTable = aggregateTable.where({ status: "FAILED" }) as AggregateTable;
+    const [statusRows, attemptsRow, retriedPendingRow, successRow, failureRow, latestFailure] = await Promise.all([
+      aggregateTable.groupBy("status").aggregate((aggregate) => ({ count: aggregate.count() })),
+      aggregateTable.aggregate((aggregate) => ({ totalAttempts: aggregate.sum("attemptCount") })),
+      retriedPendingTable.where((row: { attemptCount: { gt(value: number): unknown } }) => row.attemptCount.gt(0)).aggregate((aggregate) => ({ retryPending: aggregate.count() })),
+      sentTable.aggregate((aggregate) => ({ lastSuccessAt: aggregate.max("sentAt") })),
+      failedTable.aggregate((aggregate) => ({ lastFailureAt: aggregate.max("updatedAt") })),
+      failedTable
+        .orderBy((row: { updatedAt: { desc(): unknown } }) => row.updatedAt.desc())
+        .limit(1)
+        .first(),
+    ] as const);
+    const counts = new Map<string, number>(statusRows.map((row) => [String(row.status), Number(row.count ?? 0)]));
+    const failed = counts.get("FAILED") ?? 0;
+    const lastFailureAtValue = failureRow.lastFailureAt;
+    return {
+      queueDepth: counts.get("PENDING") ?? 0,
+      processing: counts.get("PROCESSING") ?? 0,
+      sent: counts.get("SENT") ?? 0,
+      failed,
+      retryPending: Number(retriedPendingRow.retryPending ?? 0),
+      totalAttempts: Number(attemptsRow.totalAttempts ?? 0),
+      terminalFailures: failed,
+      lastSuccessAt: successRow.lastSuccessAt ? iso(successRow.lastSuccessAt) : null,
+      lastFailureAt: lastFailureAtValue ? iso(lastFailureAtValue) : null,
+      lastError: typeof latestFailure?.lastError === "string" ? latestFailure.lastError.slice(0, 300) : null,
+    };
   }
 
   async getOccurrenceForDelivery(id: string): Promise<AlertV1DeliveryOccurrence | null> {

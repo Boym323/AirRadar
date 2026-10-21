@@ -37,11 +37,6 @@ function diagnosticNumber(value: Record<string, unknown> | null, key: string): n
   return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : 0;
 }
 
-function diagnosticOptionalNumber(value: Record<string, unknown> | null, key: string): number | null {
-  const candidate = value?.[key];
-  return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : null;
-}
-
 function diagnosticBoolean(value: Record<string, unknown> | null, key: string): boolean {
   return value?.[key] === true;
 }

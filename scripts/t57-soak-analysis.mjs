@@ -249,6 +249,56 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
   };
 }
 
+/**
+ * Token-free read-only T58 projection. Only already-public, sanitized fields
+ * are sampled. Administrator-only GC, retention, SQL and Twin forensics are
+ * intentionally omitted and must never be inferred as zero.
+ */
+export function projectT57PublicSoakSample(status, metrics, at = new Date().toISOString()) {
+  const app = status?.application, runtime = metrics?.runtime;
+  const commitOK = typeof app?.commit === "string" && /^[a-f0-9]{8,40}$/i.test(app.commit);
+  const startedAt = stamp(app?.startedAt);
+  if (status?.detailLevel !== "public" || metrics?.schemaVersion !== 1 ||
+      metrics?.scope !== "process-local" || runtime?.status !== "enabled" ||
+      !commitOK || !startedAt || typeof app.version !== "string" ||
+      !Array.isArray(runtime.eventLoopLagWindows) ||
+      [runtime.rssBytes, runtime.heapUsedBytes, runtime.cpuIntervalPercent]
+        .some((value) => safe(value) === null)) {
+    throw new Error("t57_public_telemetry_unavailable");
+  }
+  // A bounded fingerprint of public startup metadata detects probable
+  // restarts. It is NOT equivalent to private PID/store identity evidence.
+  const processIdentity = createHash("sha256")
+    .update(JSON.stringify([app.commit, startedAt])).digest("hex").slice(0, 24);
+  return {
+    identity: { commit: app.commit },
+    sample: {
+      telemetryMode: "public", at, commit: app.commit, version: app.version,
+      processIdentity,
+      rssBytes: safe(runtime.rssBytes),
+      heapUsedBytes: safe(runtime.heapUsedBytes),
+      heapTotalBytes: safe(runtime.heapTotalBytes),
+      externalBytes: safe(runtime.externalBytes),
+      oldSpaceBytes: null, cpuPercent: safe(runtime.cpuIntervalPercent),
+      cgroupCpuQuotaCores: null, cgroupCpuNrThrottled: null,
+      cgroupCpuThrottledUsec: null, cgroupCpuThrottleStatus: null,
+      majorGcCount: null, postMajorGc: null,
+      aircraftCount: null, activeSseClients: null,
+      localTrailOverLimitAircraft: null, networkTrailOverLimitAircraft: null,
+      retention: null,
+      eventLoopWindows: windows(runtime.eventLoopLagWindows, "loop"),
+      operationalTwinForensics: { enabled: false },
+      hotPaths: [], routeCache: null,
+      health: {
+        application: typeof status.status === "string" ? status.status : null,
+        database: typeof status.database?.status === "string" ? status.database.status : null,
+        receiver: typeof status.receiver?.status === "string" ? status.receiver.status : null,
+        readsb: typeof status.receiver?.readsb?.status === "string" ? status.receiver.readsb.status : null,
+      },
+    },
+  };
+}
+
 // Return only completed, as-yet-unreported 60-second windows. Existing
 // observer caches retain 15 windows, so reading once per minute is safe.
 export function newT57Windows(sample, cursors) {
@@ -296,11 +346,16 @@ export function analyzeT57Soak(records) {
     throw new Error("invalid_t57_report");
   }
   const header = records[0];
-  if (header.schemaVersion !== 1 || !Number.isSafeInteger(header.seconds) ||
+  if (header.schemaVersion !== 1 || ![undefined, "admin", "public"].includes(header.telemetryMode) ||
+      !Number.isSafeInteger(header.seconds) ||
       !Number.isSafeInteger(header.intervalSeconds) || !Number.isSafeInteger(header.warmupSeconds)) {
     throw new Error("invalid_t57_header");
   }
+  const telemetryMode = header.telemetryMode === "public" ? "public" : "admin";
   const allRows = records.filter((r) => r.type === "sample").map((r) => r.value);
+  if (allRows.some((r) => (r?.telemetryMode ?? "admin") !== telemetryMode)) {
+    throw new Error("t57_telemetry_mode_mismatch");
+  }
   if (allRows.some((row) => !stamp(row?.at) || typeof row?.commit !== "string" || !row.commit ||
       !Object.hasOwn(row, "version") || (row.version !== null && typeof row.version !== "string") ||
       typeof row?.processIdentity !== "string" || !/^[a-f0-9]{24}$/.test(row.processIdentity))) {
@@ -531,12 +586,14 @@ export function analyzeT57Soak(records) {
       selected.push(item);
     }
   }
-  const overLimit = steady.some((r) => (r.localTrailOverLimitAircraft ?? 0) > 0 ||
+  const overLimit = telemetryMode === "public" ? null : steady.some((r) => (r.localTrailOverLimitAircraft ?? 0) > 0 ||
     (r.networkTrailOverLimitAircraft ?? 0) > 0);
   const measuredEnough = stable && missing === 0 && sampleGaps.length === 0 &&
     span >= header.seconds - header.intervalSeconds * 2 &&
     rows.length >= Math.ceil(expected * 0.95) && steady.length >= 30 &&
-    gcBaselines.length >= 2 && loopWindows.length >= 10;
+    (telemetryMode === "public" || gcBaselines.length >= 2) &&
+    loopWindows.length >= 10 && (telemetryMode !== "public" || steady.every((r) =>
+      safe(r.rssBytes) !== null && safe(r.cpuPercent) !== null));
   const verdict = overLimit ? "FAIL" :
     measuredEnough ? "PASS_WITH_LIMITATIONS" : "INSUFFICIENT_EVIDENCE";
   const firstTen = steady.slice(0, Math.max(1, Math.floor(steady.length / 10)));
@@ -561,7 +618,7 @@ export function analyzeT57Soak(records) {
   const routeMaxRejected = series(routeSamples, (r) => r.sql?.rejected)?.max ?? null;
   const routeMaxProbe = series(routeSamples, (r) => r.sql?.halfOpenProbe === true ? 1 : 0)?.max ?? null;
   return {
-    verdict, stableProcessAndCommit: stable,
+    verdict, telemetryMode, stableProcessAndCommit: stable,
     segments: segmentIds.size,
     segmentSummaries,
     segmentChanges,
@@ -651,7 +708,9 @@ export function analyzeT57Soak(records) {
     hotPathsByWindowCpuMs: selected,
     operationalTwinForensics,
     caveats: [
-      "Continuous clean windows and two major GC observations are required for evidence.",
+      telemetryMode === "public"
+        ? "PUBLIC ONLY: retention, major-GC/old-space, SQL, hot-path/Twin attribution and exact process identity were NOT MEASURED."
+        : "Continuous clean windows and two major GC observations are required for evidence.",
       "A restart, changed commit, or insufficient coverage yields INSUFFICIENT_EVIDENCE.",
       "Process CPU attribution for overlapping async paths is not a per-operation profiler.",
       "Old-space growth and bounded-container counts alone do not prove a leak.",

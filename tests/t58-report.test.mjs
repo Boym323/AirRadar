@@ -18,6 +18,12 @@ describe("T58 preflight", () => {
       operationalTwinForensicsEnabled: true })).toBe("e9a9b835");
     expect(() => verifyT58Preflight({ status: "TELEMETRY_READY", commit: "e9a9b835",
       operationalTwinForensicsEnabled: false })).toThrow("t58_operational_twin_forensics_disabled");
+    expect(verifyT58Preflight({ status: "TELEMETRY_READY", commit: "e9a9b835",
+      telemetryMode: "public", operationalTwinForensicsEnabled: false,
+      requiredSources: ["public-system-status", "public-runtime-performance"] })).toBe("e9a9b835");
+    expect(() => verifyT58Preflight({ status: "TELEMETRY_READY", commit: "e9a9b835",
+      telemetryMode: "public", requiredSources: ["admin-system-status"] }))
+      .toThrow("t58_public_preflight_invalid");
     expect(() => verifyT58Preflight({ status: "TELEMETRY_READY", commit: "wrong" }))
       .toThrow("t58_preflight_identity_unavailable");
   });
@@ -39,6 +45,10 @@ describe("T58 published report", () => {
     expect(md).toContain("Event Outcome CPU per call (ms)");
     expect(md).toContain("ATC truth-cache hits (%)");
     expect(md).toContain("Observational before/after");
+    const limited = buildT58Comparison({ ...sample(), telemetryMode: "public",
+      operationalTwinForensics: { enabled: false }, hotPathsByWindowCpuMs: [] });
+    expect(limited).toContain("Measurement mode: **public**");
+    expect(limited).toContain("NOT MEASURED");
     expect(T57_BASELINE.eventOutcomeCalls).toBe(842);
   });
   it("preserves unavailable observations and non-PASS verdicts", () => {
