@@ -43,10 +43,6 @@ interface RadarMapLayerMenuProps {
   onShowNavDataChange: (value: boolean) => void;
   navDataDataset: DatasetState<unknown>;
   atsRoutes: AtsRoutesSummary | null | undefined;
-  showSids: boolean;
-  onShowSidsChange: (value: boolean) => void;
-  showStars: boolean;
-  onShowStarsChange: (value: boolean) => void;
   sigmetEnabled: boolean | null;
   showSigmet: boolean;
   onShowSigmetChange: (value: boolean) => void;
@@ -65,12 +61,6 @@ interface RadarMapLayerMenuProps {
   onShowAircraftWeatherChange: (value: boolean) => void;
   showNavigationIntegrity: boolean;
   onShowNavigationIntegrityChange: (value: boolean) => void;
-  showAupUup: boolean;
-  onShowAupUupChange: (value: boolean) => void;
-  airspaceDataset: DatasetState<unknown>;
-  receiverPositionAvailable: boolean;
-  showRangeRings: boolean;
-  onShowRangeRingsChange: (value: boolean) => void;
   colorMode: AircraftColorMode;
   onColorModeChange: (value: AircraftColorMode) => void;
 }
@@ -108,10 +98,6 @@ export function RadarMapLayerMenu({
   onShowNavDataChange,
   navDataDataset,
   atsRoutes,
-  showSids,
-  onShowSidsChange,
-  showStars,
-  onShowStarsChange,
   sigmetEnabled,
   showSigmet,
   onShowSigmetChange,
@@ -130,12 +116,6 @@ export function RadarMapLayerMenu({
   onShowAircraftWeatherChange,
   showNavigationIntegrity,
   onShowNavigationIntegrityChange,
-  showAupUup,
-  onShowAupUupChange,
-  airspaceDataset,
-  receiverPositionAvailable,
-  showRangeRings,
-  onShowRangeRingsChange,
   colorMode,
   onColorModeChange,
 }: RadarMapLayerMenuProps) {
@@ -160,8 +140,6 @@ export function RadarMapLayerMenu({
         <label data-testid="map-layer-nav-data"><input type="checkbox" checked={showNavData} onChange={(event) => onShowNavDataChange(event.target.checked)} /> {datasetStateLabel(t.layers.navData, navDataDataset, (count) => String(count))}</label>
         {showNavData && navDataDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.navDataUnavailable}</div>}
         {showNavData && <div className="map-layer-sublevel"><small>{t.layers.navDataDescription}</small></div>}
-        <label data-testid="map-layer-sid"><input type="checkbox" checked={showSids} onChange={(event) => onShowSidsChange(event.target.checked)} /> {t.layers.sids}</label>
-        <label data-testid="map-layer-star"><input type="checkbox" checked={showStars} onChange={(event) => onShowStarsChange(event.target.checked)} /> {t.layers.stars}</label>
         {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
         {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
         {sigmetEnabled !== false && <label data-testid="map-layer-sigmet"><input type="checkbox" checked={showSigmet} onChange={(event) => onShowSigmetChange(event.target.checked)} /> {t.layers.sigmet}</label>}
@@ -182,12 +160,6 @@ export function RadarMapLayerMenu({
         {showMetar && <div className="map-layer-sublevel metar-legend"><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span><span><i className="metar-dot lifr" /> {t.layers.lifr}</span></div>}
       </div>
       <div className="map-layer-group">
-        <span className="map-layer-group-title">{t.layers.groups.operationalAirspace}</span>
-        <label data-testid="map-layer-aup-uup"><input type="checkbox" checked={showAupUup} onChange={(event) => onShowAupUupChange(event.target.checked)} /> {t.layers.airspaceActivity}</label>
-        {showAupUup && airspaceDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.airspaceUnavailable}</div>}
-        {showAupUup && <div className="map-layer-sublevel">{t.layers.airspacePlannedActive} · {t.layers.airspaceDisclaimer}</div>}
-      </div>
-      <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.display}</span>
         <label className="map-layer-mode" data-testid="map-appearance-v6"><span>{t.locale.startsWith("en") ? "Map background" : "Mapový podklad"}</span>
           <select value={mapAppearance} onChange={(event) => onMapAppearanceChange(event.target.value as RadarMapAppearance)}>
@@ -197,7 +169,6 @@ export function RadarMapLayerMenu({
           </select>
         </label>
         {mapAppearance === "satellite" && <small>{t.locale.startsWith("en") ? "2020 non-live satellite mosaic · EOxCloudless · personal non-commercial use" : "Historický satelitní podklad 2020 · EOxCloudless · pouze nekomerční použití"}</small>}
-        {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => onShowRangeRingsChange(event.target.checked)} /> {t.layers.rangeRings}</label>}
         <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => onColorModeChange(event.target.value as AircraftColorMode)}>
           <option value="default">{t.layers.colorModes.default}</option>
           <option value="altitude">{t.layers.colorModes.altitude}</option>

@@ -93,12 +93,9 @@ export function isReadsbJsonFailoverEnabled(): boolean {
   return raw !== "false";
 }
 
-/** Sample ATC is useful in demo mode, but is opt-in once a real receiver is configured. */
+/** Demo-only ATC fixtures are always opt-in; no implicit synthetic fallback. */
 export function shouldUseSampleAtcData(): boolean {
-  const explicit = process.env.ATC_SAMPLE_ENABLED?.trim().toLowerCase();
-  if (explicit === "true") return true;
-  if (explicit === "false") return false;
-  return !isReadsbConfigured();
+  return process.env.ATC_SAMPLE_ENABLED?.trim().toLowerCase() === "true";
 }
 
 export function getPollIntervalMs(): number {
@@ -232,11 +229,6 @@ export function isAtcResolutionEnabled(): boolean {
   return process.env.AIRRADAR_ATC_RESOLUTION_ENABLED?.trim().toLowerCase() !== "false";
 }
 
-/** Shadow prediction follows assignment unless explicitly disabled. */
-export function isAtcShadowPredictionEnabled(): boolean {
-  const configured = process.env.AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED?.trim().toLowerCase();
-  return configured === undefined || configured === "" ? isAtcResolutionEnabled() : configured === "true";
-}
 export type OperationalTwinTrajectoryQualityPolicy = "CANONICAL" | "TRAJECTORY_QUALITY_V2";
 export function getOperationalTwinTrajectoryQualityPolicy(): OperationalTwinTrajectoryQualityPolicy {
   return process.env.AIRRADAR_DIGITAL_TWIN_TRAJECTORY_QUALITY_POLICY?.trim().toUpperCase() === "TRAJECTORY_QUALITY_V2"

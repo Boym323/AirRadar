@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET as getAirportTraffic } from "@/app/api/airports/[icao]/traffic/route";
 import type { Airport } from "@/lib/airports/types";
-import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getTranslations } from "@/lib/i18n";
 import {
   AIRPORT_TRAFFIC_RECENT_LIMIT,
@@ -11,10 +9,8 @@ import {
   getAirportTrafficSummary,
 } from "@/lib/server/airport-traffic";
 import { getPrisma } from "@/lib/server/db";
-import { resolveAirportDetail } from "@/lib/server/airport-detail";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
-vi.mock("@/lib/server/airport-detail", () => ({ resolveAirportDetail: vi.fn() }));
 
 type Row = Record<string, unknown>;
 
@@ -145,7 +141,6 @@ function flight(
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.mocked(getPrisma).mockReset();
-  vi.mocked(resolveAirportDetail).mockReset();
 });
 
 describe("airport traffic summary v1", () => {
@@ -304,28 +299,14 @@ describe("airport traffic summary v1", () => {
     expect(readFileSync(new URL("../lib/server/airport-traffic.ts", import.meta.url), "utf8")).not.toContain("fetch(");
   });
 
-  it("serves 30d by default, validates the range, and preserves canonical deep links", async () => {
-    const counters = { all: 0, in: 0 };
-    vi.mocked(resolveAirportDetail).mockResolvedValue(prague);
-    vi.mocked(getPrisma).mockReturnValue(fakeDatabase([], routeAirports, counters) as never);
-
-    const defaultResponse = await getAirportTraffic(new Request("http://localhost/api/airports/lkpr/traffic"), { params: Promise.resolve({ icao: "lkpr" }) });
-    const invalidResponse = await getAirportTraffic(new Request("http://localhost/api/airports/lkpr/traffic?range=today"), { params: Promise.resolve({ icao: "lkpr" }) });
-
-    expect(defaultResponse.status).toBe(200);
-    expect(defaultResponse.headers.get("Cache-Control")).toBe("public, max-age=30, stale-while-revalidate=120");
-    expect((await defaultResponse.json()).range).toBe("30d");
-    expect(invalidResponse.status).toBe(400);
-    expect(aircraftAirportHref("EDDF")).toBe("/airports/EDDF");
-    expect(aircraftHistoryHref(42)).toBe("/history?flightId=42");
-    expect(aircraftFlightHref(42)).toBe("/flights/42");
+  it("keeps retired airport traffic API absent while retaining stored aggregates", () => {
+    expect(readFileSync(new URL("../lib/server/airport-traffic.ts", import.meta.url), "utf8")).toContain("getAirportTrafficSummary");
+    expect(() => readFileSync(new URL("../app/api/airports/[icao]/traffic/route.ts", import.meta.url), "utf8")).toThrow();
   });
 
   it("keeps Czech and English airport traffic copy available", () => {
     expect(getTranslations("cs").airportTraffic).toMatchObject({ title: "Provoz zachycený přijímačem", rangeThirtyDays: "30 dní" });
     expect(getTranslations("en").airportTraffic).toMatchObject({ title: "Observed receiver traffic", rangeThirtyDays: "30 days" });
-    const componentSource = readFileSync(new URL("../components/airport-traffic-summary.tsx", import.meta.url), "utf8");
-    expect(componentSource).toContain("/aircraft/${encodeURIComponent(item.icaoHex)}");
-    expect(componentSource).toContain("aircraftFlightHref(flight.id)");
+
   });
 });

@@ -37,10 +37,13 @@ describe("retired standalone feature boundaries", () => {
 
   it("keeps shared event, logbook, and receiver-statistics APIs", () => {
     for (const path of [
-      "app/api/intelligence/events/route.ts",
       "app/api/logbook/summary/route.ts",
       "app/api/statistics/traffic/route.ts",
     ]) expect(exists(path), path).toBe(true);
+  });
+
+  it("keeps the retired Flight Intelligence events endpoint absent", () => {
+    expect(exists("app/api/intelligence/events/route.ts")).toBe(false);
   });
 
   it("removes retired links from navigation and the aircraft detail action", () => {

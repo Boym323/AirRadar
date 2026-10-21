@@ -1,5 +1,14 @@
 import webpush from "web-push";
-import type { AlertNotifier, AircraftAlert } from "@/lib/server/alert-notifier";
+import type { Aircraft } from "@/lib/aircraft/types";
+
+/** Standalone Web Push transport contract; old server alert producers are retired. */
+export interface WebPushAlert {
+  aircraft: Pick<Aircraft, "icaoHex" | "callsign" | "registration">;
+  emergency: boolean;
+  squawk?: string | null;
+  type?: string;
+  eventId?: string;
+}
 import { listWebPushSubscriptions, removeWebPushSubscription } from "@/lib/server/web-push-store";
 
 export function getWebPushPublicKey(): string | null {
@@ -30,13 +39,13 @@ export function getWebPushDiagnostics() {
   return { configured: isWebPushConfigured(), ...webPushHealth };
 }
 
-export class WebPushNotifier implements AlertNotifier {
+export class WebPushNotifier {
   readonly name = "web-push";
   readonly enabled: boolean;
 
   constructor() { this.enabled = Boolean(credentials()); }
 
-  async send(alert: AircraftAlert): Promise<void> {
+  async send(alert: WebPushAlert): Promise<void> {
     const config = credentials();
     if (!config) return;
     webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);

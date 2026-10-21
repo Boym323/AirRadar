@@ -1,11 +1,8 @@
-import type { RxwCommunication, RxwReportedRoute, RxwRouteEvidence, RxwWaypointPlan, RxwWaypointAvailability } from "@/lib/aircraft/rxw-communications";
-import { parseRxwH1Fpn } from "@/lib/server/rxw-fpn-parser";
+import type { RxwCommunication, RxwReportedRoute, RxwRouteEvidence, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 
 /** Never retain raw message text, decoded ACARS/CPDLC content or operational conversations. */
 export const RXW_MESSAGE_TTL_MS = 2 * 60 * 60_000;
 export const RXW_ROUTE_HINT_TTL_MS = 45 * 60_000;
-export const RXW_WAYPOINT_PLAN_TTL_MS = 45 * 60_000;
-export const RXW_MAX_WAYPOINT_PLANS = 256;
 export const RXW_MAX_AIRCRAFT = 512;
 export const RXW_MAX_MESSAGES_PER_AIRCRAFT = 20;
 export const RXW_MAX_SEEN_UIDS = 12_000;
@@ -129,12 +126,9 @@ export function selectRxwRouteEvidence(
 export class RxwHubMessageStore {
   private readonly aircraft = new Map<string, RxwCommunication[]>();
   private readonly seen = new Map<string, number>();
-  private readonly waypointPlans = new Map<string, RxwWaypointPlan>();
   private accepted = 0;
   private rejectedInvalid = 0;
   private rejectedDuplicate = 0;
-  private fpnAccepted = 0;
-  private fpnRejected = 0;
   private lastAcceptedAt: string | null = null;
 
   ingest(
@@ -164,58 +158,14 @@ export class RxwHubMessageStore {
       if (oldest === undefined) break;
       this.aircraft.delete(oldest);
     }
-    // Transiently decode only allowlisted H1/FPN format; the body never reaches
-    // the public aircraft model, in-memory message cache, database or logs.
-    let persistablePlan: RxwWaypointPlan | null = null;
-    if (process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true") {
-      const raw = input !== null && typeof input === "object" && !Array.isArray(input)
-        ? input as Record<string, unknown> : null;
-      if (raw?.label === "H1") {
-        const parsed = parseRxwH1Fpn(raw.text, raw.flight);
-        if (!parsed) this.fpnRejected++;
-        if (parsed) {
-          this.fpnAccepted++;
-          const seenAt = Date.parse(message.timestamp);
-          // Preserve the parsed snapshot independently of whether it replaces
-          // the currently selected live plan (out-of-order hub batch).
-          if (parsed.status === "planned" && seenAt <= now) {
-            persistablePlan = {
-              ...parsed, icaoHex: message.icaoHex, observedAt: message.timestamp,
-              stationId: message.stationId, source: "rxw-acarshub", confidence: "reported",
-            };
-          }
-          const previousPlan = this.waypointPlans.get(message.icaoHex);
-          if (!previousPlan || Date.parse(previousPlan.observedAt) <= seenAt) {
-            if (parsed.status === "inactive") {
-              // A route-inactive report must not keep an older 'RP' badge alive.
-              if (previousPlan?.flight === parsed.flight) this.waypointPlans.delete(message.icaoHex);
-            } else if (seenAt >= now - RXW_WAYPOINT_PLAN_TTL_MS && seenAt <= now) {
-              const plan: RxwWaypointPlan = {
-                ...parsed,
-                icaoHex: message.icaoHex,
-                observedAt: message.timestamp,
-                stationId: message.stationId,
-                source: "rxw-acarshub",
-                confidence: "reported",
-              };
-              this.waypointPlans.delete(message.icaoHex);
-              this.waypointPlans.set(message.icaoHex, plan);
-              while (this.waypointPlans.size > RXW_MAX_WAYPOINT_PLANS) {
-                const oldest = this.waypointPlans.keys().next().value;
-                if (!oldest) break;
-                this.waypointPlans.delete(oldest);
-              }
-            }
-          }
-        }
-      }
-    }
     this.accepted += 1;
     this.lastAcceptedAt = new Date(now).toISOString();
     // This callback performs only bounded in-memory enqueueing; no DB await
     // is allowed on the Socket.IO ingest path. Never forward raw input.
-    if (onRoute && (persistablePlan || message.reportedRoute?.flight)) {
-      onRoute(message, persistablePlan);
+    if (onRoute && message.reportedRoute?.flight) {
+      // The discontinued H1/FPN decoder never receives message bodies.
+      // Structured airport pairs remain eligible for historical archive writes.
+      onRoute(message, null);
     }
     return true;
   }
@@ -235,40 +185,12 @@ export class RxwHubMessageStore {
     return selectRxwRouteEvidence(this.list(icaoHex, now), icaoHex, callsign, now);
   }
 
-  /** Keep the plan identity bound to its current flight; never infer by ICAO alone. */
-  waypointPlanForFlight(icaoHex: string, callsign: string | null, now = Date.now()): RxwWaypointPlan | null {
-    const flight = rxwFlightIdentifier(callsign);
-    const plan = this.waypointPlans.get(icaoHex);
-    if (!flight || !plan || plan.flight !== flight || plan.status !== "planned") return null;
-    if (Date.parse(plan.observedAt) > now || Date.parse(plan.observedAt) < now - RXW_WAYPOINT_PLAN_TTL_MS) {
-      if (Date.parse(plan.observedAt) < now - RXW_WAYPOINT_PLAN_TTL_MS) this.waypointPlans.delete(icaoHex);
-      return null;
-    }
-    return { ...plan, waypoints: plan.waypoints.map((point) => ({ ...point })) };
-  }
-
-  /** Bounded, non-sensitive summary for radar indicators, not raw message text. */
-  waypointAvailability(now = Date.now()): RxwWaypointAvailability[] {
-    const available: RxwWaypointAvailability[] = [];
-    for (const [hex, plan] of this.waypointPlans) {
-      const timestamp = Date.parse(plan.observedAt);
-      if (timestamp < now - RXW_WAYPOINT_PLAN_TTL_MS) {
-        this.waypointPlans.delete(hex);
-      } else if (timestamp <= now && plan.status === "planned") {
-        available.push({ icaoHex: hex, flight: plan.flight, waypointCount: plan.waypoints.length });
-      }
-    }
-    return available;
-  }
-
-  stats(): { aircraft: number; accepted: number; uids: number; plans: number;
-    rejectedInvalid: number; rejectedDuplicate: number; fpnAccepted: number; fpnRejected: number;
+  stats(): { aircraft: number; accepted: number; uids: number;
+    rejectedInvalid: number; rejectedDuplicate: number;
     lastAcceptedAt: string | null } {
     return {
       aircraft: this.aircraft.size, accepted: this.accepted, uids: this.seen.size,
-      plans: this.waypointAvailability().length,
       rejectedInvalid: this.rejectedInvalid, rejectedDuplicate: this.rejectedDuplicate,
-      fpnAccepted: this.fpnAccepted, fpnRejected: this.fpnRejected,
       lastAcceptedAt: this.lastAcceptedAt,
     };
   }
@@ -276,12 +198,9 @@ export class RxwHubMessageStore {
   clear(): void {
     this.aircraft.clear();
     this.seen.clear();
-    this.waypointPlans.clear();
     this.accepted = 0;
     this.rejectedInvalid = 0;
     this.rejectedDuplicate = 0;
-    this.fpnAccepted = 0;
-    this.fpnRejected = 0;
     this.lastAcceptedAt = null;
   }
 }

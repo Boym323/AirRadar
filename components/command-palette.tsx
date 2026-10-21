@@ -173,17 +173,9 @@ export function CommandPalette() {
 
   const commands = useMemo<StaticCommand[]>(() => [
     { key: "live", label: t.commandSearch.liveRadar, detail: t.commandSearch.liveRadarDetail, href: "/", icon: "radar", keywords: ["live", "radar", "map"] },
-    { key: "operations-center", label: t.commandSearch.operationsCenter, detail: t.commandSearch.operationsCenterDetail, href: "/?operations=1", icon: "radar", keywords: ["operations center", "now", "events", "události"], action: "operations" },
     { key: "airports", label: t.commandSearch.airports, detail: t.commandSearch.airportsDetail, href: "/airports", icon: "airport", keywords: ["airports", "letiště"] },
     { key: "weather", label: t.locale.startsWith("cs") ? "Otevřít počasí" : "Open Weather", detail: t.locale.startsWith("cs") ? "Provozní meteorologický přehled" : "Operational weather overview", href: "/weather", icon: "radar", keywords: ["weather", "metar", "sigmet", "počasí"] },
-    { key: "airspace", label: t.locale.startsWith("cs") ? "Otevřít vzdušný prostor" : "Open Airspace", detail: t.locale.startsWith("cs") ? "ATC sektory a aktivita" : "ATC sectors and activity", href: "/airspace", icon: "atc", keywords: ["airspace", "atc", "sector", "vzdušný prostor"] },
-    { key: "operations", label: t.locale.startsWith("cs") ? "Otevřít provozní přehled" : "Open Operations", detail: t.locale.startsWith("cs") ? "Provozní přehled" : "Operations dashboard", href: "/operations", icon: "radar", keywords: ["operations", "dashboard", "provoz"] },
-    { key: "flights", label: t.commandSearch.flights, detail: t.commandSearch.flightsDetail, href: "/flights", icon: "flight", keywords: ["flights", "history", "lety"] },
-    { key: "compare-flights", label: t.locale.startsWith("cs") ? "Porovnat lety" : "Compare Flights", detail: t.locale.startsWith("cs") ? "Porovnání dvou historických letů" : "Compare two historical flights", href: "/compare/flights", icon: "flight", keywords: ["compare flights", "flight compare", "porovnat lety"] },
-    { key: "compare-airports", label: t.locale.startsWith("cs") ? "Porovnat letiště" : "Compare Airports", detail: t.locale.startsWith("cs") ? "Porovnání provozu dvou letišť" : "Compare two airports", href: "/compare/airports", icon: "airport", keywords: ["compare airports", "airport compare", "porovnat letiště"] },
     { key: "navigation-integrity", label: t.locale.startsWith("cs") ? "Otevřít integritu navigačních dat" : "Open Navigation Integrity", detail: t.locale.startsWith("cs") ? "Integrita navigačních dat" : "Navigation data integrity", href: "/navigation-integrity", icon: "system", keywords: ["navigation integrity", "integrity", "gnss"] },
-    { key: "alerts", label: t.alerts.title, detail: t.commandSearch.alertsDetail, href: "/alerts", icon: "system", keywords: ["alerts", "warnings", "alerty"] },
-    { key: "time-machine", label: t.timeMachine.title, detail: t.commandSearch.timeMachineDetail, href: "/time-machine", icon: "time", keywords: ["time machine", "history", "replay"] },
     { key: "system", label: t.system.title, detail: t.commandSearch.systemDetail, href: "/system", icon: "system", keywords: ["system", "health", "status"] },
   ], []);
 

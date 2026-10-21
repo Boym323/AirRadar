@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { RxwHubMessageStore } from "@/lib/server/rxw-hub-store";
+import { RxwHubMessageStore, normalizeRxwCommunication } from "@/lib/server/rxw-hub-store";
+import type { RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
 import {
   buildRxwRouteSnapshot, decodeRxwRouteSnapshot,
   isRxwRouteHistoryEnabled, rxwRouteRetentionDays,
@@ -15,7 +16,6 @@ const message = (uid: string, extras: Record<string, unknown> = {}) => ({
   ...extras,
 });
 afterEach(() => {
-  delete process.env.RXW_FPN_ENABLED;
   delete process.env.RXW_ROUTE_HISTORY_ENABLED;
   delete process.env.RXW_HUB_ENABLED;
   delete process.env.RXW_ROUTE_HISTORY_RETENTION_DAYS;
@@ -33,28 +33,30 @@ describe("parsed-only ACARS/VDL2 route archive", () => {
     expect(rxwRouteRetentionDays()).toBe(7);
   });
 
-  it("stores only parsed, georeferenced fixes, deduplicates by hashed message identity", () => {
-    process.env.RXW_FPN_ENABLED = "true";
-    const store = new RxwHubMessageStore();
-    const snapshots: ReturnType<typeof buildRxwRouteSnapshot>[] = [];
-    const ingest = (value: unknown) => store.ingest(value, now, (m, p) => {
-      snapshots.push(buildRxwRouteSnapshot(m, p));
-    });
-    expect(ingest(message("one"))).toBe(true);
-    expect(ingest(message("one"))).toBe(false);
-    expect(snapshots).toHaveLength(1);
-    const snapshot = snapshots[0]!;
+  it("continues to decode previously archived FPN snapshots without ingest-time parsing", () => {
+    const incoming = normalizeRxwCommunication(message("one"), now);
+    expect(incoming).not.toBeNull();
+    const legacyPlan: RxwWaypointPlan = {
+      icaoHex: "4CA123", flight: "CSA123", origin: "LKPR", destination: "EGLL",
+      status: "planned", positionedCount: 2,
+      waypoints: [
+        { name: "BODAL", lat: 50, lon: 14, via: null, breakBefore: true },
+        { name: "SOMID", lat: 51, lon: 12, via: null, breakBefore: false },
+      ],
+      observedAt: new Date(now).toISOString(), stationId: "RXW",
+      source: "rxw-acarshub", confidence: "reported",
+    };
+    const snapshot = buildRxwRouteSnapshot(incoming!, legacyPlan);
     expect(snapshot).toMatchObject({
       icaoHex: "4CA123", flight: "CSA123", kind: "FPN",
       origin: "LKPR", destination: "EGLL", positionedCount: 2,
     });
-    const restored = decodeRxwRouteSnapshot(snapshot);
-    expect(restored?.waypoints.map(p => p.name)).toEqual(["BODAL", "SOMID"]);
+    expect(decodeRxwRouteSnapshot(snapshot)?.waypoints.map(p => p.name)).toEqual(["BODAL", "SOMID"]);
     expect(JSON.stringify(snapshot)).not.toContain("FPN/");
     expect(JSON.stringify(snapshot)).not.toContain("never persisted");
     expect(JSON.stringify(snapshot)).not.toContain('"uid"');
     expect(JSON.stringify(snapshot)).not.toContain('"text"');
-    expect(snapshots[0]?.id).toHaveLength(64);
+    expect(snapshot?.id).toHaveLength(64);
   });
 
   it("archives structured airport pairs when no FPN is available", () => {

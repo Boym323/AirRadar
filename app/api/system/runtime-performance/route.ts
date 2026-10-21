@@ -4,7 +4,6 @@ import { getRuntimePerformanceDiagnostics } from "@/lib/server/runtime-performan
 import { getRuntimeHealthObservation } from "@/lib/server/runtime-health-observation";
 import { getRuntimeStallEvidence } from "@/lib/server/runtime-stall-evidence";
 import { getT58CpuProfileSummary } from "@/lib/server/t58-cpu-profile";
-import { getOperationalTwinForensicsReport } from "@/lib/operational-twin/event-outcome";
 import { toPublicRuntimePerformance } from "@/lib/server/public-diagnostics";
 
 export const dynamic = "force-dynamic";
@@ -44,14 +43,10 @@ export async function GET(request: Request): Promise<Response> {
       processedAircraft: item.processedAircraft,
     }));
   const hotPaths = [...paths].sort((left, right) => right.totalMs - left.totalMs).slice(0, 12);
-  // Low-cost individual Twin validators may fall outside the top 12, despite
-  // the inclusive parent being slow. Export exactly these five separately.
-  const validatorPaths = paths.filter((path) => path.name.startsWith("twin.")).slice(0, 5);
   const ingestPaths = paths.filter((path) => path.name.startsWith("ingest.")).slice(0, 3);
   const runtime = getRuntimeHealthObservation();
-  const operationalTwinForensics = getOperationalTwinForensicsReport();
   const response = {
-    schemaVersion: 4, scope: "process-local", phases, hotPaths, validatorPaths, ingestPaths, operationalTwinForensics,
+    schemaVersion: 4, scope: "process-local", phases, hotPaths, ingestPaths,
     stallEvidence: getRuntimeStallEvidence(),
     t58CpuProfile: getT58CpuProfileSummary(),
     runtime: {

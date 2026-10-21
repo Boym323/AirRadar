@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "scope": "PR #1096 selected-feature release readiness; read-only evidence, not live proof",
+  "date": "2026-10-21",
+  "baselineCommit": "3121f9a79bc1740d6c54ef6c453ed1e66c886ecf",
+  "sourceInventory": "docs/audits/SELECTED-FEATURE-CURRENT-2026-10-21.json",
+  "selection": {
+    "keep": 79,
+    "remove": 99,
+    "sourceAnchors": 79,
+    "anchorEvidence": "one or more feature-specific tracked paths per KEEP ID. File presence is NOT execution proof."
+  },
+  "anchors": {
+    "J01": [
+      "lib/server/local-readsb-provider.ts"
+    ],
+    "J02": [
+      "lib/server/beast-local-provider.ts"
+    ],
+    "J03": [
+      "lib/server/native-acceleration.ts"
+    ],
+    "J04": [
+      "lib/server/failover-local-provider.ts"
+    ],
+    "J05": [
+      "lib/server/aircraft-state.ts"
+    ],
+    "J06": [
+      "app/api/aircraft/route.ts"
+    ],
+    "J07": [
+      "app/api/stream/route.ts"
+    ],
+    "J08": [
+      "lib/server/sse-delta.ts"
+    ],
+    "J09": [
+      "lib/server/history.ts"
+    ],
+    "J11": [
+      "lib/server/aircraft-continuity.ts"
+    ],
+    "R01": [
+      "components/airradar-app.tsx"
+    ],
+    "R02": [
+      "components/radar/use-radar-aircraft-context.ts"
+    ],
+    "R03": [
+      "lib/aircraft/icon-classification.ts"
+    ],
+    "R04": [
+      "lib/radar/aircraft-label-collision.ts"
+    ],
+    "R05": [
+      "lib/aircraft/color-mode.ts"
+    ],
+    "R06": [
+      "components/radar/radar-traffic-browser.tsx"
+    ],
+    "R07": [
+      "components/radar/radar-drawer-details.tsx"
+    ],
+    "R08": [
+      "lib/aircraft/trail.ts"
+    ],
+    "R09": [
+      "components/radar/radar-flight-follow-hud.tsx"
+    ],
+    "R10": [
+      "components/radar/radar-multi-aircraft.tsx"
+    ],
+    "R11": [
+      "components/radar/use-selected-route.ts"
+    ],
+    "R12": [
+      "lib/radar/aviation-map-layers.ts"
+    ],
+    "R14": [
+      "lib/radar/map-appearance.ts"
+    ],
+    "R15": [
+      "components/radar/radar-map-hud.tsx"
+    ],
+    "R17": [
+      "app/api/atc/sectors/route.ts"
+    ],
+    "R18": [
+      "components/radar/use-radar-weather-context.ts"
+    ],
+    "H03": [
+      "app/api/aircraft/[hex]/photo/route.ts"
+    ],
+    "H07": [
+      "components/flight-profile.tsx"
+    ],
+    "H14": [
+      "app/api/history/[hex]/route.ts"
+    ],
+    "A01": [
+      "app/api/airports/route.ts"
+    ],
+    "A02": [
+      "lib/server/airport-infrastructure.ts"
+    ],
+    "T08": [
+      "lib/ats/cz-routes.ts"
+    ],
+    "T09": [
+      "lib/ats/sk-routes.ts",
+      "lib/ats/at-routes.ts"
+    ],
+    "T10": [
+      "app/api/navigation/data/route.ts"
+    ],
+    "T13": [
+      "lib/server/navigation-integrity.ts"
+    ],
+    "T14": [
+      "components/navigation-integrity-center.tsx"
+    ],
+    "W01": [
+      "lib/server/aviation-weather-provider.ts"
+    ],
+    "W02": [
+      "app/api/weather/metar-map/route.ts"
+    ],
+    "W03": [
+      "app/api/weather/radar/frames/route.ts"
+    ],
+    "W06": [
+      "app/api/weather/sigmet/route.ts"
+    ],
+    "W08": [
+      "lib/server/bds-decoder.ts"
+    ],
+    "W09": [
+      "app/api/weather/aircraft/profile/route.ts"
+    ],
+    "L11": [
+      "app/api/push/subscribe/route.ts"
+    ],
+    "L12": [
+      "lib/server/alert-delivery-worker.ts"
+    ],
+    "E01": [
+      "lib/server/adsbhub-provider.ts"
+    ],
+    "E02": [
+      "lib/server/adsblol-raw-provider.ts"
+    ],
+    "E03": [
+      "lib/server/adsblol-provider.ts"
+    ],
+    "E04": [
+      "lib/server/ogn-provider.ts"
+    ],
+    "E05": [
+      "lib/ogn/ddb.ts"
+    ],
+    "E06": [
+      "lib/ogn/softrf.ts"
+    ],
+    "E07": [
+      "lib/server/rxw-hub-service.ts"
+    ],
+    "E09": [
+      "lib/server/flightaware-provider.ts"
+    ],
+    "E10": [
+      "lib/server/adsbdb-provider.ts"
+    ],
+    "S01": [
+      "lib/server/statistics.ts"
+    ],
+    "S02": [
+      "app/api/statistics/route.ts"
+    ],
+    "S03": [
+      "app/api/receiver/coverage/route.ts"
+    ],
+    "S04": [
+      "lib/server/receiver-coverage-analytics.ts"
+    ],
+    "S06": [
+      "app/api/statistics/traffic/route.ts"
+    ],
+    "S09": [
+      "app/api/logbook/summary/route.ts"
+    ],
+    "O01": [
+      "app/system/page.tsx"
+    ],
+    "O02": [
+      "app/api/health/route.ts"
+    ],
+    "O03": [
+      "lib/server/receiver-monitoring.ts"
+    ],
+    "O04": [
+      "app/api/system/integrations/route.ts"
+    ],
+    "O05": [
+      "lib/server/runtime-performance.ts"
+    ],
+    "O06": [
+      "app/api/system/runtime-history/route.ts"
+    ],
+    "O07": [
+      "lib/server/db-operation-diagnostics.ts"
+    ],
+    "O08": [
+      "app/api/system/stream/route.ts"
+    ],
+    "O09": [
+      "scripts/t58-report.mjs"
+    ],
+    "O10": [
+      "scripts/benchmark-load-scaling.ts"
+    ],
+    "O11": [
+      ".github/workflows/ci.yml"
+    ],
+    "O12": [
+      "deploy/release.sh"
+    ],
+    "O13": [
+      "scripts/atc-import.ts"
+    ],
+    "O15": [
+      "app/api/admin/navigation-integrity/diagnostics/route.ts"
+    ],
+    "U01": [
+      "app/globals.css"
+    ],
+    "U02": [
+      "app/manifest.ts"
+    ],
+    "U03": [
+      "components/use-aircraft-stream.ts"
+    ],
+    "U04": [
+      "lib/i18n/index.ts"
+    ],
+    "U05": [
+      "components/command-palette.tsx"
+    ],
+    "U08": [
+      "components/radar/radar-quick-actions.tsx"
+    ]
+  },
+  "removal": {
+    "retiredTargets": [
+      "components/atc-sector-detail.module.css",
+      "components/live-airport-network.module.css"
+    ],
+    "evidence": "Components (56 TS/TSX files) and app page/layout/style files (14) were checked for references; no matching import found; CI reruns after change."
+  },
+  "ciEvidence": {
+    "headBeforeThisAudit": "3121f9a79bc1740d6c54ef6c453ed1e66c886ecf",
+    "ciRun": 39610503881,
+    "codeqlRun": 39610504227,
+    "scalingRun": 39610503923,
+    "ci": "success",
+    "codeql": "success",
+    "scaling": "success",
+    "testsPassed": 1813,
+    "testsSkipped": 15,
+    "unitTestFilesPassed": 284,
+    "unitTestFilesSkipped": 5,
+    "productionBrowserGate": "PASS",
+    "syntheticRadar5000Aircraft": "PASS",
+    "notes": "Validation was run on GitHub's PR merge checkout; no production receiver attached."
+  },
+  "footprint": {
+    "productionLoc": 86895,
+    "productionFiles": 519,
+    "testLoc": 27915,
+    "testFiles": 325,
+    "metric": "tracked nonempty lines",
+    "source": "CI test logs for run 39610503881",
+    "note": "Metric applies to pre-audit-commit checkout, not the new commit. New CI must be checked."
+  },
+  "dbSafety": {
+    "prDiffTouchesPrisma": false,
+    "prDiffTouchesMigrations": false,
+    "legacyDbSchema": "RETAIN",
+    "dbBackupVerified": false,
+    "migrationRollbackVerified": false
+  },
+  "blockerReasons": [
+    "Production T58 A/B on matched local ADS-B workload not measured; CPU/RSS/event-loop P95/P99 and DB history retention unknown",
+    "Reverse-proxy/API access logs for removed 50+ endpoints not available; unknown external client impact",
+    "Database backup and recovery rehearsal not witnessed; release.sh explicitly warns automatic database rollback is not guaranteed",
+    "Public /api/health and /api/version not accessible from available remote verification environment",
+    "Manual feature-by-feature browser/device testing of 79 KEEP functions not proven by static anchors"
+  ],
+  "releasePolicy": {
+    "readyToMerge": false,
+    "readyToDeploy": false,
+    "productionModified": false,
+    "recommendation": "Keep draft until runtime T58, retired API client audit, backup and dry-run are confirmed; run release on pinned commit only after operator approval."
+  }
+}

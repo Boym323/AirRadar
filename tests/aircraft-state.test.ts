@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
+import { MockReadsbProvider } from "@/tests/helpers/mock-readsb-provider";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, AircraftEnrichment, ProviderSnapshot, StateSnapshot } from "@/lib/aircraft/types";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { AtcSectorService, EmptyAtcSectorProvider } from "@/lib/server/atc-sector-service";
-import { AlertEngine } from "@/lib/server/alert-engine";
-import type { AircraftAlert } from "@/lib/server/alert-notifier";
 import type { AircraftProvider, NetworkAircraftProvider } from "@/lib/server/provider";
 import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 import { recordAircraftSnapshot } from "@/lib/server/history";
@@ -167,31 +165,24 @@ describe("aircraft state service", () => {
     expect(diagnostics.localTrailPointCount).toBeGreaterThanOrEqual(1);
   });
 
-  it("uses one snapshot per calibration validator for its full diagnostic output", () => {
+  it("excludes retired Digital Twin calibration from live service diagnostics", () => {
     const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
     services.push(service);
-    const internal = service as unknown as {
-      operationalTwinTrajectoryQualityOutcome: { report: (now?: Date) => unknown };
-      operationalTwinTrajectoryQualityOutcomeV2: { report: (now?: Date) => unknown };
-      regionalAttentionOutcome: { report: (now?: Date) => unknown };
-    };
-    const legacyReport = vi.spyOn(internal.operationalTwinTrajectoryQualityOutcome, "report");
-    const v2Report = vi.spyOn(internal.operationalTwinTrajectoryQualityOutcomeV2, "report");
-    const regionalReport = vi.spyOn(internal.regionalAttentionOutcome, "report");
-
-    const diagnostics = service.getDiagnostics();
-    expect(legacyReport).toHaveBeenCalledTimes(1);
-    expect(v2Report).toHaveBeenCalledTimes(1);
-    expect(regionalReport).toHaveBeenCalledTimes(1);
-    expect(diagnostics.operationalTwinTrajectoryQualityGraduation.outcomeVersion)
-      .toBe(diagnostics.operationalTwinTrajectoryQualityOutcome.version);
-    expect(diagnostics.operationalTwinTrajectoryQualityV3Graduation.outcomeVersion)
-      .toBe(diagnostics.operationalTwinTrajectoryQualityOutcomeV2.version);
-    expect(diagnostics.regionalAttentionGraduation.outcomeVersion)
-      .toBe(diagnostics.regionalAttentionOutcome.version);
-    legacyReport.mockRestore();
-    v2Report.mockRestore();
-    regionalReport.mockRestore();
+    const diagnostics = service.getDiagnostics() as Record<string, unknown>;
+    expect(diagnostics.coverageAnalytics).toBeDefined();
+    expect(diagnostics.altitudeDiagnostics).toBeDefined();
+    for (const removed of [
+      "operationalTwinOutcome",
+      "operationalTwinEventOutcome",
+      "operationalTwinTrajectoryQualityOutcome",
+      "operationalTwinTrajectoryQualityOutcomeV2",
+      "operationalTwinTrajectoryQualityGraduation",
+      "operationalTwinTrajectoryQualityV3Graduation",
+      "operationalFocusOutcome",
+      "regionalAttentionOutcome",
+      "regionalAttentionGraduation",
+      "operationalTwinCalibrationPersistence",
+    ]) expect(diagnostics).not.toHaveProperty(removed);
   });
 
   it("publishes the correct aircraft icon identity in the first live snapshot", async () => {
@@ -515,12 +506,12 @@ describe("aircraft state service", () => {
       stop: vi.fn(async () => undefined),
     };
     vi.mocked(recordAircraftSnapshot).mockClear();
-    const alertSend = vi.fn(async (alert: AircraftAlert) => { void alert; });
-    const alerts = new AlertEngine({
-      rules: [{ id: "network-watch", enabled: true, type: "callsignPattern", value: "NETWORK*" }],
-      notifier: { name: "test", enabled: true, send: alertSend },
-      history: { recordDetected: vi.fn(async () => undefined), recordNotification: vi.fn(async () => undefined) },
-    });
+    // A legacy adapter is deliberately ignored; retired rule evaluation must never run.
+    const alerts = {
+      observe: vi.fn(),
+      observeNewAircraft: vi.fn(),
+      observeReceptionRecord: vi.fn(),
+    };
     const service = new AircraftStateService(
       localProvider,
       new EnrichmentService({}),
@@ -546,8 +537,10 @@ describe("aircraft state service", () => {
       .filter((aircraft) => aircraft.length > 0)
       .flat();
     expect(persistedAircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
-    expect(alertSend.mock.calls.some(([alert]) => alert.aircraft.icaoHex === "DEF456")).toBe(false);
-    expect(alertSend.mock.calls.some(([alert]) => alert.type === "watchlist")).toBe(false);
+    expect(alerts.observe).not.toHaveBeenCalled();
+    expect(alerts.observeNewAircraft).not.toHaveBeenCalled();
+    expect(alerts.observeReceptionRecord).not.toHaveBeenCalled();
+    expect(service.getAlertStatus()).toEqual({ status: "disabled", enabled: false, notifier: "retired", ruleCount: 0 });
     expect(networkProvider.getSnapshot).toHaveBeenCalledTimes(1);
   });
 
@@ -1349,9 +1342,8 @@ describe("aircraft state service", () => {
     expect(published.at(-1)?.aircraft).toHaveLength(1);
   });
 
-  it("keeps ATC assignment enabled when shadow prediction is explicitly disabled", async () => {
+  it("keeps ATC assignment even though shadow prediction was retired", async () => {
     vi.stubEnv("AIRRADAR_ATC_RESOLUTION_ENABLED", "true");
-    vi.stubEnv("AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED", "false");
     const receiver = { lat: 50, lon: 14, name: "Test" };
     const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver);
     if (!aircraft) throw new Error("test aircraft could not be normalized");
@@ -1360,52 +1352,12 @@ describe("aircraft state service", () => {
     const internal = service as unknown as {
       applySnapshot: (value: ProviderSnapshot) => void;
       resolveAtc: (value: ProviderSnapshot) => Promise<void>;
-      pendingAtcShadowPredictions: Map<string, unknown>;
     };
     const snapshot: ProviderSnapshot = { aircraft: [aircraft], receiver, fetchedAt: aircraft.lastSeen, provider: "test" };
     internal.applySnapshot(snapshot);
     await internal.resolveAtc(snapshot);
     expect(lookup).toHaveBeenCalledTimes(1);
     expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("ASSIGNED");
-    expect(internal.pendingAtcShadowPredictions.size).toBe(0);
-  });
-
-  it("bounds 100 shadow predictions, keeps latest work per ICAO, and contains provider errors", async () => {
-    vi.stubEnv("AIRRADAR_ATC_RESOLUTION_ENABLED", "true");
-    vi.stubEnv("AIRRADAR_ATC_SHADOW_PREDICTION_ENABLED", "true");
-    const receiver = { lat: 50, lon: 14, name: "Test" };
-    const now = Date.now();
-    const aircraft = Array.from({ length: 100 }, (_, index) => normalizeAircraft({
-      hex: index.toString(16).padStart(6, "0"), flight: `TEST${index}`, lat: 50 + index / 1000, lon: 14 + index / 1000,
-    }, receiver, new Date(now + index)))
-      .filter((value): value is Aircraft => value !== null);
-    const service = new AircraftStateService(new MockReadsbProvider(receiver), new EnrichmentService({}), new AtcSectorService(new EmptyAtcSectorProvider()));
-    const internal = service as unknown as {
-      applySnapshot: (value: ProviderSnapshot) => void;
-      enqueueShadowPrediction: (aircraft: Aircraft, currentSector: string | null, resolutionKey: string) => void;
-      runShadowPrediction: (work: { aircraft: Aircraft }) => Promise<void>;
-      atcShadowPredictionRunning: number;
-      pendingAtcShadowPredictions: Map<string, unknown>;
-    };
-    internal.applySnapshot({ aircraft, receiver, fetchedAt: new Date(now).toISOString(), provider: "test" });
-    let active = 0;
-    let maximum = 0;
-    const completed: string[] = [];
-    internal.runShadowPrediction = vi.fn(async (work: { aircraft: Aircraft }) => {
-      active += 1;
-      maximum = Math.max(maximum, active);
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      completed.push(work.aircraft.icaoHex);
-      active -= 1;
-    });
-    for (const item of aircraft) internal.enqueueShadowPrediction(item, "SECTOR", "resolution");
-    const moved = { ...aircraft[0]!, lastSeen: new Date(now + 10_000).toISOString(), lon: 14.9 };
-    internal.applySnapshot({ aircraft: [moved], receiver, fetchedAt: moved.lastSeen, provider: "test" });
-    internal.enqueueShadowPrediction(moved, "SECTOR", "resolution");
-    expect(internal.pendingAtcShadowPredictions.size).toBeLessThanOrEqual(100);
-    await vi.waitFor(() => expect(internal.atcShadowPredictionRunning).toBe(0));
-    expect(maximum).toBeLessThanOrEqual(2);
-    expect(completed.at(-1)).toBe(moved.icaoHex);
   });
 
   it("retries ATC after a transient lookup failure", async () => {

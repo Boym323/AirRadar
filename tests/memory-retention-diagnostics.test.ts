@@ -27,9 +27,8 @@ describe("memory retention diagnostics", () => {
       sourcePreferences: new Map([["ABC123", "local"]]),
       sourcePreferenceMissingSince: new Map([["DEF456", now - 1_000]]),
       lastHistorySample: new Map([["ABC123", now]]),
-      predictiveEvaluatedAt: new Map(),
+      
       atcResolutionKeys: new Map([["ABC123", "key"]]),
-      atcShadowPredictionKeys: new Map(),
       snapshotCacheEntries: 2,
       listeners: 3,
       now,
@@ -42,6 +41,7 @@ describe("memory retention diagnostics", () => {
     expect(result.trails.network.staleRetained).toBe(1);
     expect(result.auxiliaryMaps.sourcePreferenceMissingSince).toBe(1);
     expect(result.snapshotCacheEntries).toBe(2);
+    expect(result.auxiliaryMaps.predictiveEvaluatedAt).toBe(0);
   });
   it("reads each source only once while retaining independent aircraft and trail age windows", () => {
     const now = Date.parse("2026-10-10T12:00:00.000Z");
@@ -68,9 +68,8 @@ describe("memory retention diagnostics", () => {
       sourcePreferences: empty,
       sourcePreferenceMissingSince: empty,
       lastHistorySample: empty,
-      predictiveEvaluatedAt: empty,
+      
       atcResolutionKeys: empty,
-      atcShadowPredictionKeys: empty,
       snapshotCacheEntries: 0,
       listeners: 0,
       now,
@@ -103,9 +102,8 @@ describe("memory retention diagnostics", () => {
       sourcePreferences: empty,
       sourcePreferenceMissingSince: empty,
       lastHistorySample: empty,
-      predictiveEvaluatedAt: empty,
+      
       atcResolutionKeys: empty,
-      atcShadowPredictionKeys: empty,
       snapshotCacheEntries: 0,
       listeners: 0,
       now,
@@ -134,8 +132,8 @@ describe("memory retention diagnostics", () => {
       localStaleAfterMs: 60_000, networkStaleAfterMs: 60_000,
       networkTrailMaxAgeMs: 60_000,
       sourcePreferences: empty, sourcePreferenceMissingSince: empty,
-      lastHistorySample: empty, predictiveEvaluatedAt: empty,
-      atcResolutionKeys: empty, atcShadowPredictionKeys: empty,
+      lastHistorySample: empty, 
+      atcResolutionKeys: empty,
       snapshotCacheEntries: 0, listeners: 0, now,
     };
     const original = getMemoryRetentionDiagnostics(input);

@@ -5,15 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary } from "@/lib/i18n";
 import type { AircraftWeatherStatus, OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
 import type { NavigationIntegrityStatus } from "@/lib/server/system-status-contract";
-import type { PredictiveReadinessReport } from "@/lib/server/predictive-readiness";
-import type {
-  PredictiveGraduationEvidenceDeficit,
-  PredictiveGraduationQualityMargin,
-  PredictiveGraduationTruthRequirement,
-} from "@/lib/predictive-intelligence/graduation-calibration";
 import { useLocale } from "@/components/locale-provider";
 import { operationalHealthLabels } from "@/lib/i18n/operational-health";
-import { truthAccuracyText } from "@/lib/i18n/truth-accuracy-e";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 import { SystemRuntimeTimeline } from "@/components/system-runtime-timeline";
 import { RouteEnrichmentPanel } from "@/components/route-enrichment-panel";
@@ -194,388 +187,11 @@ function Card({
   </UiCard>;
 }
 
-function predictiveDecisionVariant(decision: "PASS" | "WAIT" | "FAIL"): StatusBadgeVariant {
-  return decision === "PASS" ? "success" : decision === "FAIL" ? "danger" : "warning";
-}
-
-function formatPredictivePercent(value: number | null, dictionary: LocaleDictionary): string {
-  return value === null ? dictionary.system.notAvailable : `${formatNumber(value * 100, 1, dictionary.locale)} %`;
-}
-
-function formatPredictiveError(value: number | null, dictionary: LocaleDictionary): string {
-  if (value === null) return dictionary.system.notAvailable;
-  return value < 60
-    ? `${formatNumber(value, 0, dictionary.locale)} s`
-    : `${formatNumber(value / 60, 1, dictionary.locale)} min`;
-}
-
-function predictiveCalibrationMetricLabel(key: string, dictionary: LocaleDictionary): string {
-  const labels: Record<string, string> = {
-    observations: dictionary.system.predictiveObservations,
-    scoreableObservations: dictionary.system.predictiveScoreable,
-    independentTruthFlights: dictionary.system.predictiveIndependentTruth,
-    validatedCandidates: dictionary.system.predictiveValidatedCandidates,
-    medianAbsoluteErrorSeconds: dictionary.system.predictiveMedianError,
-    p90AbsoluteErrorSeconds: dictionary.system.predictiveP90Error,
-    p95AbsoluteErrorSeconds: dictionary.system.predictiveP95Error,
-    exactEndAccuracy: dictionary.system.predictiveAccuracy,
-    coverage: dictionary.system.predictiveCoverage,
-    outcomePrecision: dictionary.system.predictivePrecision,
-    falsePositiveRate: dictionary.system.predictiveFalsePositiveRate,
-    precision: dictionary.system.predictivePrecision,
-    captureStaleRate: dictionary.system.predictiveCaptureStaleRate,
-    independentChangeTruthAvailable: dictionary.system.predictiveOutcomeTruth,
-    independentOutcomeTruthAvailable: dictionary.system.predictiveOutcomeTruth,
-    stateCaptureAvailable: dictionary.system.predictiveStateCapture,
-  };
-  return labels[key] ?? key;
-}
-
-function predictiveCalibrationDeficits(
-  deficits: readonly PredictiveGraduationEvidenceDeficit[],
-  dictionary: LocaleDictionary,
-): string {
-  if (!deficits.length) return dictionary.system.predictiveCalibrationNone;
-  return deficits
-    .map((item) => `${predictiveCalibrationMetricLabel(item.key, dictionary)} +${formatNumber(item.missing, 0, dictionary.locale)} (${formatNumber(item.current, 0, dictionary.locale)}/${formatNumber(item.target, 0, dictionary.locale)})`)
-    .join(" · ");
-}
-
-function predictiveCalibrationTruth(
-  requirements: readonly PredictiveGraduationTruthRequirement[],
-  dictionary: LocaleDictionary,
-): string {
-  const unavailable = requirements.filter((item) => !item.available);
-  if (!unavailable.length) return dictionary.system.predictiveCalibrationNone;
-  return unavailable.map((item) => predictiveCalibrationMetricLabel(item.key, dictionary)).join(" · ");
-}
-
-function predictiveCalibrationMargin(
-  margin: PredictiveGraduationQualityMargin,
-  dictionary: LocaleDictionary,
-): string {
-  const value = (input: number | null) => {
-    if (input === null) return dictionary.system.notAvailable;
-    if (margin.unit === "SECONDS") return formatPredictiveError(input, dictionary);
-    if (margin.unit === "RATE") return formatPredictivePercent(input, dictionary);
-    return formatNumber(input, 0, dictionary.locale);
-  };
-  const delta = margin.margin === null
-    ? dictionary.system.notAvailable
-    : margin.unit === "SECONDS"
-      ? `${margin.margin >= 0 ? "+" : "−"}${formatPredictiveError(Math.abs(margin.margin), dictionary)}`
-      : margin.unit === "RATE"
-        ? `${margin.margin >= 0 ? "+" : "−"}${formatPredictivePercent(Math.abs(margin.margin), dictionary)}`
-        : `${margin.margin >= 0 ? "+" : "−"}${formatNumber(Math.abs(margin.margin), 0, dictionary.locale)}`;
-  return `${value(margin.current)} · ${margin.direction === "AT_LEAST" ? "≥" : "≤"} ${value(margin.target)} · Δ ${delta}`;
-}
-
-function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveReadinessReport; dictionary: LocaleDictionary }) {
-  const truthCopy = truthAccuracyText(dictionary.locale);
-  // Old cached/browser fixture payloads may precede the E schema during an atomic rollout.
-  const truthAccuracy = report.truthAccuracy ?? null;
-  const policies = (policy: PredictiveReadinessReport["configuredPolicy"]) =>
-    (["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"] as const).map((key) => `${key} ${policy[key]}`).join(" · ");
-  const capabilities = [
-    {
-      key: "ETA",
-      result: report.capabilities.ETA,
-      calibration: report.calibration.capabilities.ETA,
-      rollout: report.rollout.ETA,
-      capture: report.captureHealth.perCapability.ETA,
-      metrics: [
-        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.ETA.evidence.observations, 0, dictionary.locale)],
-        [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.ETA.evidence.scoreableObservations, 0, dictionary.locale)],
-        [dictionary.system.predictiveIndependentTruth, formatNumber(report.capabilities.ETA.evidence.independentTruthFlights, 0, dictionary.locale)],
-        [dictionary.system.predictiveMedianError, formatPredictiveError(report.capabilities.ETA.evidence.medianAbsoluteErrorSeconds, dictionary)],
-        [dictionary.system.predictiveP90Error, formatPredictiveError(report.capabilities.ETA.evidence.p90AbsoluteErrorSeconds, dictionary)],
-        [dictionary.system.predictiveP95Error, formatPredictiveError(report.capabilities.ETA.evidence.p95AbsoluteErrorSeconds, dictionary)],
-        [dictionary.system.predictiveCaptureStaleRate, formatPredictivePercent(report.capabilities.ETA.evidence.captureStaleRate, dictionary)],
-      ],
-    },
-    {
-      key: "RUNWAY",
-      result: report.capabilities.RUNWAY,
-      calibration: report.calibration.capabilities.RUNWAY,
-      rollout: report.rollout.RUNWAY,
-      capture: report.captureHealth.perCapability.RUNWAY,
-      metrics: [
-        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY.evidence.observations, 0, dictionary.locale)],
-        [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY.evidence.scoreableObservations, 0, dictionary.locale)],
-        [dictionary.system.predictiveIndependentTruth, formatNumber(report.capabilities.RUNWAY.evidence.independentTruthFlights, 0, dictionary.locale)],
-        [dictionary.system.predictiveAccuracy, formatPredictivePercent(report.capabilities.RUNWAY.evidence.exactEndAccuracy, dictionary)],
-        [dictionary.system.predictiveCoverage, formatPredictivePercent(report.capabilities.RUNWAY.evidence.coverage, dictionary)],
-        [dictionary.system.predictiveCaptureStaleRate, formatPredictivePercent(report.capabilities.RUNWAY.evidence.captureStaleRate, dictionary)],
-      ],
-    },
-    {
-      key: "RUNWAY_CHANGE",
-      result: report.capabilities.RUNWAY_CHANGE,
-      calibration: report.calibration.capabilities.RUNWAY_CHANGE,
-      rollout: report.rollout.RUNWAY_CHANGE,
-      capture: report.captureHealth.perCapability.RUNWAY_CHANGE,
-      metrics: [
-        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.observations, 0, dictionary.locale)],
-        [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.scoreableObservations, 0, dictionary.locale)],
-        [dictionary.system.predictiveIndependentTruth, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.independentTruthFlights, 0, dictionary.locale)],
-        [dictionary.system.predictivePrecision, formatPredictivePercent(report.capabilities.RUNWAY_CHANGE.evidence.outcomePrecision, dictionary)],
-        [dictionary.system.predictiveFalsePositiveRate, formatPredictivePercent(report.capabilities.RUNWAY_CHANGE.evidence.falsePositiveRate, dictionary)],
-        [dictionary.system.predictiveOutcomeTruth, report.capabilities.RUNWAY_CHANGE.evidence.independentChangeTruthAvailable ? dictionary.system.yes : dictionary.system.no],
-      ],
-    },
-    {
-      key: "TRAJECTORY",
-      result: report.capabilities.TRAJECTORY,
-      calibration: report.calibration.capabilities.TRAJECTORY,
-      rollout: report.rollout.TRAJECTORY,
-      capture: report.captureHealth.perCapability.TRAJECTORY,
-      metrics: [
-        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.TRAJECTORY.evidence.observations, 0, dictionary.locale)],
-        [dictionary.system.predictiveValidatedCandidates, formatNumber(report.capabilities.TRAJECTORY.evidence.validatedCandidates, 0, dictionary.locale)],
-        [dictionary.system.predictiveStateCapture, report.capabilities.TRAJECTORY.evidence.stateCaptureAvailable ? dictionary.system.yes : dictionary.system.no],
-        [dictionary.system.predictiveOutcomeTruth, report.capabilities.TRAJECTORY.evidence.independentOutcomeTruthAvailable ? dictionary.system.yes : dictionary.system.no],
-        [dictionary.system.predictivePrecision, formatPredictivePercent(report.capabilities.TRAJECTORY.evidence.precision, dictionary)],
-        [dictionary.system.predictiveCaptureStaleRate, formatPredictivePercent(report.capabilities.TRAJECTORY.evidence.captureStaleRate, dictionary)],
-      ],
-    },
-  ] as const;
-
-  return <UiCard className="system-card system-predictive-readiness" data-testid="predictive-readiness">
-    <div className="system-card-header">
-      <div>
-        <h2>{dictionary.system.predictiveReadiness}</h2>
-        <p className="system-card-subtitle">{dictionary.system.predictiveReadinessSubtitle}</p>
-      </div>
-      <UiStatusBadge variant={report.source === "postgres" ? "neutral" : "stale"}>{report.source.toUpperCase()}</UiStatusBadge>
-    </div>
-    <dl className="system-fields system-predictive-readiness-meta">
-      <Field label={dictionary.system.predictiveCaptureState} value={dictionary.system.predictiveCaptureStateLabels[report.captureHealth.state]} />
-      <Field label={dictionary.system.predictiveCaptureConfigured} value={report.captureHealth.captureConfigured ? dictionary.system.yes : dictionary.system.no} />
-      <Field label={dictionary.system.predictiveCaptureRecent24h} value={formatNumber(report.captureHealth.recent24h, 0, dictionary.locale)} />
-      <Field label={dictionary.system.predictiveCaptureLast} value={formatDateTime(report.captureHealth.lastPersistedAt, dictionary)} />
-      <Field label={dictionary.system.predictiveThresholdVersion} value={report.thresholds.version} />
-      <Field label={dictionary.system.predictiveOutcomeTruthVersion} value={report.outcomeTruthVersion} />
-      <Field label={dictionary.system.predictiveCalibrationVersion} value={report.calibration.version} />
-      <Field label={dictionary.system.predictiveOutcomeEvents} value={formatNumber(report.collection.outcomeEvents, 0, dictionary.locale)} />
-      <Field label={dictionary.system.predictiveWindow} value={`${formatDateTime(report.window.from, dictionary)} – ${formatDateTime(report.window.to, dictionary)}`} />
-      <Field label={dictionary.system.predictiveComplete} value={report.complete ? dictionary.system.predictiveCompleteYes : dictionary.system.predictiveCompleteNo} />
-      <Field label={dictionary.system.predictiveConfiguredPolicy} value={policies(report.configuredPolicy)} />
-      <Field label={dictionary.system.predictiveEffectivePolicy} value={policies(report.effectivePolicy)} />
-      <Field label={dictionary.system.predictiveIntegrity} value={`${dictionary.system.predictiveCrossIcao}: ${report.integrity.crossIcaoLifecycleConflicts} · ${dictionary.system.predictiveCrossFlight}: ${report.integrity.crossFlightLifecycleConflicts}`} />
-    </dl>
-    <p className="system-predictive-reasons">{dictionary.system.predictiveCaptureDisclaimer}</p>
-    <div className="system-predictive-capabilities">
-      {capabilities.map((capability) => <section key={capability.key} className="system-predictive-capability">
-        <div className="system-predictive-capability-heading">
-          <strong>{capability.key}</strong>
-          <UiStatusBadge variant={predictiveDecisionVariant(capability.result.decision)}>
-            {capability.result.decision === "PASS" ? dictionary.system.predictiveDecisionPass : capability.result.decision === "FAIL" ? dictionary.system.predictiveDecisionFail : dictionary.system.predictiveDecisionWait}
-          </UiStatusBadge>
-        </div>
-        <dl>
-          <Field label={dictionary.system.predictiveCaptureRecent24h} value={formatNumber(capability.capture.recent24h, 0, dictionary.locale)} />
-          <Field label={dictionary.system.predictiveCaptureLast} value={formatDateTime(capability.capture.lastPersistedAt, dictionary)} />
-          <Field label={dictionary.system.predictiveEvidenceAction} value={dictionary.system.predictiveEvidenceActionLabels[report.evidencePlan.capabilities[capability.key].action]} />
-          {capability.metrics.map(([label, value]) => <Field key={label} label={label} value={value} />)}
-        </dl>
-        <dl className="system-predictive-calibration" data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}>
-          <Field
-            label={dictionary.system.predictiveCalibrationPhase}
-            value={dictionary.system.predictiveCalibrationPhaseLabels[capability.calibration.phase]}
-          />
-          <Field
-            label={dictionary.system.predictiveCalibrationManualReview}
-            value={capability.calibration.manualReviewEligible ? dictionary.system.yes : dictionary.system.no}
-          />
-          <Field
-            label={dictionary.system.predictiveCalibrationEvidenceGap}
-            value={predictiveCalibrationDeficits(capability.calibration.evidenceDeficits, dictionary)}
-          />
-          <Field
-            label={dictionary.system.predictiveCalibrationTruthGap}
-            value={predictiveCalibrationTruth(capability.calibration.truthRequirements, dictionary)}
-          />
-          {capability.calibration.qualityMargins.map((margin) => <Field
-            key={margin.key}
-            label={`${dictionary.system.predictiveCalibrationQualityMargin} · ${predictiveCalibrationMetricLabel(margin.key, dictionary)}`}
-            value={predictiveCalibrationMargin(margin, dictionary)}
-          />)}
-        </dl>
-        <dl className="system-predictive-calibration" data-testid={`predictive-rollout-${capability.key.toLowerCase()}`}>
-          <Field
-            label={dictionary.system.predictiveRolloutVersion}
-            value={capability.rollout.version}
-          />
-          <Field
-            label={dictionary.system.predictiveRolloutState}
-            value={dictionary.system.predictiveRolloutStateLabels[capability.rollout.state]}
-          />
-          <Field
-            label={dictionary.system.predictiveRolloutPublicActive}
-            value={capability.rollout.publicActive ? dictionary.system.yes : dictionary.system.no}
-          />
-          <Field
-            label={dictionary.system.predictiveRolloutConfigChange}
-            value={capability.rollout.requiresExplicitConfigChange ? dictionary.system.yes : dictionary.system.no}
-          />
-          <Field
-            label={dictionary.system.predictiveRolloutBlockers}
-            value={capability.rollout.blockers.length ? capability.rollout.blockers.join(" · ") : dictionary.system.predictiveRolloutNone}
-          />
-        </dl>
-        {!capability.calibration.qualityEvaluated && <p className="system-predictive-reasons">{dictionary.system.predictiveCalibrationQualityPending}</p>}
-        {capability.result.reasons.length > 0 && <p className="system-predictive-reasons"><strong>{dictionary.system.predictiveReasons}:</strong> {capability.result.reasons.join(" · ")}</p>}
-      </section>)}
-    </div>
-
-    <div className="system-card-header" data-testid="predictive-accuracy-trends-heading">
-      <div>
-        <h2>{dictionary.system.predictiveTrendTitle}</h2>
-        <p className="system-card-subtitle">{dictionary.system.predictiveTrendSubtitle}</p>
-      </div>
-    </div>
-    <div className="system-predictive-capabilities" data-testid="predictive-accuracy-trends">
-      {(["ETA", "RUNWAY"] as const).map((key) => {
-        const trend = report.accuracyTrends.capabilities[key];
-        const recentMetric = key === "ETA"
-          ? formatPredictiveError(trend.recent.etaMaeSeconds, dictionary)
-          : formatPredictivePercent(trend.recent.runwayExactEndAccuracy, dictionary);
-        const previousMetric = key === "ETA"
-          ? formatPredictiveError(trend.previous.etaMaeSeconds, dictionary)
-          : formatPredictivePercent(trend.previous.runwayExactEndAccuracy, dictionary);
-        const metricLabel = key === "ETA"
-          ? dictionary.system.predictiveTrendEtaMae
-          : dictionary.system.predictiveTrendRunwayAccuracy;
-        const delta = key === "ETA" ? trend.deltaEtaMaeSeconds : trend.deltaRunwayAccuracyPercentagePoints;
-        const deltaLabel = key === "ETA" ? dictionary.system.predictiveTrendDeltaEta : dictionary.system.predictiveTrendDeltaRunway;
-        return <section key={key} className="system-predictive-capability" data-testid={`predictive-accuracy-trend-${key.toLowerCase()}`}>
-          <div className="system-predictive-capability-heading">
-            <strong>{key}</strong>
-            <UiStatusBadge variant={trend.state === "COMPARABLE" ? "neutral" : "warning"}>
-              {dictionary.system.predictiveTrendStateLabels[trend.state]}
-            </UiStatusBadge>
-          </div>
-          <dl>
-            <Field label={`${dictionary.system.predictiveTrendRecent} · ${dictionary.system.predictiveTrendSampleRatio}`}
-              value={`${formatNumber(trend.recent.scoreableFlights, 0, dictionary.locale)} / ${formatNumber(trend.recent.observedFlights, 0, dictionary.locale)}`} />
-            <Field label={`${dictionary.system.predictiveTrendPrevious} · ${dictionary.system.predictiveTrendSampleRatio}`}
-              value={`${formatNumber(trend.previous.scoreableFlights, 0, dictionary.locale)} / ${formatNumber(trend.previous.observedFlights, 0, dictionary.locale)}`} />
-            <Field label={`${dictionary.system.predictiveTrendRecent} · ${metricLabel}`} value={recentMetric} />
-            <Field label={`${dictionary.system.predictiveTrendPrevious} · ${metricLabel}`} value={previousMetric} />
-            {key === "ETA" && <>
-              <Field label={`${dictionary.system.predictiveTrendRecent} · ${dictionary.system.predictiveTrendEtaMedian}`} value={formatPredictiveError(trend.recent.etaMedianAbsoluteErrorSeconds, dictionary)} />
-              <Field label={`${dictionary.system.predictiveTrendRecent} · ${dictionary.system.predictiveTrendEtaP90}`} value={formatPredictiveError(trend.recent.etaP90AbsoluteErrorSeconds, dictionary)} />
-            </>}
-            <Field label={deltaLabel} value={delta === null
-              ? dictionary.system.predictiveTrendInsufficient
-              : `${delta > 0 ? "+" : ""}${formatNumber(delta, 1, dictionary.locale)}`} />
-          </dl>
-        </section>;
-      })}
-    </div>
-    <p className="system-predictive-reasons">{dictionary.system.predictiveTrendDisclaimer}</p>
-    {truthAccuracy ? <>
-    <div className="system-card-header" data-testid="truth-accuracy-e-heading">
-      <div><h2>{truthCopy.heading}</h2><p className="system-card-subtitle">{truthCopy.subtitle}</p></div>
-      <UiStatusBadge variant={truthAccuracy.decision === "MONITOR" ? "neutral" : "warning"}>
-        {truthCopy.decisions[truthAccuracy.decision]}
-      </UiStatusBadge>
-    </div>
-    <div className="system-predictive-capabilities" data-testid="truth-accuracy-e">
-      {(["ETA", "RUNWAY"] as const).map((capability) => {
-        const cohort = truthAccuracy.truth[capability];
-        return <section key={capability} className="system-predictive-capability">
-          <div className="system-predictive-capability-heading"><strong>{capability}</strong></div>
-          <dl>
-            <Field label={truthCopy.flights} value={formatNumber(cohort.flights, 0, dictionary.locale)} />
-            <Field label={truthCopy.confirmed} value={formatNumber(cohort.confirmed, 0, dictionary.locale)} />
-            <Field label={truthCopy.coverage} value={formatPredictivePercent(cohort.coverage, dictionary)} />
-            <Field label={capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
-              value={capability === "ETA"
-                ? formatPredictiveError(truthAccuracy.decision === "MONITOR" || truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.etaMaeSeconds : null, dictionary)
-                : formatPredictivePercent(truthAccuracy.decision === "MONITOR" || truthAccuracy.decision === "REVIEW_QUALITY" ? cohort.exactRunwayAccuracy : null, dictionary)} />
-          </dl>
-        </section>;
-      })}
-    </div>
-    <div className="system-card-header"><div><h3>{truthCopy.airportHeading}</h3></div></div>
-    <div className="system-predictive-capabilities" data-testid="truth-accuracy-airports">
-      {truthAccuracy.airports.map((row) => <section key={`${row.airport}-${row.capability}`} className="system-predictive-capability">
-        <div className="system-predictive-capability-heading"><strong>{row.airport} · {row.capability}</strong>
-          <UiStatusBadge variant={row.state === "MEASURED" ? "neutral" : "warning"}>
-            {row.state === "MEASURED" ? truthCopy.measured : row.state === "COLLECTION_INCOMPLETE" ? truthCopy.incomplete : truthCopy.insufficient}
-          </UiStatusBadge>
-        </div>
-        <dl>
-          <Field label={truthCopy.confirmed} value={formatNumber(row.cohort.confirmed, 0, dictionary.locale)} />
-          <Field label={row.capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
-            value={row.capability === "ETA" ? formatPredictiveError(row.cohort.etaMaeSeconds, dictionary)
-              : formatPredictivePercent(row.cohort.exactRunwayAccuracy, dictionary)} />
-        </dl>
-      </section>)}
-      {!truthAccuracy.airports.length && <p>{truthCopy.noTruth}</p>}
-    </div>
-    <div className="system-card-header"><div><h3>{truthCopy.phaseHeading}</h3></div></div>
-    <div className="system-predictive-capabilities" data-testid="truth-accuracy-phases">
-      {truthAccuracy.phases.map((row) => <section key={`${row.phase}-${row.capability}`} className="system-predictive-capability">
-        <strong>{row.phase} · {row.capability}</strong>
-        <dl>
-          <Field label={truthCopy.confirmed} value={formatNumber(row.cohort.confirmed, 0, dictionary.locale)} />
-          <Field label={row.capability === "ETA" ? truthCopy.eta : truthCopy.accuracy}
-            value={row.capability === "ETA" ? formatPredictiveError(row.cohort.etaMaeSeconds, dictionary)
-              : formatPredictivePercent(row.cohort.exactRunwayAccuracy, dictionary)} />
-        </dl>
-      </section>)}
-    </div>
-    <div className="system-card-header"><div><h3>{truthCopy.confidenceHeading}</h3></div></div>
-    <div className="system-predictive-capabilities" data-testid="truth-accuracy-confidence">
-      {truthAccuracy.confidence.map((row) => <section key={`${row.capability}-${row.confidence}`} className="system-predictive-capability">
-        <div className="system-predictive-capability-heading"><strong>{row.capability} · {row.confidence}</strong></div>
-        <dl>
-          <Field label={truthCopy.confirmed} value={formatNumber(row.confirmed, 0, dictionary.locale)} />
-          <Field label={truthCopy.confidenceRule} value={formatPredictivePercent(row.successRate, dictionary)} />
-        </dl>
-      </section>)}
-    </div>
-    <p className="system-predictive-reasons">{truthCopy.disclaimer}</p>
-    </> : null}
-    <div className="system-card-header" data-testid="predictive-horizon-quality-heading">
-      <div>
-        <h2>{dictionary.system.predictiveHorizonTitle}</h2>
-        <p className="system-card-subtitle">{dictionary.system.predictiveHorizonSubtitle}</p>
-      </div>
-    </div>
-    <dl className="system-fields">
-      <Field label={dictionary.system.predictiveHorizonMinimum} value={formatNumber(report.horizonQuality.minimumConfirmedFlights, 0, dictionary.locale)} />
-      <Field label={dictionary.system.predictiveHorizonUnclassified} value={formatNumber(report.horizonQuality.unclassifiedFlights, 0, dictionary.locale)} />
-    </dl>
-    <div className="system-predictive-capabilities" data-testid="predictive-horizon-quality">
-      {report.horizonQuality.bands.map((band) => <section key={band.bucket} className="system-predictive-capability" data-testid={`predictive-horizon-${band.bucket}`}>
-        <div className="system-predictive-capability-heading">
-          <strong>{band.bucket}</strong>
-          <UiStatusBadge variant={band.state === "MEASURED" ? "neutral" : "warning"}>
-            {dictionary.system.predictiveHorizonStateLabels[band.state]}
-          </UiStatusBadge>
-        </div>
-        <dl>
-          <Field label={dictionary.system.predictiveHorizonFlights} value={formatNumber(band.flights, 0, dictionary.locale)} />
-          <Field label={dictionary.system.predictiveHorizonMae} value={formatPredictiveError(band.maeSeconds, dictionary)} />
-          <Field label={dictionary.system.predictiveHorizonMedian} value={formatPredictiveError(band.medianAbsoluteErrorSeconds, dictionary)} />
-          <Field label={dictionary.system.predictiveHorizonP90} value={formatPredictiveError(band.p90AbsoluteErrorSeconds, dictionary)} />
-          <Field label={dictionary.system.predictiveHorizonBias} value={band.biasSeconds === null ? dictionary.system.notAvailable : `${band.biasSeconds > 0 ? "+" : ""}${formatNumber(band.biasSeconds, 0, dictionary.locale)} s`} />
-        </dl>
-      </section>)}
-    </div>
-    <p className="system-predictive-reasons">{dictionary.system.predictiveHorizonDisclaimer}</p>
-    <p className="system-predictive-reasons">{dictionary.system.predictiveEvidenceActionDisclaimer}</p>
-  </UiCard>;
-}
-
 function LinkNav({ dictionary }: { dictionary: LocaleDictionary }) {
   return <nav className="system-nav" aria-label={dictionary.system.navigation}>
-    <Link href="/history">{dictionary.history.title}</Link>
-    <Link href="/watchlist">{dictionary.watchlist.title}</Link>
-    <Link href="/alerts">{dictionary.alerts.title}</Link>
+    <Link href="/receiver/coverage">{dictionary.locale.startsWith("cs") ? "Pokrytí přijímače" : "Receiver coverage"}</Link>
+    <Link href="/navigation-integrity">{dictionary.locale.startsWith("cs") ? "Integrita navigace" : "Navigation integrity"}</Link>
+    <Link href="/weather">{dictionary.locale.startsWith("cs") ? "Počasí" : "Weather"}</Link>
   </nav>;
 }
 
@@ -587,8 +203,6 @@ export function SystemStatusPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [streamConnected, setStreamConnected] = useState(false);
-  const [predictiveReadiness, setPredictiveReadiness] = useState<PredictiveReadinessReport | null>(null);
-  const [predictiveReadinessError, setPredictiveReadinessError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const applyStatus = useCallback((next: SystemStatusApiResponse) => {
@@ -614,27 +228,7 @@ export function SystemStatusPage() {
     }
   }, [applyStatus]);
 
-  const loadPredictiveReadiness = useCallback(async () => {
-    try {
-      const response = await fetch("/api/admin/predictive/readiness", { cache: "no-store" });
-      if (!response.ok) throw new Error("predictive readiness request failed");
-      setPredictiveReadiness(await response.json() as PredictiveReadinessReport);
-      setPredictiveReadinessError(false);
-    } catch {
-      setPredictiveReadinessError(true);
-    }
-  }, []);
-
   useEffect(() => { void load(); }, [load]);
-
-  useEffect(() => {
-    if (data?.detailLevel !== "admin") {
-      setPredictiveReadiness(null);
-      setPredictiveReadinessError(false);
-      return;
-    }
-    void loadPredictiveReadiness();
-  }, [data?.detailLevel, loadPredictiveReadiness]);
 
   useEffect(() => {
     const source = new EventSource("/api/system/stream");
@@ -661,13 +255,6 @@ export function SystemStatusPage() {
   const continuityLocal = asRecord(continuity?.local);
   const continuityNetwork = asRecord(continuity?.network);
   const continuityFailovers = asRecord(continuity?.sourceFailovers);
-  const operationalTwinOutcome = asRecord(data?.localAdsb?.operationalTwinOutcome);
-  const operationalTwinOutcomeWindow = asRecord(operationalTwinOutcome?.window);
-  const operationalTwinOutcomeOverall = asRecord(operationalTwinOutcome?.overall);
-  const operationalTwinOutcomeHorizons = asRecord(operationalTwinOutcome?.horizons);
-  const operationalTwinOutcome5 = asRecord(operationalTwinOutcomeHorizons?.["5"]);
-  const operationalTwinOutcome15 = asRecord(operationalTwinOutcomeHorizons?.["15"]);
-  const operationalTwinOutcome30 = asRecord(operationalTwinOutcomeHorizons?.["30"]);
   return <main className="history-page system-page">
     <header className="history-page-header system-page-header">
       <div>
@@ -685,7 +272,7 @@ export function SystemStatusPage() {
           <span aria-hidden="true">●</span> {streamConnected ? dictionary.system.realtime : dictionary.system.reconnecting}
         </span>
       </div>
-      <Button variant="primary" className="primary-button" onClick={() => { setRefreshKey((k) => k + 1); void load(); if (data?.detailLevel === "admin") void loadPredictiveReadiness(); }} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
+      <Button variant="primary" className="primary-button" onClick={() => { setRefreshKey((k) => k + 1); void load(); }} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
     </div>
 
     {loading && !data && <p className="system-message">{dictionary.system.loading}</p>}
@@ -730,35 +317,6 @@ export function SystemStatusPage() {
           <Field label={dictionary.system.continuityFailovers} value={`L→N ${formatNumber(diagnosticNumber(continuityFailovers, "localToNetwork"), 0, dictionary.locale)} · N→L ${formatNumber(diagnosticNumber(continuityFailovers, "networkToLocal"), 0, dictionary.locale)} · pending ${formatNumber(diagnosticNumber(continuityFailovers, "pendingAffinity"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.continuityMassDrop} value={`L ${formatNumber(diagnosticNumber(continuityLocal, "massDropCandidates"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityLocal, "massDropConfirmed"), 0, dictionary.locale)} · N ${formatNumber(diagnosticNumber(continuityNetwork, "massDropCandidates"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityNetwork, "massDropConfirmed"), 0, dictionary.locale)}${diagnosticBoolean(continuityLocal, "massDropPending") || diagnosticBoolean(continuityNetwork, "massDropPending") ? ` · ${dictionary.system.continuityPending}` : ""}`} />
         </>}
-      </Card>}
-
-      {detailed && operationalTwinOutcome && <Card
-        title={dictionary.system.operationalTwinOutcome}
-        status={operationalTwinOutcome.decision === "PASS" ? "ok" : operationalTwinOutcome.decision === "FAIL" ? "degraded" : "disabled"}
-        dictionary={dictionary}
-      >
-        <div data-testid="operational-twin-outcome-validation">
-          <Field label={dictionary.system.version} value={String(operationalTwinOutcome.version ?? dictionary.system.notAvailable)} />
-          <Field label={dictionary.system.operationalTwinOutcomeDecision} value={String(operationalTwinOutcome.decision ?? dictionary.system.notAvailable)} />
-          <Field label={dictionary.system.operationalTwinOutcomeTruth} value={String(operationalTwinOutcome.truthSource ?? dictionary.system.notAvailable)} />
-          <Field label={dictionary.system.operationalTwinOutcomeWindow} value={`${formatNumber(diagnosticNumber(operationalTwinOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} ${dictionary.uiExtras.completed}`} />
-          <Field label={dictionary.system.operationalTwinOutcomeSamples} value={`${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(operationalTwinOutcome, "pending"), 0, dictionary.locale)}`} />
-          <Field label={dictionary.system.operationalTwinOutcomeError} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanPositionErrorNm") === null
-            ? dictionary.system.notAvailable
-            : `${formatNumber(diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanPositionErrorNm") ?? 0, 2, dictionary.locale)} NM`} />
-          <Field label={dictionary.system.operationalTwinOutcomeCoverage} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "uncertaintyCoverage") === null
-            ? dictionary.system.notAvailable
-            : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcomeOverall, "uncertaintyCoverage") ?? 0) * 100, 1, dictionary.locale)} %`} />
-          <Field label={dictionary.system.operationalTwinOutcomeRatio} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanErrorToUncertaintyRatio") === null
-            ? dictionary.system.notAvailable
-            : formatNumber(diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanErrorToUncertaintyRatio") ?? 0, 2, dictionary.locale)} />
-          <Field label={dictionary.system.operationalTwinOutcomeExpired} value={diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") === null
-            ? dictionary.system.notAvailable
-            : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
-          <Field label={dictionary.system.operationalTwinOutcomeHorizons} value={`5m ${formatNumber(diagnosticNumber(operationalTwinOutcome5, "samples"), 0, dictionary.locale)} · 15m ${formatNumber(diagnosticNumber(operationalTwinOutcome15, "samples"), 0, dictionary.locale)} · 30m ${formatNumber(diagnosticNumber(operationalTwinOutcome30, "samples"), 0, dictionary.locale)}`} />
-          <Field label={dictionary.system.operationalTwinOutcomeCapture} value={diagnosticBoolean(operationalTwinOutcome, "requestDrivenCapture") ? dictionary.system.operationalTwinOutcomeRequestDriven : dictionary.system.notAvailable} />
-          <Link className="secondary-button" href="/admin/operational-twin/calibration">{dictionary.calibrationCenter.title}</Link>
-        </div>
       </Card>}
 
       <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>
@@ -978,23 +536,6 @@ export function SystemStatusPage() {
       </Card>}
 
       {detailed && <SystemRuntimeTimeline locale={locale} refreshKey={refreshKey} />}
-
-      {detailed && predictiveReadiness && <PredictiveReadinessPanel report={predictiveReadiness} dictionary={dictionary} />}
-      {detailed && predictiveReadinessError && !predictiveReadiness && <UiCard className="system-card system-predictive-readiness"><p className="system-message">{dictionary.system.predictiveReadinessUnavailable}</p></UiCard>}
-
-      {detailed && data.predictiveValidation && <Card title={dictionary.system.predictiveValidation} status={data.predictiveValidation.status === "no_data" ? "disabled" : data.predictiveValidation.status} dictionary={dictionary}>
-        <Field label={dictionary.system.enabled} value={data.predictiveValidation.enabled ? dictionary.system.configured : dictionary.system.disabled} />
-        <Field label={dictionary.system.observationsCaptured} value={formatNumber(data.predictiveValidation.observationsCaptured, 0, dictionary.locale)} />
-        <Field label={dictionary.system.observationsSkipped} value={formatNumber(data.predictiveValidation.invalid + data.predictiveValidation.dedupePending + data.predictiveValidation.dedupeDatabase, 0, dictionary.locale)} />
-        <Field label={dictionary.system.queueDepth} value={formatNumber(data.predictiveValidation.queueDepth, 0, dictionary.locale)} />
-        <Field label={dictionary.system.queueHighWaterMark} value={formatNumber(data.predictiveValidation.queueHighWaterMark, 0, dictionary.locale)} />
-        <Field label={dictionary.system.prospectivePersistenceFailures} value={formatNumber(data.predictiveValidation.persistenceFailures, 0, dictionary.locale)} />
-        <Field label={dictionary.system.prospectiveIntegrityRejects} value={formatNumber(data.predictiveValidation.integrityRejects, 0, dictionary.locale)} />
-        <Field label={dictionary.system.prospectivePersistenceSuspended} value={data.predictiveValidation.persistenceSuspended ? dictionary.system.yes : dictionary.system.no} />
-        {data.predictiveValidation.suspensionReason && <Field label={dictionary.system.prospectiveSuspensionReason} value={data.predictiveValidation.suspensionReason} />}
-        {data.predictiveValidation.lastFailureField && <Field label={dictionary.system.prospectiveLastFailureField} value={data.predictiveValidation.lastFailureField} />}
-        <Field label={dictionary.system.validationReadiness} value={`ETA ${data.predictiveValidation.readiness.ETA} · RUNWAY ${data.predictiveValidation.readiness.RUNWAY}`} />
-      </Card>}
 
       </SystemSection>
     </div>}

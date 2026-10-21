@@ -5,26 +5,16 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
 import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
-import type { WeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
-import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
-import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
-import type { OperationalTwinApiResponse } from "@/lib/operational-twin/types";
-import type { AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/aircraft-operational-focus-change";
+import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
-import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
-import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
 import { AircraftAltitudeChart } from "@/components/aircraft-detail-shared";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
-import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";
 import { RadarTrafficHero } from "@/components/radar/radar-traffic-hero";
-import { RadarOperationalFocusSummary } from "@/components/radar/radar-operational-focus-summary";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { AircraftObservedWeather } from "@/components/aircraft-observed-weather";
 import {
@@ -56,18 +46,8 @@ export interface AircraftRadarQuickDetailProps {
   historyTrail: QuickHistoryTrail | null;
   atcContext: AtcContextResult | null;
   sigmetContext: AircraftSigmetContext[];
-  sigmetDeviation: SigmetTrajectoryDeviation | null;
-  weatherAvoidance: WeatherAvoidanceIntelligence | null;
   sigmetStale: boolean;
-  routeWeather: RouteWeatherContext | null;
-  routeCorridor?: RouteCorridorSnapshot | null;
-  routeConformance?: TrajectoryConformanceSnapshot | null;
-  intelligenceEvents?: FlightIntelligenceEvent[];
-  operationalTwin?: OperationalTwinApiResponse | null;
-  operationalFocusChanges?: AircraftOperationalFocusChangeSummary | null;
-  operationalFocusItemId?: string | null;
-  operationalFocusRevealVersion?: number;
-  onOperationalFocus?: (itemId: string) => void;
+  selectedRoute?: RouteIntelligenceViewDTO | null;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -133,25 +113,24 @@ function trackingSummary(aircraft: AircraftView, historyTrail: QuickHistoryTrail
   ].filter((value): value is string => Boolean(value));
 }
 
-function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: AtcContextResult | null }) {
+function AtcSection({ context }: { context: AtcContextResult | null }) {
   const contextAirspace = context?.status === "available" ? context.primaryAirspace : null;
-  const assignment = contextAirspace ? null : aircraft.atc ?? null;
+  // T04 retired: use only published data for sectors containing the current position.
+  // Do not infer that any controller is actually communicating with this aircraft.
   const fir = context?.status === "available" ? context.fir?.name : null;
-  const airspaceName = contextAirspace?.name ?? assignment?.name ?? null;
-  const service = contextAirspace?.publishedUnit ?? assignment?.service ?? assignment?.callsign ?? null;
+  const airspaceName = contextAirspace?.name ?? null;
+  const service = contextAirspace?.publishedUnit ?? null;
   const frequencies = contextAirspace?.publishedFrequenciesMhz ?? [];
-  const primaryFrequency = frequencies[0] ?? assignment?.primaryFrequencyMhz ?? null;
-  const additionalFrequencies = frequencies.length > 0 ? frequencies.slice(1) : assignment?.alternateFrequenciesMhz ?? [];
+  const primaryFrequency = frequencies[0] ?? null;
+  const additionalFrequencies = frequencies.slice(1);
   const route = context?.status === "available" ? context.atsRoute ?? context.nearestAtsCandidate : null;
-  const nextSector = context?.status === "available" ? context.nextSector : null;
-  const handoff = buildAtcHandoffEstimate(context);
-  const next = nextSector ?? (context?.status === "available" ? context.nextPoint ?? context.ahead : null);
+  const next = context?.status === "available" ? context.nextPoint : null;
   if (!airspaceName && !fir && !route && !next && !primaryFrequency) return null;
 
-  const lowerLimit = contextAirspace?.lowerLimitFt ?? assignment?.lowerAltitudeFt ?? null;
-  const upperLimit = contextAirspace?.upperLimitFt ?? assignment?.upperAltitudeFt ?? null;
-  const lowerReference = contextAirspace?.lowerLimitReference ?? assignment?.lowerAltitudeReference;
-  const upperReference = contextAirspace?.upperLimitReference ?? assignment?.upperAltitudeReference;
+  const lowerLimit = contextAirspace?.lowerLimitFt ?? null;
+  const upperLimit = contextAirspace?.upperLimitFt ?? null;
+  const lowerReference = contextAirspace?.lowerLimitReference ?? null;
+  const upperReference = contextAirspace?.upperLimitReference ?? null;
   const hasLimits = lowerLimit !== null || upperLimit !== null;
 
   return <QuickSection id="aircraft-quick-atc-title" title={t.atc.contextTitle} className="aircraft-quick-atc" >
@@ -166,66 +145,20 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
     </div>
     {(route || next) && <div className="aircraft-quick-atc-context">
       {route && <DetailValue label={route === context?.atsRoute ? t.atc.contextAts : t.atc.contextNearestAts} value={`${route.routeId} · ${formatNumber(route.distanceNm, 1)} NM`} />}
-      {handoff && <div className="aircraft-quick-atc-handoff" data-testid="atc-handoff-estimate">
-        <DetailValue label={t.atc.handoffEstimate} value={handoff.toSectorName} />
-        {handoff.publishedUnit && <DetailValue label={t.atc.handoffUnit} value={formatAtcService(handoff.publishedUnit)} />}
-        {handoff.primaryFrequencyMhz !== null && <DetailValue label={t.atc.handoffFrequency} value={formatAtcFrequency(handoff.primaryFrequencyMhz)} />}
-        <DetailValue label={t.atc.handoffEta} value={`~${formatNumber(handoff.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(handoff.estimatedSeconds / 60))} min`} />
-        <DetailValue label={t.atc.relevantConfidence} value={t.atc.relevantConfidenceValues[handoff.confidence]} />
-      </div>}
-      {!handoff && nextSector && <DetailValue label={t.atc.nextSector} value={`${nextSector.airspace.name} · ~${formatNumber(nextSector.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(nextSector.estimatedSeconds / 60))} min`} />}
-      {!nextSector && next && <DetailValue label={t.atc.contextNext} value={"identifier" in next ? `${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM` : `${next.airspace.name} · ${formatNumber(next.distanceNm, 0)} NM`} />}
+      {next && <DetailValue label={t.atc.contextNext} value={`${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM`} />}
     </div>}
     {additionalFrequencies.length > 0 && <details className="aircraft-quick-atc-more">
       <summary>{t.atc.moreFrequencies}</summary>
       <div className="aircraft-quick-frequency-list">{additionalFrequencies.map((frequency) => <span key={frequency}>{formatAtcFrequency(frequency)}</span>)}</div>
     </details>}
-    {handoff && <p className="aircraft-quick-disclaimer">{t.atc.handoffDisclaimer}</p>}
     <p className="aircraft-quick-disclaimer">{t.atc.contextDisclaimer}</p>
   </QuickSection>;
 }
 
-function SigmetSection({ context, deviation, avoidance, stale }: { context: AircraftSigmetContext[]; deviation: SigmetTrajectoryDeviation | null; avoidance: WeatherAvoidanceIntelligence | null; stale: boolean }) {
-  if (!context.length && !deviation && !avoidance) return null;
+function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; stale: boolean }) {
+  if (!context.length) return null;
   const hasProjection = context.some((item) => item.relation === "projected");
-  const currentExposure = avoidance
-    ? avoidance.currentExposure.intersects === null
-      ? t.weather.weatherAvoidanceCurrentUnknown
-      : avoidance.currentExposure.intersects
-        ? t.weather.weatherAvoidanceCurrentExposed(
-            avoidance.currentExposure.entryMinutes === null ? t.common.emptyValue : formatNumber(avoidance.currentExposure.entryMinutes, 0),
-            avoidance.currentExposure.distanceNm === null ? t.common.emptyValue : formatNumber(avoidance.currentExposure.distanceNm, 0),
-          )
-        : t.weather.weatherAvoidanceCurrentClear
-    : null;
   return <QuickSection id="aircraft-quick-sigmet-title" title={t.weather.sigmetAircraftTitle} className="aircraft-quick-sigmet">
-    {avoidance ? <div className="aircraft-quick-weather-deviation" data-testid="weather-avoidance-intelligence-v1" data-classification={avoidance.classification}>
-      <strong>{t.weather.weatherAvoidanceClassification[avoidance.classification]}</strong>
-      <span>{avoidance.hazard || avoidance.phenomenon || t.weather.sigmetUnknownHazard}</span>
-      <div className="aircraft-quick-detail-grid">
-        <DetailValue label={t.weather.sigmetTurn} value={`${formatNumber(avoidance.headingChangeDeg, 0)}°`} />
-        <DetailValue label={t.weather.sigmetTracks} value={`${formatTrack(avoidance.previousTrackDeg)} → ${formatTrack(avoidance.currentTrackDeg)}`} />
-        <DetailValue label={t.weather.weatherAvoidancePreviousExposure} value={`~${avoidance.previousExposure.entryMinutes ?? t.common.emptyValue} min · ~${avoidance.previousExposure.distanceNm === null ? t.common.emptyValue : formatNumber(avoidance.previousExposure.distanceNm, 0)} NM`} />
-        <DetailValue label={t.weather.weatherAvoidanceCurrentExposure} value={currentExposure} />
-        {avoidance.conformanceStatus && <DetailValue label={t.weather.weatherAvoidanceConformance} value={t.routeConformance.statuses[avoidance.conformanceStatus]} />}
-        <DetailValue label={t.weather.weatherAvoidanceConfidence} value={t.weather.weatherFusionConfidence[avoidance.confidence]} />
-      </div>
-      <p>{avoidance.classification === "POSSIBLE_WEATHER_AVOIDANCE"
-        ? t.weather.weatherAvoidancePossibleSummary
-        : avoidance.classification === "CURRENT_CORRIDOR_EXPOSED"
-          ? t.weather.weatherAvoidanceExposedSummary
-          : t.weather.weatherAvoidanceCorrelatedSummary}</p>
-    </div> : deviation && <div className="aircraft-quick-weather-deviation" data-testid="sigmet-trajectory-deviation">
-      <strong>{t.weather.sigmetDeviationSignal}</strong>
-      <span>{deviation.hazard || deviation.phenomenon || t.weather.sigmetUnknownHazard}</span>
-      <div className="aircraft-quick-detail-grid">
-        <DetailValue label={t.weather.sigmetTurn} value={`${formatNumber(deviation.headingChangeDeg, 0)}°`} />
-        <DetailValue label={t.weather.sigmetTracks} value={`${formatTrack(deviation.previousTrackDeg)} → ${formatTrack(deviation.currentTrackDeg)}`} />
-        <DetailValue label={t.weather.sigmetPreviousProjection} value={`~${deviation.previousProjectedEntryMinutes} min · ~${formatNumber(deviation.previousProjectedEntryDistanceNm, 0)} NM`} />
-        <DetailValue label={t.weather.sigmetCorrelationConfidence} value={deviation.confidence === "medium" ? t.weather.sigmetCorrelationMedium : t.weather.sigmetCorrelationLow} />
-      </div>
-      <p>{t.weather.sigmetDeviationSummary}</p>
-    </div>}
     {context.length > 0 && <div className="aircraft-quick-detail-grid">
       {context.map((item) => {
         const hazard = item.hazard || item.phenomenon || t.weather.sigmetUnknownHazard;
@@ -247,71 +180,27 @@ function SigmetSection({ context, deviation, avoidance, stale }: { context: Airc
     </div>}
     <p className="aircraft-quick-disclaimer">{stale
       ? t.weather.sigmetStaleWarning
-      : avoidance
-        ? t.weather.weatherAvoidanceDisclaimer
-        : deviation
-          ? t.weather.sigmetDeviationDisclaimer
-        : hasProjection
-          ? t.weather.sigmetProjectionDisclaimer
-          : t.weather.sigmetAircraftDisclaimer}</p>
+      : hasProjection
+        ? t.weather.sigmetProjectionDisclaimer
+        : t.weather.sigmetAircraftDisclaimer}</p>
   </QuickSection>;
 }
 
-function corridorEta(value: number | null): string | null {
-  if (value === null || !Number.isFinite(value)) return null;
-  if (value < 1) return "<1 min";
-  return `~${formatNumber(value, 0)} min`;
-}
-
-function RouteCorridorSection({ corridor, conformance }: { corridor: RouteCorridorSnapshot | null; conformance: TrajectoryConformanceSnapshot | null }) {
-  if (!corridor) return null;
-  const next = corridor.nextPoint
-    ? `${corridor.nextPoint.name}${corridor.distanceToNextNm === null ? "" : ` · ${formatNumber(corridor.distanceToNextNm, 1)} NM`}${corridor.etaToNextMinutes === null ? "" : ` · ${corridorEta(corridor.etaToNextMinutes)}`}`
-    : t.common.emptyValue;
-  const remaining = corridor.remainingDistanceNm === null
-    ? t.common.emptyValue
-    : `${corridor.remainingDistanceComplete ? "" : "~"}${formatNumber(corridor.remainingDistanceNm, 0)} NM${corridor.etaRemainingMinutes === null ? "" : ` · ${corridorEta(corridor.etaRemainingMinutes)}`}${corridor.remainingDistanceComplete ? "" : ` · ${t.routeCorridor.partialDistance}`}`;
-  return <QuickSection id="aircraft-quick-route-corridor-title" title={t.routeCorridor.title} className="aircraft-quick-route-corridor">
-    <div className="aircraft-quick-detail-grid" data-testid="route-corridor-intelligence">
-      <DetailValue label={t.routeCorridor.status} value={t.routeCorridor.statuses[corridor.status]} />
-      <DetailValue label={t.routeCorridor.progress} value={corridor.progressPercent === null ? null : `${formatNumber(corridor.progressPercent, 0)} %`} />
-      <DetailValue label={t.routeCorridor.nextPoint} value={next} />
-      <DetailValue label={t.routeCorridor.remaining} value={remaining} />
-      <DetailValue label={t.routeCorridor.crossTrack} value={corridor.crossTrackDeviationNm === null ? null : `${formatNumber(corridor.crossTrackDeviationNm, 1)} NM`} />
-      <DetailValue label={t.routeCorridor.expectedTrack} value={corridor.expectedTrackDeg === null ? null : formatTrack(corridor.expectedTrackDeg)} />
-      <DetailValue label={t.routeCorridor.trackDelta} value={corridor.trackDeltaDeg === null ? null : `${formatNumber(corridor.trackDeltaDeg, 0)}°`} />
-      <DetailValue label={t.routeCorridor.confidence} value={t.routeCorridor.confidenceValues[corridor.confidence]} />
-      {conformance && <DetailValue label={t.routeConformance.status} value={t.routeConformance.statuses[conformance.status]} />}
-      {conformance && <DetailValue label={t.routeConformance.confidence} value={t.routeConformance.confidenceValues[conformance.confidence]} />}
-      {conformance?.probableDirect && <DetailValue
-        label={t.routeConformance.probableDirect}
-        value={t.routeConformance.directSummary(conformance.probableDirect.skippedElements, conformance.probableDirect.rejoinedAt)}
-      />}
+// R11: route geometry and observed progress only. No P05 corridor classification
+// or P06 trajectory-conformance state is computed or displayed here.
+function SelectedRouteProgressSection({ route }: { route: RouteIntelligenceViewDTO | null }) {
+  if (!route || (!route.nextPoint && route.routeProgressPercent === null)) return null;
+  const next = route.nextPoint
+    ? `${route.nextPoint.name}${route.distanceToNext === null ? "" : ` · ${formatNumber(route.distanceToNext, 1)} NM`}`
+    : null;
+  const progress = route.routeProgressPercent;
+  return <QuickSection id="aircraft-quick-route-progress-title" title={t.route.context} className="aircraft-quick-route-progress">
+    <div className="aircraft-quick-detail-grid" data-testid="selected-route-progress">
+      <DetailValue label={t.radar.followNext} value={next} />
+      <DetailValue label={visualSystemV5EText(t.locale).flightProgress}
+        value={typeof progress === "number" && Number.isFinite(progress) ? `${formatNumber(progress, 0)} %` : null} />
     </div>
-    <p className="aircraft-quick-disclaimer">{t.routeCorridor.disclaimer}</p>
-    {conformance && <p className="aircraft-quick-disclaimer">{t.routeConformance.disclaimer}</p>}
-  </QuickSection>;
-}
-
-function RouteWeatherSection({ context }: { context: RouteWeatherContext | null }) {
-  if (!context || context.status === "no_route") return null;
-  if (context.status === "unavailable" && context.matches.length === 0) return null;
-  const unresolved = context.unresolvedRouteTokens.length;
-  return <QuickSection id="aircraft-quick-route-weather-title" title={t.weather.routeWeatherTitle} className="aircraft-quick-route-weather">
-    {context.matches.length ? <div className="aircraft-quick-route-weather-list">
-      {context.matches.slice(0, 5).map((match) => <div key={`${match.sigmetId}:${match.segmentId}`} className="aircraft-quick-route-weather-item" data-testid="route-weather-match">
-        <strong>{match.hazard || t.weather.sigmetUnknownHazard}</strong>
-        <span>{match.routeDesignator} · {match.fromName} → {match.toName}</span>
-        <small>{t.weather.routeWeatherDistance(formatNumber(match.distanceAlongRouteNm, 0))}</small>
-        <small>{match.verticalMatch === "matched" ? t.weather.routeWeatherVerticalMatched : t.weather.routeWeatherVerticalUnknown}</small>
-      </div>)}
-    </div> : <p className="aircraft-quick-empty">{t.weather.routeWeatherClear}</p>}
-    <div className="aircraft-quick-detail-grid">
-      <DetailValue label={t.weather.routeWeatherCoverage} value={context.routeCoveragePercent === null ? t.common.emptyValue : `${formatNumber(context.routeCoveragePercent, 0)} %`} />
-      <DetailValue label={t.weather.routeWeatherSource} value={context.routeSource || t.common.emptyValue} />
-    </div>
-    {unresolved > 0 && <p className="aircraft-quick-disclaimer">{t.weather.routeWeatherUnresolved(formatNumber(unresolved))}</p>}
-    <p className="aircraft-quick-disclaimer">{context.stale ? t.weather.routeWeatherStale : t.weather.routeWeatherDisclaimer}</p>
+    <p className="aircraft-quick-disclaimer">{t.route.contextDisclaimer}</p>
   </QuickSection>;
 }
 
@@ -385,41 +274,6 @@ function compactVerticalRateLabel(value: number | null): string {
   return `${value > 0 ? "+" : value < 0 ? "−" : ""}${formatNumber(Math.abs(value), 0)} fpm`;
 }
 
-function SituationSummarySection({ summary }: { summary: FlightSituationSummary }) {
-  const hasMeaningfulContext = Boolean(
-    summary.currentSector
-      || summary.nextSector
-      || summary.weatherState !== "unknown"
-      || summary.routeDeviationNearSigmet,
-  );
-  if (!hasMeaningfulContext) return null;
-
-  const atc = summary.currentSector
-    ? [summary.currentSector, summary.currentUnit].filter(Boolean).join(" · ")
-    : t.common.emptyValue;
-  const next = summary.nextSector && summary.nextSectorMinutes !== null
-    ? t.intelligence.situationNextSector(summary.nextSector, formatNumber(summary.nextSectorMinutes, 0))
-    : null;
-  const hazard = summary.weatherHazard || t.weather.sigmetUnknownHazard;
-  const weather = summary.weatherState === "current_sigmet"
-    ? t.intelligence.situationWeatherCurrent(hazard)
-    : summary.weatherState === "route_sigmet" && summary.weatherDistanceNm !== null
-      ? t.intelligence.situationWeatherRoute(hazard, formatNumber(summary.weatherDistanceNm, 0))
-      : summary.weatherState === "projected_sigmet" && summary.weatherDistanceNm !== null
-        ? t.intelligence.situationWeatherProjected(hazard, formatNumber(summary.weatherDistanceNm, 0))
-        : summary.weatherState === "clear"
-          ? t.intelligence.situationWeatherClear
-          : t.intelligence.situationWeatherUnknown;
-  return <QuickSection id="aircraft-situation-summary-title" title={t.intelligence.situationTitle} className="aircraft-quick-situation">
-    <div className="aircraft-quick-detail-grid" data-testid="flight-situation-summary">
-      <DetailValue label={t.intelligence.situationAtc} value={next ? `${atc} · ${next}` : atc} />
-      <DetailValue label={t.intelligence.situationWeather} value={weather} />
-    </div>
-    {summary.routeDeviationNearSigmet && <p className="aircraft-quick-situation-signal">{t.intelligence.situationDeviation}</p>}
-    <p className="aircraft-quick-disclaimer">{t.intelligence.situationDisclaimer}</p>
-  </QuickSection>;
-}
-
 function NavigationIntegritySection({ aircraft }: { aircraft: AircraftView }) {
   const context = useNavigationIntegrityContext(aircraft.icaoHex);
   const latest = context?.latest;
@@ -447,24 +301,6 @@ function NavigationIntegritySection({ aircraft }: { aircraft: AircraftView }) {
     </div>
     {anomaly && <p className="aircraft-quick-situation-signal">{t.navigationIntegrity.possibleInterference}</p>}
     <p className="aircraft-quick-disclaimer">{t.navigationIntegrity.aircraftDisclaimer}</p>
-  </QuickSection>;
-}
-
-function phaseLabel(phase: FlightPhase | null): string | null {
-  return phase ? t.intelligence.phaseLabels[phase] : null;
-}
-
-function IntelligenceSection({ events }: { events: FlightIntelligenceEvent[] }) {
-  const meaningful = events.filter((event) => !["HOLDING_CANDIDATE", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"].includes(event.type)).slice(0, 4);
-  if (!meaningful.length) return null;
-  return <QuickSection id="aircraft-quick-intelligence-title" title={t.intelligence.aircraftSectionTitle} className="aircraft-quick-intelligence">
-    <ul className="aircraft-quick-event-list">
-      {meaningful.map((event) => <li key={event.eventKey}>
-        <time dateTime={event.occurredAt}>{formatTime(event.occurredAt)}</time>
-        <span>{t.intelligence.types[event.type]}</span>
-        <small>{t.intelligence.confidence[event.confidenceLevel]}</small>
-      </li>)}
-    </ul>
   </QuickSection>;
 }
 
@@ -653,18 +489,8 @@ export function AircraftRadarQuickDetail({
   historyTrail,
   atcContext,
   sigmetContext,
-  sigmetDeviation,
-  weatherAvoidance,
   sigmetStale,
-  routeWeather,
-  routeCorridor = null,
-  routeConformance = null,
-  intelligenceEvents = [],
-  operationalTwin = null,
-  operationalFocusChanges = null,
-  operationalFocusItemId = null,
-  operationalFocusRevealVersion = 0,
-  onOperationalFocus,
+  selectedRoute = null,
   watchlisted,
   onBack,
   onClose,
@@ -683,24 +509,13 @@ export function AircraftRadarQuickDetail({
   const route = aircraft.enrichment?.route;
   const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
   const visual = visualSystemV5EText(t.locale);
-  const progress = routeCorridor?.progressPercent;
+  const progress = selectedRoute?.routeProgressPercent;
   const hasProgress = typeof progress === "number" && Number.isFinite(progress) && progress >= 0 && progress <= 100;
   const operator: string | null = route?.airline || metadata?.operator || null;
   const emergency = aircraft.emergency && aircraft.emergency.toLowerCase() !== "none" ? aircraft.emergency : null;
   const emergencySquawk = aircraft.squawk && ["7500", "7600", "7700"].includes(aircraft.squawk) ? aircraft.squawk : null;
   const sourceAge = aircraft.seenPosSeconds === null ? null : formatAge(aircraft.seenPosSeconds);
-  const latestEvent = intelligenceEvents[0] ?? null;
-  const phase = phaseLabel(latestEvent?.phase ?? null);
-  const situation = buildFlightSituationSummary({
-    aircraft,
-    atc: atcContext,
-    sigmets: sigmetContext,
-    sigmetStale,
-    routeWeather,
-    sigmetDeviation,
-  });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
-  const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
   async function shareAircraft(): Promise<void> {
     const url = new URL(fullDetailHref, window.location.origin).toString();
     try {
@@ -718,16 +533,6 @@ export function AircraftRadarQuickDetail({
       setShareStatus("unavailable");
     }
   }
-  const operationalFocus = operationalTwin?.status === "available"
-    && operationalTwin.aircraft.icaoHex.toUpperCase() === aircraft.icaoHex.toUpperCase()
-    ? operationalTwin.operationalFocus ?? null
-    : null;
-
-  useEffect(() => {
-    if (!operationalFocusItemId) return;
-    setActiveTab("situation");
-  }, [operationalFocusItemId, operationalFocusRevealVersion]);
-
   return <div className="aircraft-quick-detail detail-content" data-testid="aircraft-quick-detail">
     <header className="aircraft-quick-header">
       <div className="aircraft-quick-header-actions">
@@ -758,13 +563,11 @@ export function AircraftRadarQuickDetail({
           <div className="aircraft-quick-header-context" aria-label={t.aircraft.liveTrackingTitle}>
             {aircraft.distanceKm !== null && <span><strong>{formatDistance(aircraft.distanceKm)}</strong> {t.aircraft.distance}</span>}
             {sourceAge && <span data-freshness={aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds <= 60 ? "fresh" : "stale"}>{t.aircraft.positionAge}: {sourceAge}{aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds > 60 ? ` · ${t.intelligence.stale}` : ""}</span>}
-            {phase && <strong>{phase}</strong>}
           </div>
           <RouteSection route={route} visible={hasRouteData} />
-          {routeCorridor && hasProgress && <div className="aircraft-v5-route-progress" data-testid="aircraft-v5-route-progress" title={t.routeCorridor.disclaimer}>
+          {selectedRoute && hasProgress && <div className="aircraft-v5-route-progress" data-testid="aircraft-v5-route-progress" title={t.route.contextDisclaimer}>
             <div><strong>{visual.flightProgress}</strong><span>{formatNumber(progress, 0)} %</span></div>
             <progress aria-label={visual.flightProgress} value={progress} max={100} />
-            <small>{t.routeCorridor.confidence}: {t.routeCorridor.confidenceValues[routeCorridor.confidence]}</small>
           </div>}
           {!hasRouteData && <p className="aircraft-quick-route-state">{t.aircraft.noRouteData}</p>}
         </div>
@@ -775,9 +578,7 @@ export function AircraftRadarQuickDetail({
       <nav className="aircraft-quick-actions aircraft-v5-quick-actions" aria-label={t.aircraft.quickActions} data-testid="aircraft-v5-quick-actions">
         <button type="button" className={`aircraft-quick-action${following ? " active" : ""}`} onClick={onToggleFollow} disabled={aircraft.lat === null || aircraft.lon === null} aria-pressed={following} data-testid="aircraft-v5-follow">{following ? t.aircraftQuickV5.stopFollowing : t.aircraftQuickV5.followMap}</button>
         <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
-        <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFlightHistory}</Link>
         <button type="button" className="aircraft-quick-action" onClick={() => { void shareAircraft(); }} data-testid="aircraft-v5-share">{t.aircraftQuickV5.share}</button>
-        <Link className="aircraft-quick-action" href="/alerts" title={t.aircraftQuickV5.alertsHint}>{t.aircraftQuickV5.alerts}</Link>
         <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
       </nav>
       <p className="aircraft-v5-share-status" role="status" aria-live="polite">{shareStatus === "copied" ? t.aircraftQuickV5.linkCopied : shareStatus === "shared" ? t.aircraftQuickV5.shared : shareStatus === "unavailable" ? t.aircraftQuickV5.shareUnavailable : ""}</p>
@@ -786,26 +587,16 @@ export function AircraftRadarQuickDetail({
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
       <AircraftOverview aircraft={aircraft} emergency={emergency} emergencySquawk={emergencySquawk} historyTrail={historyTrail} />
-      <RouteCorridorSection corridor={routeCorridor} conformance={routeConformance} />
+      <SelectedRouteProgressSection route={selectedRoute} />
       <FlightStateSection aircraft={aircraft} />
     </div>}
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
-      {operationalFocus && onOperationalFocus ? <RadarOperationalFocusSummary
-        focus={operationalFocus}
-        changes={operationalFocusChanges}
-        activeItemId={operationalFocusItemId}
-        onFocus={onOperationalFocus}
-      /> : null}
-      <SituationSummarySection summary={situation} />
-      <AtcSection aircraft={aircraft} context={atcContext} />
-      <RouteWeatherSection context={routeWeather} />
-      {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
-      <IntelligenceSection events={intelligenceEvents} />
+      <AtcSection context={atcContext} />
       <details className="aircraft-quick-deep-context" data-testid="aircraft-v5-advanced-context" onToggle={(event) => setAdvancedContextOpen(event.currentTarget.open)}>
         <summary>{t.aircraftQuickV5.advancedContext}</summary>
         {advancedContextOpen && <>
           <NavigationIntegritySection aircraft={aircraft} />
-          <SigmetSection context={sigmetContext} deviation={sigmetDeviation} avoidance={weatherAvoidance} stale={sigmetStale} />
+          <SigmetSection context={sigmetContext} stale={sigmetStale} />
           <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
         </>}
       </details>

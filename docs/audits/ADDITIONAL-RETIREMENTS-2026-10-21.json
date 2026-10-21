@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-21",
+  "prNumber": 1096,
+  "baseHead": "53b93651cf87be9ce14f42fecb0c45566e848439",
+  "purpose": "New user-approved removals supersede the October 19 KEEP decision for these nine IDs. Original historical 178-item inventory and its original 88/90 decisions remain immutable.",
+  "removedFromKeep": [
+    "R16",
+    "S08",
+    "S05",
+    "W07",
+    "U06",
+    "U07",
+    "O14",
+    "S07",
+    "W04"
+  ],
+  "revisedTotals": {
+    "keep": 79,
+    "remove": 99
+  },
+  "items": [
+    {
+      "id": "R16",
+      "title": "Map presentation mode",
+      "assessment": "NO_ACTIVE_PRESENTATION_MODE_ENTRYPOINT",
+      "action": "No dedicated presentation-mode toggle or module remains. Preserve ordinary R14 map style and R01 rendering."
+    },
+    {
+      "id": "S08",
+      "title": "Daily/weekly recap API",
+      "assessment": "RECAP_ENDPOINT_TYPES_AND_TRANSLATIONS_REMOVED",
+      "action": "Daily/weekly recap endpoints were absent; removed obsolete recap wire types and both locale dictionaries. Removed obsolete changelog tests from retained version suite."
+    },
+    {
+      "id": "S05",
+      "title": "Receiver distance and aircraft records",
+      "assessment": "RECEPTION_RECORDS_FULL_STACK_RETIRED_WITH_COVERAGE_AGGREGATES_PRESERVED",
+      "action": "Removed individual record API, repository, logger, RAM metadata, logbook widgets and statistics-coverage current-day record evidence; historical nullable schema retained. Aggregate maximum distance remains for receiver coverage."
+    },
+    {
+      "id": "W07",
+      "title": "PIREP/AIREP reports",
+      "assessment": "PILOT_REPORT_ENDPOINT_AND_TRANSLATIONS_REMOVED",
+      "action": "PIREP endpoint and provider already absent; removed obsolete PIREP/AIREP-only locale labels. Kept SIGMET and aircraft weather."
+    },
+    {
+      "id": "U06",
+      "title": "Favorite airports and preferences",
+      "assessment": "BROWSER_PRESETS_AND_FAVORITES_RETIRED",
+      "action": "Removed persisted radar preset model, UI, CSS, tests and favorite-airport locale fields; keep R14 layer toggle and basic preferences."
+    },
+    {
+      "id": "U07",
+      "title": "Shareable filter and analysis bookmarks",
+      "assessment": "NO_SEPARATE_FILTER_LINK_IMPLEMENTATION",
+      "action": "No specialized shareable saved-filter implementation remains. Preserve selected-aircraft and NAVAID/ATS deep links required by U05/T10/R11."
+    },
+    {
+      "id": "O14",
+      "title": "Automatic documentation, changelog and code growth metrics",
+      "assessment": "CHANGELOG_AND_CODE_GROWTH_AUTOMATION_REMOVED_RELEASE_DEPENDENCY_FIXED",
+      "action": "Retired changelog generator and CI/manual-release invocations, aligned release docs with pinned source SHA. Kept release script, CI CodeQL/docs/feature checks and performance monitoring."
+    },
+    {
+      "id": "S07",
+      "title": "Historical heatmap and traffic-profile API",
+      "assessment": "HISTORICAL_HEATMAP_ENDPOINT_AND_TRANSLATIONS_REMOVED",
+      "action": "Historical heatmap/traffic profile endpoints already absent; removed orphan translation module plus recap/record locale labels."
+    },
+    {
+      "id": "W04",
+      "title": "Echo Top weather radar layer",
+      "assessment": "NO_ECHO_TOP_PRODUCT_PRESENT",
+      "action": "Radar contract only has MAX_Z_MASKED and PSEUDOCAPPI_2KM; no Echo Top product, API or toggle. Preserve W03 live radar."
+    }
+  ],
+  "applied": [
+    {
+      "path": "lib/i18n/statistics-heatmap.ts",
+      "reason": "Unreferenced localized copy for retired historical heatmap S07"
+    },
+    {
+      "path": "tests/new-retirement-selection.test.ts",
+      "reason": "Regression test recording current decisions and guarded absent endpoints"
+    },
+    {
+      "path": "app/api/reception-records/route.ts",
+      "reason": "S05 retired standalone record endpoint"
+    },
+    {
+      "path": "lib/server/reception-records.ts",
+      "reason": "S05 retired record repository"
+    },
+    {
+      "path": "lib/aircraft/types.ts",
+      "reason": "S08 obsolete recap and S05 record wire types"
+    },
+    {
+      "path": "scripts/changelog.mjs",
+      "reason": "O14 automatic changelog generator retired"
+    },
+    {
+      "path": "lib/i18n/en.ts",
+      "reason": "S08 S07 W07 stale locale blocks removed"
+    },
+    {
+      "path": "lib/i18n/cs.ts",
+      "reason": "S08 S07 W07 stale locale blocks removed"
+    },
+    {
+      "path": "lib/server/statistics.ts",
+      "reason": "S05 removed tracking/persistence of individual reception-record metadata"
+    },
+    {
+      "path": "components/airradar-app.tsx",
+      "reason": "U06 browser radar presets disconnected"
+    },
+    {
+      "path": "lib/i18n/en.ts",
+      "reason": "U06 favorite airport locale entries retired"
+    },
+    {
+      "path": "lib/i18n/cs.ts",
+      "reason": "U06 favorite airport locale entries retired"
+    },
+    {
+      "path": "deploy/release.sh",
+      "reason": "Retire O14 changelog invocation safely without breaking manual release source identity"
+    },
+    {
+      "path": "docs/RELEASE.md",
+      "reason": "Update EN release procedure to source-commit provenance"
+    },
+    {
+      "path": "docs/cs/RELEASE.md",
+      "reason": "Update CZ release procedure and retired metadata details"
+    },
+    {
+      "path": "lib/statistics-coverage-current-day.ts",
+      "reason": "S05 eliminate stale per-aircraft reception identity merging"
+    },
+    {
+      "path": "scripts/selected-feature-premerge-audit.mjs",
+      "reason": "Update premerge audit to revised 79/99 and 52 API routes"
+    },
+    {
+      "path": "tests/version.test.ts",
+      "reason": "O14 remove obsolete changelog test suite and import"
+    }
+  ],
+  "notClaimed": "All nine requested feature surfaces have been retired or were already absent. This audit does not prove production behavior or authorize deploy; shared core dependencies and legacy database schema remain."
+}

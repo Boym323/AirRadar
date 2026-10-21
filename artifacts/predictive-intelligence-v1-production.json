@@ -1,8 +1,0 @@
-{
-  "result": "NOT_RUN",
-  "deployment": { "performed": false, "workflow": "deploy/release.sh", "durationMinutes": null },
-  "shadow": { "eligibleFlights": null, "evaluations": null, "errors": null },
-  "runtime": { "cpuBefore": null, "cpuAfter": null, "rssBefore": null, "rssAfter": null, "predictionWritesPerMinute": 0 },
-  "gates": { "service": "NOT_RUN", "db": "NOT_RUN", "receiver": "NOT_RUN", "sse": "NOT_RUN", "radar": "NOT_RUN", "browser": "NOT_RUN" },
-  "reason": "User-requested evidence work was implemented locally, but no production release was authorized/executed in this workspace."
-}

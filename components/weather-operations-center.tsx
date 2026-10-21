@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { FlightCategory, MetarMapObservation, PirepObservation, SigmetSnapshot } from "@/lib/weather/types";
+import type { FlightCategory, MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
 import { formatNumber, t } from "@/lib/i18n";
 import { EmptyState, MetricCard, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/ui-primitives";
 import styles from "./weather-operations-center.module.css";
@@ -36,15 +36,6 @@ interface RadarCatalog {
   frames: RadarFrame[];
   latestFrameId: string | null;
   generatedAt: string;
-}
-
-interface PirepResponse {
-  enabled?: boolean;
-  available?: boolean;
-  reports: PirepObservation[];
-  fetchedAt?: string;
-  stale?: boolean;
-  source?: string;
 }
 
 const AIRPORT_PRIORITY = ["LKPR", "LKTB", "LKMT", "LKKV", "LKPD", "LKVO", "LKNA", "LKPO"];
@@ -84,20 +75,17 @@ export function WeatherOperationsCenter() {
   const cs = t.locale.startsWith("cs");
   const copy = cs ? {
     title: "Provozní přehled počasí",
-    subtitle: "Souhrn dostupných meteorologických údajů z METAR, SIGMET, radaru a pilotních hlášení.",
+    subtitle: "Souhrn dostupných meteorologických údajů z METAR, SIGMET a radaru.",
     airportReports: "Letištní hlášení",
     activeSigmets: "Aktivní SIGMET",
     thunderstormAreas: "Bouřkové oblasti",
     strongWindAirports: "Letiště se silným větrem",
-    pireps: "PIREP / AIREP",
     airports: "Letiště",
     airportsDescription: "Aktuální stanice METAR v regionální meteorologické oblasti.",
     sigmets: "SIGMET",
     sigmetsDescription: "Aktivní letecké výstrahy ze služby Aviation Weather Center.",
     radar: "Meteorologický radar",
     radarDescription: "Stav CHMI radarového katalogu a poslední dostupný snímek.",
-    reports: "Hlášení pilotů",
-    reportsDescription: "Poslední PIREP/AIREP/AMDAR hlášení v regionu ČR.",
     loading: "Načítám meteorologické údaje…",
     partial: "Některý meteorologický zdroj je dočasně nedostupný.",
     noData: "Data nejsou aktuálně dostupná.",
@@ -107,23 +95,19 @@ export function WeatherOperationsCenter() {
     valid: "Platnost",
     stale: "ZASTARALÉ",
     live: "DOSTUPNÉ",
-    urgent: "NALÉHAVÉ",
   } : {
     title: "Weather Operations",
-    subtitle: "One operational view over AirRadar's existing METAR, SIGMET, radar and PIREP sources.",
+    subtitle: "One operational view over AirRadar's existing METAR, SIGMET and radar sources.",
     airportReports: "Airport reports",
     activeSigmets: "Active SIGMETs",
     thunderstormAreas: "Thunderstorm areas",
     strongWindAirports: "Strong-wind airports",
-    pireps: "PIREP / AIREP",
     airports: "Airports",
     airportsDescription: "Current METAR stations inside the regional weather grid.",
     sigmets: "SIGMET",
     sigmetsDescription: "Active aviation advisories from the existing AWC feed.",
     radar: "Weather radar",
     radarDescription: "CHMI radar catalog state and latest available frame.",
-    reports: "Pilot reports",
-    reportsDescription: "Recent PIREP/AIREP/AMDAR reports in the Czech regional area.",
     loading: "Loading weather sources…",
     partial: "One or more weather sources are temporarily unavailable.",
     noData: "Data is currently unavailable.",
@@ -133,13 +117,11 @@ export function WeatherOperationsCenter() {
     valid: "Valid",
     stale: "STALE",
     live: "AVAILABLE",
-    urgent: "URGENT",
   };
 
   const [metar, setMetar] = useState<MetarMapResponse | null>(null);
   const [sigmet, setSigmet] = useState<SigmetResponse | null>(null);
   const [radar, setRadar] = useState<RadarCatalog | null>(null);
-  const [pirep, setPirep] = useState<PirepResponse | null>(null);
   const [failedSources, setFailedSources] = useState(0);
 
   useEffect(() => {
@@ -158,18 +140,13 @@ export function WeatherOperationsCenter() {
         if (!response.ok) throw new Error("radar unavailable");
         return response.json() as Promise<RadarCatalog>;
       }),
-      fetch("/api/weather/pirep?lat=50.1&lon=15.9&radiusNm=180&hours=6", { cache: "no-store", signal: controller.signal }).then(async (response) => {
-        if (!response.ok) throw new Error("pirep unavailable");
-        return response.json() as Promise<PirepResponse>;
-      }),
     ]).then((results) => {
       if (!alive) return;
       let failures = 0;
-      const [metarResult, sigmetResult, radarResult, pirepResult] = results;
+      const [metarResult, sigmetResult, radarResult] = results;
       if (metarResult.status === "fulfilled") setMetar(metarResult.value); else failures += 1;
       if (sigmetResult.status === "fulfilled") setSigmet(sigmetResult.value); else failures += 1;
       if (radarResult.status === "fulfilled") setRadar(radarResult.value); else failures += 1;
-      if (pirepResult.status === "fulfilled") setPirep(pirepResult.value); else failures += 1;
       setFailedSources(failures);
     });
     return () => {
@@ -208,7 +185,6 @@ export function WeatherOperationsCenter() {
       <MetricCard value={formatNumber(sigmets.length)} label={copy.activeSigmets} />
       <MetricCard value={formatNumber(thunderstormCount)} label={copy.thunderstormAreas} />
       <MetricCard value={formatNumber(strongWind.length)} label={copy.strongWindAirports} />
-      <MetricCard value={formatNumber(pirep?.reports.length ?? 0)} label={copy.pireps} />
     </MetricStrip>
 
     <div className={styles.grid}>
@@ -256,23 +232,6 @@ export function WeatherOperationsCenter() {
         </div> : <EmptyState title={copy.loading} />}
       </Panel>
 
-      <Panel className={styles.reportsPanel}>
-        <SectionHeader kicker="AWC" title={copy.reports} description={copy.reportsDescription} />
-        {pirep?.reports.length ? <div className={styles.reportList}>
-          {pirep.reports.slice(0, 12).map((report) => <article key={report.id}>
-            <div>
-              <strong>{report.reportType}</strong>
-              {report.urgent ? <StatusBadge variant="danger">{copy.urgent}</StatusBadge> : null}
-            </div>
-            <span>{report.aircraftType ?? t.common.emptyValue} · {report.altitudeFt === null ? t.common.emptyValue : `FL${Math.round(report.altitudeFt / 100)}`} · {timeLabel(report.observedAt)}</span>
-            <small>{[
-              report.turbulence?.intensity ? `TURB ${report.turbulence.intensity}` : null,
-              report.icing?.intensity ? `ICE ${report.icing.intensity}` : null,
-              report.weather,
-            ].filter(Boolean).join(" · ") || report.rawText?.slice(0, 100) || t.common.emptyValue}</small>
-          </article>)}
-        </div> : <EmptyState title={pirep ? copy.noData : copy.loading} />}
-      </Panel>
     </div>
   </main>;
 }

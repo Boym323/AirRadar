@@ -10,7 +10,10 @@ describe("Visual refinement B: aircraft and mobile drawer", () => {
     expect(page).toContain("styles.heroOverview");
     expect(page).toContain("styles.heroIntro");
     expect(page).toContain("styles.heroBody");
-    expect(page).toContain("<PredictiveAircraftAdvisories");
+    expect(page).not.toContain("<PredictiveAircraftAdvisories");
+    expect(page).not.toContain("<AircraftOperationalTwin");
+    expect(page).not.toContain("<FlightRouteWeather");
+    expect(page).toContain("<AircraftAltitudeChart");
     expect(styles).toContain(".heroOverview .heroMetrics");
     expect(styles).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
   });

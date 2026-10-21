@@ -1,6 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET as getFlight } from "@/app/api/history/flights/[id]/route";
-import { GET as listFlightsRoute } from "@/app/api/history/flights/route";
 import { GET as getAircraftDetailRoute } from "@/app/api/aircraft/[hex]/route";
 import {
   AIRCRAFT_RECENT_FLIGHT_LIMIT,
@@ -12,7 +10,6 @@ import {
 import type { HistoryFlightSummary } from "@/lib/server/history";
 import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getPrisma } from "@/lib/server/db";
-import { playbackSampleAt, playbackTimeRange, type PlaybackPosition } from "@/lib/history/playback";
 import { buildFlightProfileSeries, flightProfilePlaybackX } from "@/components/flight-profile";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
@@ -270,28 +267,6 @@ describe("flight history v2", () => {
     expect(result.flights.map((item) => item.callsign)).toEqual(["TO-PRG"]);
   });
 
-  it("exposes destination filtering through the public history route", async () => {
-    // This route intentionally uses the real clock. Keep the fixture inside
-    // the rolling seven-day window so the test cannot expire as CI dates move.
-    const now = Date.now();
-    const recentFlightAt = new Date(now - 24 * 60 * 60_000).toISOString();
-    const otherFlightAt = new Date(now - 25 * 60 * 60_000).toISOString();
-    const expiredFlightAt = new Date(now - 9 * 24 * 60 * 60_000).toISOString();
-    const flights = [
-      { ...flight(1, recentFlightAt, "TO-PRG"), destination: "LKPR" },
-      { ...flight(2, otherFlightAt, "TO-VIE", 2), destination: "LOWW" },
-      { ...flight(3, expiredFlightAt, "EXPIRED-PRG"), destination: "LKPR" },
-    ];
-    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights }) as never);
-
-    const response = await listFlightsRoute(new Request("http://localhost/api/history/flights?range=7d&destination=LKPR"));
-    const body = await response.json() as { flights: HistoryFlightSummary[] };
-    expect(response.status).toBe(200);
-    expect(body.flights.map((item) => item.callsign)).toEqual(["TO-PRG"]);
-
-    const invalid = await listFlightsRoute(new Request("http://localhost/api/history/flights?destination=PRG"));
-    expect(invalid.status).toBe(400);
-  });
 
   it("searches by callsign", async () => {
     vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [flight(1, "2026-09-07T10:00:00Z", "UAE139"), flight(2, "2026-09-07T09:00:00Z", "CSA001", 2)] }) as never);
@@ -342,16 +317,6 @@ describe("flight history v2", () => {
     expect(result.flights.map((item) => item.id)).toEqual([1, 2]);
   });
 
-  it("returns 400 for an invalid flight id", async () => {
-    const response = await getFlight(new Request("http://localhost/api/history/flights/nope"), { params: Promise.resolve({ id: "nope" }) });
-    expect(response.status).toBe(400);
-  });
-
-  it("returns 404 for an unknown flight", async () => {
-    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [] }) as never);
-    const response = await getFlight(new Request("http://localhost/api/history/flights/999"), { params: Promise.resolve({ id: "999" }) });
-    expect(response.status).toBe(404);
-  });
 
   it("returns detail positions chronologically and reports truncation", async () => {
     const positions = Array.from({ length: HISTORY_POSITION_LIMIT + 1 }, (_, index) => ({
@@ -405,18 +370,6 @@ describe("flight history v2", () => {
     }) as never);
     const result = await listHistoryFlights({ icaoHex: "abc123", limit: 1 });
     expect(result.flights[0]?.callsign).toBe("NEW");
-  });
-
-  it("keeps playback at the first and last observation at the boundaries", () => {
-    const positions: PlaybackPosition[] = [
-      { recordedAt: "2026-01-01T12:00:00Z", lat: 50, lon: 14, altitude: 8_000, groundSpeed: 200, track: 90 },
-      { recordedAt: "2026-01-01T12:01:00Z", lat: 51, lon: 15, altitude: 10_000, groundSpeed: 220, track: 100 },
-    ];
-    const range = playbackTimeRange(positions);
-    expect(range).toEqual({ start: Date.parse(positions[0].recordedAt), end: Date.parse(positions[1].recordedAt) });
-    expect(playbackSampleAt(positions, range!.start)).toMatchObject({ lat: 50, lon: 14, index: 0 });
-    expect(playbackSampleAt(positions, range!.end)).toMatchObject({ lat: 51, lon: 15, index: 1 });
-    expect(playbackSampleAt(positions, range!.start + 30_000)).toMatchObject({ lat: 50.5, lon: 14.5 });
   });
 
   it("maps one playback timestamp to a synchronized SVG profile marker", () => {

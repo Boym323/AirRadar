@@ -43,7 +43,6 @@ export class RxwHubService {
     const stats = this.store.stats();
     return {
       enabled: isRxwHubEnabled(),
-      fpnEnabled: isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true",
       connection: this.connection,
       routeHistoryEnabled: isRxwRouteHistoryEnabled(),
       routeHistory: getRxwRouteHistoryWriter().diagnostics(),
@@ -57,7 +56,6 @@ export class RxwHubService {
       lastAcceptedAt: this.lastReceivedAt,
       aircraft: stats.aircraft, accepted: stats.accepted,
       rejectedInvalid: stats.rejectedInvalid, rejectedDuplicate: stats.rejectedDuplicate,
-      plans: stats.plans, fpnAccepted: stats.fpnAccepted, fpnRejected: stats.fpnRejected,
     };
   }
 
@@ -141,14 +139,8 @@ export class RxwHubService {
       connection: this.connection,
       lastReceivedAt: this.lastReceivedAt,
       routeHint: isRxwHubEnabled() ? this.store.routeForFlight(icaoHex, callsign) : null,
-      waypointPlan: isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true" ? this.store.waypointPlanForFlight(icaoHex, callsign) : null,
       messages: isRxwHubEnabled() ? this.store.list(icaoHex) : [],
     };
-  }
-
-  getWaypointAvailability(): { enabled: boolean; aircraft: ReturnType<RxwHubMessageStore["waypointAvailability"]> } {
-    const enabled = isRxwHubEnabled() && process.env.RXW_FPN_ENABLED?.trim().toLowerCase() === "true";
-    return { enabled, aircraft: enabled ? this.store.waypointAvailability() : [] };
   }
 
   stop(): void {

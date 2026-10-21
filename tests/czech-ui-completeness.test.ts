@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { getTranslations } from "@/lib/i18n";
 
@@ -24,7 +24,6 @@ describe("Czech UI localization coverage", () => {
     expect(cs.operations.liveTrafficKicker).toBe("ŽIVÝ PROVOZ");
     expect(cs.commandSearch.title).toBe("Rychlé vyhledávání");
     expect(cs.commandSearch.liveRadar).toBe("Živý radar");
-    expect(cs.recap.weatherHighlights).toBe("Významné meteorologické jevy");
     expect(cs.aircraft.showFlightHistory).toBe("Zobrazit historii letu");
     expect(cs.browse.networkRouteFlow(2, 3)).toContain("2 přílety · 3 odlety");
     expect(cs.browse.networkRouteFlow(1, 5)).toContain("1 přílet · 5 odletů");
@@ -63,62 +62,29 @@ describe("Czech UI localization coverage", () => {
     expect(cs.aircraft.predictiveAdminPreview).toBe("SPRÁVA · EXPERIMENTÁLNÍ NÁHLED");
   });
 
-  it("keeps production smoke expectations synchronized with Czech user-facing labels", () => {
+  it("keeps Czech weather smoke without retired prediction copy", () => {
     const gates = source("scripts/production-gates.mjs");
-    const cs = getTranslations();
-    for (const copy of [
-      cs.system.predictiveRolloutStateLabels.SHADOW_COLLECTING,
-      cs.system.predictiveRolloutStateLabels.READY_FOR_PUBLIC_CONFIG,
-      cs.system.predictiveCalibrationPhaseLabels.READY,
-      cs.system.predictiveCalibrationPhaseLabels.COLLECTING,
-      cs.system.predictiveCalibrationPhaseLabels.TRUTH_BLOCKED,
-      cs.aircraft.predictiveAdminPreview,
-    ]) {
-      expect(gates, copy).toContain(JSON.stringify(copy));
-    }
-    expect(gates).not.toContain("SHADOW · sbírání evidence");
-    expect(gates).not.toContain("ADMIN · SHADOW PREVIEW");
+    expect(gates).toContain("Data nejsou aktuálně dostupná.");
+    expect(gates).toContain("weather-data-desktop");
+    expect(gates).toContain("weather-empty-mobile");
+    expect(gates).not.toContain("predictiveReadinessFixture");
+    expect(gates).not.toContain("SPRÁVA · EXPERIMENTÁLNÍ NÁHLED");
   });
 
-  it("localizes alert analytics and delivery health dashboards without dropping English support", () => {
-    const analytics = source("components/alert-effectiveness-analytics-page.tsx");
+  it("keeps localized delivery-health diagnostics but excludes retired alert administration", () => {
     const delivery = source("components/delivery-health-page.tsx");
-
-    for (const component of [analytics, delivery]) {
-      expect(component).toContain('t.locale.startsWith("cs") ? {');
-      expect(component).toContain("copy.kicker");
-      expect(component).toContain("copy.title");
-      expect(component).toContain("copy.unavailable");
-    }
-
-    expect(analytics).toContain('title: "Analýza účinnosti upozornění"');
-    expect(analytics).toContain('noisiest: "Nejčastěji aktivovaná pravidla"');
-    expect(analytics).toContain('title: "Alert Effectiveness Analytics"');
+    expect(delivery).toContain('t.locale.startsWith("cs") ? {');
+    expect(delivery).toContain("copy.kicker");
+    expect(delivery).toContain("copy.title");
+    expect(delivery).toContain("copy.unavailable");
     expect(delivery).toContain('title: "Stav doručování upozornění"');
     expect(delivery).toContain('queueDepth: "Ve frontě"');
     expect(delivery).toContain('title: "Delivery Health"');
-    expect(delivery).toContain("data.status === \"DEGRADED\" ? copy.degraded : copy.disabled");
-    expect(analytics).not.toContain('<MetricCard value={data.sent} label="Delivered"');
-    expect(delivery).not.toContain('<MetricCard value={data.durable.queueDepth} label="Queue depth"');
-  });
-
-  it("localizes alert rule simulation while keeping rule identifiers unchanged", () => {
-    const simulator = source("components/alert-rule-simulator-page.tsx");
-    expect(simulator).toContain('title: "Simulátor pravidel upozornění"');
-    expect(simulator).toContain('flightEvent: "Letová událost"');
-    expect(simulator).toContain('match: "SHODA"');
-    expect(simulator).toContain("copy.actionableRules(result.matchedRuleIds.length)");
-    expect(simulator).toContain('<option value="GEOFENCE_ENTER">{copy.geofenceEnter}</option>');
-    expect(simulator).toContain('title: "Alert Rule Simulator"');
-    expect(simulator).not.toContain('<button className="primary-button" type="submit">Simulate</button>');
-  });
-
-  it("keeps predictive explanations readable in Czech", () => {
-    const predictive = source("components/predictive-aircraft-advisories.tsx");
-
-    expect(predictive).toContain('subtitle: "Podklady použité hlavním predikčním modelem"');
-    expect(predictive).toContain('adminGate: "Administrátorský náhled"');
-    expect(predictive).toContain('readiness: "Důvody hodnocení připravenosti"');
+    for (const retired of [
+      "components/alert-effectiveness-analytics-page.tsx",
+      "components/alert-rule-simulator-page.tsx",
+      "components/alerts-admin-page.tsx",
+    ]) expect(existsSync(new URL(`../${retired}`, import.meta.url)), retired).toBe(false);
   });
 
   it("renders Czech receiver coverage text including SVG and dynamic health", () => {
@@ -149,9 +115,6 @@ describe("Czech UI localization coverage", () => {
     const expected = new Map([
       ["components/navigation-integrity-center.tsx", 'title: "Integrita navigačních dat"'],
       ["components/weather-operations-center.tsx", 'title: "Provozní přehled počasí"'],
-      ["components/flight-compare.tsx", 'distance: "Délka zaznamenané stopy"'],
-      ["components/airport-compare.tsx", 'title: "Porovnání letišť"'],
-      ["components/flight-intelligence-analytics.tsx", 'title: "Analýza událostí letů"'],
     ]);
 
     for (const [path, expectedLabel] of expected) {

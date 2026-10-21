@@ -1,8 +1,5 @@
 import type { FeatureCollection } from "geojson";
 import type { AtcSector } from "@/lib/atc/types";
-import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
-import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
-import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { formatAtcFrequency, formatAtcLimit, formatAtcService, t } from "@/lib/i18n";
 
 /** Canonical 2D ATC and Navigation Integrity MapLibre source builders. */
@@ -18,10 +15,9 @@ export function createNavigationIntegrityGeoJSON(cells: Array<{ latCell: number;
   };
 }
 
-export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivity: AirspaceActivityResponse | null = null) {
-  // Hidden ATC has no features; avoid work proportional to planned airspace windows.
+export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
+  // Hidden ATC has no features; skip projection.
   if (!visible) return { type: "FeatureCollection" as const, features: [] };
-  const planIndex = buildAirspacePlanMapIndex(airspaceActivity);
   return {
     type: "FeatureCollection" as const,
     features: sectors.flatMap((sector) => {
@@ -29,8 +25,6 @@ export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspac
       if (!polygons.length) return [];
       // All polygons of one sector share these values. Avoid repeating lookups,
       // formatting and planned-activity matching for every polygon.
-      const plan = matchAirspacePlanForSector(sector, planIndex);
-      const planLabel = plan?.state === "planned-now" ? activityT.plannedNow : plan?.state === "upcoming" ? activityT.upcoming : null;
       const frequencies = sector.frequencies;
       const service = formatAtcService(sector.service ?? sector.atcCallsign);
       const lowerAltitude = formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited);
@@ -43,7 +37,7 @@ export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspac
           id: sector.id,
           countryCode: sector.country,
           name: sector.name,
-          label: planLabel ? `${sector.name} · ${planLabel}` : sector.name,
+          label: sector.name,
           service,
           airspaceType: sector.airspaceType ?? null,
           airspaceClass: sector.airspaceClass ?? null,
@@ -59,18 +53,6 @@ export function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspac
           validTo: sector.validTo,
           lastVerifiedAt: sector.lastVerifiedAt,
           activationStatus: sector.activationStatus ?? "UNKNOWN",
-          airspacePlanState: plan?.state ?? "none",
-          airspacePlanStale: plan?.stale ?? false,
-          airspacePlanSource: plan?.source ?? "",
-          airspacePlanSequence: plan?.sequence ?? 0,
-          airspacePlanSourceReference: plan?.sourceReference ?? "",
-          airspacePlanStartsAt: plan?.startsAt ?? "",
-          airspacePlanEndsAt: plan?.endsAt ?? "",
-          airspacePlanLowerLimit: plan?.lowerLimit ?? "",
-          airspacePlanUpperLimit: plan?.upperLimit ?? "",
-          airspacePlanResponsibleUnit: plan?.responsibleUnit ?? "",
-          airspacePlanActivity: plan?.activity ?? "",
-          airspacePlanDesignator: plan?.canonicalDesignator ?? "",
         },
         geometry: { type: "Polygon" as const, coordinates: [polygon] },
       }));

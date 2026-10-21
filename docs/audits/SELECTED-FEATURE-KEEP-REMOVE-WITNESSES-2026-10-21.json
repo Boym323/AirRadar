@@ -1,0 +1,2244 @@
+{
+  "version": 2,
+  "auditDate": "2026-10-21",
+  "purpose": "Source-backed KEEP/REMOVE runtime witnesses with exact full 178-feature descriptions from user",
+  "interpretation": "All 178 original feature descriptions are confirmed from the user's full October 21 checklist, with decisions from the prior October 19 selection. This does NOT independently certify each corresponding source implementation; group-level runtime witnesses and deliberate KEEP/REMOVE overlaps remain. Dedicated P05/P06 runtime is disconnected and deleted in source. R11 published route rendering remains; CI and production verification required. Targeted T04 selected-detail fallback and W12 route-weather inference were deleted. Four REMOVE IDs (T04/T05/W11/W12) now have specific source-level retirement evidence; other KEEP shared mappings remain active. CI and live production verification are still required.",
+  "keepItems": [
+    {
+      "id": "J01",
+      "originalIndividualName": "Příjem lokálních letadel přes readsb JSON · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "J02",
+      "originalIndividualName": "Přímý příjem lokálních BEAST TCP rámců",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "J03",
+      "originalIndividualName": "Rust akcelerace BEAST parseru a CRC24",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "J04",
+      "originalIndividualName": "Automatické přepínání BEAST / JSON při výpadku",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "J05",
+      "originalIndividualName": "Správa živého stavu letadel v RAM · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "J06",
+      "originalIndividualName": "Veřejné API aktuálních letadel · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "J07",
+      "originalIndividualName": "Živý stream SSE V1 – celé snapshoty · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "J08",
+      "originalIndividualName": "Optimalizovaný SSE V2 – delta aktualizace",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "J09",
+      "originalIndividualName": "Ukládání vzorkované historie do PostgreSQL",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "J11",
+      "originalIndividualName": "Kontinuita identity letadel, detekce výpadků a deduplikace · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "R01",
+      "originalIndividualName": "Základní interaktivní mapa MapLibre · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "R02",
+      "originalIndividualName": "Přepínání LOCAL / EXTENDED pokrytí",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R03",
+      "originalIndividualName": "Ikony letadel podle typu a směru",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R04",
+      "originalIndividualName": "Popisky letadel a řízení jejich kolizí",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R05",
+      "originalIndividualName": "Barevné režimy letadel podle provozních údajů",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R06",
+      "originalIndividualName": "Živý seznam provozu a filtrování letadel",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R07",
+      "originalIndividualName": "Detail vybraného letadla v mapovém panelu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R08",
+      "originalIndividualName": "Zobrazení živé letové stopy (trail)",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R09",
+      "originalIndividualName": "Sledování letadla kamerou mapy (follow)",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R10",
+      "originalIndividualName": "Současné sledování více letadel",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R11",
+      "originalIndividualName": "Zobrazení trasy mezi letišti a jejího průběhu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R12",
+      "originalIndividualName": "Vrstvy okolních letišť",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R14",
+      "originalIndividualName": "Mapové podklady, vzhled a předvolby vrstev",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R15",
+      "originalIndividualName": "Mapová HUD lišta a rychlé akce",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R16",
+      "originalIndividualName": "Režim prezentace mapy",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R17",
+      "originalIndividualName": "ATC sektory a vysílače přímo v mapě",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "R18",
+      "originalIndividualName": "Volitelné počasí a vzdušné prostory přímo v mapě",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "H03",
+      "originalIndividualName": "Fotografie letadel z Planespotters",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "H07",
+      "originalIndividualName": "Výškový, rychlostní a vertikální profil letu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "H14",
+      "originalIndividualName": "Souhrny letadla za 7/30 dní a celé období",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "A01",
+      "originalIndividualName": "Katalog letišť a vyhledávání podle ICAO",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "A02",
+      "originalIndividualName": "Detail letiště – dráhy, poloha, vybavení a frekvence",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "T08",
+      "originalIndividualName": "ATS tratě České republiky",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "T09",
+      "originalIndividualName": "ATS tratě Slovenska a Rakouska",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "T10",
+      "originalIndividualName": "NAVAID/FIX databáze a navigační průzkumník",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "T13",
+      "originalIndividualName": "Navigation Integrity – podezřelé anomálie ADS-B",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "T14",
+      "originalIndividualName": "Navigation Integrity – regionální mapa, historie a analýza",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W01",
+      "originalIndividualName": "Aktuální METAR a TAF letišť",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W02",
+      "originalIndividualName": "METAR značky a informace přímo v mapě",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W03",
+      "originalIndividualName": "Meteorologický radar ČHMÚ s časovou osou",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W04",
+      "originalIndividualName": "Echo Top – výška radarových odrazů",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W06",
+      "originalIndividualName": "SIGMET a AirSIGMET výstrahy",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W07",
+      "originalIndividualName": "PIREP/AIREP hlášení pilotů",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W08",
+      "originalIndividualName": "Počasí měřené letadly z Mode-S / BDS 4,4",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "W09",
+      "originalIndividualName": "Profil a kvalita počasí pozorovaného letadlem",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "L11",
+      "originalIndividualName": "Push notifikace do prohlížeče",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "L12",
+      "originalIndividualName": "Externí Pushover upozornění",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E01",
+      "originalIndividualName": "ADSBHub – příjem externího síťového provozu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E02",
+      "originalIndividualName": "ADSB.lol – surový BEAST/SBS stream",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E03",
+      "originalIndividualName": "ADSB.lol – HTTP geografická záloha",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E04",
+      "originalIndividualName": "OGN/FLARM – letadla, kluzáky a další cíle",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E05",
+      "originalIndividualName": "OGN Device Database – identifikace a ochrana soukromí",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E06",
+      "originalIndividualName": "SoftRF SQLite – nouzová OGN whitelist databáze",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E07",
+      "originalIndividualName": "ACARS/VDL2 metadata přes RXW Hub",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E09",
+      "originalIndividualName": "FlightAware – doplňování letových plánů a diagnostika využití",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "E10",
+      "originalIndividualName": "ADSBDB – externí metadata letadel",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S01",
+      "originalIndividualName": "Aktuální počítadla letadel a zpráv za sekundu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S02",
+      "originalIndividualName": "Denní/7denní/30denní agregované statistiky – API",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S03",
+      "originalIndividualName": "Receiver Coverage – polární mapa dosahu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S04",
+      "originalIndividualName": "Analýza slabých sektorů a spolehlivosti příjmu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S05",
+      "originalIndividualName": "Rekordy vzdálenosti a přijatých letadel",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S06",
+      "originalIndividualName": "Statistiky typů letadel, aerolinek a tratí – API",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S07",
+      "originalIndividualName": "Historická heatmapa a profil provozu – API",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S08",
+      "originalIndividualName": "Denní a týdenní recap – zbývající API",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "S09",
+      "originalIndividualName": "Logbook a agregované souhrny přijímače",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O01",
+      "originalIndividualName": "System Dashboard – stav všech komponent",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O02",
+      "originalIndividualName": "Veřejná kontrola zdraví aplikace a verze · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "O03",
+      "originalIndividualName": "Receiver Monitoring – zdraví SDR/readsb příjmu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O04",
+      "originalIndividualName": "Diagnostika externích poskytovatelů a integrací",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O05",
+      "originalIndividualName": "CPU, RAM, GC a event-loop telemetrie",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O06",
+      "originalIndividualName": "Historie výkonu a aktuálních bottlenecků",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O07",
+      "originalIndividualName": "Databázová latence, fronty a diagnostika zapisování",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O08",
+      "originalIndividualName": "Systémové diagnostické SSE streamy",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O09",
+      "originalIndividualName": "T58 production soak, stall canary a CPU profiling",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O10",
+      "originalIndividualName": "Výkonové benchmarky a zátěžové testy",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O11",
+      "originalIndividualName": "Automatické CI, testy, CodeQL a bezpečnostní kontroly · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "O12",
+      "originalIndividualName": "Automatické nasazení, health check a rollback · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "O13",
+      "originalIndividualName": "Import/synchronizace eAIP, ATS a letištních dat",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O14",
+      "originalIndividualName": "Automatická dokumentace, changelog a metriky růstu kódu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "O15",
+      "originalIndividualName": "Správa přihlášení administrátora a bezpečnostních oprávnění · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "U01",
+      "originalIndividualName": "Responzivní rozhraní mobil/tablet/desktop · základ systému",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": true
+    },
+    {
+      "id": "U02",
+      "originalIndividualName": "Instalovatelná PWA aplikace",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "U03",
+      "originalIndividualName": "Offline cache posledního známého stavu",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "U04",
+      "originalIndividualName": "Česká a anglická lokalizace",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "U05",
+      "originalIndividualName": "Globální Command Search a navigace",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "U06",
+      "originalIndividualName": "Oblíbená letiště a lokální uživatelské preference",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "U07",
+      "originalIndividualName": "Sdílené záložkové odkazy na filtrování a analýzy",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    },
+    {
+      "id": "U08",
+      "originalIndividualName": "Klávesové zkratky a rychlé ovládání",
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog.",
+      "source": "user supplied exact 178-item catalog 2026-10-21",
+      "basicSystem": false
+    }
+  ],
+  "removeItems": [
+    {
+      "id": "J10",
+      "recoveredTitle": "Demo provoz se simulovanými letadly",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "R13",
+      "recoveredTitle": "Poloha přijímače, kružnice dosahu a měřítko",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H01",
+      "recoveredTitle": "Samostatný detail letadla – registrace, typ, operátor",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H02",
+      "recoveredTitle": "Katalog a automatické doplňování metadat letadel",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H04",
+      "recoveredTitle": "Letový plán, volací znak a letiště OD/DO",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H05",
+      "recoveredTitle": "Historie konkrétního letadla a jeho letů",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H06",
+      "recoveredTitle": "Detail jednotlivého letu (Flight Story V2)",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H08",
+      "recoveredTitle": "Historické přehrávání konkrétního letu",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H09",
+      "recoveredTitle": "Seznam a vyhledávání historických letů",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H10",
+      "recoveredTitle": "Porovnání dvou letů",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H11",
+      "recoveredTitle": "Time Machine – přehrávání všech letadel v čase",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H12",
+      "recoveredTitle": "Event Replay – ±10 minut kolem události",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "H13",
+      "recoveredTitle": "Historická identita NEW / RARE / RETURNING",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A03",
+      "recoveredTitle": "Airport Live Board – přehled provozu letiště",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A04",
+      "recoveredTitle": "Odvozené přílety, odlety a průlety",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A05",
+      "recoveredTitle": "Vyhodnocení použitých přistávacích drah",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A06",
+      "recoveredTitle": "Arrival Sequence / Approach Queue",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A07",
+      "recoveredTitle": "Arrival Flow, vytížení a stabilita drah (V8)",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A08",
+      "recoveredTitle": "Odhad terminálové poptávky / příletů (V9)",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A09",
+      "recoveredTitle": "Provozní výjimky a konfliktní údaje letiště",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A10",
+      "recoveredTitle": "Live Airport Network – okolní aktivní letiště",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A11",
+      "recoveredTitle": "Porovnání letišť",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "A12",
+      "recoveredTitle": "Historická statistika provozu letiště za 7/30 dní",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T01",
+      "recoveredTitle": "ATC sektory včetně geometrie a výškových hranic",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T02",
+      "recoveredTitle": "Samostatný detail ATC sektoru",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T03",
+      "recoveredTitle": "ATC frekvence, vysílače a publikované služby",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T04",
+      "recoveredTitle": "Pravděpodobné ATC přiřazení vybraného letadla",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "selectedDetailFallbackRemoved": "components/aircraft-radar-quick-detail.tsx",
+        "retained": "R17 map and current-sector published frequencies; T08–T10 ATS",
+        "tests": [
+          "tests/selected-feature-t04-w12.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
+    },
+    {
+      "id": "T05",
+      "recoveredTitle": "ATC handoff – odhad přechodu mezi sektory",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "moduleDeleted": "lib/atc-context/handoff.ts",
+        "retained": "R17 current sector geometry and published frequencies",
+        "tests": [
+          "tests/selected-feature-t05-w11.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
+    },
+    {
+      "id": "T06",
+      "recoveredTitle": "Historie provozu a přechodů mezi sektory – API",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T07",
+      "recoveredTitle": "Validace a diagnostika ATC dat",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T11",
+      "recoveredTitle": "Letové procedury SID/STAR a procedurální data",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "T12",
+      "recoveredTitle": "AUP/UUP – plánovaná aktivace vzdušného prostoru",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "W05",
+      "recoveredTitle": "Model větru ICON-EU v různých letových hladinách",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "W10",
+      "recoveredTitle": "Weather Fusion – spojení více zdrojů počasí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "W11",
+      "recoveredTitle": "Weather Avoidance – vyhodnocení možné odchylky kvůli počasí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "moduleDeleted": "lib/weather/sigmet-trajectory-deviation.ts",
+        "retained": "W06 SIGMET advisories and R18 informational context",
+        "tests": [
+          "tests/selected-feature-t05-w11.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
+    },
+    {
+      "id": "W12",
+      "recoveredTitle": "Počasí na trase zvoleného letu",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "INDIVIDUAL_SOURCE_RETIREMENT",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": true,
+      "basicSystem": false,
+      "specificEvidence": {
+        "moduleDeleted": "lib/weather/route-weather-context.ts",
+        "legacyTestDeleted": "tests/route-weather-context.test.ts",
+        "retained": "W06 SIGMET and R18 map layers",
+        "tests": [
+          "tests/selected-feature-t04-w12.test.ts"
+        ],
+        "currentState": "RETIREMENT_COMMITTED_CI_PENDING"
+      }
+    },
+    {
+      "id": "W13",
+      "recoveredTitle": "Historické mapové počasí v Time Machine",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "W14",
+      "recoveredTitle": "Weather Corridor – počasí v předpokládaném koridoru",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P01",
+      "recoveredTitle": "Flight Intelligence – automatické události letu",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P02",
+      "recoveredTitle": "Rozpoznávání holding, go-around, diversion, orbit a neobvyklých zatáček",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P03",
+      "recoveredTitle": "Přehled událostí a analytická stránka",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P04",
+      "recoveredTitle": "Route Intelligence – interpretace letového plánu",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false,
+      "activeRuntimeFinding": "SHARED_OWNERSHIP_REVIEW"
+    },
+    {
+      "id": "P05",
+      "recoveredTitle": "Route Corridor Intelligence – odchylka od plánované trasy",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false,
+      "activeRuntimeFinding": "DEDICATED_RUNTIME_REMOVED_PENDING_FINAL_CI",
+      "specificEvidence": [
+        "lib/route-intelligence/corridor.ts absent",
+        "new components/radar/use-selected-route.ts uses only R11 published route matcher",
+        "negative regression tests guard absence and displayed status"
+      ]
+    },
+    {
+      "id": "P06",
+      "recoveredTitle": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false,
+      "activeRuntimeFinding": "DEDICATED_RUNTIME_REMOVED_PENDING_FINAL_CI",
+      "specificEvidence": [
+        "lib/route-intelligence/conformance.ts absent",
+        "new components/radar/use-selected-route.ts uses only R11 published route matcher",
+        "negative regression tests guard absence and displayed status"
+      ]
+    },
+    {
+      "id": "P07",
+      "recoveredTitle": "Predikce času příletu ETA",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P08",
+      "recoveredTitle": "Predikce přistávací dráhy",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P09",
+      "recoveredTitle": "Predikce změny přistávací dráhy",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P10",
+      "recoveredTitle": "Predikce budoucí trajektorie",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P11",
+      "recoveredTitle": "Explainable Prediction – vysvětlení podkladů predikcí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P12",
+      "recoveredTitle": "Prospektivní sběr a validace predikcí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P13",
+      "recoveredTitle": "Readiness a pravidla pro zveřejnění predikcí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P14",
+      "recoveredTitle": "Kalibrace a porovnání predikcí s výsledky",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "P15",
+      "recoveredTitle": "Predictive Operations Center – souhrn předpovědí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D01",
+      "recoveredTitle": "Digital Twin – základní projekce letu na 30 minut",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D02",
+      "recoveredTitle": "4D koridor – budoucí poloha, výška a čas",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D03",
+      "recoveredTitle": "Prediction Timeline v detailu letadla",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D04",
+      "recoveredTitle": "Budoucí průniky ATC sektorů a ATS tras",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D05",
+      "recoveredTitle": "Průniky s plánovanými AUP/UUP prostory",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D06",
+      "recoveredTitle": "Průniky s Navigation Integrity anomáliemi",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D07",
+      "recoveredTitle": "Operational Focus – prioritní situace letadla",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D08",
+      "recoveredTitle": "Operational Focus Change – změny priorit",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D09",
+      "recoveredTitle": "Regional Situation Graph – vazby mezi letadly",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D10",
+      "recoveredTitle": "Operational Attention – regionální upozornění",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D11",
+      "recoveredTitle": "Regional Focus Queue – pořadí prioritních letadel",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D12",
+      "recoveredTitle": "Regionální projekce za 5/15/30 minut",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D13",
+      "recoveredTitle": "Validace koridoru proti pozdějším pozicím",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D14",
+      "recoveredTitle": "Validace predikovaných událostí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D15",
+      "recoveredTitle": "Truth-first Validation – vyhodnocování podle skutečných událostí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D16",
+      "recoveredTitle": "Ukládání anonymních výsledků kalibrace",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D17",
+      "recoveredTitle": "Regional Attention Outcome – kontrola regionálních predikcí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D18",
+      "recoveredTitle": "Regional Attention Graduation – pravidla povýšení modelu",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D19",
+      "recoveredTitle": "Trajectory Quality V2 – alternativní vertikální model",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D20",
+      "recoveredTitle": "Trajectory Quality V3 – výkonově orientovaný shadow model",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D21",
+      "recoveredTitle": "Outcome Validation pro modely V2 a V3",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D22",
+      "recoveredTitle": "Graduation/Promotion – výběr schváleného modelu",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "D23",
+      "recoveredTitle": "Admin Calibration Center – diagnostika modelů",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L01",
+      "recoveredTitle": "Watchlist – pravidla sledování letadel",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L02",
+      "recoveredTitle": "Hlídání ICAO, registrace, callsignu, typu a aerolinky",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L03",
+      "recoveredTitle": "Upozornění podle vzdálenosti od přijímače",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L04",
+      "recoveredTitle": "Fleet Explorer – vlastní sledované flotily",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L05",
+      "recoveredTitle": "Geofencing – vlastní sledované geografické oblasti",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L06",
+      "recoveredTitle": "Emergency squawk 7500/7600/7700",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L07",
+      "recoveredTitle": "Historie upozornění a událostí",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L08",
+      "recoveredTitle": "Pravidla cooldownu a odstranění duplicit",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L09",
+      "recoveredTitle": "Notification Center – přijaté/nepřečtené zprávy",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L10",
+      "recoveredTitle": "Ztlumení oznámení pro letadlo nebo pravidlo",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L13",
+      "recoveredTitle": "Delivery Health – stav doručování zpráv",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L14",
+      "recoveredTitle": "Alert Rule Simulator – testování pravidel",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "L15",
+      "recoveredTitle": "Alert Effectiveness Analytics – účinnost upozornění",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    },
+    {
+      "id": "E08",
+      "recoveredTitle": "ACARS H1/FPN waypointy a mapová vrstva",
+      "titleProvenance": "user supplied exact 178-item catalog 2026-10-21",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false,
+      "basicSystem": false
+    }
+  ],
+  "originalTitleCount": 90,
+  "remainingWithoutOriginalTitle": 0,
+  "knownSharedDependencyConflicts": [
+    "H01 retained aircraft detail is also required by H03/H07/H14",
+    "H02 identity/enrichment used by retained E integrations",
+    "H04 OD/DO context may be required by retained R11 ATS route",
+    "T01 sector geometry is retained for R17"
+  ],
+  "originalKeepTitleCount": 88,
+  "originalInventorySource": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+  "scopeGaps": [
+    {
+      "id": "P04",
+      "title": "Route Intelligence – interpretace letového plánu",
+      "severity": "SHARED_R11_MINIMUM",
+      "source": [
+        "components/radar/use-route-corridor-intelligence.ts:130-149",
+        "lib/route-intelligence/index.ts"
+      ],
+      "current": "Retain minimal published-route parsing for R11; do not reintroduce P04 standalone analytical views.",
+      "action": "Review that R11 uses only necessary route presentation.",
+      "remediationCodeHead": "914d444aec6e82ffee78be102643a6bbda9bdb05"
+    },
+    {
+      "id": "P05",
+      "title": "Route Corridor Intelligence – odchylka od plánované trasy",
+      "severity": "RESOLVED_DEDICATED_RUNTIME_REMOVED",
+      "source": [
+        "components/radar/use-route-corridor-intelligence.ts:151-161",
+        "components/aircraft-radar-quick-detail.tsx:222-249"
+      ],
+      "current": "The P05 corridor and P06 conformance state-machine modules, selected-aircraft computations and classified UI were removed. R11 retains basic route progress and next waypoint.",
+      "action": "Confirm CI and user-selected R11 smoke, then retain negative regression tests.",
+      "remediationCodeHead": "914d444aec6e82ffee78be102643a6bbda9bdb05"
+    },
+    {
+      "id": "P06",
+      "title": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
+      "severity": "RESOLVED_DEDICATED_RUNTIME_REMOVED",
+      "source": [
+        "components/radar/use-route-corridor-intelligence.ts:163-175",
+        "components/aircraft-radar-quick-detail.tsx:240-248",
+        "components/radar/radar-flight-follow-hud.tsx:43-77",
+        "lib/route-intelligence/conformance.ts",
+        "docs/features.registry.json:185"
+      ],
+      "current": "The P05 corridor and P06 conformance state-machine modules, selected-aircraft computations and classified UI were removed. R11 retains basic route progress and next waypoint.",
+      "action": "Confirm CI and user-selected R11 smoke, then retain negative regression tests.",
+      "remediationCodeHead": "914d444aec6e82ffee78be102643a6bbda9bdb05"
+    }
+  ]
+}

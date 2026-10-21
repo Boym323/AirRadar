@@ -22,51 +22,14 @@ import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import { aircraftMapLabelLevel, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
-import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import {
-  createOperationalTwinMapGeoJSON,
-  emptyOperationalTwinMapGeoJSON,
-  OPERATIONAL_TWIN_EVENT_LAYER_ID,
-  OPERATIONAL_TWIN_KINEMATIC_LAYER_ID,
-  OPERATIONAL_TWIN_MAP_SOURCE_ID,
-  OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
-  OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
-  OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID,
-  OPERATIONAL_TWIN_ROUTE_LAYER_ID,
-  OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
-  OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
-} from "@/lib/operational-twin/map";
-import {
-  AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
-  AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
-  AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
-  AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM,
-  aircraftOperationalFocusClearHref,
-  aircraftOperationalFocusRadarHref,
-  createAircraftOperationalFocusMapGeoJSON,
-  emptyAircraftOperationalFocusMapGeoJSON,
-  resolveAircraftOperationalFocusMapTarget,
-} from "@/lib/operational-twin/aircraft-operational-focus-ui";
-import {
-  createRegionalAttentionMapFocusGeoJSON,
-  emptyRegionalAttentionMapFocusGeoJSON,
-  REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
-  REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
-  REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
-  REGIONAL_ATTENTION_MAP_SOURCE_ID,
-  type RegionalAttentionMapFocusEventDetail,
-} from "@/lib/operational-twin/regional-attention-ui";
-import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
-import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { airportVisibilityFilter, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
-import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
 import {
   createRouteAirportGeoJSON,
@@ -96,25 +59,20 @@ import { createAtcGeoJSON, createNavigationIntegrityGeoJSON } from "@/lib/radar/
 import { createAirportGeoJSON, createMetarGeoJSON, createAircraftWeatherGeoJSON } from "@/lib/radar/map-context-geojson";
 import { registerRadarAviationLayers } from "@/lib/radar/aviation-map-layers";
 import { registerRadarBaseOverlays } from "@/lib/radar/base-map-overlays";
-import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
-import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { useRadarAircraftContext } from "@/components/radar/use-radar-aircraft-context";
 import { useRadarOgnStream } from "@/components/radar/use-radar-ogn-stream";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
-import { useRadarAtcMapContext } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
-import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
+import { useSelectedRoute } from "@/components/radar/use-selected-route";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { createAviationNavGeoJSON } from "@/lib/navigation-data/map";
 import { routeReferencePointIds } from "@/lib/navigation-data/route-reference";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
-import { createProcedureGeoJSON } from "@/lib/procedure-visualization";
-import type { Procedure } from "@/lib/route-intelligence/contracts";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
@@ -140,27 +98,12 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions } from "@/lib/map-style";
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
-import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
-import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
 import { RadarMapHud } from "@/components/radar/radar-map-hud";
 import { aircraftWebglLabelFeature, ognMapLabelFeature, labelForAircraft, aircraftSearchText, ognTargetLabel, ognGlyphMarkup } from "@/lib/radar/map-label-presentation";
 import { parseAirportDataset, parseAtcDataset, parseAtsDataset, parseJsonDataset, type AtsRoutesResponse } from "@/lib/radar/dataset-validation";
-import type { RxwWaypointAvailability, RxwWaypointPlan } from "@/lib/aircraft/rxw-communications";
-import {
-  createRxwFpnBadges,
-  createRxwFpnRoute,
-  RXW_FPN_BADGE_SOURCE,
-  RXW_FPN_BADGE_CIRCLE,
-  RXW_FPN_BADGE_LABEL,
-  RXW_FPN_ROUTE_SOURCE,
-  RXW_FPN_ROUTE_LINE,
-  RXW_FPN_ROUTE_POINTS,
-  RXW_FPN_ROUTE_LABEL,
-} from "@/lib/radar/rxw-fpn-visual";
 import { radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
 import { aircraftColor } from "@/lib/aircraft/color-mode";
-import { addRadarPreset, createRadarPreset, readRadarPresets, writeRadarPresets, type RadarPreset } from "@/lib/radar/presets";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -188,7 +131,6 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
 };
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
-const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_NAVIGATION_INTEGRITY_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const OGN_LABEL_SOURCE_ID = "ogn-traffic-labels";
 const OGN_LABEL_LAYER_ID = "ogn-traffic-labels-symbol";
@@ -243,17 +185,6 @@ function collapseNarrowRadarAttribution(map: maplibregl.Map): void {
   credits.classList.remove("maplibregl-compact-show");
 }
 
-function formatAirspaceUtc(value: string): string {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
-  return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 16)} UTC`;
-}
-
-function relativeTwinMapOffset(minutes: number): string {
-  if (minutes <= 0.05) return "NOW";
-  return `+${formatNumber(minutes, minutes < 10 ? 1 : 0)} min`;
-}
-
 export function AirRadarApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -261,7 +192,6 @@ export function AirRadarApp() {
   const navPointFocus = searchParams.get("navPoint");
   const focusedNavPoint = useMemo(() => parseNavPointFocus(navPointFocus), [navPointFocus]);
   const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
-  const operationalFocusMapId = searchParams.get(AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM);
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
@@ -272,7 +202,6 @@ export function AirRadarApp() {
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
   const [followSelected, setFollowSelected] = useState(false);
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
-  const [operationalFocusRevealVersion, setOperationalFocusRevealVersion] = useState(0);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -283,7 +212,6 @@ export function AirRadarApp() {
   const [watchlist, setWatchlist] = useState<Array<{ kind: string; value: string }>>([]);
   const [showAircraft, setShowAircraft] = useState(true);
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
-  const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
@@ -297,10 +225,6 @@ export function AirRadarApp() {
   const [aircraftWeatherMapObservations, setAircraftWeatherMapObservations] = useState<AircraftWeatherMapObservation[]>([]);
   const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
-  const [showAupUup, setShowAupUup] = useState(false);
-  const { airspaceDataset, airspaceActivity } = useRadarAtcMapContext({
-    showAupUup,
-  });
   const {
     radarCatalog,
     radarFrameId,
@@ -323,9 +247,6 @@ export function AirRadarApp() {
   });
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
   const [showNavData, setShowNavData] = useState(false);
-  const [showSids, setShowSids] = useState(false);
-  const [showStars, setShowStars] = useState(false);
-  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [selectedAtsRoute, setSelectedAtsRoute] = useState<string | null>(null);
   const [showAirports, setShowAirports] = useState(true);
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
@@ -339,12 +260,6 @@ export function AirRadarApp() {
   const [trafficOpen, setTrafficOpen] = useState(false);
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
-  const [presentationMode, setPresentationMode] = useState(false);
-  const [presentationPaused, setPresentationPaused] = useState(false);
-  const [presentationScene, setPresentationScene] = useState<string | null>(null);
-  const presentationLastHexRef = useRef<string | null>(null);
-  const presentationAircraftRef = useRef<AircraftView[]>([]);
-  presentationAircraftRef.current = snapshot.aircraft;
   const nativeBasemapLayerIdsRef = useRef<string[]>([]);
   const [multiAircraftMode, setMultiAircraftMode] = useState(false);
   const multiAircraftModeRef = useRef(false);
@@ -360,13 +275,11 @@ export function AirRadarApp() {
   const attributionControlRef = useRef<maplibregl.AttributionControl | null>(null);
   const centeredTrafficRef = useRef(false);
   const focusedAircraftRef = useRef<string | null>(null);
-  const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const aircraftMarkersRef = useRef<Map<string, AircraftMarkerHandle>>(new Map());
   const ognMarkersRef = useRef<Map<string, OgnMarkerHandle>>(new Map());
   const aircraftMotionRuntimeRef = useRef<AircraftMotionRuntime | null>(null);
   const aircraftWebglRuntimeRef = useRef<AircraftWebglRuntime | null>(null);
   const aircraftWebglLabelAircraftRef = useRef<Map<string, AircraftView>>(new Map());
-  const rxwFpnAvailabilityRef = useRef<RxwWaypointAvailability[]>([]);
   const aircraftWebglLabelsUpdatedAtRef = useRef(Number.NEGATIVE_INFINITY);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
@@ -387,10 +300,8 @@ export function AirRadarApp() {
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
-  const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
-  // Native details[name] keeps Presets and Layers mutually exclusive.
-  // Dismiss the active map menu outside the HUD and restore focus on Escape.
+  // Dismiss the active map layer menu outside the HUD and restore focus on Escape.
   useEffect(() => {
     const selector = 'details[name="radar-map-menus"][open]';
     const onPointerDown = (event: PointerEvent) => {
@@ -426,103 +337,10 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     applyRadarMapAppearance(map, nativeBasemapLayerIdsRef.current, mapAppearance);
   }, [mapAppearance, mapReady]);
-  useEffect(() => {
-    if (!presentationMode || !mapReady || presentationPaused) return;
-    const map = mapRef.current;
-    if (!map) return;
-    let disposed = false;
-    const rotate = () => {
-      if (disposed || document.hidden || !mapRef.current) return;
-      const next = pickPresentationAircraft(presentationAircraftRef.current, presentationLastHexRef.current);
-      if (next?.lat !== null && next?.lon !== null && next) {
-        presentationLastHexRef.current = next.icaoHex;
-        setPresentationScene(next.callsign || next.registration || next.icaoHex);
-        map.easeTo({ center: [next.lon, next.lat], zoom: 8, duration: 900, essential: true });
-      } else {
-        const receiver = receiverRef.current;
-        if (receiver.lat === null || receiver.lon === null) return;
-        presentationLastHexRef.current = null;
-        setPresentationScene(receiver.name);
-        map.easeTo({ center: [receiver.lon, receiver.lat], zoom: 7.4, duration: 900, essential: true });
-      }
-    };
-    // Keep exactly one pending scene rotation only while Presentation Mode is active.
-    // This is local camera choreography, never additional aircraft/network polling.
-    let rotationTimeout: number | null = null;
-    const schedule = () => {
-      if (disposed) return;
-      rotationTimeout = window.setTimeout(() => {
-        if (disposed) return;
-        rotate();
-        schedule();
-      }, 45_000);
-    };
-    rotate();
-    schedule();
-    return () => {
-      disposed = true;
-      if (rotationTimeout !== null) window.clearTimeout(rotationTimeout);
-    };
-  }, [mapReady, presentationMode, presentationPaused]);
-
-  useEffect(() => {
-    if (!presentationMode) return;
-    const resize = () => mapRef.current?.resize();
-    const onFullscreen = () => {
-      if (!document.fullscreenElement) setPresentationMode(false);
-      window.requestAnimationFrame(resize);
-    };
-    document.addEventListener("fullscreenchange", onFullscreen);
-    window.requestAnimationFrame(resize);
-    return () => {
-      document.removeEventListener("fullscreenchange", onFullscreen);
-      window.requestAnimationFrame(resize);
-    };
-  }, [presentationMode]);
-
-  const togglePresentationMode = () => {
-    if (presentationMode) {
-      setPresentationMode(false);
-      setPresentationScene(null);
-      if (document.fullscreenElement === radarContentRef.current) void document.exitFullscreen().catch(() => undefined);
-      return;
-    }
-    setMapFocus(true);
-    setFollowSelected(false);
-    setPresentationPaused(false);
-    setPresentationMode(true);
-    const element = radarContentRef.current;
-    if (element?.requestFullscreen) void element.requestFullscreen().catch(() => undefined);
-  };
   const chooseMapAppearance = (value: RadarMapAppearance) => {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
   };
-  const operationalFocusMapCameraKeyRef = useRef<string | null>(null);
-  const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
-
-  useEffect(() => {
-    const onRegionalAttentionMapFocus = (event: Event) => {
-      setRegionalAttentionMapFocus((event as CustomEvent<RegionalAttentionMapFocusEventDetail>).detail ?? null);
-    };
-    window.addEventListener(REGIONAL_ATTENTION_MAP_FOCUS_EVENT, onRegionalAttentionMapFocus);
-    return () => window.removeEventListener(REGIONAL_ATTENTION_MAP_FOCUS_EVENT, onRegionalAttentionMapFocus);
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const source = map.getSource(REGIONAL_ATTENTION_MAP_SOURCE_ID) as GeoJSONSource | undefined;
-    source?.setData(createRegionalAttentionMapFocusGeoJSON(regionalAttentionMapFocus, snapshot.aircraft));
-    const visible = regionalAttentionMapFocus !== null;
-    if (map.getLayer(REGIONAL_ATTENTION_MAP_LINE_LAYER_ID)) {
-      map.setLayoutProperty(REGIONAL_ATTENTION_MAP_LINE_LAYER_ID, "visibility", visible ? "visible" : "none");
-    }
-    if (map.getLayer(REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID)) {
-      map.setLayoutProperty(REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID, "visibility", visible ? "visible" : "none");
-    }
-  }, [mapReady, regionalAttentionMapFocus, snapshot.aircraft]);
-
   const readRadarLayout = useCallback(() => {
     const mapElement = mapContainerRef.current;
     if (!mapElement || typeof window === "undefined") return null;
@@ -626,84 +444,6 @@ export function AirRadarApp() {
     scheduleMapSync: scheduleAircraftMapSync,
   });
 
-  // One bounded summary request per minute for all visible radar aircraft,
-  // not one Socket.IO connection or network request per aircraft.
-  useEffect(() => {
-    if (!mapReady) return;
-    let active = true;
-    let busy = false;
-    const draw = () => {
-      const source = mapRef.current?.getSource(RXW_FPN_BADGE_SOURCE) as GeoJSONSource | undefined;
-      if (source) source.setData(createRxwFpnBadges(liveAircraftByHexRef.current, showAircraft ? rxwFpnAvailabilityRef.current : []));
-    };
-    const refresh = () => {
-      if (busy) return;
-      busy = true;
-      void fetch("/api/aircraft/communications/waypoints", { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok) throw new Error("RXW availability unavailable");
-          return await response.json() as { enabled: boolean; aircraft: RxwWaypointAvailability[] };
-        })
-        .then((payload) => {
-          if (!active) return;
-          rxwFpnAvailabilityRef.current = payload.enabled && Array.isArray(payload.aircraft)
-            ? payload.aircraft.slice(0, 256) : [];
-          draw();
-        })
-        .catch(() => {
-          if (!active) return;
-          rxwFpnAvailabilityRef.current = [];
-          draw();
-        })
-        .finally(() => { busy = false; });
-    };
-    refresh();
-    const refreshTimer = setInterval(refresh, 60_000);
-    const geometryTimer = setInterval(draw, 5_000);
-    return () => {
-      active = false;
-      clearInterval(refreshTimer);
-      clearInterval(geometryTimer);
-      rxwFpnAvailabilityRef.current = [];
-    };
-  }, [mapReady, liveAircraftByHexRef, showAircraft]);
-
-  useEffect(() => {
-    if (!mapReady) return;
-    let active = true;
-    const controller = new AbortController();
-    const clear = () => {
-      const source = mapRef.current?.getSource(RXW_FPN_ROUTE_SOURCE) as GeoJSONSource | undefined;
-      if (source) source.setData(createRxwFpnRoute(null));
-    };
-    clear();
-    if (!selectedHex) return () => { active = false; controller.abort(); };
-    let busy = false;
-    const refresh = () => {
-      if (busy) return;
-      const callsign = liveAircraftByHexRef.current.get(selectedHex)?.callsign?.trim().toUpperCase();
-      if (!callsign || !/^[A-Z0-9]{2,10}$/.test(callsign)) { clear(); return; }
-      busy = true;
-      void fetch("/api/aircraft/" + encodeURIComponent(selectedHex) + "/communications?flight=" + encodeURIComponent(callsign), {
-        cache: "no-store", signal: controller.signal,
-      })
-        .then(async (response) => {
-          if (!response.ok) throw new Error("RXW plan unavailable");
-          return await response.json() as { waypointPlan: RxwWaypointPlan | null };
-        })
-        .then((result) => {
-          if (!active || liveAircraftByHexRef.current.get(selectedHex)?.callsign?.trim().toUpperCase() !== callsign) return;
-          const source = mapRef.current?.getSource(RXW_FPN_ROUTE_SOURCE) as GeoJSONSource | undefined;
-          if (source) source.setData(createRxwFpnRoute(result.waypointPlan));
-        })
-        .catch(() => { if (active) clear(); })
-        .finally(() => { busy = false; });
-    };
-    refresh();
-    const timer = setInterval(refresh, 30_000);
-    return () => { active = false; controller.abort(); clearInterval(timer); clear(); };
-  }, [mapReady, selectedHex, liveAircraftByHexRef]);
-
   const airportsDataset = useDatasetQuery<Airport[]>({
     url: receiverPositionAvailable ? `/api/airports?lat=${encodeURIComponent(String(snapshot.receiver.lat))}&lon=${encodeURIComponent(String(snapshot.receiver.lon))}&radiusNm=${AIRPORT_MAP_RADIUS_NM}` : "/api/airports",
     cache: "force-cache",
@@ -712,7 +452,7 @@ export function AirRadarApp() {
   });
   const atcDataset = useDatasetQuery<AtcDataResponse>({
     url: "/api/atc/sectors",
-    enabled: showAtc || showAupUup,
+    enabled: showAtc,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtcDataset),
     itemCount: (value) => value.sectors.length,
@@ -742,7 +482,6 @@ export function AirRadarApp() {
     try {
       const stored = window.localStorage.getItem("airradar-watchlist");
       if (stored) setWatchlist(JSON.parse(stored) as Array<{ kind: string; value: string }>);
-      setRadarPresets(readRadarPresets(window.localStorage));
       const storedCoverage = window.localStorage.getItem("airradar-coverage");
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
       const storedSource = window.localStorage.getItem("airradar-source-filter");
@@ -755,7 +494,6 @@ export function AirRadarApp() {
       const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
       if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
       setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
-      setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
       setShowNavData(window.localStorage.getItem("airradar-nav-data-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
@@ -834,7 +572,6 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-product", radarProduct); } catch { /* optional */ } }, [radarProduct]);
   useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
   useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
-  useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
   useEffect(() => { try { window.localStorage.setItem("airradar-nav-data-layer", String(showNavData)); } catch { /* optional */ } }, [showNavData]);
   useEffect(() => {
     const map = mapRef.current;
@@ -888,110 +625,6 @@ export function AirRadarApp() {
     (aircraft: AircraftView) => normalizedWatchlist.some((rule) => matchesAircraftRule(aircraft, rule)),
     [normalizedWatchlist],
   );
-
-  const saveCurrentRadarPreset = useCallback((name: string) => {
-    const map = mapRef.current;
-    if (!map) return;
-    const center = map.getCenter();
-    const preset = createRadarPreset({
-      name,
-      camera: { longitude: center.lng, latitude: center.lat, zoom: map.getZoom() },
-      coverage,
-      mapFilters,
-      layers: {
-        showAircraft,
-        showOgn,
-        showAirports,
-        showSignificantAirports,
-        showSmallAirports,
-        showHeliports,
-        showAtc,
-        showAtsRoutes,
-        showNavData,
-        showSids,
-        showStars,
-        showSigmet,
-        showWeatherRadar,
-        showMetar,
-        showAircraftWeather,
-        showNavigationIntegrity,
-        showAupUup,
-        showRangeRings,
-      },
-      display: { colorMode, radarOpacity },
-    });
-    setRadarPresets((current) => {
-      const next = addRadarPreset(current, preset);
-      writeRadarPresets(window.localStorage, next);
-      return next;
-    });
-  }, [
-    colorMode,
-    coverage,
-    mapFilters,
-    radarOpacity,
-    showAircraft,
-    showAircraftWeather,
-    showAirports,
-    showAtc,
-    showAtsRoutes,
-    showAupUup,
-    showHeliports,
-    showMetar,
-    showNavData,
-    showNavigationIntegrity,
-    showOgn,
-    showRangeRings,
-    showSids,
-    showSigmet,
-    showSignificantAirports,
-    showSmallAirports,
-    showStars,
-    showWeatherRadar,
-  ]);
-
-  const applyRadarPreset = useCallback((preset: RadarPreset) => {
-    setCoverage(preset.coverage);
-    setMapFilters(preset.mapFilters);
-    setShowAircraft(preset.layers.showAircraft);
-    setShowOgn(preset.layers.showOgn);
-    setShowAirports(preset.layers.showAirports);
-    setShowSignificantAirports(preset.layers.showSignificantAirports);
-    setShowSmallAirports(preset.layers.showSmallAirports);
-    setShowHeliports(preset.layers.showHeliports);
-    setShowAtc(preset.layers.showAtc);
-    setShowAtsRoutes(preset.layers.showAtsRoutes);
-    setShowNavData(preset.layers.showNavData);
-    setShowSids(preset.layers.showSids);
-    setShowStars(preset.layers.showStars);
-    setShowSigmet(preset.layers.showSigmet);
-    setShowWeatherRadar(preset.layers.showWeatherRadar);
-    setShowMetar(preset.layers.showMetar);
-    setShowAircraftWeather(preset.layers.showAircraftWeather);
-    setShowNavigationIntegrity(preset.layers.showNavigationIntegrity);
-    setShowAupUup(preset.layers.showAupUup);
-    setShowRangeRings(preset.layers.showRangeRings);
-    setColorMode(preset.display.colorMode);
-    setRadarOpacity(preset.display.radarOpacity);
-    setRadarPlaying(false);
-    const map = mapRef.current;
-    if (map) {
-      map.easeTo({
-        center: [preset.camera.longitude, preset.camera.latitude],
-        zoom: preset.camera.zoom,
-        padding: currentRadarPadding(),
-        duration: prefersReducedMotion() ? 0 : 500,
-      });
-    }
-  }, [currentRadarPadding, setRadarPlaying]);
-
-  const deleteRadarPreset = useCallback((id: string) => {
-    setRadarPresets((current) => {
-      const next = current.filter((preset) => preset.id !== id);
-      writeRadarPresets(window.localStorage, next);
-      return next;
-    });
-  }, []);
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
@@ -1316,7 +949,6 @@ export function AirRadarApp() {
         radarImageUrl: EMPTY_RADAR_PNG,
         radarCoordinates: WEATHER_RADAR_COORDINATES,
         emptyAts: EMPTY_ATS_GEOJSON,
-        emptyProcedures: EMPTY_PROCEDURE_GEOJSON,
         emptyNavigationIntegrity: EMPTY_NAVIGATION_INTEGRITY_GEOJSON,
       });
       const openAtsSegment = (event: MapLayerMouseEvent) => {
@@ -1340,233 +972,6 @@ export function AirRadarApp() {
       map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 2.6, 13, 3.4] } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID, { type: "geojson", data: emptyOperationalTwinMapGeoJSON() });
-      map.addSource(AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID, { type: "geojson", data: emptyAircraftOperationalFocusMapGeoJSON() });
-      map.addSource(REGIONAL_ATTENTION_MAP_SOURCE_ID, { type: "geojson", data: emptyRegionalAttentionMapFocusGeoJSON() });
-      map.addLayer({
-        id: REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
-        type: "line",
-        source: REGIONAL_ATTENTION_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "line"],
-        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": AIRRADAR_MAP_THEME.warning,
-          "line-opacity": 0.72,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3],
-          "line-dasharray": [2, 2],
-        },
-      });
-      map.addLayer({
-        id: REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
-        type: "circle",
-        source: REGIONAL_ATTENTION_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "aircraft"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": AIRRADAR_MAP_THEME.warning,
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 9, 4.5, 13, 6],
-          "circle-opacity": 0.3,
-          "circle-stroke-color": AIRRADAR_MAP_THEME.selectedStrong,
-          "circle-stroke-width": 1.5,
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
-        type: "fill",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "uncertainty"],
-        layout: { visibility: "none" },
-        paint: { "fill-color": AIRRADAR_MAP_THEME.selected, "fill-opacity": 0.075 },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_ROUTE_LAYER_ID,
-        type: "line",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["all", ["==", ["get", "kind"], "corridor"], ["==", ["get", "mode"], "ROUTE_AWARE"]],
-        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": AIRRADAR_MAP_THEME.selectedStrong,
-          "line-opacity": 0.9,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.6, 8, 2.4, 13, 3.4],
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_KINEMATIC_LAYER_ID,
-        type: "line",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["all", ["==", ["get", "kind"], "corridor"], ["==", ["get", "mode"], "KINEMATIC"]],
-        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": AIRRADAR_MAP_THEME.selectedStrong,
-          "line-opacity": 0.82,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.2, 13, 3.2],
-          "line-dasharray": [2, 2],
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
-        type: "circle",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "milestone"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": AIRRADAR_MAP_THEME.selectedStrong,
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 2.4, 9, 3.8, 13, 5],
-          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
-          "circle-stroke-width": 1.2,
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
-        type: "symbol",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        minzoom: 5.5,
-        filter: ["==", ["get", "kind"], "milestone"],
-        layout: {
-          visibility: "none",
-          "text-field": ["get", "label"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 9,
-          "text-offset": [0, 1.1],
-          "text-padding": 5,
-          "text-allow-overlap": false,
-          "text-ignore-placement": false,
-        },
-        paint: {
-          "text-color": AIRRADAR_MAP_THEME.selectedStrong,
-          "text-halo-color": AIRRADAR_MAP_THEME.outline,
-          "text-halo-width": 1,
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_EVENT_LAYER_ID,
-        type: "circle",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "event"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": ["match", ["get", "eventType"],
-            "SIGMET_INTERSECTION", AIRRADAR_MAP_THEME.hazard,
-            "PLANNED_AIRSPACE", AIRRADAR_MAP_THEME.airspace,
-            "ATC_SECTOR_ENTRY", AIRRADAR_MAP_THEME.atc.highlight,
-            "RUNWAY_EXPECTATION", AIRRADAR_MAP_THEME.accent,
-            AIRRADAR_MAP_THEME.weather],
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3.2, 9, 4.6, 13, 6],
-          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
-          "circle-stroke-width": 1.4,
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
-        type: "circle",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "weather-event"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": ["match", ["get", "severity"],
-            "SEVERE", AIRRADAR_MAP_THEME.hazard,
-            "MODERATE", AIRRADAR_MAP_THEME.warning,
-            AIRRADAR_MAP_THEME.weather],
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4, 9, 5.5, 13, 7],
-          "circle-opacity": 0.8,
-          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
-          "circle-stroke-width": 1.5,
-        },
-      });
-      map.addLayer({
-        id: OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID,
-        type: "circle",
-        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "navigation-integrity-event"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": ["match", ["get", "severity"],
-            "SEVERE", AIRRADAR_MAP_THEME.hazard,
-            "DEGRADED", AIRRADAR_MAP_THEME.warning,
-            AIRRADAR_MAP_THEME.accent],
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4.4, 9, 6, 13, 7.6],
-          "circle-opacity": 0.86,
-          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
-          "circle-stroke-width": 1.6,
-        },
-      });
-      map.addLayer({
-        id: AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
-        type: "line",
-        source: AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "corridor"],
-        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["match", ["get", "level"],
-            "ATTENTION", AIRRADAR_MAP_THEME.hazard,
-            AIRRADAR_MAP_THEME.warning],
-          "line-opacity": 0.96,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4.2, 13, 5.4],
-        },
-      });
-      map.addLayer({
-        id: AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
-        type: "circle",
-        source: AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
-        filter: ["==", ["get", "kind"], "target"],
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": ["match", ["get", "level"],
-            "ATTENTION", AIRRADAR_MAP_THEME.hazard,
-            AIRRADAR_MAP_THEME.warning],
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 6, 9, 8, 13, 10],
-          "circle-opacity": 0.34,
-          "circle-stroke-color": ["match", ["get", "level"],
-            "ATTENTION", AIRRADAR_MAP_THEME.hazard,
-            AIRRADAR_MAP_THEME.selectedStrong],
-          "circle-stroke-width": 2.4,
-        },
-      });
-      const revealOperationalFocusFromMap = (event: MapLayerMouseEvent) => {
-        const itemId = event.features?.[0]?.properties?.itemId;
-        const hex = selectedHexRef.current;
-        if (typeof itemId !== "string" || !itemId || !hex) return;
-        router.replace(aircraftOperationalFocusRadarHref(hex, itemId), { scroll: false });
-        setOperationalFocusRevealVersion((value) => value + 1);
-      };
-      for (const layer of [
-        AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
-        AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
-      ] as const) {
-        map.on("click", layer, revealOperationalFocusFromMap);
-        map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
-      }
-      const openOperationalTwinMapEvent = (event: MapLayerMouseEvent) => {
-        const properties = event.features?.[0]?.properties;
-        if (!properties) return;
-        const content = document.createElement("div");
-        content.className = "map-popup";
-        const title = document.createElement("strong");
-        title.textContent = String(properties.title ?? properties.eventType ?? t.operationalTwin.title);
-        const detail = document.createElement("span");
-        const offset = Number(properties.offsetMinutes);
-        const offsetLabel = Number.isFinite(offset) ? relativeTwinMapOffset(offset) : "";
-        detail.textContent = [
-          offsetLabel,
-          properties.eventType ? String(properties.eventType).replaceAll("_", " ") : null,
-          properties.confidence ? String(properties.confidence) : null,
-          properties.provenance ? String(properties.provenance) : null,
-          properties.severity ? String(properties.severity) : null,
-          properties.source ? String(properties.source) : null,
-          properties.detail ? String(properties.detail) : null,
-        ].filter(Boolean).join(" · ");
-        content.append(title, detail);
-        new maplibregl.Popup({ closeButton: true, maxWidth: "320px" })
-          .setLngLat(event.lngLat)
-          .setDOMContent(content)
-          .addTo(map);
-      };
-      for (const layer of [OPERATIONAL_TWIN_EVENT_LAYER_ID, OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID, OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID] as const) {
-        map.on("click", layer, openOperationalTwinMapEvent);
-        map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
-      }
       map.addLayer({
         id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
         type: "line",
@@ -1653,33 +1058,10 @@ export function AirRadarApp() {
         const activation = properties.activationStatus === "ACTIVE" ? t.atc.activationValues.active : properties.activationStatus === "INACTIVE" ? t.atc.activationValues.inactive : t.atc.activationValues.unknown;
         body.textContent = `${t.atc.activation}: ${activation} · ${String(properties.service ?? "")} · ${altitude} · ${t.atc.primaryFrequency}: ${String(properties.primaryFrequency ?? t.common.emptyValue)} · ${t.atc.alternates}: ${String(properties.alternateFrequencies || t.common.emptyValue)} · ${t.atc.source}: ${String(properties.source ?? t.common.emptyValue)} · ${t.atc.sourceReference}: ${String(properties.sourceReference ?? t.common.emptyValue)} · ${t.atc.effectiveDate}: ${String(properties.validFrom ?? t.common.emptyValue)} · ${t.atc.lastVerified}: ${String(properties.lastVerifiedAt ?? t.common.emptyValue)}`;
         content.append(title, body);
-        const planState = String(properties.airspacePlanState ?? "none");
-        if (planState === "planned-now" || planState === "upcoming") {
-          const plan = document.createElement("span");
-          const planStatus = planState === "planned-now" ? activityT.plannedNow : activityT.upcoming;
-          const staleNote = properties.airspacePlanStale === true ? ` · ${activityT.stale}: ${activityT.staleNote}` : "";
-          const responsibleUnit = properties.airspacePlanResponsibleUnit ? ` · ${activityT.responsibleUnit}: ${String(properties.airspacePlanResponsibleUnit)}` : "";
-          const activity = properties.airspacePlanActivity ? ` · ${activityT.activity}: ${String(properties.airspacePlanActivity)}` : "";
-          plan.textContent = `${activityT.plannedAllocation}: ${planStatus} · ${activityT.timeWindow}: ${formatAirspaceUtc(String(properties.airspacePlanStartsAt))}–${formatAirspaceUtc(String(properties.airspacePlanEndsAt))} · ${activityT.levels}: ${String(properties.airspacePlanLowerLimit)}–${String(properties.airspacePlanUpperLimit)} · ${activityT.source}: ${String(properties.airspacePlanSource)} #${String(properties.airspacePlanSequence)}${responsibleUnit}${activity}${staleNote}. ${activityT.disclaimer}`;
-          content.append(plan);
-        }
         new maplibregl.Popup({ closeButton: true, maxWidth: "360px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
       });
       map.on("mouseenter", "atc-sectors-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
-      map.on("click", "airspace-plan-fill", (event: MapLayerMouseEvent) => {
-        const properties = event.features?.[0]?.properties;
-        if (!properties) return;
-        const content = document.createElement("div"); content.className = "map-popup";
-        const title = document.createElement("strong"); title.textContent = String(properties.name ?? t.layers.airspaceActivity);
-        const body = document.createElement("span");
-        const planned = String(properties.airspacePlanState ?? "") === "planned-now";
-        body.textContent = `${planned ? t.layers.airspacePlannedActive : t.layers.airspaceUnknown} · ${t.layers.valid}: ${formatAirspaceUtc(String(properties.airspacePlanStartsAt ?? ""))}–${formatAirspaceUtc(String(properties.airspacePlanEndsAt ?? ""))} · ${t.layers.source}: ${String(properties.airspacePlanSource ?? t.common.emptyValue)} · ${t.layers.airspaceDisclaimer}`;
-        content.append(title, body);
-        new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
-      });
-      map.on("mouseenter", "airspace-plan-fill", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "airspace-plan-fill", () => { map.getCanvas().style.cursor = ""; });
       map.on("click", "metar-symbols", (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties;
         if (!properties) return;
@@ -1745,47 +1127,6 @@ export function AirRadarApp() {
         },
       });
 
-      // Low-volume, independent ACARS FPN indicator. It does not alter aircraft
-      // icon colors, selection/emergency priority, live positions or the SSE.
-      map.addSource(RXW_FPN_BADGE_SOURCE, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: RXW_FPN_BADGE_CIRCLE, type: "circle", source: RXW_FPN_BADGE_SOURCE, minzoom: 5.8,
-        paint: { "circle-radius": 17, "circle-opacity": 0, "circle-stroke-color": "#e6bb65", "circle-stroke-width": 1.8, "circle-stroke-opacity": 0.8 },
-      });
-      map.addLayer({
-        id: RXW_FPN_BADGE_LABEL, type: "symbol", source: RXW_FPN_BADGE_SOURCE, minzoom: 6.2,
-        layout: { "text-field": "FP", "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [1.65, -1.5], "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true },
-        paint: { "text-color": "#e6bb65", "text-halo-color": "#091725", "text-halo-width": 1.6 },
-      });
-
-      // Dashed, reported (unverified) H1/FPN route of the selected aircraft.
-      // We draw only adjacent georeferenced fixes, never guessed straight lines.
-
-      for (const badgeLayer of [RXW_FPN_BADGE_CIRCLE, RXW_FPN_BADGE_LABEL]) {
-        map.on("click", badgeLayer, (event: MapLayerMouseEvent) => {
-          const hex = event.features?.[0]?.properties?.icaoHex;
-          if (typeof hex === "string") selectAircraft(hex);
-        });
-        map.on("mouseenter", badgeLayer, () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", badgeLayer, () => { map.getCanvas().style.cursor = ""; });
-      }
-      map.addSource(RXW_FPN_ROUTE_SOURCE, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: RXW_FPN_ROUTE_LINE, type: "line", source: RXW_FPN_ROUTE_SOURCE,
-        filter: ["==", ["geometry-type"], "LineString"],
-        paint: { "line-color": "#e6bb65", "line-opacity": 0.8, "line-width": 2, "line-dasharray": [2, 2] },
-      });
-      map.addLayer({
-        id: RXW_FPN_ROUTE_POINTS, type: "circle", source: RXW_FPN_ROUTE_SOURCE,
-        filter: ["==", ["geometry-type"], "Point"],
-        paint: { "circle-radius": 3.6, "circle-color": "#e6bb65", "circle-stroke-width": 1.2, "circle-stroke-color": "#091725" },
-      });
-      map.addLayer({
-        id: RXW_FPN_ROUTE_LABEL, type: "symbol", source: RXW_FPN_ROUTE_SOURCE,
-        filter: ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "labelVisible"], true]],
-        layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 1.3], "text-allow-overlap": false, "text-optional": true },
-        paint: { "text-color": "#e6bb65", "text-halo-color": "#091725", "text-halo-width": 1.1 },
-      });
       map.addSource(OGN_LABEL_SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -1925,8 +1266,6 @@ export function AirRadarApp() {
       aircraftWebglLabelsUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
       if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
       aircraftMapSyncFrameRef.current = null;
-      receiverMarkerRef.current?.remove();
-      receiverMarkerRef.current = null;
       for (const handle of aircraftMarkers.values()) handle.marker.remove();
       aircraftMarkers.clear();
       for (const handle of ognMarkers.values()) handle.marker.remove();
@@ -1969,34 +1308,12 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     const receiver = snapshot.receiver;
     receiverRef.current = receiver;
-    const rings = map.getSource("range-rings") as GeoJSONSource | undefined;
-    const rangeLayer = map.getLayer("range-rings-line");
-    if (receiver.lat === null || receiver.lon === null) {
-      receiverMarkerRef.current?.remove();
-      receiverMarkerRef.current = null;
-      rings?.setData({ type: "FeatureCollection", features: [] });
-      if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", "none");
-      if (map.getLayer("range-rings-label")) map.setLayoutProperty("range-rings-label", "visibility", "none");
-      return;
-    }
-    const receiverWithCoordinates: ReceiverPosition = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
-    if (!receiverMarkerRef.current) {
-      const receiverElement = document.createElement("div");
-      receiverElement.className = "receiver-marker";
-      receiverElement.setAttribute("aria-label", t.radar.receiverPosition);
-      receiverMarkerRef.current = new maplibregl.Marker({ element: receiverElement, anchor: "center" })
-        .setLngLat([receiver.lon, receiver.lat])
-        .addTo(map);
-    }
-    receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
-    rings?.setData(createRangeRingsGeoJSON(receiverWithCoordinates, showRangeRings ? RANGE_RING_RADII_KM : []));
-    if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", showRangeRings ? "visible" : "none");
-    if (map.getLayer("range-rings-label")) map.setLayoutProperty("range-rings-label", "visibility", showRangeRings ? "visible" : "none");
+    if (receiver.lat === null || receiver.lon === null) return;
     if (shouldRecenterOnReceiver(snapshot.provider, centeredReceiverRef.current, receiver)) {
       map.jumpTo({ center: [receiver.lon, receiver.lat] });
-      centeredReceiverRef.current = receiverWithCoordinates;
+      centeredReceiverRef.current = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
     }
-  }, [mapReady, showRangeRings, snapshot.provider, snapshot.receiver]);
+  }, [mapReady, snapshot.provider, snapshot.receiver]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2432,33 +1749,11 @@ export function AirRadarApp() {
     map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: prefersReducedMotion() ? 0 : 700 });
   }, [atsPointFocus, atsRoutes, mapReady]);
 
-  useEffect(() => {
-    if (!showSids && !showStars) { setProcedures([]); return; }
-    const controller = new AbortController();
-    fetch("/api/procedures", { cache: "force-cache", signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ procedures?: Procedure[] }> : { procedures: [] })
-      .then((result) => setProcedures(result.procedures ?? []))
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [showSids, showStars]);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    (map.getSource("procedures-sid") as GeoJSONSource | undefined)?.setData(createProcedureGeoJSON(procedures.filter((procedure) => procedure.type === "SID"), "SID"));
-    (map.getSource("procedures-star") as GeoJSONSource | undefined)?.setData(createProcedureGeoJSON(procedures.filter((procedure) => procedure.type === "STAR"), "STAR"));
-    if (map.getLayer("procedures-sid-line")) map.setLayoutProperty("procedures-sid-line", "visibility", showSids ? "visible" : "none");
-    if (map.getLayer("procedures-star-line")) map.setLayoutProperty("procedures-star-line", "visibility", showStars ? "visible" : "none");
-  }, [mapReady, procedures, showSids, showStars]);
-
-  // Data payloads depend on ATC data/plan activity, not on camera padding,
-  // drawer state or MapLibre readiness. Avoid re-creating sector polygons and
-  // re-sending them to WebGL when only the overlay visibility changes.
-  const atcVisible = showAtc || showAupUup;
-  const visibleAirspaceActivity = showAupUup ? airspaceActivity : null;
+  // Keep published ATC sector geometry independent from retired planned-activity feeds.
   const atcGeoJson = useMemo(
-    () => createAtcGeoJSON(atcData.sectors, atcVisible, visibleAirspaceActivity),
-    [atcData.sectors, atcVisible, visibleAirspaceActivity],
+    () => createAtcGeoJSON(atcData.sectors, showAtc),
+    [atcData.sectors, showAtc],
   );
   const transmitterGeoJson = useMemo<FeatureCollection>(() => ({
     type: "FeatureCollection",
@@ -2486,10 +1781,7 @@ export function AirRadarApp() {
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-    for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
-    }
-  }, [mapReady, showAtc, showAupUup]);
+  }, [mapReady, showAtc]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2596,126 +1888,22 @@ export function AirRadarApp() {
     ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
     : selectedAircraftSnapshot, [aircraftDetail, selectedAircraftSnapshot]);
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
-  const selectedRouteCorridor = useRouteCorridorIntelligence(selectedAircraft);
+  const selectedRoute = useSelectedRoute(selectedAircraft);
   const selectedSigmetContext = useMemo(() => aircraftSigmetContext(selectedAircraft, sigmetData), [selectedAircraft, sigmetData]);
-  const selectedSigmetDeviation = useMemo(() => detectSigmetTrajectoryDeviation(
-    selectedAircraft,
-    selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
-    sigmetData,
-  ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
   const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
   const {
     atcContext: selectedAtcContext,
-    routeWeather: selectedRouteWeather,
-    operationalTwin: selectedOperationalTwin,
-    operationalFocusChanges: selectedOperationalFocusChanges,
-    intelligenceEvents: selectedIntelligenceEvents,
   } = useRadarAircraftContext({ aircraftHex: contextAircraftHex, hasPosition: contextHasPosition });
-  const selectedWeatherAvoidance = useMemo(() => buildWeatherAvoidanceIntelligence({
-    deviation: selectedSigmetDeviation,
-    conformance: selectedRouteCorridor.conformance,
-    weatherCorridor: selectedOperationalTwin?.status === "available"
-      ? selectedOperationalTwin.weatherCorridor
-      : null,
-  }), [selectedOperationalTwin, selectedRouteCorridor.conformance, selectedSigmetDeviation]);
-
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
-  const activeOperationalFocusItem = useMemo(() => {
-    if (
-      !selectedAircraftVisible
-      || !operationalFocusMapId
-      || selectedOperationalTwin?.status !== "available"
-      || aircraftFocus !== selectedOperationalTwin.aircraft.icaoHex.toUpperCase()
-    ) return null;
-    return selectedOperationalTwin.operationalFocus?.items.find((item) => item.id === operationalFocusMapId) ?? null;
-  }, [
-    aircraftFocus,
-    operationalFocusMapId,
-    selectedAircraftVisible,
-    selectedOperationalTwin,
-  ]);
-  const clearOperationalFocusMap = useCallback(() => {
-    if (!aircraftFocus) return;
-    router.replace(aircraftOperationalFocusClearHref(aircraftFocus), { scroll: false });
-  }, [aircraftFocus, router]);
-  const focusOperationalItemFromDrawer = useCallback((itemId: string) => {
-    if (!selectedAircraft) return;
-    router.replace(aircraftOperationalFocusRadarHref(selectedAircraft.icaoHex, itemId), { scroll: false });
-  }, [router, selectedAircraft]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const availableTwin = selectedAircraftVisible && selectedOperationalTwin?.status === "available"
-      ? selectedOperationalTwin
-      : null;
-    const twinSource = map.getSource(OPERATIONAL_TWIN_MAP_SOURCE_ID) as GeoJSONSource | undefined;
-    twinSource?.setData(createOperationalTwinMapGeoJSON(availableTwin));
-    const visibility = availableTwin ? "visible" : "none";
-    for (const layer of [
-      OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
-      OPERATIONAL_TWIN_ROUTE_LAYER_ID,
-      OPERATIONAL_TWIN_KINEMATIC_LAYER_ID,
-      OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
-      OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
-      OPERATIONAL_TWIN_EVENT_LAYER_ID,
-      OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
-      OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID,
-    ] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
-    }
-  }, [mapReady, selectedAircraftVisible, selectedOperationalTwin]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const availableTwin = selectedAircraftVisible
-      && selectedOperationalTwin?.status === "available"
-      && aircraftFocus === selectedOperationalTwin.aircraft.icaoHex.toUpperCase()
-      ? selectedOperationalTwin
-      : null;
-    const target = resolveAircraftOperationalFocusMapTarget(availableTwin, operationalFocusMapId);
-    const source = map.getSource(AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID) as GeoJSONSource | undefined;
-    source?.setData(createAircraftOperationalFocusMapGeoJSON(availableTwin, operationalFocusMapId));
-    const visibility = target ? "visible" : "none";
-    for (const layer of [
-      AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
-      AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
-    ] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
-    }
-
-    if (!target || !availableTwin) {
-      if (!operationalFocusMapId) operationalFocusMapCameraKeyRef.current = null;
-      return;
-    }
-    const cameraKey = `${availableTwin.aircraft.icaoHex}:${target.itemId}`;
-    if (operationalFocusMapCameraKeyRef.current === cameraKey) return;
-    operationalFocusMapCameraKeyRef.current = cameraKey;
-    map.easeTo({
-      center: [target.lon, target.lat],
-      zoom: Math.max(map.getZoom(), 9),
-      padding: currentRadarPadding(),
-      duration: prefersReducedMotion() ? 0 : 650,
-    });
-  }, [
-    aircraftFocus,
-    currentRadarPadding,
-    mapReady,
-    operationalFocusMapId,
-    selectedAircraftVisible,
-    selectedOperationalTwin,
-  ]);
-
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource(ROUTE_INTELLIGENCE_SOURCE_ID) as GeoJSONSource | undefined;
     const geojson = selectedAircraftVisible
-      ? createRouteIntelligenceGeoJSON(selectedRouteCorridor.route)
+      ? createRouteIntelligenceGeoJSON(selectedRoute.route)
       : emptyRouteIntelligenceGeoJSON();
     const active = selectedAircraftVisible && geojson.features.length > 0;
     routeIntelligenceActiveRef.current = active;
@@ -2726,7 +1914,7 @@ export function AirRadarApp() {
     for (const layer of [ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && !active ? "visible" : "none");
     }
-  }, [mapReady, selectedAircraftVisible, selectedRouteCorridor.route]);
+  }, [mapReady, selectedAircraftVisible, selectedRoute.route]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2826,7 +2014,7 @@ export function AirRadarApp() {
   }
 
   return (
-    <main className="radar-shell" data-presentation-mode={presentationMode ? "true" : undefined}>
+    <main className="radar-shell">
       <AirRadarTopbar heading radarPage meta={
         <>
           <div className="topbar-ops-meta">
@@ -2849,7 +2037,7 @@ export function AirRadarApp() {
 
       <div className="radar-workspace" data-map-focus={mapFocus && drawerState === "closed" ? "true" : "false"}>
         <RadarNavRail showAtc={showAtc} onShowAtcChange={setShowAtc} showAirports={showAirports} onShowAirportsChange={setShowAirports} />
-        <section ref={radarContentRef} className="radar-content" data-presentation-mode={presentationMode ? "true" : undefined}>
+        <section ref={radarContentRef} className="radar-content">
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
@@ -2862,8 +2050,6 @@ export function AirRadarApp() {
               drawerOpen={drawerState !== "closed"}
               trafficTriggerRef={trafficTriggerRef}
               onOpenTraffic={openTrafficDrawer}
-              presentationControls={<RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />}
-              presetMenu={<RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />}
             >
               <RadarMapLayerMenu
                 mapAppearance={mapAppearance}
@@ -2894,10 +2080,6 @@ export function AirRadarApp() {
                 showNavData={showNavData}
                 onShowNavDataChange={setShowNavData}
                 navDataDataset={navDataDataset}
-                showSids={showSids}
-                onShowSidsChange={setShowSids}
-                showStars={showStars}
-                onShowStarsChange={setShowStars}
                 sigmetEnabled={sigmetEnabled}
                 showSigmet={showSigmet}
                 onShowSigmetChange={setShowSigmet}
@@ -2919,12 +2101,6 @@ export function AirRadarApp() {
                 onShowAircraftWeatherChange={setShowAircraftWeather}
                 showNavigationIntegrity={showNavigationIntegrity}
                 onShowNavigationIntegrityChange={setShowNavigationIntegrity}
-                showAupUup={showAupUup}
-                onShowAupUupChange={setShowAupUup}
-                airspaceDataset={airspaceDataset}
-                receiverPositionAvailable={receiverPositionAvailable}
-                showRangeRings={showRangeRings}
-                onShowRangeRingsChange={setShowRangeRings}
                 colorMode={colorMode}
                 onColorModeChange={setColorMode}
               />
@@ -2957,18 +2133,10 @@ export function AirRadarApp() {
               onSelect={selectAircraft}
               onFit={focusMultiAircraft}
             />
-            {activeOperationalFocusItem ? (
-              <RadarOperationalFocusCard
-                item={activeOperationalFocusItem}
-                onClear={clearOperationalFocusMap}
-              />
-            ) : null}
             {selectedAircraftVisible && selectedAircraft ? <RadarFlightFollowHud
               aircraft={selectedAircraft}
               compact={drawerState === "aircraft"}
-              corridor={selectedRouteCorridor.corridor}
-              conformance={selectedRouteCorridor.conformance}
-              operationalTwin={selectedOperationalTwin}
+              route={selectedRoute.route}
               following={followSelected}
               onToggle={() => setFollowSelected((value) => !value)}
             /> : null}
@@ -2988,9 +2156,8 @@ export function AirRadarApp() {
               </div> : <div className="map-layer-notice" role="status">{weatherView.state === "unavailable" ? t.layers.radarUnavailable : t.radarQuickActions.weatherLoading}</div>}
             </div> : null}
             {networkNotice && <div className="map-source-notice"><span className="network-notice">{networkNotice}</span></div>}
-            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || (selectedAircraftVisible && selectedOperationalTwin?.status === "available") || showAtc || showAtsRoutes || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
-              {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
-              {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
+            {colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showMetar || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
+              {showAtc && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span></span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
               {showMetar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.metar}</strong><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span></span>}
               {showNavigationIntegrity && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.navigationIntegrity}</strong><span><i className="legend-line planned" /> {t.layers.navigationIntegrityReduced}</span><small>{t.layers.navigationIntegrityDisclaimer}</small></span>}
@@ -3003,7 +2170,6 @@ export function AirRadarApp() {
                 {routeIntelligenceActiveRef.current && <span><i className="legend-line current-route" /> {visualSystemV5EText(t.locale).routeCurrent}</span>}
                 <small>{visualSystemV5EText(t.locale).routeUncertainty}</small>
               </span>}
-              {selectedAircraftVisible && selectedOperationalTwin?.status === "available" && <span className="layer-legend" data-testid="operational-twin-map-legend"><strong>{t.operationalTwin.title}</strong><span><i className="legend-line remaining" /> {selectedOperationalTwin.corridor.mode === "ROUTE_AWARE" ? t.operationalTwin.routeAware : t.operationalTwin.kinematic}</span><small>± {formatNumber(selectedOperationalTwin.corridor.maxUncertaintyNm, 1)} NM · {selectedOperationalTwin.corridor.horizonMinutes} min</small></span>}
             </Panel> : null}
             {showAircraftWeather && <AircraftWeatherPanel
               center={aircraftWeatherCenter}
@@ -3083,18 +2249,8 @@ export function AirRadarApp() {
             historyTrail={selectedAircraft && selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
             atcContext={selectedAtcContext}
             sigmetContext={selectedSigmetContext}
-            sigmetDeviation={selectedSigmetDeviation}
-            weatherAvoidance={selectedWeatherAvoidance}
             sigmetStale={sigmetData.stale}
-            routeWeather={selectedRouteWeather}
-            routeCorridor={selectedRouteCorridor.corridor}
-            routeConformance={selectedRouteCorridor.conformance}
-            intelligenceEvents={selectedIntelligenceEvents}
-            operationalTwin={selectedOperationalTwin}
-            operationalFocusChanges={selectedOperationalFocusChanges}
-            operationalFocusItemId={operationalFocusMapId}
-            operationalFocusRevealVersion={operationalFocusRevealVersion}
-            onOperationalFocus={focusOperationalItemFromDrawer}
+            selectedRoute={selectedRoute.route}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
             onClose={closeRadarDrawer}

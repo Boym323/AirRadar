@@ -1,26 +1,33 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const twinSource = readFileSync(new URL("../lib/server/operational-twin.ts", import.meta.url), "utf8");
-const corridorSource = readFileSync(new URL("../lib/weather/corridor-intelligence.ts", import.meta.url), "utf8");
-const fusionSource = readFileSync(new URL("../lib/server/weather-fusion.ts", import.meta.url), "utf8");
-const aircraftStateSource = readFileSync(new URL("../lib/server/aircraft-state.ts", import.meta.url), "utf8");
+const base = new URL("../", import.meta.url);
+const exists = (path: string) => existsSync(new URL(path, base));
 
-describe("retired Operational Twin model-wind lane", () => {
-  it("does not fetch model wind or alter event timing in the Twin", () => {
-    expect(twinSource).not.toContain("defaultWindAloftProvider");
-    expect(twinSource).not.toContain("windTimingShadow");
-    expect(twinSource).not.toContain("windTimingPromotion");
-    expect(corridorSource).not.toContain("ICON_EU");
-    expect(corridorSource).not.toContain("windSnapshots");
-    expect(corridorSource).toContain("buildPirepEvents");
-    expect(corridorSource).toContain("buildSigmetEvents");
-    expect(aircraftStateSource).not.toContain("buildWeatherCorridorIntelligence");
-    expect(aircraftStateSource).not.toContain("defaultWindAloftProvider.getWind");
+describe("retired Weather Fusion and analytic corridor boundary", () => {
+  it("does not retain weather-fusion or model-based meteorological corridor evaluators", () => {
+    for (const path of [
+      "lib/server/weather-fusion.ts",
+      "lib/weather/fusion.ts",
+      "lib/weather/corridor-intelligence.ts",
+      "app/api/aircraft/[hex]/weather-fusion/route.ts",
+      "components/aircraft-weather-fusion.tsx",
+    ]) expect(exists(path), path).toBe(false);
+    const state = readFileSync(new URL("lib/server/aircraft-state.ts", base), "utf8");
+    expect(state).not.toContain("buildWeatherCorridorIntelligence");
+    expect(state).not.toContain("buildWeatherFusion");
+    expect(state).not.toContain("defaultWindAloftProvider.getWind");
   });
 
-  it("keeps the shared model-wind provider in independent Weather Fusion", () => {
-    expect(fusionSource).toContain("defaultWindAloftProvider.getWind");
-    expect(fusionSource).toContain("buildAircraftWindContext");
+  it("preserves actual weather products, observations and SIGMET without W12 route analysis", () => {
+    for (const path of [
+      "lib/server/aviation-weather-provider.ts",
+      "lib/server/aircraft-weather.ts",
+      "lib/weather/aircraft-sigmet-context.ts",
+      "app/api/weather/airport/route.ts",
+      "app/api/weather/sigmet/route.ts",
+      "components/airport-weather.tsx",
+    ]) expect(exists(path), path).toBe(true);
+    expect(exists("lib/weather/route-weather-context.ts")).toBe(false);
   });
 });

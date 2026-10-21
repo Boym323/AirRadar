@@ -565,7 +565,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .ogn-empty { padding: 7px 0 5px; color: var(--muted); font-size: 10px; }
 .ogn-list { display: grid; gap: 3px; }
 .ogn-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 5px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); text-align: left; }
-
 .ogn-row-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; color: var(--mint); font-size: 17px; }
 .ogn-row-main { min-width: 0; flex: 1; }
 .ogn-row-topline { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -656,7 +655,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .detail-section .detail-grid { margin-top: 11px; }
 .detail-atc-probable { grid-column: 1 / -1; color: var(--mint); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .detail-disclaimer { grid-column: 1 / -1; color: var(--muted); font-size: 10px; line-height: 1.45; padding: 8px; border-left: 2px solid var(--amber); background: rgba(243, 185, 95, .06); }
-
 .detail-item-label { color: var(--muted); font-size: var(--font-size-2xs); text-transform: uppercase; letter-spacing: .08em; }
 .detail-item-value { color: var(--text); font-size: 13px; margin-top: 3px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .detail-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 10px; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -970,7 +968,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .radar-traffic-hero-metrics > div { display: grid; gap: 2px; min-width: 0; }
 .radar-traffic-hero-metrics strong { color: var(--text-primary); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
 .radar-traffic-hero-metrics span { color: var(--text-muted); font-size: var(--font-size-2xs); text-transform: uppercase; }
-.receiver-marker { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(243, 185, 95, .2); box-shadow: 0 0 0 7px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { background: rgba(8,17,29,.87) !important; border: 1px solid var(--line) !important; }
 .maplibregl-ctrl-group button { filter: invert(1) hue-rotate(160deg); }
 .maplibregl-ctrl-attrib { background: rgba(8,17,29,.75) !important; color: var(--muted) !important; }
@@ -1703,7 +1700,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .topbar { height: 62px; padding: 0 14px; }
   .brand { min-width: 0; gap: 7px; flex: 0 0 auto; }
   .brand-mark { width: 28px; height: 28px; }
-  
   .brand-subtitle, .topbar-receiver, .topbar-secondary-status { display: none; }
   .topbar-nav { display: none; }
   .global-search { flex: 1 1 auto; min-width: 0; margin: 0 5px; }
@@ -1716,7 +1712,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .map-overlay-card { padding: 9px 10px; }
   .map-summary-card { gap: 9px; max-width: calc(100vw - 92px); }
   .map-summary-item strong { font-size: 12px; }
-  
   .map-layers-menu { left: auto; right: 0; max-width: calc(100vw - 20px); }
   .range-legend { display: none; }
   .layer-legend { display: none; }
@@ -1770,7 +1765,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .aircraft-recent-card { padding-left: 15px; padding-right: 15px; }
   .route-weather-heading, .route-weather-airport-heading, .weather-taf-period-header { align-items: flex-start; flex-direction: column; }
   .airport-layout { grid-template-columns: 1fr; }
-  
   .airport-map { height: 260px; }
   .airport-info-grid { grid-template-columns: 1fr 1fr; padding-left: 15px; padding-right: 15px; }
   .airport-card > h2 { padding-left: 15px; padding-right: 15px; }
@@ -1838,7 +1832,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .recap-daily-event-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .recap-timeline-list li { grid-template-columns: 56px minmax(0, 1fr); gap: var(--space-2); }
   .recap-timeline-aircraft { grid-column: 2; }
-  
   .system-fields { padding-left: 15px; padding-right: 15px; gap: 12px; }
 }
 
@@ -2155,11 +2148,9 @@ button, input, select, textarea { color-scheme: dark; }
 .primary-button:hover { background: var(--accent-hover); }
 .detail-footer { margin-top: 17px; padding-top: 13px; border-top-color: var(--border); font-size: 11px; }
 
-.receiver-marker { width: 18px; height: 18px; border-color: var(--warning); background: rgba(243, 185, 95, .16); box-shadow: 0 0 0 6px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { border-color: var(--border-strong) !important; border-radius: 4px !important; background: rgba(8, 17, 29, .94) !important; overflow: hidden; }
 .maplibregl-ctrl-group button { width: 34px; height: 34px; filter: invert(1) sepia(.2) saturate(.5) hue-rotate(145deg); }
 .maplibregl-ctrl-attrib { background: rgba(8, 17, 29, .84) !important; color: var(--text-muted) !important; font-size: var(--font-size-2xs); }
-
 
 @keyframes airradar-emergency-pulse {
   0% { opacity: .8; transform: scale(.82); }
@@ -2477,12 +2468,11 @@ button, input, select, textarea { color-scheme: dark; }
   .map-overlay { top: 10px; left: 10px; right: 56px; }
   .map-summary-card { gap: 10px; }
   .map-summary-item strong { font-size: 13px; }
-  
+  .map-summary-item span { font-size: var(--font-size-2xs); }
   .map-source-notice { top: 44px; right: 0; max-width: 100%; font-size: var(--font-size-2xs); }
   .contextual-legend { display: none; }
   .map-layers > summary { min-height: 38px; }
   .sidebar { left: 6px; right: 6px; bottom: max(6px, env(safe-area-inset-bottom)); border-radius: 8px; }
-  
   .sidebar.compact .sidebar-secondary-tools { display: none; }
   .sidebar:not(.compact) { height: min(54svh, 520px); }
   .sidebar-heading { padding: 11px 13px 9px; }
@@ -2995,7 +2985,6 @@ button, input, select, textarea { color-scheme: dark; }
 .map-panel { height: 100%; z-index: 0; isolation: isolate; }
 .traffic-trigger { pointer-events: auto; display: inline-flex; align-items: center; gap: 9px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-overlay); color: var(--text-primary); box-shadow: var(--shadow-control); font-size: var(--font-size-xs); }
 .traffic-trigger:hover, .traffic-trigger.active { border-color: var(--border-accent); background: var(--surface-accent-soft); }
-
 .traffic-trigger strong { color: var(--accent-primary); font-family: var(--font-geist-mono), monospace; font-size: 13px; }
 .sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: var(--shadow-drawer); visibility: visible; opacity: 1; transition: opacity 150ms ease, visibility 0s linear 0s; }
 .sidebar.drawer-closed { visibility: hidden; opacity: 0; pointer-events: none; transition: opacity 150ms ease, visibility 0s linear 150ms; }
@@ -3078,7 +3067,6 @@ button, input, select, textarea { color-scheme: dark; }
 .intelligence-empty strong { color: var(--text); font-size: 14px; }
 .intelligence-empty span { color: var(--muted); font-size: 11px; }
 
-
 .airport-overview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 450px);
@@ -3128,7 +3116,6 @@ button, input, select, textarea { color-scheme: dark; }
   .global-search { min-width: 0; margin: 0 5px; }
   .global-search-input { min-height: 38px; font-size: 14px; }
   .radar-content { height: calc(100svh - var(--radar-topbar-height-mobile)); }
-  
   .sidebar { top: auto; right: 6px; bottom: calc(var(--radar-mobile-nav-height) + 2px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
   .sidebar.drawer-closed { display: block; visibility: hidden; opacity: 0; transform: translateY(12px); pointer-events: none; }
   .traffic-trigger { display: none; }
@@ -4014,7 +4001,6 @@ button, input, select, textarea { color-scheme: dark; }
   border-radius: var(--radius-md);
   background: var(--surface-glass);
 }
-
 .map-layers-menu {
   border-color: var(--border-strong);
   border-radius: var(--radius-lg);
@@ -4640,7 +4626,6 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 
-
 .map-overlay-card {
   border-color: var(--border-subtle);
   border-radius: var(--radius-md);
@@ -4707,7 +4692,6 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 
-
 .map-layers-menu label {
   min-height: 30px;
   color: var(--text-secondary);
@@ -4752,14 +4736,6 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--accent) !important;
 }
 
-.receiver-marker {
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--selected);
-  border-radius: 50%;
-  background: var(--surface-selected-soft);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--selected) 10%, transparent);
-}
 
 .contextual-legend {
   gap: var(--space-2) var(--space-4);
@@ -4782,10 +4758,6 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--text-secondary);
 }
 
-.legend-line.range-ring {
-  border-top-color: var(--accent);
-  opacity: .7;
-}
 
 .legend-line.actual {
   border-top-color: var(--selected);
@@ -5946,7 +5918,6 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 
-
 .map-layers-menu label:has(input:checked) input {
   accent-color: var(--accent);
 }
@@ -6768,16 +6739,6 @@ button, input, select, textarea { color-scheme: dark; }
   .radar-quick-actions .radar-v5-map-focus-full { display: none; }
   .radar-quick-actions .radar-v5-map-focus-compact { display: inline; }
 }
-
-/* V6-G Presentation Mode: map remains the existing live MapLibre instance. */
-.radar-content:fullscreen { width: 100vw; height: 100vh; background: var(--background); }
-.radar-content[data-presentation-mode="true"] { grid-template-columns: minmax(0, 1fr); }
-.radar-content[data-presentation-mode="true"] > .sidebar { display: none; }
-.radar-content[data-presentation-mode="true"] .map-overlay-primary > :not([data-testid="radar-presentation-v6-g"]) { display: none; }
-.radar-content[data-presentation-mode="true"] .map-overlay-primary { justify-content: flex-start; }
-.radar-content[data-presentation-mode="true"] .map-overlay { right: 64px; }
-.radar-content[data-presentation-mode="true"] .radar-quick-actions,
-.radar-content[data-presentation-mode="true"] [data-testid="radar-multi-aircraft"] { display: none; }
 
 /* V6-F Fleet Explorer: compact summary/filter row reusing card tokens. */
 .fleet-v6-tools { display: grid; gap: var(--space-3); margin-block: var(--space-3); }

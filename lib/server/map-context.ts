@@ -2,7 +2,6 @@ import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from "node:
 import path from "node:path";
 import { getPrisma } from "@/lib/server/db";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
-import { getAirspaceActivity } from "@/lib/server/airspace-activity";
 import type { AirspacePlanSnapshot } from "@/lib/airspace-activity/types";
 import type { MetarMapObservation } from "@/lib/weather/types";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
@@ -414,7 +413,7 @@ export class MapContextArchiveService {
   async stop(): Promise<void> { if (this.timer) clearInterval(this.timer); this.timer = null; await this.pollInFlight; await defaultMapContextArchive.flush(); }
   async poll(): Promise<void> {
     if (this.pollInFlight) return this.pollInFlight;
-    this.pollInFlight = Promise.allSettled([this.pollMetar(), this.pollAup(), defaultWeatherRadarArchive.poll()]).then(() => undefined).finally(() => { this.pollInFlight = null; });
+    this.pollInFlight = Promise.allSettled([this.pollMetar(), defaultWeatherRadarArchive.poll()]).then(() => undefined).finally(() => { this.pollInFlight = null; });
     return this.pollInFlight;
   }
   private async pollMetar(): Promise<void> {
@@ -425,7 +424,6 @@ export class MapContextArchiveService {
     const result = await defaultAviationWeatherProvider.getMetarMap(airports.slice(0, 256));
     await defaultMapContextArchive.addMetar(result.observations, result.fetchedAt);
   }
-  private async pollAup(): Promise<void> { const result = await getAirspaceActivity(); if (result.planned.status !== "unavailable") await defaultMapContextArchive.addAup(result.planned); }
 }
 
 export const defaultWeatherRadarArchive = new WeatherRadarArchiveService();

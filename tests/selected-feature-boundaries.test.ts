@@ -1,0 +1,485 @@
+import { readFileSync, existsSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const matrix = JSON.parse(readFileSync(new URL("../docs/audits/SELECTED-FEATURE-MATRIX-2026-10-19.json", import.meta.url), "utf8")) as {
+  keepIds: string[]; removeIds: string[];
+  phase1: { removedStandalonePages: string[]; remainingRoutes: string[] };
+};
+const root = new URL("../", import.meta.url);
+
+function pagePath(route: string): string {
+  return `app${route.replace(/:([^/]+)/g, "[$1]")}/page.tsx`;
+}
+
+describe("explicit selected-feature reduction contracts", () => {
+  it("keeps the selection unambiguous and prevents ID overlap", () => {
+    const selected = [...matrix.keepIds, ...matrix.removeIds];
+    expect(new Set(selected).size).toBe(selected.length);
+    expect(matrix.keepIds).toContain("R17");
+    expect(matrix.keepIds).toContain("J09");
+    expect(matrix.keepIds).toContain("L11");
+    expect(matrix.keepIds).toContain("L12");
+    expect(matrix.removeIds).toContain("D23");
+    expect(matrix.removeIds).toContain("P15");
+  });
+
+  it("does not ship the first-phase retired page entrypoints", () => {
+    for (const route of matrix.phase1.removedStandalonePages) {
+      expect(existsSync(new URL(pagePath(route), root)), route).toBe(false);
+    }
+  });
+
+  it("preserves page entrypoints for user-selected UI", () => {
+    for (const route of matrix.phase1.remainingRoutes) {
+      expect(existsSync(new URL(pagePath(route), root)), route).toBe(true);
+    }
+  });
+
+  it("keeps retained airport details free of retired Airport Live Board controllers", () => {
+    const detail = readFileSync(new URL("components/airport-detail.tsx", root), "utf8");
+    const catalog = readFileSync(new URL("components/airports-flights-browser.tsx", root), "utf8");
+    const hud = readFileSync(new URL("components/radar/radar-map-hud.tsx", root), "utf8");
+    expect(detail).not.toContain("useAirportLiveTrafficController");
+    expect(detail).not.toContain("useAirportOperationsController");
+    expect(detail).toContain("<AirportWeatherPanel");
+    expect(detail).toContain("<AirportInfrastructureSections");
+    expect(catalog).not.toContain("LiveAirportNetwork");
+    expect(catalog).not.toContain("FlightsPage");
+    expect(hud).not.toContain("RadarOperationsCenter");
+  });
+
+  it("keeps RXW Hub metadata but no longer runs the rejected live FPN map lane", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(app).not.toContain("RXW_FPN_");
+    expect(app).not.toContain("createRxwFpn");
+    expect(app).not.toContain("/api/aircraft/communications/waypoints");
+    expect(existsSync(new URL("app/api/aircraft/[hex]/communications/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/aircraft/communications/waypoints/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/server/rxw-fpn-parser.ts", root))).toBe(false);
+    for (const legacyUi of [
+      "lib/radar/rxw-fpn-visual.ts",
+      "components/historical-acars-routes.tsx",
+      "components/historical-acars-routes.module.css",
+      "lib/i18n/rxw-history.ts",
+    ]) {
+      expect(existsSync(new URL(legacyUi, root)), legacyUi).toBe(false);
+    }
+    const store = readFileSync(new URL("lib/server/rxw-hub-store.ts", root), "utf8");
+    expect(store).not.toContain("parseRxwH1Fpn");
+    expect(store).not.toContain("waypointPlanForFlight");
+    expect(store).not.toContain("RXW_FPN_ENABLED");
+  });
+
+  it("keeps RXW communication metadata without the rejected H1/FPN detail panel", () => {
+    const panel = readFileSync(new URL("components/aircraft-communications.tsx", root), "utf8");
+    expect(panel).toContain("snapshot.routeHint");
+    expect(panel).toContain("snapshot.messages");
+    expect(panel).not.toContain("snapshot.waypointPlan");
+  });
+
+  it("removes standalone UI modules for retired procedures, ATC exploration and airport comparisons", () => {
+    for (const path of [
+      "components/procedure-explorer.tsx",
+      "components/airport-compare.tsx",
+      "components/atc-airspace-explorer.tsx",
+    ]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+    // The requested retained navigation and ATC map overlays remain independent.
+    expect(existsSync(new URL("components/navigation-reference-explorer.tsx", root))).toBe(true);
+    expect(existsSync(new URL("lib/radar/airspace-geojson.ts", root))).toBe(true);
+  });
+
+  it("removes retired U07 URL-state helpers while keeping navigation pages", () => {
+    expect(existsSync(new URL("lib/investigation-links.ts", root))).toBe(false);
+    for (const file of [
+      "components/navigation-integrity-center.tsx",
+      "components/navigation-reference-explorer.tsx",
+    ]) expect(existsSync(new URL(file, root))).toBe(true);
+    const integrity = readFileSync(new URL("components/navigation-integrity-center.tsx", root), "utf8");
+    const navigation = readFileSync(new URL("components/navigation-reference-explorer.tsx", root), "utf8");
+    expect(integrity).not.toContain("buildNavigationIntegrityInvestigation");
+    expect(navigation).not.toContain("buildNavigationReferenceInvestigation");
+  });
+
+  it("never polls retired flight-intelligence and route-weather endpoints from selected aircraft", () => {
+    const context = readFileSync(new URL("components/radar/use-radar-aircraft-context.ts", root), "utf8");
+    const detail = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(context).not.toContain("/api/intelligence/events");
+    expect(context).not.toContain("/route-weather");
+    expect(context).toContain("/context");
+    expect(detail).toContain("SigmetSection");
+    expect(detail).toContain("NavigationIntegritySection");
+    expect(detail).not.toContain("IntelligenceSection");
+    expect(detail).not.toContain("RouteWeatherSection");
+    expect(detail).not.toContain("<FlightRouteWeather");
+  });
+
+  it("keeps retained ATC and SIGMET context without the rejected flight situation summary", () => {
+    const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(quick).not.toContain("buildFlightSituationSummary");
+    expect(quick).not.toContain("SituationSummarySection");
+    expect(quick).toContain("<AtcSection");
+    expect(quick).toContain("<SigmetSection");
+    expect(quick).toContain("<NavigationIntegritySection");
+  });
+
+  it("never fetches rejected Digital Twin from the selected-aircraft context hook", () => {
+    const hook = readFileSync(new URL("components/radar/use-radar-aircraft-context.ts", root), "utf8");
+    expect(hook).not.toContain("/situation");
+    expect(hook).not.toContain("setOperationalTwin");
+    expect(hook).not.toContain("OperationalTwinApiResponse");
+    expect(hook).toContain("return { atcContext };");
+    expect(hook).toContain("/context");
+  });
+
+  it("does not mount rejected Digital Twin and Operational Focus map layers", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const detail = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(app).not.toContain("OPERATIONAL_TWIN_");
+    expect(app).not.toContain("AIRCRAFT_OPERATIONAL_FOCUS_MAP_");
+    expect(existsSync(new URL("components/digital-twin-calibration-center.module.css", root))).toBe(false);
+    expect(app).not.toContain("RadarOperationalFocusCard");
+    expect(detail).not.toContain("RadarOperationalFocusSummary");
+    expect(app).toContain("showNavigationIntegrity");
+    expect(app).toContain("showAtc");
+  });
+
+  it("does not compute Weather Avoidance in the radar drawer", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const panel = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(app).not.toContain("buildWeatherAvoidanceIntelligence");
+    expect(panel).not.toContain("weather-avoidance-intelligence-v1");
+    expect(panel).not.toContain("sigmet-trajectory-deviation");
+    expect(panel).toContain("aircraft-sigmet-context");
+  });
+
+  it("does not register rejected Digital Twin Regional Attention map lane", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(app).not.toContain("REGIONAL_ATTENTION_MAP_");
+    expect(app).not.toContain("createRegionalAttentionMapFocusGeoJSON");
+    expect(app).not.toContain("regionalAttentionMapFocus");
+    expect(app).toContain("showNavigationIntegrity");
+    expect(app).toContain("showAtc");
+    expect(app).toContain('map.addSource("selected-trail"');
+  });
+
+  it("does not mount rejected predictive or Digital Twin panels on the retained aircraft detail", () => {
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("PredictiveAircraftAdvisories");
+    expect(detail).not.toContain("AircraftOperationalTwin");
+    expect(detail).toContain("<AircraftHeroPhoto");
+    expect(detail).toContain("<AircraftAltitudeChart");
+    expect(detail).toContain("<AircraftAdsbTelemetry");
+  });
+
+  it("does not mount the rejected W10 Weather Fusion detail panel", () => {
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("AircraftWeatherFusion");
+    expect(detail).toContain("<AircraftAdsbTelemetry");
+    expect(detail).toContain("<AircraftAltitudeChart");
+  });
+
+  it("does not mount rejected route weather on the retained aircraft detail", () => {
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("FlightRouteWeather");
+    expect(detail).toContain("<AircraftAltitudeChart");
+    expect(detail).toContain("<AirspaceCard");
+  });
+
+  it("does not ship deleted predictive client panel modules", () => {
+    for (const path of [
+      "components/predictive-aircraft-advisories.tsx",
+      "components/predictive-aircraft-advisories.module.css",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("PredictiveAircraftAdvisories");
+    expect(detail).toContain("<AircraftAltitudeChart");
+  });
+
+  it("does not ship the orphan Digital Twin client or focus UI tests", () => {
+    for (const path of [
+      "components/aircraft-operational-twin.tsx",
+      "components/aircraft-operational-twin.module.css",
+      "tests/aircraft-operational-focus-ui-boundary.test.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("AircraftOperationalTwin");
+    expect(detail).toContain("<AircraftAltitudeChart");
+  });
+
+  it("does not ship retired W10 Weather Fusion client", () => {
+    expect(existsSync(new URL("components/aircraft-weather-fusion.tsx", root))).toBe(false);
+    const detail = readFileSync(new URL("components/aircraft-detail-v3.tsx", root), "utf8");
+    expect(detail).not.toContain("AircraftWeatherFusion");
+    expect(detail).toContain("<AircraftAdsbTelemetry");
+  });
+
+  it("does not ship the rejected W11 weather avoidance analytical module", () => {
+    expect(existsSync(new URL("lib/weather/avoidance-intelligence.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/weather-avoidance-intelligence.test.ts", root))).toBe(false);
+    const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(quick).not.toContain("sigmet-trajectory-deviation");
+    expect(quick).toContain("aircraft-sigmet-context");
+  });
+
+  it("does not ship orphan Operational Focus map/drawer UI or styles", () => {
+    for (const path of [
+      "components/radar/radar-operational-focus-card.tsx",
+      "components/radar/radar-operational-focus-card.module.css",
+      "components/radar/radar-operational-focus-summary.tsx",
+      "components/radar/radar-operational-focus-summary.module.css",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
+    expect(app).not.toContain("RadarOperationalFocusCard");
+    expect(quick).not.toContain("RadarOperationalFocusSummary");
+    expect(quick).toContain("<NavigationIntegritySection");
+  });
+
+  it("does not keep obsolete prediction-timeline and retired UI files", () => {
+    for (const path of [
+      "components/predictive-aircraft-advisories.tsx",
+      "components/aircraft-operational-twin.tsx",
+      "tests/prediction-timeline-v1-boundary.test.ts",
+    ]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+    // Predictive contracts have now been retired with their unused backend.
+    expect(existsSync(new URL("lib/predictive-intelligence/explainability.ts", root))).toBe(false);
+  });
+
+  it("keeps flight-follow telemetry without rejected Digital Twin forecasts", () => {
+    const follow = readFileSync(new URL("components/radar/radar-flight-follow-hud.tsx", root), "utf8");
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(follow).not.toContain("OperationalTwin");
+    expect(follow).not.toContain("etaEvent");
+    expect(follow).not.toContain("runwayEvent");
+    expect(follow).not.toContain("weatherEvent");
+    expect(follow).toContain("verticalRate(aircraft.verticalRate)");
+    expect(app).toContain("<RadarFlightFollowHud");
+  });
+
+  it("retires Regional Attention outcome and graduation without affecting the live map", () => {
+    expect(existsSync(new URL("lib/operational-twin/regional-attention-ui.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/regional-attention-ui.test.ts", root))).toBe(false);
+    // Historical database records remain; rejected in-process validators do not.
+    expect(existsSync(new URL("lib/operational-twin/regional-attention-outcome.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/operational-twin/regional-attention-graduation.ts", root))).toBe(false);
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    expect(app).not.toContain("REGIONAL_ATTENTION_MAP");
+  });
+
+  it("does not expose removed navigation targets in main menus", () => {
+    const shell = readFileSync(new URL("components/airradar-shell.tsx", root), "utf8");
+    const palette = readFileSync(new URL("components/command-palette.tsx", root), "utf8");
+    for (const route of matrix.phase1.removedStandalonePages) {
+      if (route.includes(":")) continue;
+      expect(shell.includes(`href="${route}"`) || shell.includes(`href: "${route}"`), route).toBe(false);
+      expect(palette.includes(`href: "${route}"`), route).toBe(false);
+    }
+  });
+});
+
+describe("phase 18 retired API entrypoints", () => {
+  it("does not expose standalone Time Machine, Intelligence or prediction APIs", () => {
+    for (const path of [
+      "app/api/time-machine/range/route.ts",
+      "app/api/time-machine/window/route.ts",
+      "app/api/intelligence/analytics/route.ts",
+      "app/api/intelligence/events/route.ts",
+      "app/api/operations/predictive/route.ts",
+      "app/api/operations/situation/route.ts",
+      "app/api/aircraft/[hex]/route-weather/route.ts",
+      "app/api/aircraft/[hex]/weather-fusion/route.ts"
+]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+  });
+  it("retains selected history, navigation, weather and notification transports", () => {
+    for (const path of [
+      "app/api/history/[hex]/route.ts",
+      "app/api/navigation-integrity/current/route.ts",
+      "app/api/ats/routes/route.ts",
+      "app/api/weather/sigmet/route.ts",
+      "app/api/weather/airport/[icao]/route.ts",
+      "app/api/push/subscribe/route.ts",
+      "app/api/push/vapid-public-key/route.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(true);
+  });
+});
+
+
+describe("phase 19 retired Flight Intelligence transport", () => {
+  it("does not expose an orphan Flight Intelligence SSE route", () => {
+    expect(existsSync(new URL("app/api/intelligence/stream/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/intelligence-stream-route.test.ts", root))).toBe(false);
+    expect(existsSync(new URL("app/api/stream/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/ogn/stream/route.ts", root))).toBe(true);
+  });
+});
+
+describe("phase 20 rejected receiver-position presentation", () => {
+  it("removes R13 map/UI while keeping receiver-local context", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const menu = readFileSync(new URL("components/radar/radar-map-layer-menu.tsx", root), "utf8");
+    expect(app).not.toContain("receiver-marker");
+    expect(app).not.toContain("range-rings");
+    expect(menu).not.toContain("showRangeRings");
+    expect(existsSync(new URL("lib/range-rings.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/range-rings.test.ts", root))).toBe(false);
+    expect(app).toContain("shouldRecenterOnReceiver");
+    expect(app).toContain("receiverPositionAvailable ?");
+  });
+});
+
+describe("phase 22 T11 SID STAR surface retirement", () => {
+  it("does not expose the rejected procedure API or map toggles", () => {
+    const radar = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const menu = readFileSync(new URL("components/radar/radar-map-layer-menu.tsx", root), "utf8");
+    expect(existsSync(new URL("app/api/procedures/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/procedure-visualization.ts", root))).toBe(false);
+    expect(menu).not.toContain("map-layer-sid");
+    expect(menu).not.toContain("map-layer-star");
+    expect(radar).not.toContain("showSids");
+    expect(radar).not.toContain("showStars");
+    expect(radar).not.toContain("/api/procedures");
+    expect(radar).toContain("showAtsRoutes");
+    expect(radar).toContain("showNavData");
+  });
+});
+
+describe("phase 23 retired airport operations and flight-history listing APIs", () => {
+  it("does not re-expose removed A03-A12 and H05-H09 public API routes", () => {
+    for (const path of [
+      "app/api/airports/[icao]/movements/route.ts",
+      "app/api/airports/[icao]/operations/route.ts",
+      "app/api/airports/[icao]/traffic/route.ts",
+      "app/api/history/flights/route.ts",
+      "app/api/history/flights/[id]/route.ts"
+]) {
+      expect(existsSync(new URL(path, root)), path).toBe(false);
+    }
+  });
+  it("keeps retained airport and aircraft time-series data entrypoints", () => {
+    for (const path of ["app/api/airports/route.ts", "app/api/airports/[icao]/route.ts", "app/api/history/[hex]/route.ts", "app/api/aircraft/[hex]/route.ts"]) {
+      expect(existsSync(new URL(path, root)), path).toBe(true);
+    }
+  });
+});
+
+describe("phase 24 retired T12 planned airspace surface", () => {
+  it("removes the AUP/UUP polling API and map layers without affecting selected ATC geometry", () => {
+    const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
+    const geo = readFileSync(new URL("lib/radar/airspace-geojson.ts", root), "utf8");
+    expect(existsSync(new URL("app/api/airspace/activity/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("app/api/map-context/aup/route.ts", root))).toBe(false);
+    expect(existsSync(new URL("components/radar/use-radar-atc-map-context.ts", root))).toBe(false);
+    expect(app).not.toContain("showAupUup");
+    expect(app).not.toContain("airspace-plan-fill");
+    expect(geo).not.toContain("buildAirspacePlanMapIndex");
+    expect(geo).toContain("sector.polygons");
+    const context = readFileSync(new URL("lib/server/map-context.ts", root), "utf8");
+    expect(context).not.toContain("pollAup()");
+    expect(context).not.toContain("getAirspaceActivity");
+    expect(context).toContain("async resolveAupAt(");
+    expect(app).toContain("mapReplayRef.current.atc.setData(atcGeoJson)");
+  });
+});
+
+describe("phase 25 rejected sector traffic and ATC validation APIs", () => {
+  it("does not expose retired T02-T07 endpoints but retains selected map/ATS data", () => {
+    for (const path of [
+      "app/api/atc/sectors/history/route.ts",
+      "app/api/atc/sectors/traffic/route.ts",
+      "app/api/atc/sectors/transitions/route.ts",
+      "app/api/atc/sectors/[id]/history/route.ts",
+      "app/api/atc/sectors/[id]/traffic/route.ts",
+      "app/api/atc/validation/route.ts"
+]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    expect(existsSync(new URL("app/api/atc/sectors/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/ats/routes/route.ts", root))).toBe(true);
+    expect(existsSync(new URL("app/api/aircraft/[hex]/context/route.ts", root))).toBe(true);
+  });
+});
+
+describe("phase 29 no autonomous rejected Digital Twin calibration", () => {
+  it("removes the periodic full snapshot sampler without touching selected services", () => {
+    const source = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+    expect(source).not.toContain("scheduleOperationalTwinCalibrationSample");
+    expect(source).not.toContain("OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS");
+    expect(source).not.toContain("operationalTwinCalibrationSamplePromise");
+    expect(source).not.toContain('import("@/lib/server/operational-twin")');
+    expect(source).toContain("this.navigationIntegrity.observe(activeAircraft");
+    expect(source).toContain("this.statistics.observe(activeAircraft");
+    expect(source).not.toContain("this.operationalTwinCalibrationPersistence.stop()");
+    expect(source).toContain("recordAircraftSnapshot");
+  });
+});
+
+describe("phase 32 live analytics versus L11/L12 delivery separation", () => {
+  it("keeps the historic tables while no longer invoking removed analytical triggers", () => {
+    const state = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+    expect(state).not.toContain("this.intelligence.observe(");
+    expect(state).not.toContain("this.predictive.evaluate(");
+    expect(state).not.toContain("schedulePredictiveWatchlistAlerts");
+    expect(existsSync(new URL("lib/server/alert-engine.ts", root))).toBe(false);
+    expect(state).toContain("getAlertDeliveryWorker().start()");
+    expect(state).toContain("this.navigationIntegrity.observe(activeAircraft");
+    expect(state).toContain("recordAircraftSnapshot");
+  });
+});
+
+describe("phase 34 retired FlightEvent ID lookup", () => {
+  it("removes the obsolete engine and retains the durable delivery worker", () => {
+    expect(existsSync(new URL("lib/server/alert-engine.ts", root))).toBe(false);
+    expect(existsSync(new URL("tests/alert-engine-canonical-id.test.ts", root))).toBe(false);
+    expect(existsSync(new URL("lib/server/alert-delivery-worker.ts", root))).toBe(true);
+  });
+});
+
+describe("phase 61 retired-only runtime and historical UI boundaries", () => {
+  it("keeps eliminated prediction, airport analytics, Time Machine and modeled wind modules absent", () => {
+    for (const path of [
+      "lib/history/playback.ts",
+      "lib/predictive-intelligence",
+      "lib/server/predictive-readiness.ts",
+      "lib/server/aircraft-predictive-projection.ts",
+      "lib/server/time-machine.ts",
+      "lib/server/flight-story.ts",
+      "lib/flight-story/narrative.ts",
+      "lib/recap/daily-intelligence.ts",
+      "lib/server/airport-operations.ts",
+      "lib/server/airport-movements.ts",
+      "lib/airport-intelligence/v3.ts",
+      "components/airport-movement-analytics.tsx",
+      "lib/server/wind-aloft.ts",
+      "lib/weather/aircraft-wind-context.ts",
+      "lib/atc-sector-history.ts",
+      "lib/server/sector-traffic-context.ts",
+      "lib/procedures/index.ts",
+      "lib/procedures/pipeline.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const state = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+    expect(state).not.toContain("PredictiveStateStore");
+    expect(state).not.toContain("this.predictive.flushProspective");
+    expect(state).toContain("this.navigationIntegrity.observe(activeAircraft");
+    expect(state).toContain("recordAircraftSnapshot(");
+  });
+
+  it("preserves live airport weather, ATC/ATS navigation and durable historical data", () => {
+    for (const path of [
+      "lib/server/history.ts",
+      "app/api/history/[hex]/route.ts",
+      "lib/server/airport-detail.ts",
+      "lib/server/airport-traffic.ts",
+      "lib/server/airport-infrastructure.ts",
+      "lib/server/atc-sector-service.ts",
+      "app/api/atc/sectors/route.ts",
+      "app/api/ats/routes/route.ts",
+      "lib/airport-runway-wind.ts",
+      "lib/server/aviation-weather-provider.ts",
+      "lib/server/alert-delivery-worker.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(true);
+  });
+});

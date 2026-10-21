@@ -15,31 +15,22 @@ import {
   getSourceAffinityFailoverGraceMs,
   isAircraftMassDropGuardEnabled,
   isAtcResolutionEnabled,
-  isAtcShadowPredictionEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
-import { buildPredictiveShadowInput, isAirportProximity } from "@/lib/server/aircraft-predictive-projection";
-export { predictivePhase, isAirportProximity, buildPredictiveShadowInput } from "@/lib/server/aircraft-predictive-projection";
 import { AircraftContinuityGuard, type AircraftContinuityOrigin, type AircraftMassDropDecision } from "@/lib/server/aircraft-continuity";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
 import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
-import { AlertEngine } from "@/lib/server/alert-engine";
-import type { AlertStatus } from "@/lib/server/alert-engine";
-import { loadAlertConfig } from "@/lib/server/alert-config";
-import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
-import { getReceptionRecords } from "@/lib/server/reception-records";
+import type { AlertStatus } from "@/lib/server/alert-status";
+import { ReceiverStatistics, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { coverageStats, mergeAircraftMaps, mergeAircraftObservations } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
-import { getFlightIntelligenceService, type FlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
 import { getRuntimePerformanceDiagnostics, measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
-import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
-import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
 import { appendBoundedNetworkTrailPoint, appendBoundedServerTrailPoint, trailPointFromAircraft, SERVER_LOCAL_TRAIL_MAX_POINTS } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -48,18 +39,6 @@ import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classifica
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-provenance";
-import {
-  PredictiveStateStore,
-  buildPublicEtaAdvisory,
-  buildPublicRunwayChangeAdvisory,
-  getPredictiveGraduationPolicy,
-} from "@/lib/predictive-intelligence";
-import { enforcePredictiveReadiness, readPredictiveReadinessReport } from "@/lib/server/predictive-readiness";
-import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeV2Validator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildOperationalTwinTrajectoryQualityGraduation, buildOperationalTwinTrajectoryQualityV3Graduation, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
-import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
-import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
-import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 import { getMemoryRetentionDiagnostics, type MemoryRetentionDiagnostics } from "@/lib/server/memory-retention-diagnostics";
 import { mapBounded, mapSettledBounded } from "@/lib/server/bounded-batch";
 import { historyAircraftForSnapshot } from "@/lib/server/history-aircraft-payload";
@@ -128,19 +107,9 @@ function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">):
   return `${lat.toFixed(2)}:${lon.toFixed(2)}:${altitude === null ? "unknown" : Math.round(altitude / 1000)}`;
 }
 
-const OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS = 60_000;
 const ATC_RESOLUTION_BATCH_SIZE = 12;
 // Bounded tasks on top of the providers' own stricter HTTP/DB concurrency limits.
 const ENRICHMENT_WORKER_LIMIT = 24;
-const ATC_SHADOW_PREDICTION_CONCURRENCY = 2;
-const ATC_SHADOW_PREDICTION_MAX_PENDING = 512;
-type AtcShadowPredictionWork = {
-  aircraft: Aircraft;
-  currentSector: string | null;
-  resolutionKey: string;
-  generation: number;
-};
-
 function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
@@ -164,28 +133,6 @@ export class AircraftStateService {
   /** Start of a preferred-source outage while the alternate observation remains live. */
   private readonly sourcePreferenceMissingSince = new Map<string, number>();
   private readonly continuity = new AircraftContinuityGuard();
-  /** Request + bounded refresh-sampled Operational Digital Twin calibration against future LOCAL receiver truth. */
-  private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
-  /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
-  private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
-  /** Canonical-vs-Trajectory Quality V2 vertical outcome validation against future LOCAL truth. */
-  private readonly operationalTwinTrajectoryQualityOutcome = new OperationalTwinTrajectoryQualityOutcomeValidator();
-  /** Triple-paired canonical-vs-V2-vs-V3 vertical outcome validation against the same future LOCAL truth. */
-  private readonly operationalTwinTrajectoryQualityOutcomeV2 = new OperationalTwinTrajectoryQualityOutcomeV2Validator();
-  /** Final Aircraft Operational Focus validation against later independent LOCAL SIGMET truth where scoreable. */
-  private readonly operationalFocusOutcome = new AircraftOperationalFocusOutcomeValidator();
-  /** Truth-first multi-domain recall validation from independent later observations. */
-  private readonly operationalTwinTruthFirst = new OperationalTwinTruthFirstValidator();
-  /** Prospective Regional Attention validation against future LOCAL pair state. */
-  private readonly regionalAttentionOutcome = new RegionalAttentionOutcomeValidator();
-  /** PostgreSQL persistence for anonymous completed five-minute calibration aggregates only. */
-  private readonly operationalTwinCalibrationPersistence = new OperationalTwinCalibrationPersistence(
-    this.operationalTwinOutcome,
-    this.operationalTwinEventOutcome,
-    this.operationalTwinTrajectoryQualityOutcome,
-    this.operationalTwinTrajectoryQualityOutcomeV2,
-    this.regionalAttentionOutcome,
-  );
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -210,25 +157,10 @@ export class AircraftStateService {
   private shuttingDown = false;
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
-  private readonly alerts: AlertEngine;
-  private readonly intelligence = getFlightIntelligenceService();
-  /** Shadow-only predictive state; never serialized into radar SSE frames. */
-  private readonly predictive = new PredictiveStateStore();
-  private readonly predictiveEvaluatedAt = new Map<string, number>();
-  private predictiveAlertEvaluationInFlight = false;
-  /** One bounded Digital Twin calibration sample at a time, paced by the existing receiver refresh loop. */
-  private operationalTwinCalibrationSamplePromise: Promise<void> | null = null;
-  private lastOperationalTwinCalibrationSampleAt = 0;
-  private operationalTwinCalibrationSampleCursor = 0;
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
   private readonly atcResolutionKeys = new Map<string, string>();
-  private readonly atcShadowPredictionKeys = new Map<string, string>();
-  private readonly atcShadowPredictionInFlight = new Set<string>();
-  private readonly pendingAtcShadowPredictions = new Map<string, AtcShadowPredictionWork>();
-  private readonly atcShadowPredictionGenerations = new Map<string, number>();
-  private atcShadowPredictionRunning = 0;
   /** Tracks the last enabled state so disabled-mode cleanup is transition-based. */
   private atcResolutionStateActive = false;
   private atcResolutionInFlight = false;
@@ -236,10 +168,6 @@ export class AircraftStateService {
   private pendingAtcResolutionSnapshot: ProviderSnapshot | null = null;
   private atcResolutionDrain: Promise<void> | null = null;
   private atcResolutionFirstCallSettled = false;
-  private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
-  private lifetimeReceptionRecordLoaded = false;
-  private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
-  private receptionEvaluationPending = false;
   private networkStopPromise: Promise<void> | null = null;
   private snapshotVersion = 0;
   private readonly snapshotCache = new Map<string, { version: number; snapshot: StateSnapshot }>();
@@ -249,14 +177,13 @@ export class AircraftStateService {
     provider: AircraftProvider = createAircraftProvider(),
     enrichment: EnrichmentService = createEnrichmentService(),
     atc: AtcSectorService = new AtcSectorService(createAtcSectorProvider()),
-    alerts: AlertEngine = new AlertEngine(),
+    _retiredAlerts: unknown = undefined,
     statistics: ReceiverStatistics = new ReceiverStatistics(),
     networkProvider: NetworkAircraftProvider = createNetworkAircraftProvider(),
   ) {
     this.provider = provider;
     this.enrichment = enrichment;
     this.atc = atc;
-    this.alerts = alerts;
     this.statistics = statistics;
     this.networkProvider = networkProvider;
   }
@@ -271,20 +198,9 @@ export class AircraftStateService {
         // Statistics are optional; a load failure must not prevent the first
         // live provider refresh.
         logger.error({ error }, "AirRadar statistics startup failed");
-      })
-      .then(() => {
-        this.lastEvaluatedDailyReceptionRecord = this.statistics.getDailyReceptionRecord();
-        this.scheduleReceptionRecordEvaluation();
       });
-    void this.loadLifetimeReceptionRecord();
-    const calibrationReady = this.operationalTwinCalibrationPersistence.load()
-      .catch((error) => {
-        // Calibration persistence is optional; live radar and Digital Twin
-        // must continue from fresh process-local evidence on any DB failure.
-        logger.warn({ error }, "Operational Digital Twin calibration hydration skipped");
-      });
-    const refresh = calibrationReady.then(() => this.refresh());
-    this.initialRefresh = Promise.all([this.statisticsReady, calibrationReady, refresh]).then(() => undefined);
+    const refresh = this.refresh();
+    this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
     void this.refreshNetwork();
     this.receiverCoverage.start(() => ({
       network: [...this.networkAircraft.values()], local: this.localAircraft, receiver: this.currentReceiver,
@@ -300,7 +216,6 @@ export class AircraftStateService {
 
   async stop(options: { deadline?: number; closeStatistics?: boolean; closeProvider?: boolean } = {}): Promise<void> {
     this.shuttingDown = true;
-    this.pendingAtcShadowPredictions.clear();
     await getAlertDeliveryWorker().stop();
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
@@ -313,9 +228,6 @@ export class AircraftStateService {
     await this.awaitUntil(this.initialRefresh, deadline);
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
-    await this.awaitUntil(this.predictive.flushProspective(), deadline);
-    await this.awaitUntil(this.operationalTwinCalibrationSamplePromise, deadline);
-    await this.awaitUntil(this.operationalTwinCalibrationPersistence.stop(), deadline);
     // Weather coalescing is intentionally lossy on crashes, but a normal
     // restart gets a bounded best-effort flush of representative samples.
     await this.awaitUntil(flushAircraftWeatherPersistence(deadline), deadline);
@@ -493,29 +405,11 @@ export class AircraftStateService {
     local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
-    predictiveIntelligence: ReturnType<PredictiveStateStore["diagnostics"]>;
-    flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
-    operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
-    operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
-    operationalTwinTrajectoryQualityOutcome: ReturnType<OperationalTwinTrajectoryQualityOutcomeValidator["report"]>;
-    operationalTwinTrajectoryQualityOutcomeV2: ReturnType<OperationalTwinTrajectoryQualityOutcomeV2Validator["report"]>;
-    operationalTwinTrajectoryQualityGraduation: ReturnType<typeof buildOperationalTwinTrajectoryQualityGraduation>;
-    operationalTwinTrajectoryQualityV3Graduation: ReturnType<typeof buildOperationalTwinTrajectoryQualityV3Graduation>;
-    operationalFocusOutcome: ReturnType<AircraftOperationalFocusOutcomeValidator["report"]>;
-    regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
-    regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
-    operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
     runtimePerformance: ReturnType<typeof getRuntimePerformanceDiagnostics>;
     retentionAttribution: MemoryRetentionDiagnostics;
   } {
-    const now = new Date();
-    // Reuse the same bounded outcome snapshot for each corresponding
-    // graduation decision rather than aggregating three validators twice.
-    const trajectoryOutcome = this.getOperationalTwinTrajectoryQualityOutcomeReport(now);
-    const trajectoryOutcomeV2 = this.getOperationalTwinTrajectoryQualityOutcomeV2Report(now);
-    const regionalAttentionOutcome = this.getRegionalAttentionOutcomeReport(now);
     const { limitCounters, ...retentionAttribution } = getMemoryRetentionDiagnostics({
         localAircraft: this.localAircraft,
         localTrailLimitPoints: SERVER_LOCAL_TRAIL_MAX_POINTS,
@@ -527,9 +421,7 @@ export class AircraftStateService {
         sourcePreferences: this.sourcePreferences,
         sourcePreferenceMissingSince: this.sourcePreferenceMissingSince,
         lastHistorySample: this.lastHistorySample,
-        predictiveEvaluatedAt: this.predictiveEvaluatedAt,
         atcResolutionKeys: this.atcResolutionKeys,
-        atcShadowPredictionKeys: this.atcShadowPredictionKeys,
         snapshotCacheEntries: this.snapshotCache.size,
         listeners: this.listeners.size,
     });
@@ -554,8 +446,6 @@ export class AircraftStateService {
       local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
       altitudeDiagnostics: getAltitudeDiagnostics(),
-      predictiveIntelligence: this.predictive.diagnostics(),
-      flightIntelligence: this.intelligence.getDiagnostics(),
       destinationProvenance: getDestinationProvenanceDiagnostics(),
       continuity: this.continuity.diagnostics({
         localObserved: this.localObservedHexes.size,
@@ -564,27 +454,19 @@ export class AircraftStateService {
         networkRetained: this.networkAircraft.size,
         pendingAffinity: this.sourcePreferenceMissingSince.size,
       }),
-      operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
-      operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
-      operationalTwinTrajectoryQualityOutcome: trajectoryOutcome,
-      operationalTwinTrajectoryQualityOutcomeV2: trajectoryOutcomeV2,
-      operationalTwinTrajectoryQualityGraduation: buildOperationalTwinTrajectoryQualityGraduation(trajectoryOutcome),
-      operationalTwinTrajectoryQualityV3Graduation: buildOperationalTwinTrajectoryQualityV3Graduation(trajectoryOutcomeV2),
-      operationalFocusOutcome: this.getOperationalFocusOutcomeReport(),
-      regionalAttentionOutcome,
-      regionalAttentionGraduation: buildRegionalAttentionGraduation(regionalAttentionOutcome),
-      operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
       runtimePerformance: getRuntimePerformanceDiagnostics(),
       retentionAttribution,
     };
   }
 
+  /** Compatibility response until the retired alert administration APIs are removed. */
   getAlertStatus(): AlertStatus {
-    return this.alerts.getStatus();
+    return { status: "disabled", enabled: false, notifier: "retired", ruleCount: 0 };
   }
 
+  /** The legacy rules engine is retired; transports retain their own worker lifecycle. */
   reloadAlertConfig(): void {
-    this.alerts.reload(loadAlertConfig());
+    // Intentionally no-op. Alert rules are no longer evaluated.
   }
 
   getStatistics(): ReceiverStatisticsResponse {
@@ -593,10 +475,6 @@ export class AircraftStateService {
 
   getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus {
     return this.statistics.getPersistenceStatus();
-  }
-
-  getDailyReceptionRecord(): ReceiverDailyReceptionRecord | null {
-    return this.statistics.getDailyReceptionRecord();
   }
 
   getStatisticsCurrentDaySnapshot() {
@@ -616,105 +494,6 @@ export class AircraftStateService {
       now: Date.now(),
       preferredOrigin: this.sourcePreferences.get(normalized),
     });
-  }
-
-  /** Read the last bounded live prediction; the API must never recompute it. */
-  getPredictiveState(icaoHex: string) {
-    return this.predictive.get(icaoHex);
-  }
-
-  getPredictiveDiagnostics() {
-    return this.predictive.diagnostics();
-  }
-
-  captureOperationalTwinOutcome(situation: OperationalTwinSituation): void {
-    this.operationalTwinOutcome.capture(situation);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinOutcomeReport(now = new Date()) {
-    return this.operationalTwinOutcome.report(now);
-  }
-
-  captureOperationalTwinTrajectoryQualityOutcome(situation: OperationalTwinSituation): void {
-    this.operationalTwinTrajectoryQualityOutcome.capture(situation);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinTrajectoryQualityOutcomeReport(now = new Date()) {
-    return this.operationalTwinTrajectoryQualityOutcome.report(now);
-  }
-
-  captureOperationalTwinTrajectoryQualityOutcomeV2(situation: OperationalTwinSituation): void {
-    this.operationalTwinTrajectoryQualityOutcomeV2.capture(situation);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinTrajectoryQualityOutcomeV2Report(now = new Date()) {
-    return this.operationalTwinTrajectoryQualityOutcomeV2.report(now);
-  }
-
-  getOperationalTwinTrajectoryQualityV3GraduationReport(now = new Date()) {
-    return buildOperationalTwinTrajectoryQualityV3Graduation(
-      this.operationalTwinTrajectoryQualityOutcomeV2.report(now),
-    );
-  }
-
-  getOperationalTwinTrajectoryQualityGraduationReport(now = new Date()) {
-    return buildOperationalTwinTrajectoryQualityGraduation(
-      this.operationalTwinTrajectoryQualityOutcome.report(now),
-    );
-  }
-
-  observeOperationalTwinTruthContext(
-    context: OperationalTwinTruthObservationContext,
-    now = Date.now(),
-  ): void {
-    this.operationalTwinTruthFirst.observeContext(context, now);
-  }
-
-  captureOperationalTwinEventOutcome(
-    situation: OperationalTwinSituation,
-    context: OperationalTwinEventOutcomeCaptureContext,
-  ): void {
-    this.operationalTwinEventOutcome.capture(situation, context);
-    this.operationalTwinTruthFirst.capture(situation, context);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getOperationalTwinEventOutcomeReport(now = new Date()) {
-    return {
-      ...this.operationalTwinEventOutcome.report(now),
-      truthFirst: this.operationalTwinTruthFirst.report(now),
-      calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
-    };
-  }
-
-  captureOperationalFocusOutcome(
-    situation: OperationalTwinSituation,
-    sigmets: import("@/lib/weather/types").SigmetSnapshot | null,
-  ): void {
-    this.operationalFocusOutcome.capture(situation, sigmets);
-  }
-
-  getOperationalFocusOutcomeReport(now = new Date()) {
-    return this.operationalFocusOutcome.report(now);
-  }
-
-  captureRegionalAttentionOutcome(summary: OperationalAttentionSummary): void {
-    this.regionalAttentionOutcome.capture(summary);
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
-  }
-
-  getRegionalAttentionOutcomeReport(now = new Date()) {
-    return {
-      ...this.regionalAttentionOutcome.report(now),
-      calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
-    };
-  }
-
-  getRegionalAttentionGraduationReport(now = new Date()) {
-    return buildRegionalAttentionGraduation(this.regionalAttentionOutcome.report(now));
   }
 
   getNetworkDiagnostics() {
@@ -934,7 +713,6 @@ export class AircraftStateService {
     this.currentReceiver = snapshot.receiver;
     const atcResolutionEnabled = isAtcResolutionEnabled();
     if (!atcResolutionEnabled) this.clearAtcResolutionState();
-    const previousAircraft = new Map(this.localAircraft);
     const previousObservedHexes = this.localObservedHexes;
     const currentHexes = new Set<string>();
     let newObservedIdentity = false;
@@ -979,154 +757,13 @@ export class AircraftStateService {
     // pruneMissingAircraft performs the only post-prune affinity cleanup
     // needed for identities removed from the last retained source.
     if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, localStaleAfterMs, now);
-    measureRuntime("snapshot.operationalTwin", this.localAircraft.size, () => {
-      // Preserve the evaluation order and evidence outputs. Parent and
-      // nested measurements overlap and must never be summed.
-      measureRuntime("twin.outcome.truth", this.localAircraft.size,
-        () => this.operationalTwinOutcome.observeTruth(this.localAircraft, now));
-      measureRuntime("twin.trajectoryQuality.truth", this.localAircraft.size,
-        () => this.operationalTwinTrajectoryQualityOutcome.observeTruth(this.localAircraft, now));
-      measureRuntime("twin.trajectoryQualityV2.truth", this.localAircraft.size,
-        () => this.operationalTwinTrajectoryQualityOutcomeV2.observeTruth(this.localAircraft, now));
-      measureRuntime("twin.eventOutcome.local", this.localAircraft.size,
-        () => this.operationalTwinEventOutcome.observeLocal(this.localAircraft, now));
-      measureRuntime("twin.regionalAttention.truth", this.localAircraft.size,
-        () => this.regionalAttentionOutcome.observeTruth(this.localAircraft, now));
-    });
     const activeAircraft = [...this.localAircraft.values()];
-    const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) measureRuntime("snapshot.statistics", activeAircraft.length, () => this.statistics.observe(activeAircraft, this.currentReceiver, new Date()));
-    this.scheduleReceptionRecordEvaluation();
-    measureRuntime("snapshot.alerts", activeAircraft.length, () => this.alerts.observe(previousAircraft, this.localAircraft));
-    this.intelligence.cleanup(activeHexes);
-    const predictiveCandidates: Aircraft[] = [];
-    const predictiveAlertCandidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }> = [];
-    const snapshotAt = Date.parse(snapshot.fetchedAt);
-    measureRuntime("snapshot.intelligence", activeAircraft.length, () => {
-      for (const current of activeAircraft) {
-        const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, snapshotAt);
-        this.operationalTwinEventOutcome.observeIntelligence(events, snapshotAt);
-        this.operationalTwinTruthFirst.observeIntelligence(events, snapshotAt);
-        for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
-        if (this.isPredictiveEvaluationDue(current, snapshotAt)) predictiveCandidates.push(current);
-      }
-    });
-    measureRuntime("snapshot.predictive", predictiveCandidates.length, () => {
-      for (const current of predictiveCandidates) {
-        const prediction = this.evaluatePredictiveShadow(current, snapshotAt, true);
-        if (prediction) predictiveAlertCandidates.push({ aircraft: current, prediction });
-      }
-    });
-    if (predictiveAlertCandidates.length && this.alerts.hasPredictiveRules()) {
-      this.schedulePredictiveWatchlistAlerts(predictiveAlertCandidates);
-    }
-    for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
-    this.operationalTwinCalibrationPersistence.scheduleFlush();
+    // The retired AlertEngine does not evaluate live ADS-B snapshots.
+    // Durable push/Pushover delivery is handled separately by AlertDeliveryWorker.
     measureRuntime("snapshot.navigationIntegrity", activeAircraft.length, () => this.navigationIntegrity.observe(activeAircraft, new Date(snapshot.fetchedAt), "local"));
-    this.operationalFocusOutcome.observe(this.localAircraft, new Date(snapshot.fetchedAt));
-    this.scheduleOperationalTwinCalibrationSample(now);
     this.invalidateSnapshotCache();
-  }
-
-  private scheduleOperationalTwinCalibrationSample(now: number): void {
-    if (this.shuttingDown || !this.running || this.operationalTwinCalibrationSamplePromise) return;
-    if (!Number.isFinite(now) || now - this.lastOperationalTwinCalibrationSampleAt < OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS) return;
-
-    const candidates = [...this.localAircraft.values()]
-      .filter((aircraft) => (
-        !aircraft.onGround
-        && Boolean(aircraft.enrichment?.route)
-        && typeof aircraft.lat === "number" && Number.isFinite(aircraft.lat)
-        && typeof aircraft.lon === "number" && Number.isFinite(aircraft.lon)
-        && typeof aircraft.groundSpeed === "number" && Number.isFinite(aircraft.groundSpeed) && aircraft.groundSpeed >= 30
-        && (aircraft.seenPosSeconds === null || aircraft.seenPosSeconds <= 60)
-      ))
-      .sort((left, right) => left.icaoHex.localeCompare(right.icaoHex));
-    if (!candidates.length) return;
-
-    const candidate = candidates[this.operationalTwinCalibrationSampleCursor % candidates.length]!;
-    this.operationalTwinCalibrationSampleCursor = (this.operationalTwinCalibrationSampleCursor + 1) % candidates.length;
-    this.lastOperationalTwinCalibrationSampleAt = now;
-
-    const sample = (async () => {
-      // Deferred import avoids a static aircraft-state <-> operational-twin cycle while
-      // reusing the exact canonical Digital Twin builder used by the public situation API.
-      const { getOperationalTwinForAircraft } = await import("@/lib/server/operational-twin");
-      await getOperationalTwinForAircraft(candidate.icaoHex, undefined, new Date(now));
-    })().catch((error) => {
-      // Calibration is observational only; a provider/context failure must never
-      // degrade or delay the receiver refresh loop.
-      logger.debug({ error, icaoHex: candidate.icaoHex }, "Operational Digital Twin calibration sample skipped");
-    });
-
-    this.operationalTwinCalibrationSamplePromise = sample.finally(() => {
-      this.operationalTwinCalibrationSamplePromise = null;
-    });
-  }
-
-  private isPredictiveEvaluationDue(aircraft: Aircraft, now: number): boolean {
-    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return false;
-    const previousAt = this.predictiveEvaluatedAt.get(aircraft.icaoHex) ?? 0;
-    return now - previousAt >= 10_000;
-  }
-
-  private evaluatePredictiveShadow(aircraft: Aircraft, now: number, knownDue = false): PredictiveFlightState | null {
-    if (!knownDue && !this.isPredictiveEvaluationDue(aircraft, now)) return null;
-    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return null;
-    this.predictiveEvaluatedAt.set(aircraft.icaoHex, now);
-    const destination = aircraft.enrichment?.route?.destinationAirport;
-    const input = buildPredictiveShadowInput(aircraft, now, destination ? this.intelligence.getRunways(destination.icaoCode) : []);
-    if (!input) return null;
-    input.flightState.lifecycleKey = this.intelligence.getLifecycleKey(aircraft.icaoHex);
-    input.flightState.flightId = null;
-    input.aircraft = aircraft;
-    return this.predictive.evaluate(input);
-  }
-
-  private schedulePredictiveWatchlistAlerts(
-    candidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }>,
-  ): void {
-    if (this.predictiveAlertEvaluationInFlight || this.shuttingDown) return;
-    const configuredPolicy = getPredictiveGraduationPolicy();
-    if (configuredPolicy.ETA !== "PUBLIC" && configuredPolicy.RUNWAY_CHANGE !== "PUBLIC") return;
-
-    this.predictiveAlertEvaluationInFlight = true;
-    void (async () => {
-      const readiness = await readPredictiveReadinessReport();
-      if (this.shuttingDown) return;
-      const effectivePolicy = enforcePredictiveReadiness(configuredPolicy, {
-        thresholdVersion: readiness.thresholds.version,
-        capabilities: readiness.capabilities,
-      });
-      const now = Date.now();
-
-      for (const candidate of candidates) {
-        const current = this.localAircraft.get(candidate.aircraft.icaoHex);
-        if (!current || current.callsign !== candidate.aircraft.callsign) continue;
-        const etaAdvisory = buildPublicEtaAdvisory(
-          candidate.prediction,
-          effectivePolicy,
-          readiness.capabilities.ETA,
-          now,
-        );
-        const runwayChangeAdvisory = buildPublicRunwayChangeAdvisory(
-          candidate.prediction,
-          effectivePolicy,
-          readiness.capabilities.RUNWAY_CHANGE,
-          now,
-        );
-        this.alerts.observePredictiveAdvisories(current, {
-          destinationIcao: current.enrichment?.route?.destinationAirport?.icaoCode ?? null,
-          etaAdvisory,
-          runwayChangeAdvisory,
-        });
-      }
-    })().catch((error) => {
-      logger.debug({ error }, "AirRadar predictive watchlist alert evaluation skipped");
-    }).finally(() => {
-      this.predictiveAlertEvaluationInFlight = false;
-    });
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
@@ -1291,26 +928,10 @@ export class AircraftStateService {
   private removeAircraft(hex: string): void {
     this.aircraft.delete(hex);
     this.atcResolutionKeys.delete(hex);
-    this.atcShadowPredictionKeys.delete(hex);
-    this.atcShadowPredictionInFlight.delete(hex);
-    this.pendingAtcShadowPredictions.delete(hex);
-    const generation = (this.atcShadowPredictionGenerations.get(hex) ?? 0) + 1;
-    // Keep a tombstone only while old work can still complete. Once no work
-    // references this ICAO, the stale checks also have no consumer left.
-    if (this.atcShadowPredictionInFlight.has(hex) || this.pendingAtcShadowPredictions.has(hex)) {
-      this.atcShadowPredictionGenerations.set(hex, generation);
-    } else {
-      this.atcShadowPredictionGenerations.delete(hex);
-    }
-    getAtcPredictionValidation().remove(hex);
   }
 
   private clearAtcResolutionState(): void {
-    if (!this.atcResolutionStateActive
-      && this.atcResolutionKeys.size === 0
-      && this.atcShadowPredictionKeys.size === 0
-      && this.atcShadowPredictionInFlight.size === 0
-      && this.pendingAtcShadowPredictions.size === 0) return;
+    if (!this.atcResolutionStateActive && this.atcResolutionKeys.size === 0) return;
     for (const [hex, aircraft] of this.localAircraft) {
       if (aircraft.atc === undefined) continue;
       const withoutAtc = { ...aircraft };
@@ -1318,22 +939,7 @@ export class AircraftStateService {
       this.localAircraft.set(hex, withoutAtc);
     }
     this.atcResolutionKeys.clear();
-    this.clearAtcShadowPredictionState();
-    for (const hex of this.localAircraft.keys()) getAtcPredictionValidation().remove(hex);
     this.atcResolutionStateActive = false;
-  }
-
-  private clearAtcShadowPredictionState(): void {
-    if (this.atcShadowPredictionKeys.size === 0
-      && this.atcShadowPredictionInFlight.size === 0
-      && this.pendingAtcShadowPredictions.size === 0) return;
-    this.atcShadowPredictionKeys.clear();
-    this.atcShadowPredictionInFlight.clear();
-    this.pendingAtcShadowPredictions.clear();
-    for (const [hex, generation] of this.atcShadowPredictionGenerations) {
-      if (this.localAircraft.has(hex)) this.atcShadowPredictionGenerations.set(hex, generation + 1);
-      else this.atcShadowPredictionGenerations.delete(hex);
-    }
   }
 
   private updateTrail(
@@ -1407,10 +1013,6 @@ export class AircraftStateService {
       try {
         const result = await recordAircraftSnapshot(due, new Date(sampledAt));
         for (const icaoHex of result.succeeded) this.lastHistorySample.set(icaoHex, sampledAt);
-        for (const icaoHex of result.newAircraft ?? []) {
-          const current = this.aircraft.get(icaoHex);
-          if (current) this.alerts.observeNewAircraft(current);
-        }
         if (result.failed.length) {
           logger.error({ failedAircraft: result.failed.length }, "AirRadar history persistence failed");
         }
@@ -1427,45 +1029,6 @@ export class AircraftStateService {
     for (const [hex, sampledAt] of this.lastHistorySample) {
       if (sampledAt < cleanupBefore && !this.aircraft.has(hex)) this.lastHistorySample.delete(hex);
     }
-  }
-
-  private async loadLifetimeReceptionRecord(): Promise<void> {
-    try {
-      const records = await getReceptionRecords(null);
-      this.lifetimeReceptionRecord = records.lifetime;
-      this.lifetimeReceptionRecordLoaded = true;
-      this.scheduleReceptionRecordEvaluation();
-    } catch {
-      // Reception records are optional and must never affect live refresh.
-      this.lifetimeReceptionRecordLoaded = true;
-      this.scheduleReceptionRecordEvaluation();
-    }
-  }
-
-  private scheduleReceptionRecordEvaluation(): void {
-    this.receptionEvaluationPending = true;
-    const ready = this.statisticsReady;
-    if (!ready) return;
-    void ready.then(() => {
-      if (!this.receptionEvaluationPending) return;
-      this.receptionEvaluationPending = false;
-      const current = this.statistics.getDailyReceptionRecord();
-      const previousDaily = this.lastEvaluatedDailyReceptionRecord;
-      if (current && (!previousDaily || current.date !== previousDaily.date || current.distanceKm > previousDaily.distanceKm)) {
-        this.alerts.observeReceptionRecord("daily", current, previousDaily?.date === current.date ? previousDaily : null);
-      }
-      this.lastEvaluatedDailyReceptionRecord = current;
-      if (current && this.lifetimeReceptionRecordLoaded
-        && (!this.lifetimeReceptionRecord || current.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
-        const previousLifetime = this.lifetimeReceptionRecord;
-        this.lifetimeReceptionRecord = current;
-        this.alerts.observeReceptionRecord("lifetime", current, previousLifetime);
-      }
-    }).catch((error) => {
-      // This callback is intentionally fire-and-forget. Never let an
-      // optional alert/record side effect become a process-level rejection.
-      logger.debug({ error }, "AirRadar reception-record evaluation skipped");
-    });
   }
 
   private queueHistory(snapshot: ProviderSnapshot): void {
@@ -1541,7 +1104,6 @@ export class AircraftStateService {
       if (!enrichment) continue;
       const updated = { ...current, enrichment };
       this.aircraft.set(current.icaoHex, updated);
-      this.alerts.observe(new Map([[current.icaoHex, current]]), [updated]);
       changed = true;
     }
     if (changed && !this.shuttingDown) {
@@ -1561,11 +1123,6 @@ export class AircraftStateService {
       return;
     }
     this.atcResolutionStateActive = true;
-    // Shadow cleanup is performed only when the mode transitions off (or the
-    // assignment lane is disabled), never once per provider snapshot.
-    if (isAtcShadowPredictionEnabled() === false && this.atcShadowPredictionKeys.size > 0) {
-      this.clearAtcShadowPredictionState();
-    }
     // Keep only the newest observation. This makes the ATC lane bounded even
     // when the provider poll interval is shorter than a database lookup.
     this.pendingAtcResolutionSnapshot = snapshot;
@@ -1641,26 +1198,12 @@ export class AircraftStateService {
         const current = this.aircraft.get(result.incoming.icaoHex);
         const resolutionKey = result.key;
         if (!result.resolved || !resolutionKey || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== resolutionKey) continue;
-        const validation = getAtcPredictionValidation();
-        validation.observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
         if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
         const updated = measureRuntime("atc.assignment.application", 1, () => ({ ...current, atc: result.assignment }));
         this.aircraft.set(current.icaoHex, updated);
         changed = true;
       }
       if (offset + ATC_RESOLUTION_BATCH_SIZE < candidates.length) await yieldToEventLoop();
-    }
-    if (isAtcShadowPredictionEnabled()) {
-      // Assignment keys are deliberately coarse. Requeue the current
-      // assignment once per resolve, never once per ATC batch.
-      const seen = new Set<string>();
-      for (const incoming of snapshot.aircraft) {
-        const current = this.aircraft.get(incoming.icaoHex);
-        const key = current ? atcResolutionKey(current) : null;
-        if (!current?.atc || !key || seen.has(current.icaoHex)) continue;
-        seen.add(current.icaoHex);
-        this.enqueueShadowPrediction(current, current.atc.sectorId, key);
-      }
     }
     if (this.shuttingDown) return;
     if (failures.length) logger.error({ failedAircraft: failures.length }, "AirRadar ATC resolution failed");
@@ -1670,104 +1213,6 @@ export class AircraftStateService {
     }
   }
 
-  private enqueueShadowPrediction(aircraft: Aircraft, currentSector: string | null, resolutionKey: string): void {
-    if (!isAtcResolutionEnabled() || !isAtcShadowPredictionEnabled() || this.shuttingDown) return;
-    const hex = aircraft.icaoHex;
-    // Include the observation timestamp and exact position. The assignment
-    // key is intentionally coarse, while shadow prediction must refresh when
-    // an aircraft moves inside the same assignment bucket.
-    const workKey = `${resolutionKey}:${aircraft.lastSeen}:${aircraft.lat}:${aircraft.lon}:${aircraft.altitude ?? "unknown"}`;
-    if (this.atcShadowPredictionKeys.get(hex) === workKey) return;
-    const generation = (this.atcShadowPredictionGenerations.get(hex) ?? 0) + 1;
-    this.atcShadowPredictionGenerations.set(hex, generation);
-    this.atcShadowPredictionKeys.set(hex, workKey);
-    this.pendingAtcShadowPredictions.set(hex, { aircraft, currentSector, resolutionKey: workKey, generation });
-    // The map is latest-wins per ICAO. It is bounded by the live aircraft cap;
-    // the hard cap is a second safety net for malformed provider snapshots.
-    while (this.pendingAtcShadowPredictions.size > ATC_SHADOW_PREDICTION_MAX_PENDING) {
-      const oldest = this.pendingAtcShadowPredictions.keys().next().value;
-      if (typeof oldest !== "string") break;
-      this.pendingAtcShadowPredictions.delete(oldest);
-      this.atcShadowPredictionKeys.delete(oldest);
-    }
-    this.pumpShadowPredictions();
-  }
-
-  private pumpShadowPredictions(): void {
-    while (
-      this.atcShadowPredictionRunning < ATC_SHADOW_PREDICTION_CONCURRENCY
-      && this.pendingAtcShadowPredictions.size > 0
-      && !this.shuttingDown
-    ) {
-      const next = this.pendingAtcShadowPredictions.entries().next().value as [string, AtcShadowPredictionWork] | undefined;
-      if (!next) return;
-      const [hex, work] = next;
-      this.pendingAtcShadowPredictions.delete(hex);
-      this.atcShadowPredictionRunning += 1;
-      this.atcShadowPredictionInFlight.add(hex);
-      void this.runShadowPrediction(work)
-        .catch((error) => {
-          if (this.atcShadowPredictionKeys.get(hex) === work.resolutionKey) this.atcShadowPredictionKeys.delete(hex);
-          logger.debug({ error, hex }, "AirRadar ATC shadow prediction worker failed");
-        })
-        .finally(() => {
-          this.atcShadowPredictionRunning = Math.max(0, this.atcShadowPredictionRunning - 1);
-          this.atcShadowPredictionInFlight.delete(hex);
-          if (!this.aircraft.has(hex)
-            && !this.atcShadowPredictionInFlight.has(hex)
-            && !this.pendingAtcShadowPredictions.has(hex)) {
-            this.atcShadowPredictionGenerations.delete(hex);
-          }
-          this.pumpShadowPredictions();
-        }).catch((error) => logger.debug({ error, hex }, "AirRadar ATC shadow prediction cleanup failed"));
-    }
-  }
-
-  private async runShadowPrediction(work: AtcShadowPredictionWork): Promise<void> {
-    const { aircraft, currentSector, resolutionKey, generation } = work;
-    const input = inputFromAircraft(aircraft);
-    const dataset = input ? await loadAtcContextDataset() : null;
-    if (!input) return;
-    if (!dataset) {
-      if (this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) this.atcShadowPredictionKeys.delete(aircraft.icaoHex);
-      return;
-    }
-    if (!this.isCurrentShadowPrediction(aircraft, resolutionKey, generation)) return;
-    await yieldToEventLoop();
-    const result = computeAtcContext(input, dataset);
-    if (!this.isCurrentShadowPrediction(aircraft, resolutionKey, generation) || !isAtcShadowPredictionEnabled()) return;
-    const reason = classifyAtcPrediction({
-        currentSector,
-        hasNextSector: result.nextSector !== null,
-        onGround: aircraft.onGround,
-        observedAtMs: Date.parse(aircraft.lastSeen),
-        seenPosSeconds: aircraft.seenPosSeconds,
-        lat: aircraft.lat,
-        lon: aircraft.lon,
-        track: aircraft.track,
-        groundSpeed: aircraft.groundSpeed,
-        currentAirspaces: result.currentAirspaces.length,
-    });
-    getAtcPredictionValidation().observePrediction({
-        hex: aircraft.icaoHex,
-        currentSector,
-        predictedSector: result.nextSector?.airspace.id ?? null,
-        predictedEtaSeconds: result.nextSector?.estimatedSeconds ?? null,
-        suppressionReason: reason,
-    });
-  }
-
-  private isCurrentShadowPrediction(aircraft: Aircraft, resolutionKey: string, generation: number): boolean {
-    const current = this.aircraft.get(aircraft.icaoHex);
-    return !this.shuttingDown
-      && this.atcShadowPredictionGenerations.get(aircraft.icaoHex) === generation
-      && this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey
-      && current?.callsign === aircraft.callsign
-      && current.lastSeen === aircraft.lastSeen
-      && current.lat === aircraft.lat
-      && current.lon === aircraft.lon
-      && current.altitude === aircraft.altitude;
-  }
 }
 
 const globalForState = globalThis as unknown as { aircraftState?: AircraftStateService };

@@ -5,7 +5,7 @@ describe("release scope", () => {
   it.each([
     [["docs/DEVELOPMENT.md"], false],
     [["README.md", "docs/cs/DEVELOPMENT.md"], false],
-    [["docs/metrics/code-history.json"], false],
+    [["docs/metrics/code-history.json"], true],
     [["artifacts/performance/OPTIMIZATION-PROGRESS.md"], false],
     [["artifacts/performance/route-telemetry-benchmark.json"], false],
     [["artifacts/performance/OPTIMIZATION-PROGRESS.md", "lib/server/enrichment-cache.ts"], true],
@@ -21,7 +21,7 @@ describe("release scope", () => {
     expect(classifyReleaseScope(files).deploy).toBe(deploy);
   });
 
-  it("keeps machine-readable documentation outside the safe allowlist", () => {
+  it("keeps retired code-growth metrics and other machine-readable docs outside the safe allowlist", () => {
     expect(classifyReleaseScope(["docs/features.registry.json"]).deploy).toBe(true);
     expect(classifyReleaseScope(["docs/metrics/other.json"]).deploy).toBe(true);
   });

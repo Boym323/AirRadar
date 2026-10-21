@@ -95,13 +95,8 @@ production health checks pass, the workflow creates a GitHub Release with
 generated release notes, targeting the exact commit recorded by the validated
 production-build manifest. The publisher resolves the resulting tag and
 fails closed if it points anywhere else; an existing release is reusable only
-when its tag still resolves to that same artifact commit. Once the complete
-main CI workflow succeeds, `.github/workflows/repository-metadata.yml`
-backfills `CHANGELOG.md` from published tags, refreshes generated codebase
-metrics, opens one audit PR from `automation/repository-metadata`, and merges
-that metadata PR automatically. Metadata-only merges are explicitly excluded
-from production deployment. Release publishing is idempotent: an
-already-existing GitHub Release for the resolved tag is treated as success,
+when its tag still resolves to that same artifact commit.
+Release publishing is idempotent: an already-existing GitHub Release for the resolved tag is treated as success,
 including rerun/race cases. Versioned stable/RC releases continue to use the
 normal command above.
 
@@ -168,19 +163,10 @@ The nightly/manual `ci-heavy.yml` workflow runs the **complete browser/productio
    release tag already on `HEAD` is reused. The script exports release metadata
    for the build; it does not run `npm version` and does not change package
    manifests.
-4. For manual releases, `scripts/changelog.mjs` generates the new
-   `CHANGELOG.md` section from Git commits since the previous release tag. New
-   entries are grouped into Added/Changed/Fixed/Performance/Documentation/
-   Maintenance sections, retain the complete commit list in a technical-details
-   block, and list registered features touched through conventional-commit
-   scopes from `docs/features.registry.json`. If changed, the release commits
-   it automatically before continuing. Automated releases skip this repository
-   mutation; the post-CI Repository Metadata workflow backfills the tagged
-   release together with generated codebase metrics while the GitHub Release
-   continues to use GitHub-generated notes.
-   The build records separate source, release, artifact, and tag-target commit
-   identities. A manual changelog commit becomes the release and artifact
-   identity; automated releases keep the pinned CI commit for all identities.
+4. Manual and automated releases keep the tested source commit as the release,
+   artifact and tag-target identity. O14 automatic changelog generation and
+   metadata backfills are retired; GitHub Releases use GitHub-generated notes.
+   The historical `CHANGELOG.md` is not regenerated or committed during release.
 5. It runs `npm ci` with the local cache and without npm audit/fund network
    checks and emits the Prisma contract. Manual releases then run lint,
    typecheck, and the full Vitest suite in parallel. Automated releases reuse
@@ -314,7 +300,7 @@ successful recovery. Do not invoke this script automatically from CI.
 Apply the `release-preview` label to a PR to run full release typecheck,
 Vitest, browser and performance gates **before** merging (but never deploy
 from a PR). The ordinary fast PR validation job is then skipped because its
-lint, dependency, migration, feature, docs, visual and changelog checks are
+lint, dependency, migration, feature, docs and visual checks are
 included in the release-tests job.
 
 For the subsequent main-branch push, `scripts/ci-pr-validation-reuse.mjs`

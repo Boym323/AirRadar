@@ -35,20 +35,21 @@ describe("production browser gate basemap evidence", () => {
     expect(baseline).toContain('await visualPage.reload({ waitUntil: "domcontentloaded" })');
     expect(baseline).toContain('if (target.v6Appearance) {');
     expect(baseline).toContain('selectOption(target.v6Appearance)');
-    expect(baseline).toContain('!target.v6Presentation && !target.enableV6Multi');
+    expect(baseline).toContain('!target.enableV6Multi');
+    expect(baseline).not.toContain("target.v6Presentation");
     expect(baseline).toContain('map.queryRenderedFeatures().some((feature) => Boolean(feature.sourceLayer))');
     expect(baseline).toContain("failed after one retry");
     expect(baseline).not.toContain("catch { /*ignore*/ }");
   });
 
-  it("tolerates 429 only for the optional RXW availability endpoint in the browser sweep", () => {
+  it("tolerates bounded 429s for retained RXW metadata, not retired H1/FPN availability", () => {
     const browserSweep = gate.slice(gate.indexOf("const runResponsiveSweep"));
-    expect(browserSweep).toContain('pathname === "/api/aircraft/communications/waypoints"');
+    expect(browserSweep).not.toContain('pathname === "/api/aircraft/communications/waypoints"');
     expect(browserSweep).toContain("/^\\/api\\/aircraft\\/[A-F0-9]{6}\\/communications$/i.test(pathname)");
     expect(browserSweep).toContain("expectedRateLimitedApiErrors += 1");
     expect(browserSweep).toContain("browserErrors.push(");
-    expect(radar).toContain('fetch("/api/aircraft/communications/waypoints", { cache: "no-store" })');
-    // RXW availability is a best-effort map enrichment, not the source of live aircraft.
-    expect(radar).toContain('rxwFpnAvailabilityRef.current = [];');
+    // The live radar no longer polls ACARS waypoint availability.
+    expect(radar).not.toContain("/api/aircraft/communications/waypoints");
+    expect(radar).not.toContain("RXW_FPN_");
   });
 });

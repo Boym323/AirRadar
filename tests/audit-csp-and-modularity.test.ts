@@ -1,17 +1,15 @@
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import nextConfig from "../next.config";
-import { buildPredictiveShadowInput as fromCoordinator, predictivePhase as phaseFromCoordinator } from "@/lib/server/aircraft-state";
-import { buildPredictiveShadowInput, predictivePhase } from "@/lib/server/aircraft-predictive-projection";
 
 describe("audit modularity and CSP hardening", () => {
-  it("keeps original prediction exports pointing at the pure implementation", () => {
-    expect(fromCoordinator).toBe(buildPredictiveShadowInput);
-    expect(phaseFromCoordinator).toBe(predictivePhase);
-    const source = readFileSync(new URL("../lib/server/aircraft-predictive-projection.ts", import.meta.url), "utf8");
-    expect(source).not.toContain("getPrisma");
-    expect(source).not.toContain("setInterval(");
-    expect(source).not.toContain("getAircraftStateService");
+  it("keeps retired prediction and airport-sequencing modules absent", () => {
+    for (const path of [
+      "../lib/server/aircraft-predictive-projection.ts",
+      "../components/airport-operations-controller.ts",
+      "../lib/airport-intelligence/arrival-sequence-v7.ts",
+      "../lib/airport-intelligence/arrival-flow-v8.ts",
+    ]) expect(existsSync(new URL(path, import.meta.url)), path).toBe(false);
   });
 
   it("denies inline HTML event handler attributes while Next bootstrap remains supported", async () => {

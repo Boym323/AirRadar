@@ -15,7 +15,6 @@ import { aircraftLabelOpacity, aircraftMarkerClassNames, aircraftPositionIsStale
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const mapLabelsSource = readFileSync(new URL("../lib/radar/map-label-presentation.ts", import.meta.url), "utf8");
 const radarHudSource = readFileSync(new URL("../components/radar/radar-map-hud.tsx", import.meta.url), "utf8");
-const timeMachineSource = readFileSync(new URL("../components/time-machine.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftMotionRuntimeSource = readFileSync(new URL("../lib/radar/aircraft-motion-runtime.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
@@ -23,12 +22,11 @@ const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-t
 const radarTrafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
 const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
 const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
-const radarOperationsCenterSource = readFileSync(new URL("../components/radar/radar-operations-center.tsx", import.meta.url), "utf8");
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
 const radarOgnStreamSource = readFileSync(new URL("../components/radar/use-radar-ogn-stream.ts", import.meta.url), "utf8");
 const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
-const radarAtcMapContextSource = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
-const routeCorridorSource = readFileSync(new URL("../components/radar/use-route-corridor-intelligence.ts", import.meta.url), "utf8");
+const radarAtcMapContextSource = readFileSync(new URL("../lib/radar/airspace-geojson.ts", import.meta.url), "utf8");
+const selectedRouteSource = readFileSync(new URL("../components/radar/use-selected-route.ts", import.meta.url), "utf8");
 const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
@@ -44,7 +42,6 @@ const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", i
 const aircraftAltitudeChartSource = readFileSync(new URL("../components/aircraft-detail-shared.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const productionGateSource = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-const atcTrafficSource = readFileSync(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url), "utf8");
 const englishSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "utf8");
 const czechSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
 const maplibreCss = readFileSync(new URL("../node_modules/maplibre-gl/dist/maplibre-gl.css", import.meta.url), "utf8");
@@ -116,16 +113,15 @@ describe("radar UI polish helpers", () => {
     expect(aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false, stale: true })).toContain("stale");
   });
 
-  it("keeps secondary routes reachable from the canonical mobile overflow", () => {
+  it("keeps selected navigation and safe mobile overflow", () => {
     const grouped = shellSource.slice(shellSource.indexOf("function moreNavigationGroups()"), shellSource.indexOf("function MoreNavigationGroups("));
     const mobile = shellSource.slice(shellSource.indexOf("export function MobileBottomNav"), shellSource.indexOf("export function AirRadarPageShell"));
     expect(shellSource).toContain("mobile-bottom-nav");
-    expect(grouped).toContain('href: "/alerts"');
-    expect(grouped).toContain('href: "/history"');
-    expect(shellSource).toContain('mobile && group.id === "operations"');
+    expect(grouped).toContain('href: "/navigation-integrity"');
+    expect(grouped).toContain('href: "/receiver/coverage"');
+    expect(grouped).not.toContain('href: "/alerts"');
     expect(mobile).toContain("<MoreNavigationGroups pathname={pathname} mobile />");
     expect(globalCss).toContain(".mobile-bottom-more > div");
-    expect(globalCss).toContain("max-height: calc(100svh - var(--radar-mobile-nav-height) - 128px)");
   });
 
   it("keeps the five-item mobile navigation and compact source counters", () => {
@@ -135,21 +131,14 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toMatch(/\.source-counter-strip\s*\{[^}]*repeat\(4/);
   });
 
-  it("uses one layers icon and an explicit ATC history stroke", () => {
+  it("keeps the layers icon and live ATC panel independent of history UI", () => {
     expect(globalCss).not.toContain('.map-layers > summary::before { content: "☷"');
-    expect(globalCss).toMatch(/\.atc-history-series[^}]*stroke:/);
-    expect(atcTrafficSource).toContain('<path key={i} d={path} fill="none" stroke="currentColor" />');
-    expect(atcTrafficSource).toContain('aria-label={t.atc.historyChart}');
+    expect(atcSource).toContain("t.atc");
   });
 
-  it("keeps ATC UI copy translated and source badges compact", () => {
-    for (const key of ["verticalTraffic", "trafficHistory", "showHistory", "sectorFlows", "loadingHistory"]) {
-      expect(englishSource).toContain(`${key}:`);
-      expect(czechSource).toContain(`${key}:`);
-    }
-    expect(atcTrafficSource).not.toContain("ATC Vertical Traffic");
-    expect(atcTrafficSource).not.toContain("Traffic history");
-    expect(atcTrafficSource).not.toContain("Show history");
+  it("keeps live ATC wording and source badges independent of historical panels", () => {
+    expect(englishSource).toContain("probableRelevant:");
+    expect(czechSource).toContain("probableRelevant:");
     expect(appSource).not.toContain("classifyAircraftSource(aircraft)} · {aircraftPositionSourceLabel");
     expect(aircraftTrafficRowSource).toContain("aircraftSourceLabel(aircraft)");
   });
@@ -174,20 +163,14 @@ describe("radar UI polish helpers", () => {
     expect(productionGateSource).toContain("areTilesLoaded");
   });
 
-  it("shares the canonical vector basemap and style lifecycle with Time Machine", () => {
-    expect(timeMachineSource).toContain("AIRRADAR_BASE_MAP_STYLE_URL");
-    expect(timeMachineSource).toContain('map.once("style.load", () => {');
-    expect(timeMachineSource).not.toContain("tile.openstreetmap.org");
-    expect(timeMachineSource).toContain("time-machine-aircraft");
-  });
-
   it("keeps aircraft visual effects off the MapLibre root", () => {
     expect(globalCss).toContain(".aircraft-marker.selected .aircraft-marker-visual::before");
     expect(globalCss).toContain("position: absolute");
     expect(globalCss).toMatch(/\.aircraft-marker:hover \.aircraft-plane[^}]*transform:\s*scale/);
     expect(globalCss).toMatch(/\.aircraft-marker\.selected \.aircraft-plane[^}]*transform:\s*scale/);
     expect(appSource).toContain("const target: [number, number] = [aircraft.lon, aircraft.lat]");
-    expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
+    expect(appSource).not.toContain("setLngLat([receiver.lon, receiver.lat])");
+    expect(appSource).toContain("shouldRecenterOnReceiver");
   });
 
   it("keeps tar1090 icons colorable and map motion visually continuous", () => {
@@ -249,21 +232,6 @@ describe("radar UI polish helpers", () => {
     expect(radarDrawerDetailsSource).toContain("<AircraftRadarQuickDetail");
     expect(radarMapLayerMenuSource).toContain('data-testid="map-layer-atc"');
     expect(radarDrawerInteractionsSource).toContain('window.addEventListener("keydown", handleKeyboardShortcut, true)');
-  });
-
-  it("keeps Operations Center in a focused read-only intelligence boundary", () => {
-    expect(radarHudSource).toContain("<RadarOperationsCenter />");
-    expect(radarOperationsCenterSource).toContain("useIntelligenceStream(open)");
-    expect(radarOperationsCenterSource).toContain('"/api/alerts?page=0&pageSize=50&filter=all"');
-    expect(radarOperationsCenterSource).toContain('"/api/logbook/summary"');
-    expect(radarOperationsCenterSource).toContain("/operations?period=24h");
-    expect(radarOperationsCenterSource).toContain("AIRPORT_CONTEXT_REFRESH_INTERVAL_MS = 300_000");
-    expect(radarOperationsCenterSource).not.toContain("useAircraftStream");
-    expect(radarOperationsCenterSource).not.toContain("maplibre");
-    expect(radarOperationsCenterSource).not.toContain("method: \"POST\"");
-    expect(radarOperationsCenterSource).not.toContain("method: \"PATCH\"");
-    expect(radarOperationsCenterSource).not.toContain("method: \"DELETE\"");
-    expect(radarOperationsCenterSource).toContain('href={\`/aircraft/\${event.icaoHex}\`}');
   });
 
   it("keeps performance diagnostics opt-in and off the default hot path", () => {
@@ -341,7 +309,8 @@ describe("radar UI polish helpers", () => {
     expect(radarMapLayerMenuSource).toContain("checked={showAirports}");
     expect(radarMapLayerMenuSource).toContain("checked={showAtc}");
     expect(appSource).toContain("useDatasetQuery");
-    expect(radarAtcMapContextSource).toContain('url: "/api/airspace/activity"');
+    expect(radarAtcMapContextSource).toContain("export function createAtcGeoJSON");
+    expect(radarAtcMapContextSource).not.toContain("buildAirspacePlanMapIndex");
     expect(appSource).toContain('url: "/api/ats/routes?view=map"');
     expect(datasetSource).toContain('"retrying"');
     expect(datasetSource).toContain("retry-after");
@@ -401,16 +370,18 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
   });
 
-  it("keeps the full ATS map dataset gated while selected Route Corridor reuses bounded route intelligence", () => {
+  it("keeps the full ATS map dataset gated while R11 uses bounded published-route matching", () => {
     expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus)");
     expect(appSource).not.toContain("selectedHasRouteData");
     expect(appSource).not.toContain("analyzePublishedRoute");
     expect(appSource).toContain("ROUTE_INTELLIGENCE_SOURCE_ID");
-    expect(appSource).toContain("useRouteCorridorIntelligence(selectedAircraft)");
-    expect(routeCorridorSource).toContain("analyzePublishedRoute");
-    expect(routeCorridorSource).toContain("/api/navigation/data?ids=");
-    expect(routeCorridorSource).not.toContain("new EventSource");
-    expect(routeCorridorSource).not.toContain("setInterval");
+    expect(appSource).toContain("useSelectedRoute(selectedAircraft)");
+    expect(selectedRouteSource).toContain("analyzePublishedRoute");
+    expect(selectedRouteSource).toContain("/api/navigation/data?ids=");
+    expect(selectedRouteSource).not.toContain("new EventSource");
+    expect(selectedRouteSource).not.toContain("setInterval");
+    expect(selectedRouteSource).not.toContain("buildTrajectoryConformance");
+    expect(selectedRouteSource).not.toContain("buildRouteCorridorIntelligence");
     expect(appSource).toContain("selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin");
     expect(appSource).toContain("selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination");
   });

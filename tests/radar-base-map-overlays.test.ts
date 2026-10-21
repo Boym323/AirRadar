@@ -25,13 +25,11 @@ describe("base map overlay registration", () => {
       radarImageUrl: "data:image/png;base64,AA==",
       radarCoordinates: [[0, 1], [1, 1], [1, 0], [0, 0]],
       emptyAts: empty,
-      emptyProcedures: empty,
       emptyNavigationIntegrity: empty,
     });
     expect(operations.filter((x) => x.startsWith("source:"))).toEqual([
       "source:map-tint", "source:weather-radar-image", "source:navigation-integrity",
-      "source:range-rings", "source:aviation-nav-data", "source:ats-routes",
-      "source:procedures-sid", "source:procedures-star",
+      "source:aviation-nav-data", "source:ats-routes",
       "source:ats-route-labels", "source:ats-route-points",
     ]);
     expect(operations).toContain("layer:map-tint:before:base-labels");
@@ -39,7 +37,8 @@ describe("base map overlay registration", () => {
     expect(layers.get("ats-routes-selected")).toMatchObject({ source: "ats-routes", layout: { visibility: "none" } });
     expect(layers.get("navigation-integrity-fill")).toMatchObject({ source: "navigation-integrity", layout: { visibility: "none" } });
     expect(sources.get("weather-radar-image")).toMatchObject({ url: "data:image/png;base64,AA==" });
-    expect(sources.get("procedures-sid")).toMatchObject({ data: empty });
+    expect(sources.has("procedures-sid")).toBe(false);
+    expect(sources.has("range-rings")).toBe(false);
   });
 
   it("keeps the actual map owner responsible for style.load and map events", () => {

@@ -32,8 +32,9 @@ describe("Visual System V5-E2–E6", () => {
 
   it("exposes estimated route progress without replacing observed tracks", () => {
     expect(aircraft).toContain('data-testid="aircraft-v5-route-progress"');
-    expect(aircraft).toContain("t.routeCorridor.disclaimer");
-    expect(aircraft).toContain("routeCorridor.confidence");
+    expect(aircraft).toContain("t.route.contextDisclaimer");
+    expect(aircraft).toContain("selectedRoute?.routeProgressPercent");
+    expect(aircraft).not.toContain("t.routeConformance");
     expect(aircraft).toContain("aria-label={visual.flightProgress}");
     expect(radar).toContain('data-testid="radar-v5-route-evidence"');
     expect(radar).toContain("routeObserved");
@@ -42,17 +43,15 @@ describe("Visual System V5-E2–E6", () => {
     expect(radar).toContain('"selected-trail"');
   });
 
-  it("reuses airport traffic controller and deep links into existing radar selection", () => {
-    expect(airport).toContain('data-testid="airport-v5-map-shortcut"');
-    expect(airport).toContain('switchView("map")');
-    expect(nearby).toContain('data-testid="airport-v5-nearby-filters"');
-    expect(nearby).toContain('item.classification === movement');
+  it("keeps the nearby-aircraft radar shortcut without the retired Airport Live Board", () => {
+    expect(airport).toContain("<AirportMap airport={airport}");
     expect(nearby).toContain('aria-pressed={movement === option.key}');
     expect(nearby).toContain('/?aircraft=');
     expect(radar).toContain('searchParams.get("aircraft")');
     expect(nearby).not.toContain("new EventSource(");
     expect(gate).toContain("airport-v5-map-mobile");
-    expect(gate).toContain("verifyAirportMapShortcut");
+    expect(gate).toContain("airport-v5-map-desktop");
+    expect(gate).not.toContain("verifyAirportMapShortcut");
   });
 
   it("keeps full bilingual labels and accessible, token-based controls", () => {

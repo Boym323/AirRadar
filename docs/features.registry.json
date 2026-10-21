@@ -9,7 +9,7 @@
       "category": "platform",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Installable mobile PWA with offline last-state caching, browser-local favorite airports, and optional Web Push notifications for emergency squawks, watchlist aircraft, and geofence events.",
+      "summary": "Installable mobile PWA with offline last-state caching and an optional Web Push subscription transport. Retired rule-based alerts no longer produce notifications.",
       "pages": [
         "/",
         "/airports/:icao"
@@ -28,7 +28,6 @@
         "PWA",
         "mobile mode",
         "push notifications",
-        "favorite airports",
         "offline state"
       ]
     },
@@ -38,14 +37,13 @@
       "category": "radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state.",
+      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, live SSE transport and selected-aircraft map/route context without predictive dashboards.",
       "pages": [
         "/"
       ],
       "apis": [
         "/api/aircraft",
         "/api/aircraft/:hex",
-        "/api/operations/predictive",
         "/api/search",
         "/api/stream"
       ],
@@ -86,22 +84,14 @@
       "category": "history",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories.",
+      "summary": "Retained live aircraft detail, altitude/time-series observations, telemetry and receiver context without public historical-flight listing or Flight Story routes.",
       "pages": [
-        "/aircraft/:hex",
-        "/flights/:id",
-        "/history",
-        "/flights",
-        "/compare/flights"
+        "/aircraft/:hex"
       ],
       "apis": [
         "/api/aircraft/:hex/context",
-        "/api/aircraft/:hex/prediction",
         "/api/aircraft/:hex/photo",
-        "/api/aircraft/:hex/route-weather",
-        "/api/history/:hex",
-        "/api/history/flights",
-        "/api/history/flights/:id"
+        "/api/history/:hex"
       ],
       "changelogScopes": [
         "aircraft",
@@ -147,18 +137,14 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion.",
+      "summary": "Published airport catalog, runways, navaids, nearby airports and current METAR/TAF; rejected arrival/departure live board and traffic analytics endpoints are no longer public.",
       "pages": [
         "/airports",
-        "/airports/:icao",
-        "/compare/airports"
+        "/airports/:icao"
       ],
       "apis": [
         "/api/airports",
-        "/api/airports/:icao",
-        "/api/airports/:icao/movements",
-        "/api/airports/:icao/operations",
-        "/api/airports/:icao/traffic"
+        "/api/airports/:icao"
       ],
       "changelogScopes": [
         "airport",
@@ -195,67 +181,17 @@
       ]
     },
     {
-      "id": "time-machine",
-      "name": "Time Machine",
-      "category": "history",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence.",
-      "pages": [
-        "/time-machine"
-      ],
-      "apis": [
-        "/api/time-machine/range",
-        "/api/time-machine/window"
-      ],
-      "changelogScopes": [
-        "time-machine",
-        "event-replay"
-      ],
-      "changelogKeywords": [
-        "time machine",
-        "event replay",
-        "replay ±10 min"
-      ]
-    },
-    {
-      "id": "trajectory-conformance",
-      "name": "Trajectory Conformance",
-      "category": "navigation / intelligence",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence.",
-      "pages": [
-        "/"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "trajectory-conformance",
-        "route-conformance"
-      ],
-      "changelogKeywords": [
-        "trajectory conformance",
-        "route conformance",
-        "probable direct",
-        "route rejoin",
-        "persistent deviation",
-        "route uncertain"
-      ]
-    },
-    {
       "id": "map-context-weather",
       "name": "Map Context & Weather",
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion.",
+      "summary": "Current radar imagery, METAR/TAF and SIGMET, observed aircraft weather and navigation safety overlays.",
       "pages": [
         "/weather"
       ],
       "apis": [
-        "/api/aircraft/:hex/weather-fusion",
         "/api/map-context/at",
-        "/api/map-context/aup",
         "/api/map-context/metar",
         "/api/map-context/radar",
         "/api/map-context/radar/frame/:id",
@@ -263,7 +199,6 @@
         "/api/weather/airport",
         "/api/weather/airport/:icao",
         "/api/weather/metar-map",
-        "/api/weather/pirep",
         "/api/weather/radar/frame/:id",
         "/api/weather/radar/frames",
         "/api/weather/sigmet",
@@ -278,8 +213,6 @@
       "changelogKeywords": [
         "map context",
         "metar",
-        "pirep",
-        "airep",
         "sigmet",
         "weather radar",
         "wind layer",
@@ -291,117 +224,51 @@
         "bds4,4",
         "bds44",
         "aircraft observed weather",
-        "weather fusion",
-        "multi-source weather",
         "weather evidence"
       ]
     },
     {
       "id": "statistics-recaps",
-      "name": "Statistics & Recaps",
+      "name": "Statistics & Logbook",
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Legacy receiver statistics and recap APIs retained for internal consumers and compatibility; all standalone statistics, chart, records, airline/type explorer, and daily/weekly recap pages have been retired.",
+      "summary": "Receiver live and aggregate statistics, coverage, traffic and logbook summaries. Reception records, daily/weekly recaps, historical heatmap and traffic-profile APIs are retired.",
       "pages": [],
       "apis": [
         "/api/logbook/summary",
-        "/api/recap",
-        "/api/reception-records",
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
-        "/api/statistics/traffic",
-        "/api/statistics/heatmap",
-        "/api/statistics/traffic-profile"
+        "/api/statistics/traffic"
       ],
       "changelogScopes": [
         "statistics",
-        "recap",
         "logbook",
         "analytics"
       ],
       "changelogKeywords": [
-        "statistics",
-        "daily recap",
-        "weekly recap",
-        "reception records",
-        "daily aviation story"
+        "statistics"
       ]
     },
     {
-      "id": "watchlist-alerts",
-      "name": "Watchlist, Alerts & Fleet",
+      "id": "notification-delivery",
+      "name": "Notification Delivery (L11/L12)",
       "category": "alerts",
-      "status": "production",
+      "status": "internal",
       "introducedVersion": null,
-      "summary": "Server watchlists, integrated rule-scoped activity, alert history, authenticated Notification Center delivery preferences, cross-lane semantic deduplication, bounded per-aircraft timelines, server-persisted unread state, server-side paginated filtering/search, rationale, reversible aircraft/rule delivery mutes, delivery health diagnostics, authenticated dry-run alert rule simulation, and bounded alert effectiveness analytics.",
-      "pages": [
-        "/watchlist",
-        "/alerts",
-        "/notifications",
-        "/fleet",
-        "/admin/alerts",
-        "/admin/alerts/delivery-health",
-        "/admin/alerts/simulator",
-        "/admin/alerts/analytics"
-      ],
+      "summary": "Web Push subscriptions and VAPID endpoint, durable Pushover delivery worker and admin delivery-health diagnostics. Legacy AlertEngine rules, watchlists, fleets, and Notification Center are retired. Existing queued/historical delivery records remain; transports do not themselves generate new alerts.",
+      "pages": [],
       "apis": [
-        "/api/alerts",
-        "/api/watchlist",
-        "/api/watchlist/:id",
-        "/api/watchlist/activity",
         "/api/watchlist/session",
-        "/api/admin/alerts/analytics",
-        "/api/admin/alerts/delivery",
-        "/api/admin/alerts/delivery-health",
-        "/api/admin/alerts/simulator",
-        "/api/admin/alerts/fleets",
-        "/api/admin/alerts/fleets/:id",
-        "/api/admin/alerts/fleets/:id/matchers",
-        "/api/admin/alerts/fleets/:id/matchers/:matcherId",
-        "/api/admin/alerts/geofences",
-        "/api/admin/alerts/geofences/:id",
-        "/api/admin/alerts/history",
-        "/api/admin/alerts/rules",
-        "/api/admin/alerts/rules/:id"
+        "/api/admin/alerts/delivery-health"
       ],
       "changelogScopes": [
-        "alerts",
-        "watchlist",
-        "fleet"
+        "notification-delivery"
       ],
       "changelogKeywords": [
-        "watchlist",
-        "alert history",
-        "fleet",
-        "notification center"
-      ]
-    },
-    {
-      "id": "flight-intelligence",
-      "name": "Flight Intelligence",
-      "category": "intelligence",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events.",
-      "pages": [
-        "/intelligence",
-        "/intelligence/analytics"
-      ],
-      "apis": [
-        "/api/intelligence/events",
-        "/api/intelligence/stream",
-        "/api/intelligence/analytics"
-      ],
-      "changelogScopes": [
-        "intelligence"
-      ],
-      "changelogKeywords": [
-        "flight intelligence",
-        "go-around",
-        "holding detection",
-        "transition intelligence",
-        "flight intelligence analytics"
+        "Web Push",
+        "Pushover",
+        "delivery health"
       ]
     },
     {
@@ -410,25 +277,14 @@
       "category": "atc",
       "status": "production",
       "introducedVersion": null,
-      "summary": "ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data.",
+      "summary": "Published ATC map geometry and retained ATS route/navaid references; standalone traffic, sector-transition, prediction-validation and AUP/UUP endpoints are removed.",
       "pages": [
-        "/airspace",
-        "/airspace/sectors/:id",
-        "/navigation",
-        "/procedures"
+        "/navigation"
       ],
       "apis": [
-        "/api/airspace/activity",
         "/api/atc/sectors",
-        "/api/atc/sectors/:id/history",
-        "/api/atc/sectors/:id/traffic",
-        "/api/atc/sectors/history",
-        "/api/atc/sectors/traffic",
-        "/api/atc/sectors/transitions",
-        "/api/atc/validation",
         "/api/ats/routes",
-        "/api/navigation/data",
-        "/api/procedures"
+        "/api/navigation/data"
       ],
       "changelogScopes": [
         "atc",
@@ -531,14 +387,12 @@
       "category": "operations",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration.",
+      "summary": "Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics, and receiver mass-drop guard state.",
       "pages": [
         "/system"
       ],
       "apis": [
         "/api/admin/altitude/:hex",
-        "/api/admin/flights/:id/evidence",
-        "/api/admin/predictive/readiness",
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/runtime-performance",
@@ -592,216 +446,17 @@
       ]
     },
     {
-      "id": "operational-digital-twin",
-      "name": "Operational Digital Twin",
-      "category": "intelligence",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with route, PIREP/SIGMET corridor evidence, Navigation Integrity, a canonical Prediction Timeline V1 on aircraft detail, readiness-gated PUBLIC predictive context, prospective outcome validation, regional multi-aircraft attention with LOCAL outcome calibration and graduation-gated 5/15/30-minute map context, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates.",
-      "pages": [
-        "/aircraft/:hex",
-        "/",
-        "/admin/operational-twin/calibration"
-      ],
-      "apis": [
-        "/api/admin/operational-twin/calibration",
-        "/api/admin/operational-twin/event-outcome",
-        "/api/admin/operational-twin/outcome",
-        "/api/admin/operational-twin/regional-attention-graduation",
-        "/api/admin/operational-twin/regional-attention-outcome",
-        "/api/aircraft/:hex/situation",
-        "/api/operations/situation"
-      ],
-      "changelogScopes": [
-        "operational-twin",
-        "digital-twin",
-        "situation",
-        "regional-situation",
-        "multi-aircraft-situation",
-        "operational-attention",
-        "regional-attention-outcome",
-        "regional-attention-graduation",
-        "digital-twin-calibration-center",
-        "digital-twin-calibration-persistence",
-        "regional-operations-center",
-        "prediction-timeline"
-      ],
-      "changelogKeywords": [
-        "operational digital twin",
-        "4d situation",
-        "situation timeline",
-        "trajectory corridor",
-        "future intersection",
-        "weather corridor",
-        "weather ahead",
-        "pirep corridor",
-        "sigmet entry",
-        "map corridor",
-        "uncertainty corridor",
-        "future corridor",
-        "digital twin map",
-        "future event marker",
-        "outcome validation",
-        "corridor calibration",
-        "local receiver truth",
-        "uncertainty coverage",
-        "5 minute outcome",
-        "15 minute outcome",
-        "30 minute outcome",
-        "event outcome",
-        "event timing validation",
-        "waypoint outcome",
-        "sector entry outcome",
-        "sigmet outcome",
-        "arrival eta outcome",
-        "runway expectation outcome",
-        "event precision",
-        "navigation integrity corridor",
-        "navigation integrity ahead",
-        "regional integrity intersection",
-        "future integrity region",
-        "regional situation graph",
-        "multi-aircraft situation",
-        "projected copresence",
-        "shared destination context",
-        "operational attention",
-        "destination cluster",
-        "regional copresence",
-        "regional attention outcome",
-        "regional attention graduation",
-        "regional attention readiness",
-        "manual attention promotion eligibility",
-        "regional attention calibration",
-        "calibration center",
-        "calibration dashboard",
-        "readiness diagnostics",
-        "copresence precision",
-        "copresence timing mae",
-        "truth-first recall",
-        "waypoint recall",
-        "sector entry recall",
-        "sigmet recall",
-        "calibration persistence",
-        "anonymous calibration aggregates",
-        "five-minute calibration buckets",
-        "restart-stable calibration",
-        "regional operations center",
-        "regional horizon filter",
-        "graduated regional map context",
-        "regional map focus",
-        "prediction timeline",
-        "prediction timeline v1",
-        "chronological outlook",
-        "future event timeline"
-      ]
-    },
-    {
-      "id": "operations-dashboard",
-      "name": "Operations Dashboard",
-      "category": "operations",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Live operational dashboard combining canonical local traffic, airport flow, bounded next-30-minute arrival context, Regional Attention, and Flight Intelligence without creating a parallel intelligence engine.",
-      "pages": [
-        "/operations"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "operations-dashboard"
-      ],
-      "changelogKeywords": [
-        "operations dashboard",
-        "live traffic",
-        "airport flow",
-        "next 30 minutes",
-        "notable events",
-        "attention dashboard"
-      ]
-    },
-    {
-      "id": "live-airport-network",
-      "name": "Live Airport Network",
-      "category": "airports",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bounded /airports operational network showing favorite and live-route-active airports with canonical Airport Operations, receiver-only approach-queue state, likely runway, next inbound estimate, and direct Live Board navigation.",
-      "pages": [
-        "/airports"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "live-airport-network"
-      ],
-      "changelogKeywords": [
-        "live airport network",
-        "airport network",
-        "favorite airports",
-        "approach queue",
-        "next arrival"
-      ]
-    },
-    {
-      "id": "explainable-prediction",
-      "name": "Explainable Prediction",
-      "category": "intelligence / prediction",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Why/Proč evidence panels for readiness-gated ETA, runway, runway-change and trajectory advisories using a small capability-specific whitelist from the existing canonical prediction evidence.",
-      "pages": [
-        "/aircraft/:hex"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "explainable-prediction"
-      ],
-      "changelogKeywords": [
-        "explainable prediction",
-        "prediction evidence",
-        "why prediction",
-        "prediction rationale"
-      ]
-    },
-    {
-      "id": "investigation-links",
-      "name": "Investigation Links",
-      "category": "productivity",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bookmarkable URL state across analytical, comparison, navigation, procedure and sector-detail surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
-      "pages": [
-        "/airspace",
-        "/compare/airports",
-        "/compare/flights",
-        "/navigation-integrity",
-        "/time-machine",
-        "/navigation",
-        "/procedures",
-        "/airspace/sectors/:id"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "investigation-links"
-      ],
-      "changelogKeywords": [
-        "investigation links",
-        "deep links",
-        "bookmarkable state",
-        "navigation investigation links"
-      ]
-    },
-    {
       "id": "rxw-aircraft-communications",
       "name": "ACARS/VDL2 Communications (RXW Hub)",
       "category": "aircraft / communications",
       "status": "optional",
       "introducedVersion": null,
-      "summary": "Optional RXW ACARS Hub metadata and independently parsed H1/FPN waypoint reports with bounded in-memory caches, aircraft plan badges and a non-authoritative map overlay. Disabled by default; requires provider authorization.",
+      "summary": "Optional RXW Hub ACARS/VDL2 metadata and structured airport-pair route hints, backed by bounded in-memory caches. H1/FPN live decoding and radar overlays are retired; legacy archive rows remain readable. Disabled by default and subject to provider authorization.",
       "pages": [
         "/aircraft/:hex"
       ],
       "apis": [
-        "/api/aircraft/:hex/communications",
-        "/api/aircraft/communications/waypoints"
+        "/api/aircraft/:hex/communications"
       ],
       "changelogScopes": [
         "rxw-acars"
@@ -810,7 +465,6 @@
         "RXW Hub",
         "ACARS communications",
         "VDL2 communications",
-        "FPN waypoints",
         "RXW route plan"
       ]
     }

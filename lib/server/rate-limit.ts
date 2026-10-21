@@ -94,7 +94,6 @@ export const PUBLIC_RATE_LIMITS = {
   airspaceActivity: { limit: 30, windowMs: 60_000 },
   health: { limit: 60, windowMs: 60_000 },
   statistics: { limit: 12, windowMs: 60_000 },
-  receptionRecords: { limit: 12, windowMs: 60_000 },
   logbookSummary: { limit: 12, windowMs: 60_000 },
   alertHistory: { limit: 12, windowMs: 60_000 },
   recap: { limit: 12, windowMs: 60_000 },

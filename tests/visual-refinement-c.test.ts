@@ -16,15 +16,8 @@ describe("Visual refinement C: statistics and operational dashboards", () => {
     expect(system).toContain('<Link className="back-link" href="/">');
     const nav = system.split("function LinkNav")[1].split("export function SystemStatusPage")[0];
     expect(nav).not.toContain('href="/"');
-    expect(nav).toContain('href="/history"');
+    expect(nav).toContain('href="/receiver/coverage"');
+    expect(nav).toContain('href="/navigation-integrity"');
+    expect(nav).not.toContain('href="/history"');
   });
-  it("renders long wind metrics without truncation on mobile", () => {
-    const airport = source("components/airport-operations-board.tsx");
-    const css = source("app/globals.css");
-    expect(airport).toContain('className="airport-v3-wind-metric"');
-    expect(css).toContain(".airport-v3-wind-metric .ui-metric-value");
-    expect(css).toContain("white-space: normal;");
-    expect(css).toContain(".airport-v3-metrics .airport-v3-wind-metric");
-  });
-
 });

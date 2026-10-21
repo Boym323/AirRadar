@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LOCALE, getTranslations, normalizeLocalePreference } from "@/lib/i18n";
 
@@ -53,12 +53,10 @@ describe("persistent Czech / English language switch", () => {
 
   it("does not regress localized overlays, administration or aircraft telemetry", () => {
     const receiver = source("components/aircraft-radar-quick-detail.tsx");
-    const alerts = source("components/alerts-admin-page.tsx");
     const aviation = source("lib/i18n/airspace-activity.ts");
     expect(receiver).toContain("t.uiExtras.localObservation");
     expect(receiver).not.toContain('label="Last LOCAL observation"');
-    expect(alerts).toContain("t.adminAlerts.createFleet");
-    expect(alerts).not.toContain(">Create fleet</button>");
+    expect(existsSync(new URL("../components/alerts-admin-page.tsx", import.meta.url))).toBe(false);
     expect(aviation).toContain('t.locale.startsWith("en")');
     expect(aviation).toContain("airspaceActivityMapTranslations.en");
   });

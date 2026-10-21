@@ -12,7 +12,6 @@ import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { ognIconKind } from "@/lib/radar/traffic-presentation";
 
-const IntelligenceFeed = dynamic(() => import("@/components/intelligence-feed").then((module) => module.IntelligenceFeed));
 const LogbookSummary = dynamic(() => import("@/components/logbook-summary").then((module) => module.LogbookSummary));
 
 type TrafficSource = "adsb" | "ogn";
@@ -99,7 +98,6 @@ export function RadarTrafficBrowser({
 }: RadarTrafficBrowserProps) {
   const [watchlistKind, setWatchlistKind] = useState("callsign");
   const [watchlistValue, setWatchlistValue] = useState("");
-  const [intelligenceOpened, setIntelligenceOpened] = useState(false);
   const [logbookOpened, setLogbookOpened] = useState(false);
 
   const quickFilterLabels: Record<AircraftQuickFilter, string> = {
@@ -214,11 +212,6 @@ export function RadarTrafficBrowser({
     </div>
 
     <RelevantAtcPanel summaries={relevantAtcFrequencies} expanded={atcExpanded} onOpen={onAtcOpen} />
-    <details className="sidebar-secondary-tools" onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}>
-      <summary>{t.intelligence.title}<span>{t.common.more}</span></summary>
-      {intelligenceOpened && <IntelligenceFeed />}
-    </details>
-
     {trafficSource === "ogn" ? (
       <div id="traffic-list" className="aircraft-list ogn-traffic-list">
         {filteredOgnTargets.length === 0 ? <div className="empty-list ogn-empty"><strong>{ognSnapshot.targets.length === 0 ? t.ogn.empty : t.ogn.noMatching}</strong></div> : filteredOgnTargets.map((target) => (

@@ -1,5 +1,5 @@
 import type { FeatureCollection } from "geojson";
-import type { FilterSpecification, Map as MapLibreMap } from "maplibre-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { createAtcGeoJSON } from "@/lib/radar/airspace-geojson";
 import { createAirportGeoJSON, createMetarGeoJSON } from "@/lib/radar/map-context-geojson";
@@ -9,17 +9,10 @@ import { createAirportGeoJSON, createMetarGeoJSON } from "@/lib/radar/map-contex
  */
 export function registerRadarAviationLayers(map: MapLibreMap, initialSigmet: FeatureCollection): void {
   map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
-  const plannedFilter: FilterSpecification = ["any", ["==", ["get", "airspacePlanState"], "planned-now"], ["==", ["get", "airspacePlanState"], "upcoming"]];
-  map.addLayer({ id: "airspace-plan-fill", type: "fill", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", AIRRADAR_MAP_THEME.warning, AIRRADAR_MAP_THEME.weather], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.12, 0.05] } });
-  map.addLayer({ id: "airspace-plan-line", type: "line", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", AIRRADAR_MAP_THEME.selectedStrong, AIRRADAR_MAP_THEME.weather], "line-opacity": 0.66, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1, 8, 1.7, 13, 2.6], "line-dasharray": [2, 2] } });
-  map.addLayer({ id: "airspace-plan-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: plannedFilter, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", AIRRADAR_MAP_THEME.selectedStrong, AIRRADAR_MAP_THEME.label], "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
   map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": AIRRADAR_MAP_THEME.atc.fill, "fill-opacity": ["match", ["get", "airspaceType"], "FIR", 0.012, "TMA", 0.022, "CTR", 0.03, 0.045] } });
-  map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.line, "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.82, "upcoming", 0.62, 0.48], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.75, 8, 1.25, 13, 2] } });
+  map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.line, "line-opacity": 0.48, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.75, 8, 1.25, 13, 2] } });
   map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.atc.label, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
   map.addLayer({ id: "atc-sectors-context-highlight", type: "line", source: "atc-sectors", filter: ["==", ["get", "id"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.highlight, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.8, 13, 4.2] } });
-  map.moveLayer("airspace-plan-fill");
-  map.moveLayer("airspace-plan-line");
-  map.moveLayer("airspace-plan-label");
   map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": AIRRADAR_MAP_THEME.atc.line, "circle-radius": 4, "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.5 } });
   map.addSource("metar-airports", { type: "geojson", data: createMetarGeoJSON([]) });

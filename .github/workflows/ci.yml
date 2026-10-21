@@ -6,14 +6,8 @@ on:
   pull_request:
     # A maintainer can opt into a full deploy-free rehearsal via the release-preview label.
     types: [opened, synchronize, reopened, labeled]
-    # The metadata bot already validates these exact generated files through
-    # a separately dispatched CI run before merging. A second pull_request
-    # workflow has no eligible jobs and can finish red after auto-delete.
-    # Mixed metadata + application changes still trigger normal PR validation.
     paths-ignore:
       - CHANGELOG.md
-      - docs/metrics/code-history.json
-      - docs/metrics/code-growth.svg
   workflow_dispatch:
 
 concurrency:
@@ -23,13 +17,10 @@ concurrency:
 
 jobs:
   validate:
-    # Metadata PRs are validated by the explicit workflow_dispatch run started
-    # by repository-metadata.yml. Skipping the duplicate pull_request job keeps
-    # its auto-merge from deleting the branch while that event is still queued.
     # release-preview already executes full unit/typecheck, the production
     # browser suite and performance gates. Avoid repeating the fast PR job;
     # release-tests must retain lint, dependency and static quality checks.
-    if: (github.event_name == 'pull_request' && github.head_ref != 'automation/repository-metadata' && !contains(github.event.pull_request.labels.*.name, 'release-preview')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'release-preview')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -77,7 +68,6 @@ jobs:
         if: steps.scope.outputs.docs_only == 'true'
         run: |
           node scripts/docs-localization.mjs
-          node scripts/changelog.mjs check
       - name: Verify release gate planner
         if: steps.scope.outputs.docs_only != 'true'
         run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs tests/reconcile-manual-native-release-tags.test.mjs tests/t58-stall-canary.test.mjs
@@ -299,7 +289,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history and tags are required by changelog/release validation.
+          # Keep full history and tags for release validation.
           fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-node@v7
@@ -445,7 +435,6 @@ jobs:
           npm run docs:check
           npm run visual:check
           npm run icons:audit
-          npm run changelog:check
       - name: Verify release gate planner
         run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs tests/t58-stall-canary.test.mjs
       - name: Run release typecheck and verified-preview-aware Vitest

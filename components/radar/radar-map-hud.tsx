@@ -4,7 +4,6 @@ import type { ReactNode, Ref } from "react";
 import { formatNumber, t } from "@/lib/i18n";
 import type { PublicStateSnapshot } from "@/lib/aircraft/types";
 import { MapControlGroup, Panel, UiIcon } from "@/components/ui-primitives";
-import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 
 interface RadarMapHudProps {
   aircraftCount: number;
@@ -14,16 +13,14 @@ interface RadarMapHudProps {
   drawerOpen: boolean;
   trafficTriggerRef: Ref<HTMLButtonElement>;
   onOpenTraffic: () => void;
-  presentationControls: ReactNode;
-  presetMenu: ReactNode;
   children: ReactNode;
 }
 
 /** Layers are always rendered, including when no aircraft has been selected. */
 export function RadarMapHud({
   aircraftCount, activeTrafficCount, showSourceBreakdown, sourceStats,
-  drawerOpen, trafficTriggerRef, onOpenTraffic, presentationControls,
-  presetMenu, children,
+  drawerOpen, trafficTriggerRef, onOpenTraffic,
+  children,
 }: RadarMapHudProps) {
   return (
     <div className="map-overlay-primary" data-testid="radar-map-hud">
@@ -47,9 +44,7 @@ export function RadarMapHud({
           </details>
         )}
       </Panel>
-      {presentationControls}
       <MapControlGroup className="map-control-group-primary">
-        <RadarOperationsCenter />
         <button
           ref={trafficTriggerRef}
           type="button"
@@ -64,7 +59,6 @@ export function RadarMapHud({
           <strong>{formatNumber(activeTrafficCount)}</strong>
         </button>
       </MapControlGroup>
-      {presetMenu}
       {children}
     </div>
   );

@@ -6,7 +6,7 @@ import type { AviationWeatherDiagnostics, SigmetDatasetDiagnostics } from "@/lib
 import type { AviationWeatherPersistenceDiagnostics } from "@/lib/server/aviation-weather-persistence";
 import type { AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
 import type { RouteEnrichmentSnapshot } from "@/lib/server/route-enrichment-telemetry";
-import type { AlertStatus } from "@/lib/server/alert-engine";
+import type { AlertStatus } from "@/lib/server/alert-status";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import type { RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";

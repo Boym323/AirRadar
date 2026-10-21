@@ -22,12 +22,6 @@ export interface RxwWaypointPlan {
   confidence: "reported";
 }
 
-export interface RxwWaypointAvailability {
-  icaoHex: string;
-  flight: string;
-  waypointCount: number;
-}
-
 /** Public, deliberately content-free metadata from an optional ACARS Hub source. */
 export interface RxwReportedRoute {
   origin: string;
@@ -72,6 +66,5 @@ export interface RxwHubPublicSnapshot {
   lastReceivedAt: string | null;
   /** A live-flight candidate is only provided when ICAO24 and callsign match. */
   routeHint: RxwRouteEvidence | null;
-  waypointPlan: RxwWaypointPlan | null;
   messages: RxwCommunication[];
 }

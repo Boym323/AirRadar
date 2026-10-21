@@ -5,15 +5,16 @@ const component = readFileSync(new URL("../components/system-status-page.tsx", i
 const gates = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
 
 describe("Stage E browser payload compatibility", () => {
-  it("keeps /system available for an older cached readiness response", () => {
-    expect(component).toContain("const truthAccuracy = report.truthAccuracy ?? null;");
-    expect(component).toContain("{truthAccuracy ? <>");
-    expect(component).toContain("data-testid=\"predictive-readiness\"");
+  it("keeps /system functional after removing retired predictive readiness", () => {
+    expect(component).not.toContain("PredictiveReadinessPanel");
+    expect(component).not.toContain('data-testid="predictive-readiness"');
+    expect(component).toContain('fetch("/api/system/status"');
   });
-  it("exercises actual E metrics in the canonical production browser fixture", () => {
-    expect(gates).toContain('truthAccuracy: {');
-    expect(gates).toContain('version: "truth-accuracy-v1"');
-    expect(gates).toContain('decision: "REVIEW_QUALITY"');
-    expect(gates).toContain('airport: "LKPR"');
+  it("does not synthesize retired Truth Accuracy in the browser fixture", () => {
+    expect(gates).toContain("startIsolatedReadsbFixture");
+    expect(gates).toContain('name: "system-desktop"');
+    expect(gates).not.toContain("truthAccuracy: {");
+    expect(gates).not.toContain('version: "truth-accuracy-v1"');
+    expect(gates).not.toContain('decision: "REVIEW_QUALITY"');
   });
 });

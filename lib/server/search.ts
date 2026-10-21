@@ -1,4 +1,3 @@
-import "temporal-polyfill/full/global";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcSector } from "@/lib/atc/types";
@@ -11,7 +10,6 @@ import { loadCzAtsRoutes, type CzAtsRouteDocument } from "@/lib/ats/cz-routes";
 import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
 import { defaultAviationNavDataProvider } from "@/lib/server/aviation-nav-data-provider";
 import { isAviationNavDataEnabled } from "@/lib/server/config";
-import { getAtcData } from "@/lib/server/providers";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import {
   GLOBAL_SEARCH_RESULT_LIMIT,
@@ -21,7 +19,6 @@ import {
   type AirportSearchResult,
   type AtsPointSearchResult,
   type AtsRouteSearchResult,
-  type AtcSectorSearchResult,
   type FlightSearchResult,
   type GlobalSearchResponse,
   type NavPointSearchResult,
@@ -59,9 +56,6 @@ interface Scored<T> {
 }
 
 const AIRPORT_QUERY_LIMIT = 12;
-const FLIGHT_QUERY_LIMIT = 6;
-const FLIGHT_SEARCH_MIN_QUERY_LENGTH = 3;
-const FLIGHT_SEARCH_WINDOW_MS = 7 * 24 * 60 * 60 * 1_000;
 
 /**
  * Validates the public search query before either the live snapshot or the
@@ -105,14 +99,11 @@ function compareScored<T>(left: Scored<T>, right: Scored<T>): number {
     || left.identity.localeCompare(right.identity);
 }
 
-type RankedSearchResult = Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult> | Scored<AtsRouteSearchResult> | Scored<AtcSectorSearchResult> | Scored<NavPointSearchResult> | Scored<FlightSearchResult>;
+type RankedSearchResult = Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult> | Scored<AtsRouteSearchResult> | Scored<NavPointSearchResult>;
 
 function compareAnyScored(left: RankedSearchResult, right: RankedSearchResult): number {
   const tierDifference = left.score.tier - right.score.tier;
   if (tierDifference) return tierDifference;
-  const leftHistorical = left.item.kind === "flight";
-  const rightHistorical = right.item.kind === "flight";
-  if (leftHistorical !== rightHistorical) return leftHistorical ? 1 : -1;
   return left.score.field - right.score.field
     || left.identity.localeCompare(right.identity);
 }
@@ -252,35 +243,6 @@ function rankAtsRoutes(documents: readonly (CzAtsRouteDocument | null)[], query:
   }).sort(compareScored);
 }
 
-function rankSectors(sectors: readonly AtcSector[], query: string): Scored<AtcSectorSearchResult>[] {
-  return sectors.flatMap((sector) => {
-    const score = matchScore(query, [sector.id, sector.name, sector.atcCallsign, sector.service, sector.country]);
-    if (!score) return [];
-    return [{
-      item: {
-        kind: "sector" as const,
-        id: sector.id,
-        name: sector.name,
-        service: sector.service ?? null,
-        callsign: sector.atcCallsign,
-        country: sector.country,
-        href: `/airspace/sectors/${encodeURIComponent(sector.id)}` as const,
-      },
-      score,
-      identity: sector.id,
-    }];
-  }).sort(compareScored);
-}
-
-async function loadSectors(supplied: readonly AtcSector[] | undefined): Promise<AtcSector[]> {
-  if (supplied) return [...supplied];
-  try {
-    return (await getAtcData()).sectors;
-  } catch {
-    return [];
-  }
-}
-
 function toNavPointResult(point: AviationNavPoint): NavPointSearchResult {
   const focus = [point.kind, point.id, point.latitude.toFixed(6), point.longitude.toFixed(6)].join(":");
   return {
@@ -320,96 +282,8 @@ async function loadNavPoints(query: string, supplied: readonly AviationNavPoint[
   }
 }
 
-function timestampIso(value: Temporal.Instant | Date): string {
-  return value instanceof Date
-    ? value.toISOString()
-    : value.toString();
-}
-
-function flightSearchFields(flight: FlightSearchResult): (string | null)[] {
-  return [
-    flight.callsign,
-    flight.registration,
-    flight.icaoHex,
-    flight.origin,
-    flight.destination,
-    flight.aircraftType,
-  ];
-}
-
-async function queryRecentFlights(database: SearchDatabase, query: string, now: Date): Promise<FlightSearchResult[]> {
-  if (query.trim().length < FLIGHT_SEARCH_MIN_QUERY_LENGTH) return [];
-  const schema = database.orm.public;
-  const normalized = normalizeMatchValue(query);
-  const prefix = `${normalized}%`;
-  const from = Temporal.Instant.fromEpochMilliseconds(now.getTime() - FLIGHT_SEARCH_WINDOW_MS);
-  const base = () => schema.Flight.where((flight) => flight.startTime.gte(from));
-  const execute = async (flightQuery: ReturnType<typeof base>) => await flightQuery
-    .orderBy([(flight) => flight.startTime.desc(), (flight) => flight.id.desc()])
-    .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration", "aircraftType"))
-    .limit(FLIGHT_QUERY_LIMIT)
-    .all();
-  const rows = await Promise.all([
-    execute(base().where((flight) => flight.callsign.ilike(prefix))),
-    execute(base().where((flight) => flight.registration.ilike(prefix))),
-    execute(base().where((flight) => flight.origin.ilike(prefix))),
-    execute(base().where((flight) => flight.destination.ilike(prefix))),
-    execute(base().where((flight) => flight.aircraft.some((aircraft) => aircraft.icaoHex.ilike(prefix)))),
-    execute(base().where((flight) => flight.aircraft.some((aircraft) => aircraft.registration.ilike(prefix)))),
-  ]);
-  const unique = new Map<number, FlightSearchResult>();
-  for (const row of rows.flat()) {
-    unique.set(row.id, {
-      kind: "flight",
-      id: row.id,
-      icaoHex: row.aircraft.icaoHex,
-      callsign: row.callsign,
-      registration: row.registration ?? row.aircraft.registration,
-      aircraftType: row.aircraftType ?? row.aircraft.aircraftType,
-      origin: row.origin,
-      destination: row.destination,
-      startTime: timestampIso(row.startTime),
-      href: `/flights/${row.id}`,
-    });
-  }
-  return [...unique.values()];
-}
-
-async function loadRecentFlights(query: string, database: SearchDatabase | null, now: Date): Promise<FlightSearchResult[]> {
-  if (!database || query.trim().length < FLIGHT_SEARCH_MIN_QUERY_LENGTH) return [];
-  try {
-    return await queryRecentFlights(database, query, now);
-  } catch {
-    return [];
-  }
-}
-
-function rankFlights(flights: readonly FlightSearchResult[], query: string): Scored<FlightSearchResult>[] {
-  return flights.flatMap((item) => {
-    const score = matchScore(query, flightSearchFields(item));
-    return score ? [{ item, score, identity: String(item.id).padStart(12, "0") }] : [];
-  }).sort(compareScored);
-}
-
-function normalizeIntentQuery(query: string): string {
-  return query.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().replace(/\s+/g, " ").toUpperCase();
-}
-
-export function smartSearchActions(query: string): SmartSearchActionResult[] {
-  const normalized = normalizeIntentQuery(query);
-  const airportOperations = normalized.match(/^([A-Z]{4}) (OPERATIONS|OPS|PROVOZ)$/)
-    ?? normalized.match(/^(OPERATIONS|OPS|PROVOZ) ([A-Z]{4})$/);
-  if (airportOperations) {
-    const airportIcao = airportOperations[1]?.length === 4 ? airportOperations[1] : airportOperations[2]!;
-    return [{ kind: "action", intent: "airport_operations", airportIcao, href: `/airports/${airportIcao}#airport-intelligence-v3` }];
-  }
-  const flightsTo = normalized.match(/^(FLIGHTS|LETY) (TO|DO) ([A-Z]{4})$/);
-  if (flightsTo) {
-    const airportIcao = flightsTo[3]!;
-    return [{ kind: "action", intent: "flights_to_airport", airportIcao, href: `/flights?range=7d&destination=${airportIcao}` }];
-  }
-  return [];
-}
+/** Retired product pages must not appear in smart-search results. */
+export function smartSearchActions(_query: string): SmartSearchActionResult[] { return []; }
 
 function airportFromDatabase(row: AirportDatabaseRow | null): Airport | null {
   if (!row || !Number.isFinite(row.latitude) || !Number.isFinite(row.longitude)) return null;
@@ -508,19 +382,15 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
       database = null;
     }
   }
-  const [rankedAircraft, rankedAirports, rankedNavPoints, rankedFlights, rankedSectors] = await Promise.all([
+  const [rankedAircraft, rankedAirports, rankedNavPoints] = await Promise.all([
     Promise.resolve(rankAircraft(aircraft, validation.query)),
     loadAirports(validation.query, database).then((items) => rankAirports(items, validation.query!)),
     loadNavPoints(validation.query, options.navPoints).then((items) => rankNavPoints(items, validation.query!)),
-    options.flights
-      ? Promise.resolve(rankFlights(options.flights, validation.query))
-      : loadRecentFlights(validation.query, database, options.now ?? new Date()).then((items) => rankFlights(items, validation.query!)),
-    loadSectors(options.sectors).then((items) => rankSectors(items, validation.query!)),
   ]);
   const atsDocuments = options.atsDocuments ?? [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()];
   const rankedAtsPoints = rankAtsPoints(atsDocuments, validation.query);
   const rankedAtsRoutes = rankAtsRoutes(atsDocuments, validation.query);
-  const selected: RankedSearchResult[] = [...rankedAircraft, ...rankedAirports, ...rankedAtsRoutes, ...rankedSectors, ...rankedAtsPoints, ...rankedNavPoints, ...rankedFlights]
+  const selected: RankedSearchResult[] = [...rankedAircraft, ...rankedAirports, ...rankedAtsRoutes, ...rankedAtsPoints, ...rankedNavPoints]
     .sort(compareAnyScored)
     .slice(0, GLOBAL_SEARCH_RESULT_LIMIT);
   return {
@@ -529,9 +399,9 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
     airports: selected.filter((result): result is Scored<AirportSearchResult> => result.item.kind === "airport").map((result) => result.item),
     atsPoints: selected.filter((result): result is Scored<AtsPointSearchResult> => result.item.kind === "ats-point").map((result) => result.item),
     atsRoutes: selected.filter((result): result is Scored<AtsRouteSearchResult> => result.item.kind === "ats-route").map((result) => result.item),
-    sectors: selected.filter((result): result is Scored<AtcSectorSearchResult> => result.item.kind === "sector").map((result) => result.item),
+    sectors: [],
     navPoints: selected.filter((result): result is Scored<NavPointSearchResult> => result.item.kind === "nav-point").map((result) => result.item),
-    flights: selected.filter((result): result is Scored<FlightSearchResult> => result.item.kind === "flight").map((result) => result.item),
+    flights: [],
     actions: [],
   };
 }

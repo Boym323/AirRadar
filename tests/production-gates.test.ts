@@ -79,18 +79,14 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain('visualPage.locator(".navigation-more-group").first().waitFor');
   });
 
-  it("refreshes predictive screenshot timestamps per API interception, not per visual sweep", () => {
+  it("does not retain retired predictive browser interceptors", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    const interceptor = source.slice(source.indexOf("if (target.mockPredictiveOperations) {"), source.indexOf("if (target.mockDailyRecap) {"));
-    expect(interceptor).toContain("const evaluatedAt = new Date(Date.now() - 8_000).toISOString()");
-    expect(interceptor).toContain('key === "etaAdvisory" || key === "etaAdminPreview"');
-    expect(interceptor).toContain('"runwayAdminPreview"');
-    expect(interceptor).toContain("JSON.stringify({ ...fixture, items })");
+    for (const token of ["mockPredictiveOperations", "mockDailyRecap", "mockAirportV3", "mockEtaAdvisory", "mockRunwayAdvisory", "mockTrajectoryAdvisory"]) expect(source).not.toContain(token);
   });
 
-  it("collects the system snapshot without a disposable Playwright response", () => {
+  it("collects the retained system snapshot without a disposable Playwright response", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    const begin = source.indexOf('if (selectedTargets.some((target) => target.name === "system-desktop" || target.mockPredictiveReadiness)) {');
+    const begin = source.indexOf('if (selectedTargets.some((target) => target.name === "system-desktop")) {');
     const workerStart = source.indexOf("await runBoundedChecks(selectedTargets", begin);
     const block = source.slice(begin, workerStart);
     expect(begin).toBeGreaterThan(-1);
@@ -100,27 +96,17 @@ describe("production release metadata gate", () => {
     expect(block).not.toContain('visualPage.route("**/api/system/status"');
   });
 
-  it("keeps predictive browser fixtures in sync with the full admin report contract", () => {
+  it("uses live readsb integrity evidence instead of retired predictive fixtures", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    const start = source.indexOf("const predictiveReadinessFixture = {");
-    const end = source.indexOf("const etaAdvisoryPublicFixture = {", start);
-    expect(start).toBeGreaterThan(-1);
-    const fixture = source.slice(start, end);
-    for (const field of [
-      "captureHealth:", "accuracyTrends:", "horizonQuality:", "evidencePlan:",
-      'version: "predictive-capture-health-v1"',
-      'version: "predictive-accuracy-trends-v1"',
-      'version: "predictive-horizon-quality-v1"',
-      'version: "predictive-evidence-plan-v1"',
-    ]) expect(fixture).toContain(field);
-    expect(source).toContain('data-testid="predictive-horizon-quality"');
-    expect(source).toContain('data-testid="predictive-accuracy-trends"');
+    expect(source).toContain("startIsolatedReadsbFixture");
+    for (const field of ["nic: 8", "nac_p: 9", "sil: 3", "version: 2"]) expect(source).toContain(field);
+    for (const retired of ["predictiveReadinessFixture", "etaAdvisoryPublicFixture", "truthAccuracy: {"]) expect(source).not.toContain(retired);
   });
 
-  it("retries the real Operations Center click once after hydration", () => {
+  it("omits retired Operations Center browser helpers", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
-    expect(source).toContain("if (!await operationsPanel.isVisible()) await operationsTrigger.click();");
+    expect(source).not.toContain("target.openOperationsCenter");
+    expect(source).toContain("radar-desktop-selected");
   });
 
   it("keeps breakpoint edges in the no-reload sweep while reloading only representative devices", () => {
@@ -158,9 +144,9 @@ describe("production release metadata gate", () => {
     expect(source).toContain("if (expectedUnavailable) unavailable.push");
   });
 
-  it("keeps Operations Dashboard in secondary smoke and follows the actual mobile More target", () => {
+  it("keeps selected receiver route in secondary smoke and follows the actual mobile More target", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
+    expect(source).not.toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
     expect(source).toContain('["/receiver/coverage", \'[data-testid="receiver-explorer-v2"]\']');
     expect(source).toContain('const mobileMoreHref = await mobileMoreLink.getAttribute("href")');
     expect(source).toContain("const mobileMoreTarget = new URL(mobileMoreHref, baseUrl)");
@@ -174,7 +160,8 @@ describe("production release metadata gate", () => {
     expect(source).toContain('waitUntil: "domcontentloaded"');
     expect(source).toContain("if (matchesTarget(page.url())) return");
     expect(source).toContain("await page.waitForTimeout(500)");
-    expect(source).toContain('clickAndWaitForNavigation(routeSmoke, historyLink, new URL("/history", baseUrl), "History link")');
+    expect(source).not.toContain('new URL("/history", baseUrl)');
+    expect(source).toContain('new URL("/airports", baseUrl)');
     expect(source).toContain("link.click()");
   });
 
@@ -190,31 +177,23 @@ describe("production release metadata gate", () => {
     expect(source).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
   });
 
-  it("tracks the Airport V5 overview, operations and advanced analytics while preserving V6-V8 evidence", () => {
+  it("tests retained airport map without retired predictive board snapshots", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('[data-product="airport-live-board-v8"]');
-    expect(source).toContain('switchAirportView("operations")');
-    expect(source).toContain('getByTestId("airport-live-board-flow-pulse")');
-    expect(source).toContain('switchAirportView("analytics")');
-    expect(source).toContain('const advanced = visualPage.getByTestId("airport-live-board-advanced")');
-    for (const id of ["airport-live-board-v6-pressure", "airport-live-board-v7-runway-flow", "airport-live-board-v7-arrival-sequence", "airport-live-board-v8-arrival-flow"]) {
-      expect(source).toContain(`"${id}"`);
-    }
-    expect(source).toContain('advanced.locator(`[data-testid="${id}"]`).waitFor');
-    expect(source).not.toContain('[data-product="airport-live-board-v6"]');
-    expect(source).not.toContain('[data-product="airport-live-board-v7"]');
+    expect(source).toContain('name: "airport-v5-map-desktop"');
+    expect(source).toContain('name: "airport-v5-map-mobile"');
+    expect(source).toContain('selector: ".airport-map-card"');
+    expect(source).not.toContain("target.mockAirportV3");
+    expect(source).not.toContain('data-product="airport-live-board-v8"');
   });
 
-  it("tracks the Digital Twin V2 map source contract", () => {
+  it("tracks retained ATC, ATS, airport and SIGMET map sources without retired Twin overlays", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('"operational-twin-v2"');
-    expect(source).toContain('"operational-twin-v2-uncertainty"');
-    expect(source).toContain('"operational-twin-v2-route"');
-    expect(source).toContain('"operational-twin-v2-kinematic"');
-    expect(source).toContain('"operational-twin-v2-milestones"');
-    expect(source).toContain('"operational-twin-v2-events"');
-    expect(source).toContain('"operational-twin-v2-weather-events"');
-    expect(source).toContain('"operational-twin-navigation-integrity-corridor-v1"');
+    expect(source).toContain('const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet"]');
+    expect(source).toContain('const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"]');
+    const layerContract = source.slice(source.indexOf('const sourceIds = ["route-airports"'), source.indexOf('const airports = map.querySourceFeatures("route-airports")'));
+    expect(layerContract).not.toContain("operational-twin");
+    expect(source).toContain('atc.some((feature) => feature.properties?.id === "fixture-sector")');
+    expect(source).toContain('ats.some((feature) => feature.properties?.segmentId === "fixture-segment")');
   });
 
   it("captures radar visual evidence only after basemap features are rendered", () => {
@@ -230,12 +209,37 @@ describe("production release metadata gate", () => {
   it("accepts only bounded per-aircraft enrichment rate limits in the visual sweep", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('pathname === "/api/logbook/summary"');
-    expect(source).toContain('pathname === "/api/intelligence/events"');
-    expect(source).toContain("searchParams.has(\"aircraft\")");
+    expect(source).not.toContain('pathname === "/api/intelligence/events"');
+    expect(source).not.toContain("searchParams.has(\"aircraft\")");
     expect(source).toContain("situation$/i.test(pathname)");
+    expect(source).not.toContain('pathname === "/api/intelligence/events"');
     expect(source).toContain("history\\/[A-F0-9]{6}$/i.test(pathname)");
     expect(source).toContain("expectedRateLimitedApiErrors += 1");
     expect(source).toContain("browserErrors.push(`http ${response.status()}");
+  });
+
+  it("checks 2D Traffic/Layers overlap without rejecting wrapped controls", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const controlsOverlap = Boolean(trafficBounds && layersBounds");
+    expect(source).toContain("trafficBounds.y + trafficBounds.height > layersBounds.y + 1");
+    expect(source).toContain("drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1");
+    expect(source).toContain("|| controlsOverlap");
+  });
+
+  it("checks selected ATC situation without retired W12 route-weather fixture", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).not.toContain("route-weather-match");
+    expect(source).not.toContain("route-weather-summary");
+    expect(source).not.toContain("flight-situation-summary");
+    expect(source).toContain("aircraft-quick-atc");
+    expect(source).toContain("advancedDisclosure");
+  });
+
+  it("keeps four retained aircraft drawer actions under overflow checks", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("aircraftDrawerLayout.metricCount !== 4 || aircraftDrawerLayout.actionCount !== 4");
+    expect(source).toContain("aircraftDrawerLayout.overflowingValues.length");
+    expect(source).toContain("aircraftDrawerLayout.overflowingActions.length");
   });
 
   it("keeps mobile navigation geometry assertions out of the Node global scope", () => {

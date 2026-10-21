@@ -81,42 +81,15 @@ Indikace trasy zůstávají jen ve stávající omezené paměťové cache
 (dvouhodinové uchování zpráv); nepřibývají databázové zápisy
 ani další síťové dotazy. Stále je nutný souhlas provozovatele RXW.
 
-## V3: Waypointy H1/FPN a odlišení letadel na radaru
+## Vyřazená funkce: H1/FPN (výběr E08)
 
-V3 přidává **striktní dekodér známého formátu ACARS H1/FPN** s omezenými
-vstupy a pamětí. Funkce má vlastní přepínač: až po souhlasu s využitím obsahu
-nastavte zároveň \`RXW_HUB_ENABLED=true\` a \`RXW_FPN_ENABLED=true\`.
-Oba přepínače jsou ve výchozím stavu vypnuté. Samotné zapnutí FPN
-nevytvoří spojení s RXW.
+Bylo odstraněno živé dekódování textů H1/FPN, paměťová cache waypointů,
+označení FP, mapové vrstvy, API dostupnosti waypointů a panel v detailu
+letadla. Historický přepínač `RXW_FPN_ENABLED` již nemá žádný účinek.
 
-* Parser přijímá pouze **úplnou jedinou** H1 zprávu s prefixem \`FPN/\`,
-  poli \`DA\`, \`AA\` a posloupností waypointů \`F\` (případně rozpoznaný
-  úsek \`CR\`). Zpráva musí končit čtyřmi hexadecimálními znaky kontrolního
-  součtu; algoritmus **zatím nedokážeme ověřit**.
-* Stav \`RP\` znamená **plánováno/hlášeno**, nikoli ověřený aktivní
-  letový plán. Stav \`RI\` zneplatní odpovídající starší plán.
-  Volitelné ID letu z hlavičky FPN musí odpovídat ID z ACARS.
-* Waypointy zachovávají pořadí, názvy, případné letové cesty a explicitní
-  GPS souřadnice (\`N01234W123456\` = 1,234°, −123,456°). Neznámé
-  souřadnice zůstávají prázdné. Chybějící části zpráv nedoplňujeme odhadem.
-* Původní obsah ACARS zpráv se nikdy neukládá do cache ani do databáze,
-  nezapisuje do logů a neposílá přes API. Uchovávají se jen povolená
-  metadata a nejvýše 80 bodů. Plány jsou omezené na 256 letadel,
-  expirují po 45 minutách a párují se výhradně podle **ICAO24 a callsignu**.
-* \`GET /api/aircraft/{icao24}/communications?flight=...\` vrací také
-  \`waypointPlan\` pouze při přesné shodě. Radar volá
-  \`GET /api/aircraft/communications/waypoints\` **jednou za 60 sekund**
-  a dostává nejvýše 256 identifikátorů letadel a příslušných letů.
-* Letadla s platným RP plánem získají na mapě jemné zlatavé označení
-  **FP** a kroužek. Po výběru letadla se vykreslí přerušovaná
-  zlatavá trasa **jen mezi sousedními waypointy s explicitními
-  souřadnicemi**. Přes neznámé body nebo přerušení se nespojuje.
-  Nemění se existující ikony, priorita nouzových stavů, ADS-B stopy,
-  ADSBDB/ADSB.lol ani FlightAware.
-
-Podporujeme zatím jen zdokumentovaný H1/FPN. H1/POS, ADS-C,
-skládání vícedílných zpráv, syntéza SID/STAR a automatické povýšení
-důvěryhodnosti trasy nejsou součástí této etapy.
-Dostupnost živých RXW dat a oprávnění provozovatele nejsou potvrzeny.
-
-Testy V3: \`npx vitest run tests/rxw-fpn-waypoints.test.ts\`
+Zachovaná integrace E07 zpracovává pouze **metadata** a poskytuje API
+`/api/aircraft/{icao24}/communications` a strukturované údaje
+`depa`/`dsta`. Při zapnutém zápisu historie vznikají nové záznamy
+jen pro dvojice letišť. Dřívější uložené FPN záznamy a jejich validovaný
+dekodér zůstávají čitelné. Nebyla odstraněna žádná tabulka, migrace
+ani archivovaný záznam.

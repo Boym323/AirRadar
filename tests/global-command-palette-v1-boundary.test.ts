@@ -17,11 +17,6 @@ describe("Global Command Palette V1 boundary", () => {
       'href: "/"',
       'href: "/airports"',
       'href: "/weather"',
-      'href: "/airspace"',
-      'href: "/operations"',
-      'href: "/time-machine"',
-      'href: "/compare/flights"',
-      'href: "/compare/airports"',
       'href: "/navigation-integrity"',
       'href: "/system"',
     ]) expect(paletteSource).toContain(href);

@@ -20,12 +20,11 @@ describe("MapLibre aviation registration boundary", () => {
     registerRadarAviationLayers(fakeMap, empty);
     expect(sourceIds).toEqual(["atc-sectors", "atc-transmitters", "metar-airports", "route-airports", "aviation-sigmet"]);
     expect(layerIds).toEqual([
-      "airspace-plan-fill", "airspace-plan-line", "airspace-plan-label",
       "atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-sectors-context-highlight",
       "atc-transmitters-circle", "metar-symbols", "metar-labels",
       "route-airports-circle", "route-airports-label", "aviation-sigmet-fill", "aviation-sigmet-line",
     ]);
-    expect(movedIds).toEqual(["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"]);
+    expect(movedIds).toEqual([]);
     expect(sources.get("aviation-sigmet")).toMatchObject({ type: "geojson", data: empty });
     expect(layers.get("metar-labels")).toMatchObject({ source: "metar-airports", type: "symbol", layout: { visibility: "none" } });
     expect(layers.get("atc-sectors-context-highlight")).toMatchObject({ source: "atc-sectors", layout: { visibility: "none" } });

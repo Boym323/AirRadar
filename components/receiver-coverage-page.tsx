@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { PublicStateSnapshot } from "@/lib/aircraft/types";
-import { formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
+import { formatDistance, formatNumber, t } from "@/lib/i18n";
 import { receiverExplorerCopy } from "@/lib/i18n/receiver-explorer";
 import type { CoveragePeriod, CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
 import type { CoverageIntelligenceRange, CoverageIntelligenceResponse } from "@/lib/statistics-coverage-intelligence";
@@ -154,14 +154,6 @@ export default function ReceiverCoveragePage() {
     [intelligence],
   );
 
-  const bestDirections = useMemo(
-    () => [...(intelligence?.coverage.sectors ?? [])]
-      .filter((sector) => sector.maxDistanceKm !== null)
-      .sort((a, b) => (b.maxDistanceKm ?? 0) - (a.maxDistanceKm ?? 0))
-      .slice(0, 8),
-    [intelligence],
-  );
-
   const trendMax = useMemo(
     () => Math.max(...(intelligence?.intelligence.trend.recentDays.map((day) => day.maxDistanceKm ?? 0) ?? []), 1),
     [intelligence],
@@ -223,11 +215,6 @@ export default function ReceiverCoveragePage() {
               value={`${intelligence.coverage.reliableSectors} / 36`}
               label={copy.reliableSectors}
               detail={`≥ ${intelligence.coverage.requiredReliableDays} ${copy.observedDays}`}
-            />
-            <MetricCard
-              value={intelligence.records.farthestReception ? formatDistance(intelligence.records.farthestReception.distanceKm) : "—"}
-              label={copy.periodRecord}
-              detail={intelligence.records.farthestReception ? `${formatTrack(intelligence.records.farthestReception.bearing)} · ${intelligence.records.farthestReception.registration ?? intelligence.records.farthestReception.icaoHex}` : undefined}
             />
             <MetricCard
               value={healthStateLabel(intelligence.intelligenceV2.health.state)}
@@ -377,33 +364,6 @@ export default function ReceiverCoveragePage() {
             </div>
           ) : (
             <EmptyState title={copy.trendEmpty} description={copy.trendEmptyDescription} />
-          )}
-        </Panel>
-
-        <Panel className={styles.panel} data-testid="receiver-explorer-records">
-          <SectionHeader
-            kicker={copy.recordsKicker}
-            title={copy.recordsTitle}
-            description={copy.recordsDescription}
-          />
-          {bestDirections.length ? (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead><tr><th>{copy.sector}</th><th>{copy.median}</th><th>P95</th><th>{copy.record}</th></tr></thead>
-                <tbody>
-                  {bestDirections.map((sector) => (
-                    <tr key={sector.bearingFrom}>
-                      <th>{sectorLabel(sector.bearingFrom, sector.bearingTo)}</th>
-                      <td>{formatDistance(sector.medianDailyMaxDistanceKm)}</td>
-                      <td>{formatDistance(sector.p95DailyMaxDistanceKm)}</td>
-                      <td><strong>{formatDistance(sector.maxDistanceKm)}</strong></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyState title={copy.recordsEmpty} description={copy.recordsEmptyDescription} />
           )}
         </Panel>
 

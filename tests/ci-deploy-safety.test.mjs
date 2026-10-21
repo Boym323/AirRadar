@@ -11,25 +11,15 @@ const job = (name) => {
   return next < 0 ? workflow.slice(start) : workflow.slice(start, start + name.length + 4 + next);
 };
 
-test("metadata-only PRs do not spawn redundant CI while explicit validation remains mandatory", () => {
-  // The metadata bot validates this exact content with a separately
-  // dispatched CI run and publishes the resulting required status.
+test("metadata automation is retired without weakening PR or release validation", () => {
   const pullTrigger = workflow.split("  pull_request:\n")[1]?.split("  workflow_dispatch:")[0];
   assert.ok(pullTrigger, "missing pull_request configuration");
-  const ignored = pullTrigger.match(/    paths-ignore:\n((?:      - [^\n]+\n)+)/);
-  assert.ok(ignored, "metadata-only paths-ignore must be explicit");
-  const paths = ignored[1].split("\n").filter(Boolean).map((line) => line.trim().slice(2));
-  assert.deepEqual(paths.slice().sort(), [
-    "CHANGELOG.md",
-    "docs/metrics/code-growth.svg",
-    "docs/metrics/code-history.json",
-  ].sort());
+  assert.match(pullTrigger, /paths-ignore:\n      - CHANGELOG\.md/);
+  assert.doesNotMatch(pullTrigger, /code-growth|code-history/);
   assert.match(workflow, /  push:\n    branches: \[main, master\]/);
   assert.match(workflow, /  workflow_dispatch:/);
-  const metadata = readFileSync(new URL("../.github/workflows/repository-metadata.yml", import.meta.url), "utf8");
-  assert.match(metadata, /gh workflow run ci\.yml/);
-  assert.match(metadata, /gh run watch "\$\{run_id\}"/);
-  assert.match(metadata, /-f context=validate/);
+  assert.match(job("validate"), /github\.event_name == 'pull_request'/);
+  assert.doesNotMatch(job("validate"), /automation\/repository-metadata/);
 });
 
 test("PR previews cannot trigger self-hosted production deploy", () => {
@@ -86,7 +76,7 @@ test("release-preview skips duplicated PR validation, not release quality gates"
     "npm audit --omit=dev --audit-level=high", "npm run lint",
     "npm run features:check", "npm run docs:check",
     "npm run visual:check", "npm run icons:audit",
-    "npm run changelog:check", "npm run typecheck:prepared",
+    "npm run typecheck:prepared",
     "npm run test:full", "npx prisma migration check",
   ]) assert.ok(tests.includes(command), command);
   const release = job("release-validate");

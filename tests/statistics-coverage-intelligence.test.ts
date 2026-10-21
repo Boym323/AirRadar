@@ -15,7 +15,6 @@ const baseOptions = {
   statsRows: [],
   flightStartTimes: [],
   flightRowsComplete: true,
-  highestFlight: null,
 };
 
 function statsRow(overrides: Partial<CoverageIntelligenceDailyStatsRow> = {}): CoverageIntelligenceDailyStatsRow {
@@ -127,19 +126,7 @@ describe("coverage intelligence", () => {
     expect(result.hourly.busiestHour).toBeNull();
   });
 
-  it("does not manufacture zero-value records from an empty daily aggregate", () => {
-    const result = aggregateCoverageIntelligence({
-      ...baseOptions,
-      coverageRows: [],
-      statsRows: [statsRow()],
-    });
-    expect(result.records.peakConcurrent).toBeNull();
-    expect(result.records.farthestReception).toBeNull();
-    expect(result.records.fastestAircraft).toBeNull();
-    expect(result.messages).toEqual({ observedDays: 0, total: null });
-  });
-
-  it("sums only observed receiver-message days and selects the fastest record", () => {
+  it("sums only observed receiver-message days", () => {
     const result = aggregateCoverageIntelligence({
       ...baseOptions,
       coverageRows: [],
@@ -149,14 +136,6 @@ describe("coverage intelligence", () => {
       ],
     });
     expect(result.messages).toEqual({ observedDays: 2, total: 260_000 });
-    expect(result.records.fastestAircraft).toEqual({
-      date: "2026-09-10",
-      speedKt: 535,
-      icaoHex: "BBBBBB",
-      registration: "OK-BBB",
-      callsign: "TEST535",
-      recordedAt: "2026-09-10T11:00:00.000Z",
-    });
   });
 
   it("rejects implausible historical distance and speed records", () => {
@@ -175,48 +154,6 @@ describe("coverage intelligence", () => {
     });
 
     expect(result.coverage.sectors[4]?.observedDays).toBe(0);
-    expect(result.records.farthestReception).toBeNull();
-    expect(result.records.fastestAircraft).toBeNull();
   });
 
-  it("selects range records without position samples", () => {
-    const highestFlight = {
-      flightId: 77,
-      icaoHex: "ABC123",
-      callsign: "TEST77",
-      registration: "OK-ABC",
-      maxAltitudeFt: 39000,
-      observedAt: "2026-09-10T12:00:00.000Z",
-    };
-    const result = aggregateCoverageIntelligence({
-      ...baseOptions,
-      coverageRows: [],
-      highestFlight,
-      statsRows: [
-        statsRow({
-          date: "2026-09-09",
-          maxConcurrentAircraft: 72,
-          maxDistanceKm: 310,
-          maxDistanceIcaoHex: "AAAAAA",
-          maxDistanceRegistration: "OK-AAA",
-          maxDistanceBearing: 45,
-          maxDistanceAt: "2026-09-09T12:00:00.000Z",
-        }),
-        statsRow({
-          date: "2026-09-10",
-          maxConcurrentAircraft: 88,
-          maxDistanceKm: 280,
-          maxDistanceIcaoHex: "BBBBBB",
-          maxDistanceRegistration: null,
-          maxDistanceBearing: 90,
-          maxDistanceAt: "2026-09-10T12:00:00.000Z",
-        }),
-      ],
-    });
-
-    expect(result.records.peakConcurrent).toEqual({ date: "2026-09-10", count: 88 });
-    expect(result.records.farthestReception?.distanceKm).toBe(310);
-    expect(result.records.farthestReception?.icaoHex).toBe("AAAAAA");
-    expect(result.records.highestFlight).toEqual(highestFlight);
-  });
 });

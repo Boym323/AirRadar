@@ -19,7 +19,7 @@ describe("Visual System V3.4 final polish", () => {
     expect(menu).toContain("background: var(--surface-elevated)");
     expect(menu).toContain("overscroll-behavior: contain");
     expect(menu).not.toContain("var(--surface-overlay)");
-    expect(productionGate).toContain("more-menu-mobile-en-320");
+    expect(productionGate).toContain("mobile-bottom-more");
   });
 
   it("keeps weather cards away from viewport edges and above the mobile bottom nav", () => {

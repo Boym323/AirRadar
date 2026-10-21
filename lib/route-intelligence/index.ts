@@ -2,7 +2,6 @@ import type { AircraftEnrichment } from "@/lib/aircraft/types";
 import type { CzAtsPoint, CzAtsRoute, CzAtsRouteDocument, CzAtsSegment } from "@/lib/ats/cz-routes";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import type { RouteIntelligenceV2Snapshot } from "./contracts";
-import type { Procedure } from "./contracts";
 export {
   analyzeRouteIntelligenceV2,
   analyzeRouteV2,
@@ -65,26 +64,14 @@ export {
   deriveDynamicRouteState,
   computeDynamicRouteState,
   analyzeRouteDynamics,
-  matchObservedProcedure,
   DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG,
   DYNAMIC_ROUTE_THRESHOLDS_NM,
 } from "./dynamic";
 export type {
   DynamicAircraftObservation,
   DynamicRouteInput,
-  ObservedProcedureInput,
-  ObservedProcedureMatch,
   RouteAirportContext,
 } from "./dynamic";
-export {
-  compareProcedureRunwayApplicability,
-  inferRunwayFromGeometry,
-  resolveArrivalRunwayContext,
-  resolveDepartureRunwayContext,
-  type RunwayContextResolverInput,
-  type RunwayInferenceAirport,
-  type RunwayInferencePosition,
-} from "./runway-context";
 
 export const DEFAULT_MAX_XTRACK_NM = 25;
 const EARTH_RADIUS_KM = 6371;
@@ -220,23 +207,13 @@ function fallbackWaypointSyntax(value: string): boolean {
 export function tokenizeRoute(routeText: string | null | undefined, options: {
   airwayDesignators?: ReadonlySet<string>;
   waypointNames?: ReadonlySet<string>;
-  procedures?: readonly Procedure[];
-  originAirportIcao?: string | null;
-  destinationAirportIcao?: string | null;
 } = {}): RouteToken[] {
   if (!routeText?.trim()) return [];
   const airways = new Set([...options.airwayDesignators ?? []].map(normalized));
   const waypoints = new Set([...options.waypointNames ?? []].map(normalized));
-  const origin = normalized(options.originAirportIcao ?? "");
-  const destination = normalized(options.destinationAirportIcao ?? "");
   const raw = routeText.split(/\s+/).map(cleanToken).filter(Boolean);
   return raw
     .map((value, index): RouteToken => {
-      const procedureCandidates = options.procedures?.filter((procedure) => normalized(procedure.designator) === value) ?? [];
-      const sidContext = index === 0 || (index === 1 && origin && normalized(raw[0] ?? "") === origin);
-      const starContext = index === raw.length - 1 || (index === raw.length - 2 && destination && normalized(raw.at(-1) ?? "") === destination);
-      if (sidContext && procedureCandidates.some((procedure) => procedure.type === "SID" && origin && normalized(procedure.airportIcao) === origin)) return { type: "SID", value, index };
-      if (starContext && procedureCandidates.some((procedure) => procedure.type === "STAR" && destination && normalized(procedure.airportIcao) === destination)) return { type: "STAR", value, index };
       if (value === "DCT") return { type: "DCT", value, index };
       if (airways.has(value) || /^[A-Z][0-9]{1,3}[A-Z]?$/.test(value)) return { type: "AIRWAY", value, index };
       if (waypoints.has(value) || fallbackWaypointSyntax(value)) return { type: "WAYPOINT", value, index };
@@ -596,33 +573,3 @@ export function clearRouteIntelligenceCache(): void {
   staticCache.clear();
   networkKeyCache = new WeakMap<RouteIntelligenceNetwork, string>();
 }
-
-export {
-  buildRouteCorridorIntelligence,
-  ROUTE_CORRIDOR_CONFIRMATION,
-  ROUTE_CORRIDOR_THRESHOLDS_NM,
-} from "./corridor";
-export type {
-  RouteCorridorConfidence,
-  RouteCorridorObservation,
-  RouteCorridorResult,
-  RouteCorridorSnapshot,
-  RouteCorridorStatus,
-  RouteCorridorTrackerState,
-} from "./corridor";
-
-export {
-  buildTrajectoryConformance,
-  TRAJECTORY_CONFORMANCE_THRESHOLDS,
-} from "./conformance";
-export type {
-  ProbableDirectEvidence,
-  TrajectoryConformanceConfidence,
-  TrajectoryConformanceCounters,
-  TrajectoryConformanceEvidence,
-  TrajectoryConformanceInput,
-  TrajectoryConformanceResult,
-  TrajectoryConformanceSnapshot,
-  TrajectoryConformanceStatus,
-  TrajectoryConformanceTrackerState,
-} from "./conformance";

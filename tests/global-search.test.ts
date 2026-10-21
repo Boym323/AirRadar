@@ -216,51 +216,13 @@ describe("global search", () => {
     expect(JSON.stringify(result)).not.toContain("database connection details");
   });
 
-  it("returns bounded historical Flight results through the shared search response", async () => {
-    const result = await searchGlobal("CSA123", {
-      aircraft: [],
-      database: null,
-      atsDocuments: [],
-      flights: [{
-        kind: "flight",
-        id: 42,
-        icaoHex: "49D001",
-        callsign: "CSA123",
-        registration: "OK-TST",
-        aircraftType: "A320",
-        origin: "LKPR",
-        destination: "LOWW",
-        startTime: "2026-10-04T07:00:00.000Z",
-        href: "/flights/42",
-      }],
-    });
-
-    expect(result.flights).toEqual([expect.objectContaining({
-      id: 42,
-      callsign: "CSA123",
-      href: "/flights/42",
-    })]);
-    expect(result.actions).toEqual([]);
-  });
-
-  it("recognizes deterministic smart actions without live or database dependencies", async () => {
-    // Retired recap routes must never appear as broken smart-search links.
+  it("does not offer links to deleted historical flight and operational pages", async () => {
     expect(smartSearchActions("go-arounds today")).toEqual([]);
     expect(smartSearchActions("vzácná letadla dnes")).toEqual([]);
-    expect(smartSearchActions("LOWW operations")).toEqual([
-      { kind: "action", intent: "airport_operations", airportIcao: "LOWW", href: "/airports/LOWW#airport-intelligence-v3" },
-    ]);
-    expect(smartSearchActions("lety do LKPR")).toEqual([
-      { kind: "action", intent: "flights_to_airport", airportIcao: "LKPR", href: "/flights?range=7d&destination=LKPR" },
-    ]);
-
-    await expect(searchGlobal("LOWW operations")).resolves.toMatchObject({
-      actions: [{ intent: "airport_operations", airportIcao: "LOWW" }],
-      aircraft: [],
-      airports: [],
-      atsPoints: [],
-      flights: [],
-    });
+    expect(smartSearchActions("LOWW operations")).toEqual([]);
+    expect(smartSearchActions("lety do LKPR")).toEqual([]);
+    await expect(searchGlobal("LOWW operations", { aircraft: [], database: null, atsDocuments: [], navPoints: [] }))
+      .resolves.toMatchObject({ actions: [], flights: [], sectors: [] });
   });
 
   it("returns only safe public DTO fields", async () => {
