@@ -187,7 +187,7 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current radar imagery, METAR/TAF and SIGMET, observed aircraft weather, bounded PIREP/AIREP and navigation safety overlays.",
+      "summary": "Current radar imagery, METAR/TAF and SIGMET, observed aircraft weather and navigation safety overlays.",
       "pages": [
         "/weather"
       ],
@@ -200,7 +200,6 @@
         "/api/weather/airport",
         "/api/weather/airport/:icao",
         "/api/weather/metar-map",
-        "/api/weather/pirep",
         "/api/weather/radar/frame/:id",
         "/api/weather/radar/frames",
         "/api/weather/sigmet",
@@ -239,16 +238,14 @@
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Receiver statistics APIs retained for internal consumers and compatible reception/history views; standalone recap pages and their public API are retired.",
+      "summary": "Receiver live/aggregate statistics, coverage, traffic and compatible reception/logbook summaries; historical heatmap and traffic-profile APIs are retired.",
       "pages": [],
       "apis": [
         "/api/logbook/summary",
         "/api/reception-records",
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
-        "/api/statistics/traffic",
-        "/api/statistics/heatmap",
-        "/api/statistics/traffic-profile"
+        "/api/statistics/traffic"
       ],
       "changelogScopes": [
         "statistics",
