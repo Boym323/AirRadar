@@ -1,4 +1,3 @@
-import type { AircraftProvider } from "@/lib/ports/aircraft-provider";
 export type { AircraftProvider, ExternalAdsbProvider } from "@/lib/ports/aircraft-provider";
 import type { AircraftMetadata, CoverageMode, FlightPlan, FlightRoute, NetworkProviderDiagnostics, ProviderSnapshot } from "@/lib/aircraft/types";
 import type { AtcActivity, AtcSector } from "@/lib/atc/types";
