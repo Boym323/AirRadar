@@ -288,6 +288,21 @@
       "docs/ARCHITECTURE.md",
       "docs/cs/ARCHITECTURE.md"
     ],
-    "canonicalProductionLoc": "PENDING CI audit test"
+    "canonicalProductionLoc": 91775,
+    "canonicalProductionFiles": 548,
+    "canonicalTestLoc": 29462,
+    "canonicalTestFiles": 335,
+    "productionLocBelowTargetBy": 8225,
+    "canonicalLocWorkflowRun": 39564699980,
+    "sourceAuditCiHead": "44260566548d24f18121fb7a38ab6a5cbb81b3da",
+    "sourceAuditCiStatus": "PASS",
+    "sourceAuditCodeQLStatus": "PASS",
+    "sourceAuditSyntheticLoadStatus": "PASS",
+    "sourceAuditUnresolved": [
+      "T12 periodic AUP polling",
+      "82 original per-ID detailed names/call graphs missing",
+      "external client/access-log verification pending",
+      "live T58 A/B production not measured"
+    ]
   }
 }

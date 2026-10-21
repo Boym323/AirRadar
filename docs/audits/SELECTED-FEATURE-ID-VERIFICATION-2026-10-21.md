@@ -24,6 +24,10 @@ This is a **source/CI audit**, not a production migration or a claim that all 90
 | L01–L10, L13–L15 | 13 | AlertEngine/rule/Fleet/Watchlist UI and APIs removed | **Keep L11/L12 Web Push/Pushover and occurrence history** |
 | E08 | 1 | Live H1/FPN overlay/API retired | E07 RXW metadata/messages remain |
 
+## Verified canonical source size
+
+GitHub Actions [release CI run 39564699980](https://github.com/Boym323/AirRadar/actions/runs/39564699980) logged the canonical `scanCodebase()` result on the PR test checkout: **91,775 nonempty production lines across 548 tracked source files** (test code: 29,462 lines in 335 files). This is **8,225 lines below the 100,000 target**. The PR was tested with 1,880 Vitest tests passing, 15 skipped; CI including browser/release validation, CodeQL and synthetic 1x/2x/4x load are all green. The result is a source-code measurement only, *not* a production-host performance or release deployment measurement.
+
 ## Unresolved findings
 
 **P1 — T12 network work remains:** `MapContextArchiveService.poll()` still executes `pollAup()`, calling `getAirspaceActivity()` and archiving new AUP/UUP data in `lib/server/map-context.ts:409–428`. The public planned-overlay API is removed, but a read-only historical map-context representation and the live archive writer remain. Do not delete archived data; investigate whether new AUP collection is necessary and, if not, retire only that new collection safely.

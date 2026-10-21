@@ -1121,8 +1121,16 @@
       "day": "2026-10-19",
       "productionLoc": 135145
     },
-    "auditedBranchProductionLoc": null,
-    "status": "PENDING_CI_INSTRUMENTED_MEASUREMENT"
+    "auditedBranchProductionLoc": 91775,
+    "status": "MEASURED_CANONICAL_METRIC",
+    "auditedBranchProductionFiles": 548,
+    "auditedBranchTestLoc": 29462,
+    "auditedBranchTestFiles": 335,
+    "targetProductionLoc": 100000,
+    "belowTargetBy": 8225,
+    "ciAuditedBranchHead": "44260566548d24f18121fb7a38ab6a5cbb81b3da",
+    "ciCheckoutCommit": "95a35c1630d35ed71f15b16091bc73b9aeb98910",
+    "ciEvidenceRun": 39564699980
   },
   "gates": {
     "previousHead": "a8b693bcd75d2fc0d254e10f5acc6eef4d52a259",
@@ -1131,6 +1139,13 @@
     "syntheticLoadRun": 39554500816,
     "conclusion": "all success",
     "liveAB": "NOT_MEASURED",
-    "externalClientImpact": "NOT_VERIFIED"
+    "externalClientImpact": "NOT_VERIFIED",
+    "auditCiHead": "44260566548d24f18121fb7a38ab6a5cbb81b3da",
+    "auditCiRun": 39564699980,
+    "auditCodeqlRun": 39564699954,
+    "auditSyntheticLoadRun": 39564699996,
+    "auditConclusion": "SUCCESS: CI, CodeQL, 1x/2x/4x synthetic load",
+    "auditTestsPassed": 1880,
+    "auditTestsSkipped": 15
   }
 }

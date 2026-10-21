@@ -24,6 +24,10 @@ Jde o **audit kódu a CI**, ne o produkční migraci ani potvrzení, že všech 
 | L01–L10, L13–L15 | 13 | Odstraněná pravidla, Fleet/Watchlist UI a API | **L11/L12 Push/Pushover a historické záznamy zachovány** |
 | E08 | 1 | Odstraněná H1/FPN živá mapa | E07 RXW metadata a zprávy zůstávají |
 
+## Ověřený rozsah produkčního kódu
+
+GitHub Actions [CI běh 39564699980](https://github.com/Boym323/AirRadar/actions/runs/39564699980) vykázal výsledek původní funkce `scanCodebase()`: **91 775 neprázdných řádků produkčního kódu v 548 sledovaných souborech** (testovací kód: 29 462 řádků v 335 souborech). Jde o **8 225 řádků pod cílem 100 000**. Prošlo 1 880 testů, 15 přeskočeno; CI včetně browser/release validace, CodeQL i syntetická zátěž 1×/2×/4× jsou úspěšné. Toto je měření zdrojového kódu, *nikoli* měření výkonu běžící produkce nebo nasazení.
+
 ## Neuzavřená zjištění
 
 **P1 – T12 stále zatěžuje běh:** `MapContextArchiveService.poll()` v `lib/server/map-context.ts:409–428` pravidelně spouští `pollAup()`, volá `getAirspaceActivity()` a archivuje nová plánovaná AUP/UUP data. Veřejné API plánované vrstvy je pryč, ale historické čtení i aktivní zapisovač zůstávají. Neničit historická data; prověřit potřebnost nového načítání a případně vypnout jen sběr.
