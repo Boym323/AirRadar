@@ -628,3 +628,15 @@ navázány na npm příkazy ani běžící CI.
 Zachovány testy štítků, ATC, stop a Navigation Integrity, aktuální zátěžový
 benchmark, diagnostika T58, veškerá historická databázová data a migrace.
 Beze změny živého příjmu ADS-B, dat na disku, schématu a produkčního provozu.
+
+## Fáze 59: odstranění nevyužívaného SID/STAR matcheru v zobrazení trasy
+
+Po odstranění importéru procedur a jejich samostatného rozhraní již
+zachovaný radar nepředává katalog SID/STAR. Z V2 trasy je proto odstraněna
+osiřelá klasifikace procedur, porovnávání drah, projekce geometrie a
+odpovídající větve cache a izolované testy. Zůstávají publikované ATS úseky,
+přímá spojení DCT, původ skutečných informací o trase z FlightAware,
+koridor trasy, kontrola odchylky, kontext drah a navigační data.
+Neznámé návrhy procedur zůstávají nerozpoznanými úseky, nikoliv domnělými
+publikovanými SID/STAR. Historické DTO typy zůstávají kompatibilní.
+Bez migrací, mazání historie nebo nasazení na produkci.

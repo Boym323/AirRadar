@@ -3,7 +3,6 @@ import {
   analyzeRouteIntelligenceV2,
   interpretFiledRoute,
   tokenizeRoute,
-  type Procedure,
   type RouteIntelligenceNetwork,
 } from "@/lib/route-intelligence";
 
@@ -32,99 +31,47 @@ const network: RouteIntelligenceNetwork = {
   ],
 };
 
-function procedure(overrides: Partial<Procedure> = {}): Procedure {
-  const type = overrides.type ?? "SID";
-  const designator = overrides.designator ?? (type === "SID" ? "DEP1" : "ARR1");
-  const airportIcao = overrides.airportIcao ?? (type === "SID" ? "LKPR" : "EDDF");
-  const fix = type === "SID" ? "ALFA" : "DELTA";
-  return {
-    id: `${airportIcao}-${type}-${designator}-${overrides.transition ?? "NONE"}`,
-    airportIcao,
-    designator,
-    type,
-    transition: overrides.transition ?? fix,
-    runwayApplicability: overrides.runwayApplicability ?? { kind: "ALL", runwayDesignators: [] },
-    legs: [{
-      sequence: 1,
-      type: "COURSE_TO_FIX",
-      from: { id: `${designator}-FROM`, name: type === "SID" ? "RWY24" : "IAF", kind: type === "SID" ? "RUNWAY" : "FIX", coordinates: { lat: 49.9, lon: 13.8 }, sourceReference: "AD 2.22" },
-      to: { id: `${designator}-TO`, name: fix, kind: "FIX", coordinates: { lat: type === "SID" ? 50 : 50.6, lon: type === "SID" ? 14 : 15.2 }, sourceReference: "AD 2.22" },
-      geometry: null,
-      courseDeg: 240,
-      sourceReference: "AD 2.22",
-    }],
-    discontinuities: [],
-    source: { countryCode: "CZ", provider: "AIP-FIXTURE", reference: `AD 2 ${airportIcao}`, effectiveDate: "2026-09-03", airacCycle: "AIRAC 09/2026", amendment: "AMDT 09/26", retrievedAt: null },
-    ...overrides,
-  };
+function analyze(route: string) {
+  return analyzeRouteIntelligenceV2({ filedRoute: route, atsNetwork: network }).route;
 }
 
-const sid = procedure({});
-const star = procedure({ type: "STAR" });
-
-function analyze(route: string, extra: Partial<Parameters<typeof analyzeRouteIntelligenceV2>[0]> = {}) {
-  return analyzeRouteIntelligenceV2({
-    filedRoute: route,
-    originAirportIcao: "LKPR",
-    destinationAirportIcao: "EDDF",
-    atsNetwork: network,
-    procedures: [sid, star],
-    ...extra,
-  }).route;
-}
-
-describe("Route Intelligence V2 static engine", () => {
-  it("gives contextual SID/STAR recognition priority over generic airway syntax", () => {
-    expect(tokenizeRoute("S1 ALFA", { procedures: [procedure({ designator: "S1", type: "SID" })], originAirportIcao: "LKPR" }).map((token) => token.type)).toEqual(["SID", "WAYPOINT"]);
-    expect(tokenizeRoute("S1 ALFA", { procedures: [procedure({ designator: "S1", type: "SID" })] })[0]?.type).toBe("AIRWAY");
+describe("Route Intelligence V2 retained ATS and DCT engine", () => {
+  it("classifies published airways and ordinary filed fixes without procedure promotion", () => {
+    expect(tokenizeRoute("S1 ALFA").map((token) => token.type)).toEqual(["AIRWAY", "WAYPOINT"]);
+    expect(tokenizeRoute("ALFA T709 BRAVO", { airwayDesignators: new Set(["T709"]) }).map((token) => token.type)).toEqual(["WAYPOINT", "AIRWAY", "WAYPOINT"]);
   });
 
-  it("reconstructs SID, ATS, filed DCT, cross-country ATS, and STAR in filed order", () => {
-    const route = analyze("DEP1 ALFA T709 BRAVO DCT CHARLIE T709 DELTA ARR1");
-    expect(route.elements.map((element) => element.kind)).toEqual(["PUBLISHED_SID", "PUBLISHED_ATS", "FILED_DCT", "PUBLISHED_ATS", "PUBLISHED_STAR"]);
-    expect(route.elements.map((element) => element.label)).toEqual(["DEP1", "T709", "DCT", "T709", "ARR1"]);
+  it("reconstructs ATS, DCT and cross-border ATS legs in filed order", () => {
+    const route = analyze("ALFA T709 BRAVO DCT CHARLIE T709 DELTA");
+    expect(route.elements.map((element) => element.kind)).toEqual(["PUBLISHED_ATS", "FILED_DCT", "PUBLISHED_ATS"]);
+    expect(route.elements.map((element) => element.label)).toEqual(["T709", "DCT", "T709"]);
     expect(route.coverage.ats).toEqual({ eligibleLegs: 2, matchedLegs: 2, percent: 100 });
-    expect(route.coverage.reconstruction).toEqual({ totalElements: 5, resolvedElements: 5, percent: 100 });
-    expect(route.coverage.progress).toBeNull();
+    expect(route.procedureMatches).toEqual([]);
+    expect(route.coverage.reconstruction).toEqual({ totalElements: 3, resolvedElements: 3, percent: 100 });
   });
 
-  it("keeps an unambiguous DCT filed and outside ATS coverage", () => {
-    const route = analyze("ALFA DCT BRAVO", { procedures: [] });
+  it("keeps the filed DCT outside ATS coverage", () => {
+    const route = analyze("ALFA DCT BRAVO");
     expect(route.elements).toHaveLength(1);
     expect(route.elements[0]).toMatchObject({ kind: "FILED_DCT", phase: "EN_ROUTE", status: "RESOLVED", source: { kind: "FILED_DCT" } });
     expect(route.coverage.ats).toEqual({ eligibleLegs: 0, matchedLegs: 0, percent: null });
   });
 
-  it("does not recognize a procedure at the wrong airport", () => {
-    const route = analyze("DEP1 ALFA T709 BRAVO", { originAirportIcao: "LZIB", destinationAirportIcao: null, procedures: [sid] });
-    expect(route.elements.some((element) => element.kind === "PUBLISHED_SID")).toBe(false);
-    expect(route.elements.find((element) => element.label === "DEP1")).toMatchObject({ kind: "UNRESOLVED_CONNECTOR", status: "UNRESOLVED" });
+  it("never turns a procedure-shaped token into a published SID or STAR", () => {
+    const route = analyze("DEP1 ALFA T709 BRAVO");
+    expect(route.procedureMatches).toEqual([]);
+    expect(route.elements.find((element) => element.label === "DEP1")).toMatchObject({ kind: "UNRESOLVED_CONNECTOR", phase: "CONNECTOR", status: "UNRESOLVED" });
+    expect(route.elements.some((element) => element.kind === "PUBLISHED_SID" || element.kind === "PUBLISHED_STAR")).toBe(false);
   });
 
-  it("leaves equally suitable procedure candidates unresolved", () => {
-    const ambiguous = analyze("DEP1 ALFA T709 BRAVO", {
-      procedures: [procedure({ id: "sid-a", transition: null }), procedure({ id: "sid-b", transition: null })],
-    });
-    expect(ambiguous.procedureMatches[0]).toMatchObject({ status: "UNRESOLVED", ambiguous: true, candidateCount: 2, selectedProcedureId: null });
-    expect(ambiguous.elements[0]).toMatchObject({ kind: "UNRESOLVED_CONNECTOR", phase: "SID" });
+  it("preserves source provenance for the published and filed segments", () => {
+    const route = analyze("ALFA T709 BRAVO DCT CHARLIE T709 DELTA");
+    expect(route.elements.map((element) => element.source.kind)).toEqual(["PUBLISHED_ATS", "FILED_DCT", "PUBLISHED_ATS"]);
+    expect(route.elements[0]?.source).toMatchObject({ provider: "ATS-FIXTURE", reference: "ENR 3.2", effectiveDate: "2026-09-03" });
+    expect(route.elements[1]?.source).toMatchObject({ kind: "FILED_DCT", provider: null, procedureId: null });
   });
 
-  it("does not promote an unknown procedure or procedure-shaped airway token", () => {
-    const unknown = analyze("MISSING1 ALFA T709 BRAVO", { procedures: [] });
-    expect(unknown.elements[0]).toMatchObject({ kind: "UNRESOLVED_CONNECTOR", status: "UNRESOLVED" });
-    expect(tokenizeRoute("ALFA B1 BRAVO", { airwayDesignators: new Set(["B1"]) }).map((token) => token.type)).toEqual(["WAYPOINT", "AIRWAY", "WAYPOINT"]);
-  });
-
-  it("retains publication and filed provenance on every reconstructed element", () => {
-    const route = analyze("DEP1 ALFA T709 BRAVO DCT CHARLIE T709 DELTA ARR1");
-    expect(route.elements.map((element) => element.source.kind)).toEqual(["PUBLISHED_SID", "PUBLISHED_ATS", "FILED_DCT", "PUBLISHED_ATS", "PUBLISHED_STAR"]);
-    expect(route.elements[0]?.source).toMatchObject({ provider: "AIP-FIXTURE", procedureId: sid.id, reference: "AD 2 LKPR" });
-    expect(route.elements[1]?.source).toMatchObject({ provider: "ATS-FIXTURE", reference: "ENR 3.2", effectiveDate: "2026-09-03" });
-    expect(route.elements[2]?.source).toMatchObject({ kind: "FILED_DCT", provider: null, procedureId: null });
-    expect(route.elements.every((element) => "geometry" in element && "source" in element)).toBe(true);
-  });
-
-  it("exposes the static snapshot without dynamic current-element behavior", () => {
+  it("exposes static results without a dynamic current-element guess", () => {
     const snapshot = analyzeRouteIntelligenceV2({ filedRoute: "ALFA DCT BRAVO", atsNetwork: network });
     expect(snapshot.route.elements[0]?.kind).toBe("FILED_DCT");
     expect(snapshot.dynamic).toMatchObject({ currentElement: null, routeProgress: null, routeAdherence: "UNKNOWN" });

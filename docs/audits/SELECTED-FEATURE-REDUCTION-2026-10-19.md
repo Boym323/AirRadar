@@ -706,3 +706,15 @@ Preserve source-backed aircraft label, ATC, trail and Navigation Integrity tests
 the official benchmark:load-scaling workflow, maintained ATC and T58 benchmarks,
 all FlightPosition/FlightEvent/AlertOccurrence history and existing migrations.
 No runtime services, on-disk state, database schema, release or production are modified.
+
+## Phase 59: retire unused SID/STAR matching in the retained route viewer
+
+The published SID/STAR procedure importer and all procedure UI were removed in
+phase 54. The selected-aircraft ATS route view never supplies a procedure
+catalog, yet V2 still carried unused procedure classification, runway matching,
+geometry projections and static cache keys. Delete that optional matching branch
+and its procedure-only tests without touching retained ATS/DCT leg resolution,
+FlightAware filed-route provenance, route corridors, conformance, actual runway
+context or navigation datasets. Unknown designators remain unresolved connectors,
+never fabricated published procedures. Legacy route DTO types stay available for
+historical read compatibility. No database migrations or production deployment.

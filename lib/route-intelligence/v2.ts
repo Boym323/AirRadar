@@ -6,14 +6,8 @@ import type {
   InterpretedRouteElement,
   InterpretedRouteGeometry,
   InterpretedRoutePoint,
-  Procedure,
-  ProcedureCandidate,
-  ProcedureMatch,
-  ProcedureMatchEvidence,
-  ProcedureRunwayCompatibility,
   RouteElementSource,
   RouteIntelligenceV2Snapshot,
-  RoutePhase,
   RunwayContextInput,
 } from "./contracts";
 import { createRunwayContext } from "./contracts";
@@ -26,9 +20,8 @@ export interface RouteIntelligenceV2Options {
   waypoints?: string[] | null;
   source?: string | null;
   atsNetwork?: RouteIntelligenceNetwork | null;
-  /** Bounded on-demand reference points. They may resolve filed connectors but never override published ATS/procedure geometry. */
+  /** Bounded on-demand reference points supplement published ATS geometry. */
   referencePoints?: readonly AviationNavPoint[] | null;
-  procedures?: readonly Procedure[] | null;
   originAirportIcao?: string | null;
   destinationAirportIcao?: string | null;
   /** Convenient aliases for callers that already have airport context. */
@@ -39,13 +32,12 @@ export interface RouteIntelligenceV2Options {
   previousDynamicState?: RouteIntelligenceV2Snapshot["dynamic"] | null;
 }
 
-type V2TokenType = "WAYPOINT" | "AIRWAY" | "DCT" | "SID" | "STAR" | "UNKNOWN";
+type V2TokenType = "WAYPOINT" | "AIRWAY" | "DCT" | "UNKNOWN";
 
 interface V2Token {
   type: V2TokenType;
   value: string;
   index: number;
-  procedure?: Procedure;
 }
 
 interface PointRef {
@@ -57,11 +49,6 @@ interface PathItem {
   route: CzAtsRoute;
   segment: CzAtsSegment;
   direction: "FORWARD" | "REVERSE";
-}
-
-interface ProcedureSelection {
-  procedure: Procedure | null;
-  match: ProcedureMatch;
 }
 
 const MAX_PATH_SEARCH_STEPS = 256;
@@ -115,22 +102,13 @@ function genericTokenType(value: string, network: RouteIntelligenceNetwork | nul
   return "UNKNOWN";
 }
 
-function tokensFor(options: RouteIntelligenceV2Options, network: RouteIntelligenceNetwork | null, procedures: readonly Procedure[]): V2Token[] {
+function tokensFor(options: RouteIntelligenceV2Options, network: RouteIntelligenceNetwork | null): V2Token[] {
   const fields = routeFields(options);
   const referencePoints = options.referencePoints ?? [];
   if (!fields.text) return [];
-  const context = airportContext(options);
-  const raw = fields.text.split(/\s+/).map(cleanToken).filter(Boolean);
-  return raw.map((value, index) => {
-    const matches = procedures.filter((procedure) => normalized(procedure.designator) === value);
-    const sidContext = index === 0 || (index === 1 && context.origin && normalized(raw[0] ?? "") === context.origin);
-    const starContext = index === raw.length - 1 || (index === raw.length - 2 && context.destination && normalized(raw[raw.length - 1] ?? "") === context.destination);
-    const sid = sidContext && matches.some((procedure) => procedure.type === "SID" && context.origin && normalized(procedure.airportIcao) === context.origin);
-    const star = starContext && matches.some((procedure) => procedure.type === "STAR" && context.destination && normalized(procedure.airportIcao) === context.destination);
-    if (sid) return { type: "SID", value, index };
-    if (star) return { type: "STAR", value, index };
-    return { type: genericTokenType(value, network, referencePoints), value, index };
-  });
+  return fields.text.split(/\s+/).map(cleanToken).filter(Boolean).map((value, index) => ({
+    type: genericTokenType(value, network, referencePoints), value, index,
+  }));
 }
 
 function networkPointCandidates(network: RouteIntelligenceNetwork | null, name: string, designator?: string): PointRef[] {
@@ -196,19 +174,6 @@ function directPath(network: RouteIntelligenceNetwork, startName: string, endNam
   return candidates.length === 1 ? candidates[0]! : null;
 }
 
-function sourceForProcedure(procedure: Procedure): RouteElementSource {
-  return {
-    kind: procedure.type === "SID" ? "PUBLISHED_SID" : "PUBLISHED_STAR",
-    provider: procedure.source.provider,
-    countryCode: procedure.source.countryCode,
-    reference: procedure.source.reference,
-    procedureId: procedure.id,
-    effectiveDate: procedure.source.effectiveDate,
-    airacCycle: procedure.source.airacCycle,
-    amendment: procedure.source.amendment,
-  };
-}
-
 function sourceForAts(network: RouteIntelligenceNetwork): RouteElementSource {
   return {
     kind: "PUBLISHED_ATS",
@@ -226,54 +191,13 @@ function sourceForFiled(kind: "FILED_DCT" | "FILED_ROUTE" | "SCHEMATIC", filedSo
   return { kind, provider: filedSource, countryCode: null, reference, procedureId: null, effectiveDate: null, airacCycle: null, amendment: null };
 }
 
-function point(point: ProcedurePointLike | CzAtsPoint | null): InterpretedRoutePoint | null {
-  if (!point) return null;
-  if ("coordinates" in point) return { id: point.id, name: point.name, coordinates: point.coordinates ? { ...point.coordinates } : null };
-  return { id: point.id, name: point.name, coordinates: finiteCoordinates(point.latitude, point.longitude) ? { lat: point.latitude, lon: point.longitude } : null };
-}
-
-interface ProcedurePointLike {
-  id: string;
-  name: string;
-  coordinates: { lat: number; lon: number } | null;
+function point(value: CzAtsPoint | null): InterpretedRoutePoint | null {
+  if (!value) return null;
+  return { id: value.id, name: value.name, coordinates: finiteCoordinates(value.latitude, value.longitude) ? { lat: value.latitude, lon: value.longitude } : null };
 }
 
 function finiteCoordinates(latitude: number | null, longitude: number | null): boolean {
   return latitude !== null && longitude !== null && Number.isFinite(latitude) && Number.isFinite(longitude);
-}
-
-function geometryFromProcedure(procedure: Procedure): InterpretedRouteGeometry | null {
-  const coordinates = procedure.legs.flatMap((leg) => {
-    if (leg.geometry?.coordinates.length) return leg.geometry.coordinates;
-    const from = leg.from?.coordinates;
-    const to = leg.to?.coordinates;
-    return from && to ? [from, to] : [];
-  }).filter((coordinate, index, all) => index === 0 || coordinate.lat !== all[index - 1]?.lat || coordinate.lon !== all[index - 1]?.lon);
-  if (!coordinates.length) return null;
-  return {
-    type: procedure.legs.some((leg) => leg.geometry?.type === "ARC") ? "ARC" : "LINE",
-    coordinates,
-  };
-}
-
-function procedureElement(procedure: Procedure, sequence: number): InterpretedRouteElement {
-  const legs = procedure.legs.filter((leg) => leg.type !== "DISCONTINUITY").sort((left, right) => left.sequence - right.sequence);
-  const first = legs[0];
-  const last = legs[legs.length - 1];
-  const hasDiscontinuity = procedure.discontinuities.length > 0 || procedure.legs.some((leg) => leg.type === "DISCONTINUITY");
-  return {
-    id: `procedure:${procedure.id}`,
-    sequence,
-    kind: procedure.type === "SID" ? "PUBLISHED_SID" : "PUBLISHED_STAR",
-    phase: procedure.type,
-    label: procedure.designator,
-    from: point(first?.from ?? null),
-    to: point(last?.to ?? null),
-    geometry: geometryFromProcedure(procedure),
-    source: sourceForProcedure(procedure),
-    status: hasDiscontinuity ? "DISCONTINUITY" : "RESOLVED",
-    unresolvedReason: hasDiscontinuity ? "published procedure discontinuity" : null,
-  };
 }
 
 function pointFromNetwork(ref: PointRef | null): InterpretedRoutePoint | null {
@@ -327,72 +251,6 @@ function atsElements(path: PathItem[], sequence: number, network: RouteIntellige
       unresolvedReason: from && to ? null : "ATS endpoint is outside loaded point data",
     };
   });
-}
-
-function evidence(kind: ProcedureMatchEvidence["kind"], description: string, sourceReference: string | null): ProcedureMatchEvidence {
-  return { kind, description, sourceReference };
-}
-
-function runwayCompatibility(procedure: Procedure, runway: string | null): ProcedureRunwayCompatibility {
-  if (!runway || procedure.runwayApplicability.kind === "UNKNOWN") return "UNKNOWN";
-  const runways = procedure.runwayApplicability.runwayDesignators.map(normalized);
-  if (procedure.runwayApplicability.kind === "ALL") return "COMPATIBLE";
-  const contains = runways.includes(normalized(runway));
-  return procedure.runwayApplicability.kind === "INCLUDE" ? (contains ? "COMPATIBLE" : "INCOMPATIBLE") : (contains ? "INCOMPATIBLE" : "COMPATIBLE");
-}
-
-function procedureSelection(
-  token: V2Token,
-  type: "SID" | "STAR",
-  airport: string | null,
-  procedures: readonly Procedure[],
-  runway: string | null,
-  adjacentName: string | null,
-): ProcedureSelection {
-  const candidates = procedures.filter((procedure) =>
-    procedure.type === type
-      && normalized(procedure.designator) === token.value
-      && Boolean(airport && normalized(procedure.airportIcao) === airport));
-  const candidateViews: ProcedureCandidate[] = candidates.map((procedure) => {
-    const compatibility = runwayCompatibility(procedure, runway);
-    const matchesTransition = Boolean(adjacentName && procedure.transition && normalized(procedure.transition) === normalized(adjacentName));
-    const candidateEvidence = [
-      evidence("FILED_DESIGNATOR", `filed ${type} designator ${token.value}`, procedure.source.reference),
-      ...(matchesTransition ? [evidence("TRANSITION", `filed transition ${adjacentName}`, procedure.source.reference)] : []),
-      ...(compatibility !== "UNKNOWN" ? [evidence("RUNWAY", `${compatibility.toLowerCase()} runway applicability`, procedure.source.reference)] : []),
-    ];
-    return {
-      procedureId: procedure.id,
-      airportIcao: procedure.airportIcao,
-      designator: procedure.designator,
-      type: procedure.type,
-      transition: procedure.transition,
-      confidence: Math.min(1, 0.75 + (matchesTransition ? 0.15 : 0) + (compatibility === "COMPATIBLE" ? 0.1 : 0)),
-      runwayCompatibility: compatibility,
-      evidence: candidateEvidence,
-    };
-  });
-  const usable = candidateViews.filter((candidate) => candidate.runwayCompatibility !== "INCOMPATIBLE");
-  const ranked = usable.map((candidate) => ({
-    candidate,
-    score: (candidate.evidence.some((item) => item.kind === "TRANSITION") ? 2 : 0) + (candidate.runwayCompatibility === "COMPATIBLE" ? 1 : 0),
-  })).sort((left, right) => right.score - left.score);
-  const topScore = ranked[0]?.score ?? null;
-  const top = topScore === null ? [] : ranked.filter((item) => item.score === topScore);
-  const selected = top.length === 1 ? candidates.find((procedure) => procedure.id === top[0]!.candidate.procedureId) ?? null : null;
-  const selectedView = top[0]?.candidate ?? null;
-  const match: ProcedureMatch = {
-    status: selected ? "FILED" : "UNRESOLVED",
-    selectedProcedureId: selected?.id ?? null,
-    candidateCount: candidateViews.length,
-    ambiguous: top.length > 1,
-    ambiguityReason: top.length > 1 ? "equally suitable procedure candidates" : selected ? null : candidateViews.length ? "no runway-compatible procedure candidate" : "procedure designator is not available for the required airport",
-    confidence: selectedView?.confidence ?? null,
-    runwayCompatibility: selectedView?.runwayCompatibility ?? (candidateViews.length ? "INCOMPATIBLE" : "UNKNOWN"),
-    evidence: selectedView?.evidence ?? [],
-    candidates: candidateViews,
-  };
-  return { procedure: selected, match };
 }
 
 function unresolvedElement(label: string, phase: RoutePhase, sequence: number, reason: string, filedSource: string | null): InterpretedRouteElement {
@@ -479,64 +337,25 @@ function statusFor(elements: InterpretedRouteElement[], hasRoute: boolean): Inte
 
 function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
   const fields = routeFields(options);
-  const procedures = options.procedures ?? [];
   const network = options.atsNetwork ?? null;
   const referencePoints = options.referencePoints ?? [];
   if (!fields.text) {
     return { id: "filed:empty", status: "NO_ROUTE", elements: [], procedureMatches: [], sources: [], coverage: { ats: { eligibleLegs: 0, matchedLegs: 0, percent: null }, reconstruction: { totalElements: 0, resolvedElements: 0, percent: null }, progress: null } };
   }
   const context = airportContext(options);
-  const runway = createRunwayContext(options.runway);
   const cacheKey = JSON.stringify({
     route: fields.text,
     origin: context.origin,
     destination: context.destination,
     ats: network?.source?.effectiveDate ?? null,
-    procedures: procedures.map((procedure) => `${procedure.id}:${procedure.source.effectiveDate ?? ""}`).sort(),
-    runway: runway.reportedRunway ?? runway.inferredRunway ?? null,
     referencePoints: referencePoints.map((point) => `${point.kind}:${point.id}:${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`).sort(),
   });
   const cachedRoute = staticCache.get(cacheKey);
   if (cachedRoute) return cachedRoute;
-  const tokens = tokensFor(options, network, procedures);
+  const tokens = tokensFor(options, network);
   const elements: InterpretedRouteElement[] = [];
-  const procedureMatches: ProcedureMatch[] = [];
   const elementOrder = new Map<string, number>();
-  const handledTokenIndices = new Set<number>();
   let sequence = 1;
-
-  const procedureToken = (type: "SID" | "STAR"): V2Token | null => tokens.find((token) => token.type === type) ?? null;
-  const sidToken = procedureToken("SID");
-  const starToken = procedureToken("STAR");
-  if (sidToken) {
-    const selection = procedureSelection(sidToken, "SID", context.origin, procedures, runway.reportedRunway ?? runway.inferredRunway, tokens.find((token) => token.index > sidToken.index && token.type === "WAYPOINT")?.value ?? null);
-    procedureMatches.push(selection.match);
-    const element = selection.procedure ? procedureElement(selection.procedure, sequence++) : unresolvedElement(sidToken.value, "SID", sequence++, selection.match.ambiguityReason ?? "SID could not be resolved", fields.source);
-    elements.push(element);
-    elementOrder.set(element.id, sidToken.index);
-    handledTokenIndices.add(sidToken.index);
-  } else if (tokens[0]?.value && procedures.some((procedure) => normalized(procedure.designator) === tokens[0]!.value)) {
-    procedureMatches.push({ status: "UNRESOLVED", selectedProcedureId: null, candidateCount: 0, ambiguous: false, ambiguityReason: "SID requires matching origin airport context", confidence: null, runwayCompatibility: "UNKNOWN", evidence: [], candidates: [] });
-    const element = unresolvedElement(tokens[0]!.value, "SID", sequence++, "SID requires matching origin airport context", fields.source);
-    elements.push(element);
-    elementOrder.set(element.id, tokens[0]!.index);
-    handledTokenIndices.add(tokens[0]!.index);
-  }
-  if (starToken) {
-    const selection = procedureSelection(starToken, "STAR", context.destination, procedures, runway.reportedRunway ?? runway.inferredRunway, [...tokens].reverse().find((token) => token.index < starToken.index && token.type === "WAYPOINT")?.value ?? null);
-    procedureMatches.push(selection.match);
-    // STARs are emitted in route order below when the token is encountered.
-    const element = selection.procedure ? procedureElement(selection.procedure, sequence++) : unresolvedElement(starToken.value, "STAR", sequence++, selection.match.ambiguityReason ?? "STAR could not be resolved", fields.source);
-    elements.push(element);
-    elementOrder.set(element.id, starToken.index);
-    handledTokenIndices.add(starToken.index);
-  } else if (tokens.at(-1)?.value && procedures.some((procedure) => normalized(procedure.designator) === tokens.at(-1)!.value)) {
-    procedureMatches.push({ status: "UNRESOLVED", selectedProcedureId: null, candidateCount: 0, ambiguous: false, ambiguityReason: "STAR requires matching destination airport context", confidence: null, runwayCompatibility: "UNKNOWN", evidence: [], candidates: [] });
-    const element = unresolvedElement(tokens.at(-1)!.value, "STAR", sequence++, "STAR requires matching destination airport context", fields.source);
-    elements.push(element);
-    elementOrder.set(element.id, tokens.at(-1)!.index);
-    handledTokenIndices.add(tokens.at(-1)!.index);
-  }
 
   const waypoints = tokens.filter((token) => token.type === "WAYPOINT");
   let atsEligible = 0;
@@ -545,7 +364,7 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
     const left = waypoints[index]!;
     const right = waypoints[index + 1]!;
     const between = tokens.filter((token) => token.index > left.index && token.index < right.index);
-    if (between.some((token) => token.type === "UNKNOWN" || token.type === "SID" || token.type === "STAR")) continue;
+    if (between.some((token) => token.type === "UNKNOWN")) continue;
     const dct = between.some((token) => token.type === "DCT");
     const airways = unique(between.filter((token) => token.type === "AIRWAY").map((token) => token.value));
     if (dct) {
@@ -585,14 +404,13 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
     }
   }
 
-  for (const token of tokens.filter((candidate) => candidate.type === "UNKNOWN" && !handledTokenIndices.has(candidate.index))) {
-    const phase: RoutePhase = token.index === 0 ? "SID" : token.index === tokens.length - 1 ? "STAR" : "CONNECTOR";
-    const element = unresolvedElement(token.value, phase, sequence++, "route token is not recognized by the loaded static data", fields.source);
+  for (const token of tokens.filter((candidate) => candidate.type === "UNKNOWN")) {
+    const element = unresolvedElement(token.value, "CONNECTOR", sequence++, "route token is not recognized by the loaded static data", fields.source);
     elements.push(element);
     elementOrder.set(element.id, token.index);
   }
 
-  // Keep elements in filed order even though SID/STAR matching is evaluated up front.
+  // Keep ATS and filed connector elements in the published route order.
   elements.sort((left, right) => {
     const leftIndex = elementOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER;
     const rightIndex = elementOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER;
@@ -603,7 +421,7 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
     id: routeId(fields.text),
     status: statusFor(elements, true),
     elements,
-    procedureMatches,
+    procedureMatches: [],
     sources: routeSources(elements),
     coverage: {
       ats: { eligibleLegs: atsEligible, matchedLegs: atsMatched, percent: atsEligible ? Math.round((atsMatched / atsEligible) * 100) : null },
