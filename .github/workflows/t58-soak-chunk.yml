@@ -47,15 +47,11 @@ jobs:
         id: preflight
         shell: bash
         env:
-          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
           T57_BASE_URL: https://airradar.pomykal.cz
+          T57_PUBLIC_ONLY: "1"
           T57_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
         run: |
           set -Eeuo pipefail
-          if [[ -z "${WATCHLIST_ADMIN_TOKEN:-}" ]]; then
-            echo "T58 authentication unavailable: Actions secret T58_WATCHLIST_ADMIN_TOKEN is missing or empty."
-            exit 78
-          fi
           node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t58/preflight.json"
           deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t58/preflight.json")"
           resolved_sha="$(git rev-parse --verify "$deployed_sha^{commit}")"
@@ -74,8 +70,8 @@ jobs:
         continue-on-error: ${{ inputs.finalize }}
         shell: bash
         env:
-          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T58_WATCHLIST_ADMIN_TOKEN }}
           T57_BASE_URL: https://airradar.pomykal.cz
+          T57_PUBLIC_ONLY: "1"
           T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
           T57_TOTAL_SECONDS: "3600"
           T57_CHUNK_SECONDS: ${{ inputs.chunk_seconds }}

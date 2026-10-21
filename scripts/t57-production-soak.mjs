@@ -3,7 +3,9 @@
  * T5.7C read-only 24-hour production soak. No restart, DB write, live-SSE
  * connection, forced GC, heap snapshot or raw diagnostic response storage.
  *
- * WATCHLIST_ADMIN_TOKEN must already be supplied securely in the environment.
+ * Admin forensics require WATCHLIST_ADMIN_TOKEN. T57_PUBLIC_ONLY=1 uses
+ * existing sanitized public GET projections without any credentials.
+ * Private retention/GC/Twin data stay NOT MEASURED in that mode.
  * T57_SECONDS=86400 T57_INTERVAL_SECONDS=60 node scripts/t57-production-soak.mjs
  * node scripts/t57-production-soak.mjs --analyze /tmp/airradar-t57-....ndjson
  *
@@ -17,7 +19,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { login, fetchJson } from "./t53-navigation-production-sampler.mjs";
-import { projectT57SoakSample, newT57Windows, analyzeT57Soak } from "./t57-soak-analysis.mjs";
+import { projectT57SoakSample, projectT57PublicSoakSample, newT57Windows, analyzeT57Soak } from "./t57-soak-analysis.mjs";
 
 const SESSION_REFRESH_MS = 6 * 3600 * 1000; // session expires after 8 h
 const MAX_REPORT_BYTES = 50_000_000;
@@ -194,12 +196,13 @@ export async function analyzeFile(file) {
     segments: result.segments, report: output + ".summary.json", markdown: output + ".summary.md" };
 }
 
-async function collect(base, cookie) {
+async function collect(base, cookie, publicOnly = false) {
   const [status, metrics] = await Promise.all([
     fetchJsonWithRetry(base, "/api/system/status", cookie),
     fetchJsonWithRetry(base, "/api/system/runtime-performance", cookie),
   ]);
-  return projectT57SoakSample(status, metrics);
+  return publicOnly ? projectT57PublicSoakSample(status, metrics) :
+    projectT57SoakSample(status, metrics);
 }
 
 export async function establishSession(base, token) {
@@ -219,19 +222,23 @@ export function verifyT57ExpectedCommit(commit, expectedCommit) {
   }
 }
 
-/** Read-only authenticated telemetry preflight; no journal, worker or restart. */
-async function preflight() {
+/** Read-only telemetry preflight; public mode performs no authentication. */
+export async function preflight() {
   const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
   const base = trustedBase();
-  const cookie = await establishSession(base, token);
-  const observation = await collect(base, cookie);
+  const publicOnly = process.env.T57_PUBLIC_ONLY === "1";
+  const cookie = publicOnly ? null : await establishSession(base, token);
+  const observation = await collect(base, cookie, publicOnly);
   verifyT57ExpectedCommit(observation.identity.commit, process.env.T57_EXPECTED_COMMIT?.trim());
   return {
     status: "TELEMETRY_READY",
     version: observation.sample.version,
     commit: observation.identity.commit,
     // Deliberately exclude cookie, token, PID, process store ID and raw payload.
-    requiredSources: ["admin-system-status", "runtime-performance", "retention-attribution"],
+    telemetryMode: publicOnly ? "public" : "admin",
+    requiredSources: publicOnly
+      ? ["public-system-status", "public-runtime-performance"]
+      : ["admin-system-status", "runtime-performance", "retention-attribution"],
     operationalTwinForensicsEnabled: observation.sample.operationalTwinForensics?.enabled === true,
     reportCreated: false,
   };
@@ -248,11 +255,13 @@ async function run() {
   const warmupSeconds = durationSetting("T57_WARMUP_SECONDS", 600, 0, 1800);
   if (warmupSeconds > seconds / 2) throw new Error("warmup_too_long");
   const resume = process.env.T57_RESUME === "1";
+  const publicOnly = process.env.T57_PUBLIC_ONLY === "1";
+  const telemetryMode = publicOnly ? "public" : "admin";
 
   // Preflight: fail closed before creating the output file.
-  let cookie = await establishSession(base, token);
+  let cookie = publicOnly ? null : await establishSession(base, token);
   let authenticatedAt = Date.now();
-  let initial = await collect(base, cookie);
+  let initial = await collect(base, cookie, publicOnly);
   const expectedCommit = process.env.T57_EXPECTED_COMMIT?.trim();
   verifyT57ExpectedCommit(initial.identity.commit, expectedCommit);
   // mkdtemp atomically creates a private 0700 directory even though the
@@ -279,6 +288,7 @@ async function run() {
     priorRecords = priorText.trimEnd().split("\n").map((line) => JSON.parse(line));
     const header = priorRecords[0];
     if (header?.type !== "header" || header.schemaVersion !== 1 || header.seconds !== seconds ||
+        (header.telemetryMode ?? "admin") !== telemetryMode ||
         header.intervalSeconds !== intervalSeconds ||
         (process.env.T57_MEASUREMENT_ID && header.measurementId !== process.env.T57_MEASUREMENT_ID)) {
       throw new Error("resume_identity_mismatch");
@@ -322,7 +332,7 @@ async function run() {
     ? priorScheduledIndex
     : lastSample ? Math.floor((Date.parse(lastSample.at) - startEpoch) / (intervalSeconds * 1000)) : -1;
   try {
-    if (!resume) await write({ type: "header", schemaVersion: 1, measurementId,
+    if (!resume) await write({ type: "header", schemaVersion: 1, telemetryMode, measurementId,
       startedAt: startedAt.toISOString(), plannedEndAt: new Date(startEpoch + seconds * 1000).toISOString(),
       seconds, intervalSeconds, warmupSeconds });
     for (let i = chunkStartIndex; i <= endIndex && !stopped; i++) {
@@ -339,11 +349,11 @@ async function run() {
       if (stopped) break;
       const pollDelayMs = Math.max(0, Date.now() - scheduledAt);
       try {
-        if (Date.now() - authenticatedAt > SESSION_REFRESH_MS) {
+        if (!publicOnly && Date.now() - authenticatedAt > SESSION_REFRESH_MS) {
           cookie = await establishSession(base, token);
           authenticatedAt = Date.now();
         }
-        const observation = !lastSample && i === 0 ? initial : await collect(base, cookie);
+        const observation = !lastSample && i === 0 ? initial : await collect(base, cookie, publicOnly);
         const processChanged = observation.sample.processIdentity !== previousIdentity.processIdentity;
         const commitChanged = observation.sample.commit !== previousIdentity.commit;
         const versionChanged = observation.sample.version !== previousIdentity.version;
@@ -386,7 +396,7 @@ async function run() {
           pollDelayCategory: pollDelayMs > Math.max(5_000, intervalSeconds * 250) ? "delayed_polling" : null });
         // The 8-hour admin cookie may expire or be invalidated; reauthenticate
         // on the next poll without writing credentials or error details.
-        authenticatedAt = 0;
+        if (!publicOnly) authenticatedAt = 0;
       }
       lastScheduledIndex = i;
       if (i % 10 === 0) await handle.sync();

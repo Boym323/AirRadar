@@ -33,6 +33,15 @@ export function verifyT58Preflight(value) {
       typeof value.commit !== "string" || !/^[0-9a-f]{8,40}$/i.test(value.commit)) {
     throw Error("t58_preflight_identity_unavailable");
   }
+  if (value.telemetryMode === "public") {
+    if (!Array.isArray(value.requiredSources) ||
+        !value.requiredSources.includes("public-system-status") ||
+        !value.requiredSources.includes("public-runtime-performance") ||
+        value.operationalTwinForensicsEnabled === true) {
+      throw Error("t58_public_preflight_invalid");
+    }
+    return value.commit.toLowerCase();
+  }
   if (value.operationalTwinForensicsEnabled !== true) {
     throw Error("t58_operational_twin_forensics_disabled");
   }
@@ -43,6 +52,7 @@ export function verifyT58Summary(value) {
       !["PASS_WITH_LIMITATIONS", "INSUFFICIENT_EVIDENCE", "FAIL"].includes(value.verdict) ||
       typeof value.commit !== "string" || !/^[0-9a-f]{8,40}$/i.test(value.commit) ||
       typeof value.version !== "string" ||
+      (value.telemetryMode !== undefined && !["admin", "public"].includes(value.telemetryMode)) ||
       !Number.isInteger(value.samples) || value.samples < 0 ||
       !Number.isInteger(value.missing) || value.missing < 0 ||
       !Number.isFinite(value.durationSeconds) || value.durationSeconds < 0) {
@@ -80,7 +90,8 @@ export function buildT58Comparison(source, { runUrl = null } = {}) {
   const rows = entries.map(([label, a, b]) => "| " + label + " | " + fmt(a) +
     " | " + fmt(b) + " | " + delta(a, b) + " |");
   const warnings = [];
-  if (twin.enabled !== true) warnings.push("Operational Twin forensics were not collected.");
+  if (report.telemetryMode === "public") warnings.push("PUBLIC ONLY: private Twin/SQL/GC/retention attribution and exact process identity were NOT MEASURED.");
+  else if (twin.enabled !== true) warnings.push("Operational Twin forensics were not collected.");
   if (report.stableProcessAndCommit !== true) warnings.push("Process or commit changed during measurement.");
   if (report.verdict !== "PASS_WITH_LIMITATIONS") warnings.push("Collector evidence requirements were not met.");
   if (finite(get(report, "load", "aircraft", "p50")) === null ||
@@ -95,6 +106,7 @@ export function buildT58Comparison(source, { runUrl = null } = {}) {
       " (" + report.samples + " valid / " + report.missing + " unavailable, " +
       fmt(report.durationSeconds, 0) + " s).",
     "- Collection verdict: **" + report.verdict + "**.",
+    "- Measurement mode: **" + (report.telemetryMode ?? "admin") + "**.",
     ...(runUrl ? ["- Action run: " + runUrl] : []),
     "", "| Metric | T57 | T58 | Change |", "| --- | ---: | ---: | ---: |",
     ...rows, "", "## Interpretation",
