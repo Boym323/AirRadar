@@ -49,4 +49,20 @@ describe("R11 route rendering without retired P05/P06 intelligence", () => {
     const featureRegistry = JSON.parse(read("docs/features.registry.json")) as { features:Array<{id:string}> };
     expect(featureRegistry.features.some(x=>x.id==="trajectory-conformance")).toBe(false);
   });
+  it("keeps legacy runway inference and SID/STAR applicability logic out of the retained R11 route path", () => {
+    for (const path of [
+      "lib/route-intelligence/runway-context.ts",
+      "tests/runway-context.test.ts",
+      "lib/intelligence/types.ts",
+    ]) expect(existsSync(join(root, path)), path).toBe(false);
+    const facade = read("lib/route-intelligence.ts");
+    const engine = read("lib/route-intelligence/index.ts");
+    const v2 = read("lib/route-intelligence/v2.ts");
+    const contracts = read("lib/route-intelligence/contracts.ts");
+    for (const moduleText of [facade, engine]) expect(moduleText).not.toContain('from "./runway-context"');
+    expect(facade).not.toContain('from "./route-intelligence/runway-context"');
+    expect(v2).toContain('import { createRunwayContext } from "./contracts"');
+    expect(contracts).toContain("export function createRunwayContext(");
+    expect(existsSync(join(root, "tests/route-intelligence-contracts.test.ts"))).toBe(true);
+  });
 });
