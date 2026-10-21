@@ -53,10 +53,12 @@ Pull-request CI creates a merge-base Git archive without contacting the producti
 | --- | --- | --- | --- |
 | Browser import of history server types | Present | Replaced with pure DTO import | Source diff |
 | Browser value import of server weather bounds | Present | Replaced with shared contract import | Source diff |
-| Cycle counts, cross-layer edges, client server reachability | NOT VERIFIED | NOT VERIFIED | CI graph artifacts |
+| Runtime cycles | 0 | 0 | First CI graph sample at 3904c114 only |
+| Cross-layer edges | 722 | 730 | First CI graph sample at 3904c114 only |
+| Server modules reachable from client runtime | 1 | 0 | First CI graph sample at 3904c114 only |
 | Typecheck CPU/wall/RSS | NOT VERIFIED | NOT VERIFIED | No isolated full checkout |
 | ADS-B CPU/RSS/event-loop P95/P99, SSE size | NOT VERIFIED | NOT VERIFIED | No production or equivalent replay; do not claim speedup |
-| Lint, typecheck, test, build, CodeQL | NOT VERIFIED | NOT VERIFIED | Await exact-SHA CI |
+| Lint, typecheck, test, build, CodeQL | NOT VERIFIED | NOT VERIFIED | First CI architecture gate PASS, subsequent docs:check BLOCKED by 3 pre-existing missing Czech translations plus this report; the report translation was added in the branch. Await exact-SHA CI |
 
 A relocated type has no runtime payload by itself; no performance benefit is claimed without evidence. No changes are made to Prisma models/migrations, history data, provider behavior, SSE wire format, public routes or security. Existing tests need to demonstrate runtime equivalence; static compilation alone is insufficient.
 
