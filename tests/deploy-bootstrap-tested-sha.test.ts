@@ -37,7 +37,11 @@ describe("production deploy checkout bootstrap", () => {
     expect(bootstrap).not.toContain("reset --hard");
 
     const release = workflow.slice(deploy, cleanup);
-    expect(release).toContain("sudo -n /var/www/airradar/deploy/release.sh");
+    expect(release).toContain('release_script="/var/www/airradar/deploy/release.sh"');
+    expect(release).toContain('release_launcher=(sudo -n "${release_script}")');
+    expect(release).toContain('release_launcher=(sudo -n /bin/bash "${release_script}")');
+    expect(release).toContain('if "${release_launcher[@]}"');
+    expect(release).not.toContain("chmod +x");
     expect(release).toContain("--branch main");
     expect(release).toContain("--automated");
     expect(release).toContain('--commit "${GITHUB_SHA}"');
