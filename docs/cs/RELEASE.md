@@ -87,6 +87,18 @@ ukazuje na stejný commit artefaktu. Publikování release je idempotentní: už
 vyřešený tag se považuje za úspěch, včetně případů rerun/race. Verzované
 stable/RC releasy nadále používají běžný příkaz výše.
 
+**Kompatibilita spouštěče vydání V1:** Nasazení z 21. 10. 2026
+[CI #39674837095](https://github.com/Boym323/AirRadar/actions/runs/39674837095)
+se zastavilo před spuštěním vydávacího skriptu s chybou
+`sudo: /var/www/airradar/deploy/release.sh: command not found`. Git ukládal
+soubor jako nespustitelný (`100644`). Workflow nyní rozpozná tento
+konkrétní stav starého checkoutu a pouze pro první spuštění použije pevné
+`sudo -n /bin/bash /var/www/airradar/deploy/release.sh`; po opravě bude
+vydávací skript opět spouštěn přímo. Git jej nově eviduje jako spustitelný
+(`100755`) a existuje regresní test. Pokud sudoers bootstrap zamítne,
+nasazení skončí **před** migrací, restartem i změnou dat; opravu pravidel
+smí provést provozovatel, nikoli obejít kontrolu.
+
 ## Etapa 4: Zrychlení browser testů
 
 Produkční testy nadále obsahují všechna původní ověření a screenshoty.

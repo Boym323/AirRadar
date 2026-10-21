@@ -100,6 +100,18 @@ Release publishing is idempotent: an already-existing GitHub Release for the res
 including rerun/race cases. Versioned stable/RC releases continue to use the
 normal command above.
 
+**V1 release-launcher compatibility:** The 2026-10-21 release attempt
+[CI #39674837095](https://github.com/Boym323/AirRadar/actions/runs/39674837095)
+stopped before any release-script execution with
+`sudo: /var/www/airradar/deploy/release.sh: command not found`. Git had recorded
+the file as non-executable (`100644`). The release workflow now detects that
+specific legacy checkout state and uses a fixed `sudo -n /bin/bash
+/var/www/airradar/deploy/release.sh` invocation only for the bootstrap;
+normal deployments continue to run the executable script directly. Git now
+tracks it as executable (`100755`), with a regression test. If sudoers
+rejects the bootstrap command, deployment fails **before** migration, restart,
+or data changes; an operator must repair the allowlist, not bypass it.
+
 ## Stage 4: Browser test throughput
 
 The browser gate keeps every assertion and screenshot. It runs up to two

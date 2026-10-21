@@ -625,9 +625,23 @@ jobs:
           set -Eeuo pipefail
           # A manual release may briefly hold the release flock; never remove or bypass it.
           # Retry only that explicit contention, not validation/rollback failures.
+          # Bootstrap one historical production checkout whose tracked
+          # deploy/release.sh has Git mode 100644. Do not chmod it in place:
+          # that would make the pre-release clean-checkout gate fail.
+          release_script="/var/www/airradar/deploy/release.sh"
+          if [[ -x "${release_script}" ]]; then
+            release_launcher=(sudo -n "${release_script}")
+          else
+            [[ -f "${release_script}" && -r "${release_script}" ]] || {
+              echo "::error::Production release launcher is missing or unreadable"
+              exit 1
+            }
+            release_launcher=(sudo -n /bin/bash "${release_script}")
+            echo "::warning::Bootstrapping a readable non-executable release script with Bash; the tested commit restores Git mode 100755."
+          fi
           for attempt in 1 2 3 4 5; do
             output="$(mktemp)"
-            if sudo -n /var/www/airradar/deploy/release.sh \
+            if "${release_launcher[@]}" \
                 --branch main \
                 --automated \
                 --commit "${GITHUB_SHA}" 2>&1 | tee "${output}"; then
