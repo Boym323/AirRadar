@@ -18,7 +18,6 @@ const RADAR_TARGETS = [
   "radar-mobile-selected-expanded", "radar-mobile-320", "radar-mobile-320-credits",
   "radar-v6-multiview-desktop", "radar-v6-multiview-mobile",
   "radar-v6-light-basemap", "radar-v6-satellite-basemap",
-  "radar-v6-g-presentation",
   "radar-v5-map-focus-desktop", "radar-v5-map-focus-mobile",
 ];
 const AIRPORT_TARGETS = [
