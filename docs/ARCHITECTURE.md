@@ -22,7 +22,7 @@ Selected ATC sector geometry, published ATS paths and navigation reference data 
 
 ## Weather and historical map context
 
-Retained weather includes observed METAR/TAF, SIGMET, PIREP, available aircraft observations and CHMI radar frames. The bounded map-context archive retains prior METAR, CHMI and planned Czech AUP/UUP JSON records.
+Retained weather includes observed METAR/TAF, SIGMET, available aircraft observations and CHMI radar frames. The bounded map-context archive retains prior METAR, CHMI and planned Czech AUP/UUP JSON records.
 
 **T12 scheduled collection has stopped.** MapContextArchiveService.poll() invokes live METAR and CHMI radar archival polling only; it does not call the Czech AIM network reader. Previously recorded AUP data is still read via MapContextArchive.resolveAupAt() and the historical /api/map-context/at and /api/map-context/range contracts. MapContextArchive.addAup() remains for archival compatibility, but has no scheduled fetch caller. Do not delete old map-context-aup-v1.json state or historical DTOs.
 

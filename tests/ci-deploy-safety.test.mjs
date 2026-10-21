@@ -76,7 +76,7 @@ test("release-preview skips duplicated PR validation, not release quality gates"
     "npm audit --omit=dev --audit-level=high", "npm run lint",
     "npm run features:check", "npm run docs:check",
     "npm run visual:check", "npm run icons:audit",
-    "npm run changelog:check", "npm run typecheck:prepared",
+    "npm run typecheck:prepared",
     "npm run test:full", "npx prisma migration check",
   ]) assert.ok(tests.includes(command), command);
   const release = job("release-validate");

@@ -45,6 +45,11 @@ describe("additional user-authorized removals (PR #1096)", () => {
     const logbook = readFileSync(new URL("lib/server/logbook-summary.ts", root), "utf8");
     expect(logbook).not.toContain("todayReceptionRecord");
     expect(logbook).not.toContain("getReceptionRecords");
+    const release = readFileSync(new URL("deploy/release.sh", root), "utf8");
+    expect(release).not.toContain("CHANGELOG_SCRIPT");
+    expect(release).not.toContain("generate_release_changelog");
+    expect(release).toContain("prepare_release_version");
+    expect(release).toContain("create_release_tag");
     const statistics = readFileSync(new URL("lib/server/statistics.ts", root), "utf8");
     expect(statistics).not.toContain("maxDistanceIcaoHex");
     expect(statistics).not.toContain("maxDistanceRegistration");

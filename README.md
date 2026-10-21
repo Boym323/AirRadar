@@ -120,7 +120,7 @@ classification and is persisted in the browser.
 
 Network observations are not local receiver evidence: they are never written
 to `FlightPosition`, never create local `Flight` history, never affect daily
-receiver statistics or reception records, and never use network RSSI/message
+receiver statistics, and never use network RSSI/message
 counts as local measurements. Existing local enrichment, ATC matching, and
 default push-alert semantics remain local-only; network-only aircraft do not
 trigger an enrichment fan-out or push notification.
@@ -160,7 +160,7 @@ channel; it never opens a TCP connection.
 
 OGN targets stay in a bounded RAM-only state map. They do not enter the local
 ADS-B state service, `FlightPosition`, `Flight` history, daily statistics,
-reception records, alerts, enrichment, or receiver health. The OGN map layer
+alerts, enrichment, or receiver health. The OGN map layer
 is separate, off by default, and uses dedicated MapLibre DOM markers; the OGN
 list and detail panel are separate from ADS-B selection and filters.
 
@@ -411,11 +411,10 @@ unit without understanding that lifecycle contract.
 
 Normal releases use [`deploy/release.sh`](deploy/release.sh), whose
 authoritative procedure is [`docs/RELEASE.md`](docs/RELEASE.md). It performs
-the full quality gates, migrations, restart, local/public health checks, and
-only then creates the automatic version tag. During the release it also
-generates [`CHANGELOG.md`](CHANGELOG.md) from commits since the previous
-release tag and commits the generated section. It never runs as part of
-ordinary development or documentation work.
+the full quality gates, migrations, restart and local/public health checks
+before tagging the verified source commit. Automated changelog generation
+was retired with O14; [`CHANGELOG.md`](CHANGELOG.md) remains historical
+documentation and is never regenerated or committed by the release script.
 
 ## Production performance soak (T58)
 

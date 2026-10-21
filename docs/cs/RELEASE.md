@@ -84,11 +84,7 @@ s vygenerovanými release notes cílený na přesný commit z ověřeného manif
 produkčního artefaktu. Publisher vyřeší výsledný tag a při jiném cíli skončí
 chybou; existující release lze znovu použít jen tehdy, pokud jeho tag stále
 ukazuje na stejný commit artefaktu. Po úspěchu celého main CI workflow
-`.github/workflows/repository-metadata.yml` doplní
-`CHANGELOG.md` z publikovaných tagů, obnoví vygenerované metriky codebase,
-otevře jeden audit PR z `automation/repository-metadata` a tento metadata PR
-automaticky sloučí. Metadata-only merge je explicitně vyřazen z produkčního
-nasazení. Publikování release je idempotentní: už existující GitHub Release pro
+Publikování release je idempotentní: už existující GitHub Release pro
 vyřešený tag se považuje za úspěch, včetně případů rerun/race. Verzované
 stable/RC releasy nadále používají běžný příkaz výše.
 
@@ -152,20 +148,10 @@ Noční a ručně spouštěný workflow `ci-heavy.yml` nezávisle provádí **ú
    bere v úvahu pouze RC tagy pro přesnou základní verzi. Shodný release tag
    již na `HEAD` se znovu použije. Skript exportuje release metadata pro build;
    nespouští `npm version` ani nemění package manifesty.
-4. Pro ruční releasy `scripts/changelog.mjs` vygeneruje novou sekci
-   `CHANGELOG.md` z Git commitů od předchozího release tagu. Nové záznamy jsou
-   seskupené do sekcí Added/Changed/Fixed/Performance/Documentation/
-   Maintenance, v bloku technických detailů zachovávají kompletní seznam
-   commitů a vypisují registrované funkce dotčené přes conventional-commit
-   scopes z `docs/features.registry.json`. Pokud se changelog změní, release
-   jej před pokračováním automaticky commitne. Automatizované releasy tuto
-   mutaci repozitáře přeskakují; post-CI workflow Repository Metadata doplní
-   tagovaný release společně s vygenerovanými metrikami codebase, zatímco
-   GitHub Release dál používá poznámky generované GitHubem.
-   Build zapisuje oddělené identity source, release, artefaktu a cíle tagu.
-   U ručního releasu se commit changelogu stává release a artifact identitou;
-   automatizovaný release zachová pro všechny identity přesně připnutý CI
-   commit.
+4. Ruční i automatizované vydání zachovává ověřený zdrojový commit jako
+   identitu vydání, artefaktu i cíle tagu. Automatické generování changelogu
+   a metadata backfill (O14) byly vyřazeny. GitHub Release používá poznámky
+   generované GitHubem; historický `CHANGELOG.md` se při nasazení nemění.
 5. Spustí `npm ci` s lokální cache a bez síťových npm audit/fund kontrol,
    vygeneruje Prisma kontrakt a poté paralelně spustí lint, typecheck a úplnou
    sadu Vitest. Release test používá Vitest `--pool=threads`; všechny testy se
@@ -289,7 +275,7 @@ Po obnovení proveďte také kontrolu veřejných JS/CSS souborů a aplikace.
 Štítek `release-preview` u PR spustí kompletní release typecheck, Vitest,
 browser a výkonnostní kontroly **před sloučením** (z PR se nikdy nenasazuje).
 Základní rychlý validační PR job se pak přeskočí, protože jeho lint,
-dependency audit, migrace, registr funkcí, dokumentace, vizuální a changelog
+dependency audit, migrace, registr funkcí, dokumentace a vizuální
 kontroly běží v release-tests.
 
 Po sloučení `scripts/ci-pr-validation-reuse.mjs` pouze čte GitHub API.

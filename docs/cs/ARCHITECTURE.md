@@ -22,7 +22,7 @@ Publikovaná geometrie ATC sektorů, ATS trasy a navigační data zůstávají v
 
 ## Počasí a historický kontext mapy
 
-Zachované počasí zahrnuje skutečný METAR/TAF, SIGMET, PIREP, dostupná pozorování z letadel a radar ČHMÚ. Omezený archiv kontextu mapy obsahuje dřívější METAR, radarové snímky i plánované české AUP/UUP záznamy.
+Zachované počasí zahrnuje skutečný METAR/TAF, SIGMET, dostupná pozorování z letadel a radar ČHMÚ. Omezený archiv kontextu mapy obsahuje dřívější METAR, radarové snímky i plánované české AUP/UUP záznamy.
 
 **Plánovaný sběr T12 je zastavený.** MapContextArchiveService.poll() pravidelně aktualizuje jen METAR a radar ČHMÚ; již nevolá síťovou čtečku Czech AIM. Starší AUP data lze stále číst přes MapContextArchive.resolveAupAt() a historické API /api/map-context/at a /api/map-context/range. Metoda MapContextArchive.addAup() zůstala kvůli kompatibilitě archivu, ale nemá časovaný síťový zdroj. Neodstraňovat soubory map-context-aup-v1.json ani historické datové typy.
 

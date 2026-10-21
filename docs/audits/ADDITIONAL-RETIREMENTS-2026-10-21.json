@@ -59,8 +59,8 @@
     {
       "id": "O14",
       "title": "Automatic documentation, changelog and code growth metrics",
-      "assessment": "AUTOMATED_CHANGELOG_AND_CODE_GROWTH_TOOLS_RETIRED",
-      "action": "Removed automatic changelog generator, NPM commands and checks; source-footprint advisory, static feature registry check and CI remain for O10/O11."
+      "assessment": "CHANGELOG_AND_CODE_GROWTH_AUTOMATION_REMOVED_RELEASE_DEPENDENCY_FIXED",
+      "action": "Retired changelog generator and CI/manual-release invocations, aligned release docs with pinned source SHA. Kept release script, CI CodeQL/docs/feature checks and performance monitoring."
     },
     {
       "id": "S07",
@@ -123,6 +123,18 @@
     {
       "path": "lib/i18n/cs.ts",
       "reason": "U06 favorite airport locale entries retired"
+    },
+    {
+      "path": "deploy/release.sh",
+      "reason": "Retire O14 changelog invocation safely without breaking manual release source identity"
+    },
+    {
+      "path": "docs/RELEASE.md",
+      "reason": "Update EN release procedure to source-commit provenance"
+    },
+    {
+      "path": "docs/cs/RELEASE.md",
+      "reason": "Update CZ release procedure and retired metadata details"
     }
   ],
   "notClaimed": "All nine requested feature surfaces have been retired or were already absent. This audit does not prove production behavior or authorize deploy; shared core dependencies and legacy database schema remain."
