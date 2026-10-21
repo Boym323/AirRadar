@@ -418,7 +418,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-v6-multiview-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableV6Multi: true },
         { name: "radar-v6-light-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "light" },
         { name: "radar-v6-satellite-basemap", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Appearance: "satellite" },
-        { name: "radar-v6-g-presentation", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, v6Presentation: true },
         { name: "radar-v5-map-focus-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, enableMapFocus: true },
         { name: "radar-v5-map-focus-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, enableMapFocus: true },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
@@ -616,11 +615,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             if (!await panel.locator("button").count()) {
               throw new Error("V6-A Multi-view panel must remain interactive");
             }
-          }
-          if (target.v6Presentation) {
-            const control = visualPage.getByTestId("radar-presentation-v6-g");
-            await control.getByRole("button", { name: /Presentation|Prezentace/i }).click();
-            await visualPage.waitForFunction(() => document.querySelector(".radar-content")?.getAttribute("data-presentation-mode") === "true");
           }
           if (target.mockAviationEmbed) {
             const media = visualPage.getByTestId("airport-media-v6-h");
@@ -865,7 +859,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               // vector features. The second attempt must satisfy the same
               // strict nonblank basemap evidence; never turn a blank map green.
               if (evidence.styleEventLoaded === true && evidence.renderedVectorFeatures === 0 && evidence.tilesLoaded === false
-                && !target.v6Presentation && !target.enableV6Multi
+                && !target.enableV6Multi
                 && !target.enableMapFocus && !target.selectAircraft && !target.openMapCredits) {
                 console.warn(`[production-gates] transient vector tile readiness on ${target.name}; one strict fresh-navigation retry`);
                 await visualPage.reload({ waitUntil: "domcontentloaded" });
@@ -932,7 +926,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         } finally {
           await closePage(visualPage);
         }
-      }, { isExclusive: (target) => target.v6Presentation === true });
+      });
       console.log(`[production-gates] visual batch finished durationMs=${Math.round(performance.now() - visualBatchStartedAt)} targets=${selectedTargets.length}`);
     };
     const runResponsiveSweep = configuredViewport ? async () => {} : async () => {

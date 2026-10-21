@@ -99,8 +99,6 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { visualSystemV5EText } from "@/lib/i18n/visual-system-v5-e";
 import { AIRRADAR_BASE_MAP_STYLE_URL, airRadarMapAttributions } from "@/lib/map-style";
 import { applyRadarMapAppearance, isRadarMapAppearance, type RadarMapAppearance } from "@/lib/radar/map-appearance";
-import { pickPresentationAircraft } from "@/lib/radar/presentation-v6-g";
-import { RadarPresentationControls } from "@/components/radar/radar-presentation-controls";
 import { RadarMapHud } from "@/components/radar/radar-map-hud";
 import { aircraftWebglLabelFeature, ognMapLabelFeature, labelForAircraft, aircraftSearchText, ognTargetLabel, ognGlyphMarkup } from "@/lib/radar/map-label-presentation";
 import { parseAirportDataset, parseAtcDataset, parseAtsDataset, parseJsonDataset, type AtsRoutesResponse } from "@/lib/radar/dataset-validation";
@@ -264,12 +262,6 @@ export function AirRadarApp() {
   const [trafficOpen, setTrafficOpen] = useState(false);
   const [mapFocus, setMapFocus] = useState(false);
   const [mapAppearance, setMapAppearance] = useState<RadarMapAppearance>("dark");
-  const [presentationMode, setPresentationMode] = useState(false);
-  const [presentationPaused, setPresentationPaused] = useState(false);
-  const [presentationScene, setPresentationScene] = useState<string | null>(null);
-  const presentationLastHexRef = useRef<string | null>(null);
-  const presentationAircraftRef = useRef<AircraftView[]>([]);
-  presentationAircraftRef.current = snapshot.aircraft;
   const nativeBasemapLayerIdsRef = useRef<string[]>([]);
   const [multiAircraftMode, setMultiAircraftMode] = useState(false);
   const multiAircraftModeRef = useRef(false);
@@ -349,74 +341,6 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     applyRadarMapAppearance(map, nativeBasemapLayerIdsRef.current, mapAppearance);
   }, [mapAppearance, mapReady]);
-  useEffect(() => {
-    if (!presentationMode || !mapReady || presentationPaused) return;
-    const map = mapRef.current;
-    if (!map) return;
-    let disposed = false;
-    const rotate = () => {
-      if (disposed || document.hidden || !mapRef.current) return;
-      const next = pickPresentationAircraft(presentationAircraftRef.current, presentationLastHexRef.current);
-      if (next?.lat !== null && next?.lon !== null && next) {
-        presentationLastHexRef.current = next.icaoHex;
-        setPresentationScene(next.callsign || next.registration || next.icaoHex);
-        map.easeTo({ center: [next.lon, next.lat], zoom: 8, duration: 900, essential: true });
-      } else {
-        const receiver = receiverRef.current;
-        if (receiver.lat === null || receiver.lon === null) return;
-        presentationLastHexRef.current = null;
-        setPresentationScene(receiver.name);
-        map.easeTo({ center: [receiver.lon, receiver.lat], zoom: 7.4, duration: 900, essential: true });
-      }
-    };
-    // Keep exactly one pending scene rotation only while Presentation Mode is active.
-    // This is local camera choreography, never additional aircraft/network polling.
-    let rotationTimeout: number | null = null;
-    const schedule = () => {
-      if (disposed) return;
-      rotationTimeout = window.setTimeout(() => {
-        if (disposed) return;
-        rotate();
-        schedule();
-      }, 45_000);
-    };
-    rotate();
-    schedule();
-    return () => {
-      disposed = true;
-      if (rotationTimeout !== null) window.clearTimeout(rotationTimeout);
-    };
-  }, [mapReady, presentationMode, presentationPaused]);
-
-  useEffect(() => {
-    if (!presentationMode) return;
-    const resize = () => mapRef.current?.resize();
-    const onFullscreen = () => {
-      if (!document.fullscreenElement) setPresentationMode(false);
-      window.requestAnimationFrame(resize);
-    };
-    document.addEventListener("fullscreenchange", onFullscreen);
-    window.requestAnimationFrame(resize);
-    return () => {
-      document.removeEventListener("fullscreenchange", onFullscreen);
-      window.requestAnimationFrame(resize);
-    };
-  }, [presentationMode]);
-
-  const togglePresentationMode = () => {
-    if (presentationMode) {
-      setPresentationMode(false);
-      setPresentationScene(null);
-      if (document.fullscreenElement === radarContentRef.current) void document.exitFullscreen().catch(() => undefined);
-      return;
-    }
-    setMapFocus(true);
-    setFollowSelected(false);
-    setPresentationPaused(false);
-    setPresentationMode(true);
-    const element = radarContentRef.current;
-    if (element?.requestFullscreen) void element.requestFullscreen().catch(() => undefined);
-  };
   const chooseMapAppearance = (value: RadarMapAppearance) => {
     setMapAppearance(value);
     try { window.localStorage.setItem("airradar-map-appearance-v6", value); } catch { /* Optional browser preference. */ }
@@ -2187,7 +2111,7 @@ export function AirRadarApp() {
   }
 
   return (
-    <main className="radar-shell" data-presentation-mode={presentationMode ? "true" : undefined}>
+    <main className="radar-shell">
       <AirRadarTopbar heading radarPage meta={
         <>
           <div className="topbar-ops-meta">
@@ -2210,7 +2134,7 @@ export function AirRadarApp() {
 
       <div className="radar-workspace" data-map-focus={mapFocus && drawerState === "closed" ? "true" : "false"}>
         <RadarNavRail showAtc={showAtc} onShowAtcChange={setShowAtc} showAirports={showAirports} onShowAirportsChange={setShowAirports} />
-        <section ref={radarContentRef} className="radar-content" data-presentation-mode={presentationMode ? "true" : undefined}>
+        <section ref={radarContentRef} className="radar-content">
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
@@ -2223,7 +2147,6 @@ export function AirRadarApp() {
               drawerOpen={drawerState !== "closed"}
               trafficTriggerRef={trafficTriggerRef}
               onOpenTraffic={openTrafficDrawer}
-              presentationControls={<RadarPresentationControls active={presentationMode} paused={presentationPaused} scene={presentationScene} onToggle={togglePresentationMode} onTogglePause={() => setPresentationPaused((current) => !current)} />}
               presetMenu={<RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />}
             >
               <RadarMapLayerMenu

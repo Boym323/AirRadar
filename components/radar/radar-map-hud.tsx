@@ -13,7 +13,6 @@ interface RadarMapHudProps {
   drawerOpen: boolean;
   trafficTriggerRef: Ref<HTMLButtonElement>;
   onOpenTraffic: () => void;
-  presentationControls: ReactNode;
   presetMenu: ReactNode;
   children: ReactNode;
 }
@@ -21,7 +20,7 @@ interface RadarMapHudProps {
 /** Layers are always rendered, including when no aircraft has been selected. */
 export function RadarMapHud({
   aircraftCount, activeTrafficCount, showSourceBreakdown, sourceStats,
-  drawerOpen, trafficTriggerRef, onOpenTraffic, presentationControls,
+  drawerOpen, trafficTriggerRef, onOpenTraffic,
   presetMenu, children,
 }: RadarMapHudProps) {
   return (
@@ -46,7 +45,6 @@ export function RadarMapHud({
           </details>
         )}
       </Panel>
-      {presentationControls}
       <MapControlGroup className="map-control-group-primary">
         <button
           ref={trafficTriggerRef}
