@@ -1,0 +1,1117 @@
+{
+  "schemaVersion": 1,
+  "task": "V2-01",
+  "baselineCommit": "53f137d8a3b43766d2125a1bca87a4e7c13d0bd9",
+  "source": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+  "selectionCount": 88,
+  "warning": "Task brief cites 79 KEEP, but canonical 2026-10-21 inventory currently contains 88 KEEP. Cover all 88 rather than discard 9. Candidate paths are family-level orientation, not verified per-ID dependency proofs.",
+  "entries": [
+    {
+      "id": "J01",
+      "title": "Příjem lokálních letadel přes readsb JSON · základ systému",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J02",
+      "title": "Přímý příjem lokálních BEAST TCP rámců",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J03",
+      "title": "Rust akcelerace BEAST parseru a CRC24",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J04",
+      "title": "Automatické přepínání BEAST / JSON při výpadku",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J05",
+      "title": "Správa živého stavu letadel v RAM · základ systému",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J06",
+      "title": "Veřejné API aktuálních letadel · základ systému",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J07",
+      "title": "Živý stream SSE V1 – celé snapshoty · základ systému",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J08",
+      "title": "Optimalizovaný SSE V2 – delta aktualizace",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J09",
+      "title": "Ukládání vzorkované historie do PostgreSQL",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "J11",
+      "title": "Kontinuita identity letadel, detekce výpadků a deduplikace · základ systému",
+      "selected": "KEEP",
+      "lane": "live-ingest-and-state",
+      "candidatePaths": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/providers.ts",
+        "lib/aircraft/",
+        "app/api/stream/route.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R01",
+      "title": "Základní interaktivní mapa MapLibre · základ systému",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R02",
+      "title": "Přepínání LOCAL / EXTENDED pokrytí",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R03",
+      "title": "Ikony letadel podle typu a směru",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R04",
+      "title": "Popisky letadel a řízení jejich kolizí",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R05",
+      "title": "Barevné režimy letadel podle provozních údajů",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R06",
+      "title": "Živý seznam provozu a filtrování letadel",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R07",
+      "title": "Detail vybraného letadla v mapovém panelu",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R08",
+      "title": "Zobrazení živé letové stopy (trail)",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R09",
+      "title": "Sledování letadla kamerou mapy (follow)",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R10",
+      "title": "Současné sledování více letadel",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R11",
+      "title": "Zobrazení trasy mezi letišti a jejího průběhu",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R12",
+      "title": "Vrstvy okolních letišť",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R14",
+      "title": "Mapové podklady, vzhled a předvolby vrstev",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R15",
+      "title": "Mapová HUD lišta a rychlé akce",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R16",
+      "title": "Režim prezentace mapy",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R17",
+      "title": "ATC sektory a vysílače přímo v mapě",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "R18",
+      "title": "Volitelné počasí a vzdušné prostory přímo v mapě",
+      "selected": "KEEP",
+      "lane": "interactive-radar-ui",
+      "candidatePaths": [
+        "components/airradar-app.tsx",
+        "components/radar/",
+        "lib/radar/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "H03",
+      "title": "Fotografie letadel z Planespotters",
+      "selected": "KEEP",
+      "lane": "aircraft-detail-and-history",
+      "candidatePaths": [
+        "app/aircraft/",
+        "lib/server/history.ts",
+        "lib/contracts/history.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "H07",
+      "title": "Výškový, rychlostní a vertikální profil letu",
+      "selected": "KEEP",
+      "lane": "aircraft-detail-and-history",
+      "candidatePaths": [
+        "app/aircraft/",
+        "lib/server/history.ts",
+        "lib/contracts/history.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "H14",
+      "title": "Souhrny letadla za 7/30 dní a celé období",
+      "selected": "KEEP",
+      "lane": "aircraft-detail-and-history",
+      "candidatePaths": [
+        "app/aircraft/",
+        "lib/server/history.ts",
+        "lib/contracts/history.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "A01",
+      "title": "Katalog letišť a vyhledávání podle ICAO",
+      "selected": "KEEP",
+      "lane": "airport-catalog",
+      "candidatePaths": [
+        "app/airports/",
+        "lib/server/airport-catalog.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "A02",
+      "title": "Detail letiště – dráhy, poloha, vybavení a frekvence",
+      "selected": "KEEP",
+      "lane": "airport-catalog",
+      "candidatePaths": [
+        "app/airports/",
+        "lib/server/airport-catalog.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "T08",
+      "title": "ATS tratě České republiky",
+      "selected": "KEEP",
+      "lane": "atc-ats-navigation",
+      "candidatePaths": [
+        "lib/atc/",
+        "lib/ats/",
+        "lib/server/atc-sector-service.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "T09",
+      "title": "ATS tratě Slovenska a Rakouska",
+      "selected": "KEEP",
+      "lane": "atc-ats-navigation",
+      "candidatePaths": [
+        "lib/atc/",
+        "lib/ats/",
+        "lib/server/atc-sector-service.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "T10",
+      "title": "NAVAID/FIX databáze a navigační průzkumník",
+      "selected": "KEEP",
+      "lane": "atc-ats-navigation",
+      "candidatePaths": [
+        "lib/atc/",
+        "lib/ats/",
+        "lib/server/atc-sector-service.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "T13",
+      "title": "Navigation Integrity – podezřelé anomálie ADS-B",
+      "selected": "KEEP",
+      "lane": "atc-ats-navigation",
+      "candidatePaths": [
+        "lib/atc/",
+        "lib/ats/",
+        "lib/server/atc-sector-service.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "T14",
+      "title": "Navigation Integrity – regionální mapa, historie a analýza",
+      "selected": "KEEP",
+      "lane": "atc-ats-navigation",
+      "candidatePaths": [
+        "lib/atc/",
+        "lib/ats/",
+        "lib/server/atc-sector-service.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W01",
+      "title": "Aktuální METAR a TAF letišť",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W02",
+      "title": "METAR značky a informace přímo v mapě",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W03",
+      "title": "Meteorologický radar ČHMÚ s časovou osou",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W04",
+      "title": "Echo Top – výška radarových odrazů",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W06",
+      "title": "SIGMET a AirSIGMET výstrahy",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W07",
+      "title": "PIREP/AIREP hlášení pilotů",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W08",
+      "title": "Počasí měřené letadly z Mode-S / BDS 4,4",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "W09",
+      "title": "Profil a kvalita počasí pozorovaného letadlem",
+      "selected": "KEEP",
+      "lane": "weather-and-map-context",
+      "candidatePaths": [
+        "lib/server/weather-radar/",
+        "lib/server/map-context.ts",
+        "lib/contracts/weather-radar.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "L11",
+      "title": "Push notifikace do prohlížeče",
+      "selected": "KEEP",
+      "lane": "alert-delivery",
+      "candidatePaths": [
+        "lib/server/alert-delivery-worker.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "L12",
+      "title": "Externí Pushover upozornění",
+      "selected": "KEEP",
+      "lane": "alert-delivery",
+      "candidatePaths": [
+        "lib/server/alert-delivery-worker.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E01",
+      "title": "ADSBHub – příjem externího síťového provozu",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E02",
+      "title": "ADSB.lol – surový BEAST/SBS stream",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E03",
+      "title": "ADSB.lol – HTTP geografická záloha",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E04",
+      "title": "OGN/FLARM – letadla, kluzáky a další cíle",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E05",
+      "title": "OGN Device Database – identifikace a ochrana soukromí",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E06",
+      "title": "SoftRF SQLite – nouzová OGN whitelist databáze",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E07",
+      "title": "ACARS/VDL2 metadata přes RXW Hub",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E09",
+      "title": "FlightAware – doplňování letových plánů a diagnostika využití",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "E10",
+      "title": "ADSBDB – externí metadata letadel",
+      "selected": "KEEP",
+      "lane": "enrichment-and-external-data",
+      "candidatePaths": [
+        "lib/server/providers.ts",
+        "lib/server/enrichment-cache.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S01",
+      "title": "Aktuální počítadla letadel a zpráv za sekundu",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S02",
+      "title": "Denní/7denní/30denní agregované statistiky – API",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S03",
+      "title": "Receiver Coverage – polární mapa dosahu",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S04",
+      "title": "Analýza slabých sektorů a spolehlivosti příjmu",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S05",
+      "title": "Rekordy vzdálenosti a přijatých letadel",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S06",
+      "title": "Statistiky typů letadel, aerolinek a tratí – API",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S07",
+      "title": "Historická heatmapa a profil provozu – API",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S08",
+      "title": "Denní a týdenní recap – zbývající API",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "S09",
+      "title": "Logbook a agregované souhrny přijímače",
+      "selected": "KEEP",
+      "lane": "system-diagnostics",
+      "candidatePaths": [
+        "lib/server/system-status.ts",
+        "lib/server/system-status-projection.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O01",
+      "title": "System Dashboard – stav všech komponent",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O02",
+      "title": "Veřejná kontrola zdraví aplikace a verze · základ systému",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O03",
+      "title": "Receiver Monitoring – zdraví SDR/readsb příjmu",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O04",
+      "title": "Diagnostika externích poskytovatelů a integrací",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O05",
+      "title": "CPU, RAM, GC a event-loop telemetrie",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O06",
+      "title": "Historie výkonu a aktuálních bottlenecků",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O07",
+      "title": "Databázová latence, fronty a diagnostika zapisování",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O08",
+      "title": "Systémové diagnostické SSE streamy",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O09",
+      "title": "T58 production soak, stall canary a CPU profiling",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O10",
+      "title": "Výkonové benchmarky a zátěžové testy",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O11",
+      "title": "Automatické CI, testy, CodeQL a bezpečnostní kontroly · základ systému",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O12",
+      "title": "Automatické nasazení, health check a rollback · základ systému",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O13",
+      "title": "Import/synchronizace eAIP, ATS a letištních dat",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O14",
+      "title": "Automatická dokumentace, changelog a metriky růstu kódu",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "O15",
+      "title": "Správa přihlášení administrátora a bezpečnostních oprávnění · základ systému",
+      "selected": "KEEP",
+      "lane": "ogn-and-communications",
+      "candidatePaths": [
+        "lib/ogn/",
+        "lib/server/ogn-state.ts"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U01",
+      "title": "Responzivní rozhraní mobil/tablet/desktop · základ systému",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U02",
+      "title": "Instalovatelná PWA aplikace",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U03",
+      "title": "Offline cache posledního známého stavu",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U04",
+      "title": "Česká a anglická lokalizace",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U05",
+      "title": "Globální Command Search a navigace",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U06",
+      "title": "Oblíbená letiště a lokální uživatelské preference",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U07",
+      "title": "Sdílené záložkové odkazy na filtrování a analýzy",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    },
+    {
+      "id": "U08",
+      "title": "Klávesové zkratky a rychlé ovládání",
+      "selected": "KEEP",
+      "lane": "user-services-and-ui",
+      "candidatePaths": [
+        "components/",
+        "app/"
+      ],
+      "sourceEvidence": "FAMILY_CANDIDATES_ONLY",
+      "behaviorParity": "NOT_VERIFIED_PER_ID"
+    }
+  ]
+}
