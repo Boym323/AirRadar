@@ -1,9 +1,5 @@
-export const WEATHER_RADAR_BOUNDS = {
-  west: 11.267,
-  east: 20.77,
-  south: 48.047,
-  north: 52.167,
-} as const;
+import { WEATHER_RADAR_BOUNDS } from "@/lib/contracts/weather-radar";
+export { WEATHER_RADAR_BOUNDS } from "@/lib/contracts/weather-radar";
 
 export const WEATHER_RADAR_PROVIDER = "CHMI" as const;
 export const WEATHER_RADAR_PRODUCT = "MAX_Z_MASKED" as const;
