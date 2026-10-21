@@ -259,6 +259,14 @@
       "Exact production-only LOC and measured live A/B performance",
       "Review of external clients and production rollout"
     ],
-    "retainedScalingDependency": "scripts/benchmark-atc-ring-stalls.ts (imported by scripts/benchmark-load-scaling.ts)"
+    "retainedScalingDependency": "scripts/benchmark-atc-ring-stalls.ts (imported by scripts/benchmark-load-scaling.ts)",
+    "latestCleanupPhase": 60,
+    "removedDuplicateRetirementTests": 5,
+    "removedRetiredT12Tests": 2,
+    "removedOrphanT12SourceModules": 3,
+    "removedOrphanTwinStylesheets": 1,
+    "removedAlertFleetResearchReports": 6,
+    "reviewedAtHead": "299314612e137d7257660c14bbea8622f3e4e8ec",
+    "note": "Phase 60 staged in draft PR; preserve retained ATC/ATS and notification transport, and rerun all gates."
   }
 }

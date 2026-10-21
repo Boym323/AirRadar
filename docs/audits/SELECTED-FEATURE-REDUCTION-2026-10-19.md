@@ -718,3 +718,24 @@ FlightAware filed-route provenance, route corridors, conformance, actual runway
 context or navigation datasets. Unknown designators remain unresolved connectors,
 never fabricated published procedures. Legacy route DTO types stay available for
 historical read compatibility. No database migrations or production deployment.
+
+## Phase 60: prune redundant retired-feature suites and abandoned source files
+
+After the selected-feature boundary suite covered the rejected Operational Focus,
+Digital Twin map and W11 Weather Avoidance UI, remove five narrow duplicate
+string/absence-only test files. The retained selected-feature suite still guards
+the live radar drawer, ATC/Navigation Integrity and SIGMET, and the independently
+tested ADS-B receiver, history, alerts delivery and T58 remain untouched.
+
+T12's planned AUP/UUP API and map presentation were already retired in phase 24.
+Remove the unreferenced `lib/airspace-activity` source parser, map adapter and
+DTOs together with their two retired-feature-only unit suites; strengthen the
+central test so they cannot reappear while canonical published ATC geometries,
+ATS navigation and live sector matching remain preserved.
+
+Remove the orphan Digital Twin calibration stylesheet (no mounted component) and
+six checked-in, non-runtime alert/fleet research reports. Preserve all database
+migrations, on-disk operational alert records, historic PostgreSQL rows,
+Web Push/Pushover delivery, runtime workers and related tests. Neither main nor
+the production deployment is changed. Validate this commit with full CI,
+CodeQL and 1x/2x/4x scaling before making any release decision.
