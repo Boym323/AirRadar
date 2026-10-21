@@ -20,4 +20,25 @@ describe("Retired Flight Intelligence backend boundary", () => {
     expect(benchmark).not.toContain("FlightIntelligenceDetector");
     expect(benchmark).not.toContain("snapshotApplyComparisonBenchmark");
   });
+
+  it("does not retain retired one-off benchmark jobs or retired research evidence as runtime files", () => {
+    for (const path of [
+      "scripts/benchmark-aircraft-label-collision.ts",
+      "scripts/benchmark-atc-context-offline.ts",
+      "scripts/benchmark-atc-ring-stalls.ts",
+      "scripts/benchmark-network-trail-update.ts",
+      "artifacts/flight-intelligence-v1-audit.json",
+      "artifacts/predictive-intelligence-v1-replay.json",
+      "artifacts/operational-twin-v46-iteration-1.md",
+      "artifacts/predictive-terminal-ground-truth-v1.json",
+    ]) expect(existsSync(new URL("../" + path, import.meta.url)), path).toBe(false);
+    for (const path of [
+      "scripts/benchmark-live-performance.ts",
+      "scripts/benchmark-load-scaling.ts",
+      "scripts/t58-report.mjs",
+      "lib/route-intelligence/conformance.ts",
+      "lib/server/alert-delivery-worker.ts",
+      "lib/server/history.ts",
+    ]) expect(existsSync(new URL("../" + path, import.meta.url)), path).toBe(true);
+  });
 });

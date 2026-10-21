@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "requestedAt": "2026-10-19",
-  "status": "phase1-partial-not-production",
+  "status": "selected-feature-reduction-staged-in-draft-pr-not-production",
   "source": "User's exact KEEP/REMOVE selection in this conversation",
   "keepIds": [
     "J01",
@@ -240,5 +240,24 @@
     "Retain ATS route providers T08/T09 and navigation data T10",
     "Retain approved weather products and E07/E09 integrations",
     "No deployment before green CI, CodeQL and matched build"
-  ]
+  ],
+  "currentReview": {
+    "reviewDate": "2026-10-21",
+    "prNumber": 1096,
+    "baselineHead": "d1d8a38eeeae49d69d5535592d54c9e01ffd0860",
+    "retiredResearchReports": 25,
+    "retiredOneOffMicrobenchmarks": 4,
+    "stillRequired": [
+      "R11 selected-aircraft published route and route conformance visualization",
+      "L11/L12 delivery transports and historic notification contract",
+      "T08/T09/T10 ATS and navigation datasets",
+      "live radar, ATC geometry and FlightPosition history"
+    ],
+    "outstanding": [
+      "Per-ID KEEP/REMOVE parity review",
+      "Notification trigger policy for preserved delivery transports",
+      "Exact production-only LOC and measured live A/B performance",
+      "Review of external clients and production rollout"
+    ]
+  }
 }

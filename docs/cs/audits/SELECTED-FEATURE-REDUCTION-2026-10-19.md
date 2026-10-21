@@ -615,3 +615,14 @@ kontroly hlídají, že se vyřazené funkce nevrátí, a zároveň zachovávaj�
 kontrolu systému, telemetrie NIC/NACp/SIL z readsb, mapy letišť, radaru,
 počasí a přijímače. Nepoužívaný otvírač Operations Center byl odstraněn.
 Produkční aplikace a databáze se nemění.
+
+## Fáze 58: odstranění archivních výstupů a jednorázových mikrobenchmarků
+
+Odstraněno 25 historických souborů reportů Flight Intelligence, Predictive
+Intelligence, prospective ground truth a Digital Twin, které nebyly součástí
+produkčního běhu. Odstraněny čtyři samostatné syntetické mikrobenchmarky
+kolizí štítků letadel, kontextu ATC, přetížení ATC polygonů a aktualizace
+síťových stop. Neměly zaregistrovaný příkaz npm ani použití v GitHub Actions.
+Zachovány testy štítků, ATC, stop a Navigation Integrity, aktuální zátěžový
+benchmark, diagnostika T58, veškerá historická databázová data a migrace.
+Beze změny živého příjmu ADS-B, dat na disku, schématu a produkčního provozu.
