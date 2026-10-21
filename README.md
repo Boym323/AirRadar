@@ -1,5 +1,22 @@
 # AirRadar
 
+## Stav V1 / V1 maintenance status
+
+**AirRadar V1 je určen k údržbě a následnému archivování.** Nezavádějte
+nové funkce ani architektonické přepisy. Povoleny jsou pouze bezpečnostní
+opravy, opravy ověřených regresí, dokumentace a testy potřebné pro stabilní
+referenční vydání. **Repozitář ještě není technicky archivován a dokončení
+stabilizace není potvrzeno.** Další vývoj probíhá odděleně v
+[AirRadarV2](https://github.com/Boym323/AirRadarV2). Nedotýkejte se dat,
+produkčního provozu ani nastavení V1 při práci na V2.
+
+**AirRadar V1 is maintenance-only, pending final stabilization and archival.**
+No feature development or architecture rewrites belong here. Only verified
+security/regression fixes, tests, and archival documentation are in scope.
+The independent successor is [AirRadarV2](https://github.com/Boym323/AirRadarV2).
+Read the [archive preflight](docs/audits/V1-ARCHIVE-PREFLIGHT-2026-10-21.md)
+before merging or disabling automation.
+
 AirRadar is a personal dark-mode ADS-B radar for a local [`readsb`](https://github.com/wiedehopf/readsb) receiver. It keeps live aircraft state in RAM, samples history to PostgreSQL, and streams snapshots to the browser over Server-Sent Events (SSE). The map remains useful when optional data sources are unavailable.
 
 ## Documentation
