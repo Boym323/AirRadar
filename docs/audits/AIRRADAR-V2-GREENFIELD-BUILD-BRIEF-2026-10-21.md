@@ -2,15 +2,16 @@
 
 **Date:** 2026-10-21  
 **Status:** build brief / implementation contract, not an implemented project or a production authorization  
-**Target repository:** https://github.com/Boym323/AirRadar — new isolated `v2` development branch with a clean source tree, while `main` remains V1 production.
-**V1 archive:** `archive/v1-before-v2-2026-10-21` (snapshot of V1 main before V2 work; retain existing release tags).  
+**Target repository:** https://github.com/Boym323/AirRadarV2 — independent repo to be created by the owner.
+**Target infrastructure:** new dedicated Proxmox LXC to be created by the owner; no use of existing V1 LXC.
+**V1 archive:** `archive/v1-before-v2-2026-10-21` retained in V1 as a reference.  
 **Existing reference system:** https://github.com/Boym323/AirRadar  
 **Previous plan:** `docs/audits/AIRRADAR-V2-REWRITE-OPTIMIZATION-TASKS-2026-10-21.md` — superseded as the primary strategy for V2; keep as historical comparison, do not execute it simultaneously  
 **Current product scope:** 79 KEEP capabilities, 99 intentionally removed capabilities, as recorded in the existing repository's `docs/audits/SELECTED-FEATURE-REVISED-2026-10-21.json` and its feature descriptions.
 
 ## 1. Mission and operating principles
 
-Build **AirRadar V2 as a new, operationally independent system on a clean-tree `v2` branch of the existing repository**, based on the lessons learned from AirRadar V1. This does not require a separate GitHub repository; it must have independent code, build workflow, services, credentials and database. Do **not** transplant the old project tree, database schema, gigantic React components, API architecture or accumulated legacy abstractions. Reimplement the desired product capabilities on a deliberately simple and observable architecture.
+Build **AirRadar V2 as a new standalone application in a separate `Boym323/AirRadarV2` GitHub repository and a new dedicated LXC**, based on lessons from V1. Build independent code, CI, Git history, services, credentials, runtime paths and database. Do **not** transplant the old project tree, database schema, gigantic React components, API architecture or accumulated legacy abstractions. Reimplement the desired product capabilities on a deliberately simple and observable architecture.
 
 Keep **AirRadar V1 on `main` fully operational and unchanged** throughout development. Do not reuse V1's application database, secrets, deployment path, systemd service, ports, CI deployment target or mutable runtime files. Initially use synthetic fixtures and recorded/sanitized traffic; a read-only secondary feed is permissible only after proving that V1 ingest is unaffected. V2 must not send or relay feeder output, duplicate real alerts, or pollute V1 data. A production cutover is an explicit separate operation.
 
@@ -53,6 +54,21 @@ Start with **two deployable executables** and one isolated database:
 Reference/enrichment/weather/ATC/OGN operate as optional, isolated modules and fail soft. All public DTOs are projections that omit secrets, sensitive identifiers and unapproved exact receiver coordinates.
 
 **Important choice:** Only the Rust engine owns live track state; do not resurrect the former requirement that the owner must be Node.js. Retain the *single-owner invariant*, not V1's implementation language.
+
+### Isolated deployment target: owner-provided Proxmox LXC
+
+The user will create **a new LXC and a new GitHub repository**. Work on local development and GitHub CI may start after the repository exists; no V2 LXC access should be assumed until its details and permission are provided. V1 must remain running in its original LXC.
+
+- Initial sizing proposal: **4 vCPU, 4–8 GiB RAM, 40–60 GiB disk**. This is a starting suggestion, not a measured requirement; validate during load tests.
+- Give V2 a unique hostname/IP, dedicated non-root user, paths such as `/opt/airradar-v2` and `/var/lib/airradar-v2`, and separate systemd units (`airradarv2-engine`, `airradarv2-web`). These are suggestions, not existing paths.
+- Reserve independent V2 ports (e.g. web `4100` / API `4101`). Do not touch V1 port `3000`, domain, reverse proxy, systemd service, directories, or deployment runner.
+- Use an isolated PostgreSQL database `airradar_v2` and separate least-privilege role. The PostgreSQL **server** may be shared only if capacity and credentials isolation are verified; V1 schema/database is never shared.
+- Start with fixtures or replay. A live read-only mirror of readsb/BEAST is only permitted after G-14 proves that it does not interfere with the V1 receiver.
+- GitHub Actions on the new repo must initially run only tests/builds; no CI release to the V1 LXC. Later production deploy must target only V2, with separate secrets and pinned SHA.
+- Document the new container in `docs/runbooks/LXC-SETUP.md` (OS, CPU, RAM, disk, ports, network, systemd, secrets, storage/backups), excluding secrets and sensitive details from public commits.
+
+This specification grants **no permission to modify or remove V1** and creates no new LXC automatically. If the user has not yet provisioned the repo or LXC, report the missing prerequisite and complete only independent safe work.
+
 
 ## 3. Database V2: clean start, high throughput and inexpensive retention
 
@@ -180,9 +196,9 @@ Each `G-XX` is separately executable. Finish its tests and evidence before start
 
 ### G-00 — New repository, baseline and build infrastructure
 
-Create a clean-source **`v2` branch in `Boym323/AirRadar`**, preserve the V1 archive and unchanged default `main`, decide licensing as appropriate, and add README, AGENTS.md, architecture diagram, ADRs, **V2-only CI (push/PR on `v2`, with no deploy job)**, secret scanning, Cargo workspace, Next.js app, code-style rules and deterministic build. An orphan-history branch is desirable but a complete replacement source tree with inherited Git ancestry is acceptable if connector Git APIs cannot create an orphan commit; disclose the difference. Set up isolated DEV database and fixtures. Confirm no reused V1 deploy secrets, DB or ports.
+Initialize the **separate `Boym323/AirRadarV2` repository** with a new `main` branch and its own Git history, decide licensing as appropriate, and add README, AGENTS.md, architecture diagram, ADRs, CI for V2 only (**no deploy job**), secret scanning, Cargo workspace, Next.js app, code-style rules and deterministic build. Prepare the independent LXC setup runbook but do not touch V1 infrastructure. The user provides the new GitHub repo and LXC; if missing, mark that provisioning as a blocker rather than changing V1. Set up isolated DEV database and fixtures. Confirm no reused V1 deploy secrets, DB or ports.
 
-**Acceptance:** fresh checkout builds/tests from pinned lockfiles; lint/typecheck/Cargo checks green; CI artifact identified by exact SHA; no V1 deployment can be triggered from `v2`; production V1 untouched. If lockfile or toolchain validation cannot run, record G-00 as PARTIAL and do not claim a completed build.
+**Acceptance:** fresh checkout builds/tests from pinned lockfiles; lint/typecheck/Cargo checks green; CI artifact identified by exact SHA; new repo has no access to V1 deployment target; V1 remains untouched. If the new repository, lockfiles, toolchain or host are unavailable, mark relevant work PARTIAL/NOT STARTED.
 
 ### G-01 — Contracts, fixtures and feature acceptance matrix
 
@@ -304,16 +320,16 @@ Set concrete performance budgets **after G-01/G-02 baseline**. Favor meaningful 
 
 For each package, show: Git SHA, edited/added files, public API contract changes, which KEEP IDs were implemented, test report with counts and skipped cases, before/after performance under same fixture, risk register and next dependency. If blocked, state what specific missing permission/source makes it blocked and leave working modules in a runnable state.
 
-G-15 overall success requires V2 is a genuine stand-alone application with no **runtime** dependencies on V1 despite sharing GitHub repository history; all 79 chosen product capabilities have individually verified evidence; no 99 removed modules reintroduced without explicit scope change; independent DB and safe live data feed; public UI is stable on desktop/mobile; observability and recovery verified; operator explicitly approves safe cutover.
+G-15 overall success requires V2 is a genuine stand-alone application in a separate repository and LXC with no runtime dependencies on V1; all 79 chosen product capabilities have individually verified evidence; no 99 removed modules reintroduced without explicit scope change; independent DB and safe live data feed; public UI is stable on desktop/mobile; observability and recovery verified; operator explicitly approves safe cutover.
 
 ---
 
 ## 10. Copyable kick-off prompt for Codex
 
-> Create the brand-new implementation on isolated **`v2` branch of `Boym323/AirRadar`** according to this specification:
+> Create a greenfield implementation in the new **`Boym323/AirRadarV2`** repository according to this specification:
 >
 > https://github.com/Boym323/AirRadar/blob/main/docs/audits/AIRRADAR-V2-GREENFIELD-BUILD-BRIEF-2026-10-21.md
 >
-> **Start with stage G-00 only**, then G-01 if G-00 is fully verified. Build from a new empty V2 source tree, not by refactoring the existing AirRadar; preserve V1 on `main` and the V1 archival ref. Read the V1 feature inventory and runtime constraints as product requirements, not as architecture to copy. Use Rust/Tokio/Axum for the live engine, TypeScript/Next.js/MapLibre for UI, PostgreSQL/SQLx for a new database, and add other languages only where justified.
+> **Start with stage G-00 only**, then G-01 if G-00 is fully verified. Build from an empty V2 repository, not by refactoring existing AirRadar. The dedicated V2 LXC is provisioned by the user; do not use the V1 container as a temporary host. Read the V1 feature inventory and runtime constraints as product requirements, not as architecture to copy. Use Rust/Tokio/Axum for the live engine, TypeScript/Next.js/MapLibre for UI, PostgreSQL/SQLx for a new database, and add other languages only where justified.
 >
-> Do not change or deploy V1, share its database or ports, or import old flight history. The existing V1 automatic deployment on `main` must not be reused by the `v2` CI. Implement production-grade CI, tests, deterministic local development, API contracts and a real first runnable skeleton. Report commits, verification evidence, deployment safety and next stages. Do not perform production cutover without separate authorization.
+> Do not change or deploy V1, share its database or ports, or import old flight history. Do not reuse V1 CI/deployment or old LXC; V2 receives its own release pipeline later. Implement production-grade CI, tests, deterministic local development, API contracts and a real first runnable skeleton. Report commits, verification evidence, deployment safety and next stages. Do not perform production cutover without separate authorization.
