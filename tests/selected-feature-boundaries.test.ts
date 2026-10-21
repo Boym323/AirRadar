@@ -90,20 +90,16 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(existsSync(new URL("lib/radar/airspace-geojson.ts", root))).toBe(true);
   });
 
-  it("retains only selected deep-link contracts in the shared investigation helper", () => {
-    const source = readFileSync(new URL("lib/investigation-links.ts", root), "utf8");
-    for (const required of [
-      "parseNavigationIntegrityInvestigation", "buildNavigationIntegrityInvestigation",
-      "parseNavigationReferenceInvestigation", "buildNavigationReferenceInvestigation",
-      "investigationHref",
-    ]) expect(source).toContain("export function " + required);
-    for (const retired of [
-      "parseAirspaceInvestigation", "buildAirspaceInvestigation",
-      "parseFlightCompareInvestigation", "buildFlightCompareInvestigation",
-      "parseAirportCompareInvestigation", "buildAirportCompareInvestigation",
-      "parseProcedureInvestigation", "buildProcedureInvestigation",
-      "parseSectorDetailInvestigation", "buildSectorDetailInvestigation",
-    ]) expect(source).not.toContain("export function " + retired);
+  it("removes retired U07 URL-state helpers while keeping navigation pages", () => {
+    expect(existsSync(new URL("lib/investigation-links.ts", root))).toBe(false);
+    for (const file of [
+      "components/navigation-integrity-center.tsx",
+      "components/navigation-reference-explorer.tsx",
+    ]) expect(existsSync(new URL(file, root))).toBe(true);
+    const integrity = readFileSync(new URL("components/navigation-integrity-center.tsx", root), "utf8");
+    const navigation = readFileSync(new URL("components/navigation-reference-explorer.tsx", root), "utf8");
+    expect(integrity).not.toContain("buildNavigationIntegrityInvestigation");
+    expect(navigation).not.toContain("buildNavigationReferenceInvestigation");
   });
 
   it("never polls retired flight-intelligence and route-weather endpoints from selected aircraft", () => {
