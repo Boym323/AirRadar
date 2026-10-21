@@ -36,7 +36,7 @@ const retired = audit.deletedApiRoutes.map((p)=>{
 });
 const keep = new Set(matrix.keepIds),remove = new Set(matrix.removeIds);
 if (keep.size!==88 || remove.size!==90 || [...keep].some((id)=>remove.has(id))) failures.push("Selection matrix expected 88 KEEP and 90 REMOVE with no overlap");
-if (routes.length!==56) failures.push("Expected 56 active API routes, actual "+routes.length);
+if (routes.length!==53) failures.push("Expected 53 active API routes after retiring W07 and S07, actual "+routes.length);
 for (const p of audit.preservedEndpoints) if (!existsSync(path.join(ROOT,p))) failures.push("Missing retained API: "+p);
 for (const p of [...audit.deletedApiRoutes,...audit.deletedPageEntrypoints]) if (existsSync(path.join(ROOT,p))) failures.push("Retired entrypoint restored: "+p);
 const core = [
@@ -75,7 +75,6 @@ const references=[], ambiguous=[], externalUpstream=[];
 const AWC_PROVIDER_SOURCES = new Set([
   "lib/server/aviation-nav-data-provider.ts",
   "lib/server/aviation-weather-provider.ts",
-  "lib/server/pirep-provider.ts",
 ]);
 for(const {filename,source} of sources){
   URL_LITERAL.lastIndex=0;

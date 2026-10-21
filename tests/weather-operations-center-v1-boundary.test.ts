@@ -11,7 +11,6 @@ describe("Weather Operations Center V1 boundary", () => {
       "/api/weather/metar-map",
       "/api/weather/sigmet",
       "/api/weather/radar/frames",
-      "/api/weather/pirep",
     ]) {
       expect(center).toContain(endpoint);
     }
@@ -21,7 +20,7 @@ describe("Weather Operations Center V1 boundary", () => {
 
   it("uses existing bounded products instead of introducing a weather engine", () => {
     expect(center).toContain("Promise.allSettled");
-    expect(center).toContain('radiusNm=180&hours=6');
+    expect(center).not.toContain("/api/weather/pirep");
   });
 
   it("surfaces operational summaries for METAR, SIGMET and radar", () => {
