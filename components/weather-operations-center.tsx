@@ -233,15 +233,5 @@ export function WeatherOperationsCenter() {
       </Panel>
 
     </div>
-            <span>{report.aircraftType ?? t.common.emptyValue} · {report.altitudeFt === null ? t.common.emptyValue : `FL${Math.round(report.altitudeFt / 100)}`} · {timeLabel(report.observedAt)}</span>
-            <small>{[
-              report.turbulence?.intensity ? `TURB ${report.turbulence.intensity}` : null,
-              report.icing?.intensity ? `ICE ${report.icing.intensity}` : null,
-              report.weather,
-            ].filter(Boolean).join(" · ") || report.rawText?.slice(0, 100) || t.common.emptyValue}</small>
-          </article>)}
-        </div> : <EmptyState title={pirep ? copy.noData : copy.loading} />}
-      </Panel>
-    </div>
   </main>;
 }
