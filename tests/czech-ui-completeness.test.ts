@@ -24,7 +24,6 @@ describe("Czech UI localization coverage", () => {
     expect(cs.operations.liveTrafficKicker).toBe("ŽIVÝ PROVOZ");
     expect(cs.commandSearch.title).toBe("Rychlé vyhledávání");
     expect(cs.commandSearch.liveRadar).toBe("Živý radar");
-    expect(cs.recap.weatherHighlights).toBe("Významné meteorologické jevy");
     expect(cs.aircraft.showFlightHistory).toBe("Zobrazit historii letu");
     expect(cs.browse.networkRouteFlow(2, 3)).toContain("2 přílety · 3 odlety");
     expect(cs.browse.networkRouteFlow(1, 5)).toContain("1 přílet · 5 odletů");

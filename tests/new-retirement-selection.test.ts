@@ -53,6 +53,10 @@ describe("additional user-authorized removals (PR #1096)", () => {
     const statistics = readFileSync(new URL("lib/server/statistics.ts", root), "utf8");
     expect(statistics).not.toContain("maxDistanceIcaoHex");
     expect(statistics).not.toContain("maxDistanceRegistration");
+    const coverage = readFileSync(new URL("lib/server/statistics-coverage-intelligence.ts", root), "utf8");
+    expect(coverage).not.toContain("getDailyReceptionRecord");
+    const version = readFileSync(new URL("tests/version.test.ts", root), "utf8");
+    expect(version).not.toContain("../scripts/changelog.mjs");
     const en = readFileSync(new URL("lib/i18n/en.ts", root), "utf8");
     const cs = readFileSync(new URL("lib/i18n/cs.ts", root), "utf8");
     for (const locale of [en, cs]) {

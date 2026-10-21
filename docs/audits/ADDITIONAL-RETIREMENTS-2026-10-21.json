@@ -30,13 +30,13 @@
       "id": "S08",
       "title": "Daily/weekly recap API",
       "assessment": "RECAP_ENDPOINT_TYPES_AND_TRANSLATIONS_REMOVED",
-      "action": "Daily/weekly recap endpoints were absent; removed obsolete recap wire types and both locale dictionaries."
+      "action": "Daily/weekly recap endpoints were absent; removed obsolete recap wire types and both locale dictionaries. Removed obsolete changelog tests from retained version suite."
     },
     {
       "id": "S05",
       "title": "Receiver distance and aircraft records",
-      "assessment": "FULL_ACTIVE_S05_SOURCE_RETIRED_LEGACY_DB_COLUMNS_PRESERVED",
-      "action": "Removed records API, repository, logbook widgets and response types, and record metadata collection/persistence. Keep aggregate maxDistanceKm for S02/S03; existing nullable database columns remain as untouched legacy schema for safe migration compatibility."
+      "assessment": "RECEPTION_RECORDS_FULL_STACK_RETIRED_WITH_COVERAGE_AGGREGATES_PRESERVED",
+      "action": "Removed individual record API, repository, logger, RAM metadata, logbook widgets and statistics-coverage current-day record evidence; historical nullable schema retained. Aggregate maximum distance remains for receiver coverage."
     },
     {
       "id": "W07",
@@ -135,6 +135,18 @@
     {
       "path": "docs/cs/RELEASE.md",
       "reason": "Update CZ release procedure and retired metadata details"
+    },
+    {
+      "path": "lib/statistics-coverage-current-day.ts",
+      "reason": "S05 eliminate stale per-aircraft reception identity merging"
+    },
+    {
+      "path": "scripts/selected-feature-premerge-audit.mjs",
+      "reason": "Update premerge audit to revised 79/99 and 52 API routes"
+    },
+    {
+      "path": "tests/version.test.ts",
+      "reason": "O14 remove obsolete changelog test suite and import"
     }
   ],
   "notClaimed": "All nine requested feature surfaces have been retired or were already absent. This audit does not prove production behavior or authorize deploy; shared core dependencies and legacy database schema remain."

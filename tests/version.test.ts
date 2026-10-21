@@ -2,8 +2,6 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 // @ts-expect-error The release helper is runtime-only ESM consumed by Node.
 import { createBuildMetadata, parseReleaseVersion, resolveReleaseVersion } from "../scripts/version.mjs";
-// @ts-expect-error The changelog helper is runtime-only ESM consumed by Node.
-import { backfillChangelog, createChangelogEntry, normalizeChangelog, updateChangelog } from "../scripts/changelog.mjs";
 import { parseBuildMetadata } from "../lib/server/version";
 
 describe("automatic release versioning", () => {
@@ -188,69 +186,3 @@ describe("release candidate versioning", () => {
   });
 });
 
-describe("automatic changelog generation", () => {
-  it("creates a release section from commits", () => {
-    expect(createChangelogEntry({
-      version: "0.1.10",
-      date: "2026-09-09",
-      previousTag: "v0.1.9",
-      commits: [{ hash: "abc1234", subject: "feat: add changelog" }],
-    })).toBe([
-      "## [0.1.10] - 2026-09-09",
-      "",
-      "Changes since v0.1.9.",
-      "",
-      "### Added",
-      "",
-      "- Add changelog (abc1234)",
-      "",
-      "<details>",
-      "<summary>Technical commits</summary>",
-      "",
-      "- feat: add changelog (abc1234)",
-      "",
-      "</details>",
-    ].join("\n"));
-  });
-
-  it("does not duplicate an existing release section", () => {
-    const existing = "# Changelog\n\n## [0.1.10] - 2026-09-09\n";
-    expect(updateChangelog({
-      version: "0.1.10",
-      date: "2026-09-09",
-      existing,
-      previousTag: "v0.1.9",
-      commits: [],
-    })).toBe(existing);
-  });
-
-  it("inserts new releases immediately after the changelog introduction", () => {
-    const existing = "# Changelog\n\nAll notable changes to AirRadar are documented here.\n\n## [0.1.9] - 2026-09-09\n";
-    const updated = updateChangelog({
-      version: "0.1.10",
-      date: "2026-09-09",
-      existing,
-      previousTag: "v0.1.9",
-      commits: [],
-    });
-    expect(updated.indexOf("## [0.1.10]")).toBeLessThan(updated.indexOf("## [0.1.9]"));
-  });
-
-  it("normalizes existing releases in descending version order", () => {
-    const normalized = normalizeChangelog("# Changelog\n\nIntro\n\n## [0.1.9] - 2026-09-09\n\nold\n\n## [1.0.0] - 2026-09-09\n\nnew\n");
-    expect(normalized.indexOf("## [1.0.0]")).toBeLessThan(normalized.indexOf("## [0.1.9]"));
-  });
-
-  it("backfills missing tagged releases in descending order", () => {
-    const backfilled = backfillChangelog({
-      existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
-      tags: ["v0.1.2", "v0.1.1"],
-      releases: {
-        "v0.1.2": { date: "2026-09-02", commits: [] },
-        "v0.1.1": { date: "2026-09-01", commits: [] },
-      },
-    });
-    expect(backfilled).toContain("## [0.1.1]");
-    expect(backfilled.indexOf("## [0.1.2]")).toBeLessThan(backfilled.indexOf("## [0.1.1]"));
-  });
-});

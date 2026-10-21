@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const read = (p) => readFileSync(path.join(ROOT, p), "utf8");
-const matrix = JSON.parse(read("docs/audits/SELECTED-FEATURE-MATRIX-2026-10-19.json"));
+const matrix = JSON.parse(read("docs/audits/SELECTED-FEATURE-REVISED-2026-10-21.json"));
 const audit = JSON.parse(read("docs/audits/SELECTED-FEATURE-ID-VERIFICATION-2026-10-21.json"));
 const failures = [];
 const list = (dir, accept) => {
@@ -31,12 +31,12 @@ const routes = routeFiles.map((p)=>"/"+path.relative(path.join(ROOT,"app"),p).sp
 const escape = (s) => s.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&");
 const matcher = (route) => new RegExp("^"+route.split("/").map((s)=>s.startsWith("[")?"[^/]+":escape(s)).join("/")+"/?$");
 const live = routes.map((r)=>({r,rx:matcher(r)}));
-const retired = audit.deletedApiRoutes.map((p)=>{
+const retired = [...audit.deletedApiRoutes, "app/api/reception-records/route.ts"].map((p)=>{
   const r="/"+p.replace(/^app\//,"").replace(/\/route\.ts$/,""); return {r,rx:matcher(r)};
 });
 const keep = new Set(matrix.keepIds),remove = new Set(matrix.removeIds);
-if (keep.size!==88 || remove.size!==90 || [...keep].some((id)=>remove.has(id))) failures.push("Selection matrix expected 88 KEEP and 90 REMOVE with no overlap");
-if (routes.length!==53) failures.push("Expected 53 active API routes after retiring W07 and S07, actual "+routes.length);
+if (keep.size!==79 || remove.size!==99 || [...keep].some((id)=>remove.has(id))) failures.push("Revised selection expects 79 KEEP and 99 REMOVE with no overlap");
+if (routes.length!==52) failures.push("Expected 52 active API routes after retiring S05, W07 and S07, actual "+routes.length);
 for (const p of audit.preservedEndpoints) if (!existsSync(path.join(ROOT,p))) failures.push("Missing retained API: "+p);
 for (const p of [...audit.deletedApiRoutes,...audit.deletedPageEntrypoints]) if (existsSync(path.join(ROOT,p))) failures.push("Retired entrypoint restored: "+p);
 const core = [

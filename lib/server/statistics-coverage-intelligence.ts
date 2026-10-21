@@ -184,7 +184,7 @@ export async function getCoverageIntelligence(
     }
 
     // Keep the original receiver aggregates at RAM freshness. This merge keeps
-    // reception distance/identity metadata coherent and never lowers a DB max.
+    // the aggregate maximum distance monotonic without record identity metadata.
     const statistics = getReceiverStatistics();
     const current = statistics.getCurrentDaySnapshot();
     const currentHasData = current.uniqueAircraftCount > 0
@@ -202,21 +202,12 @@ export async function getCoverageIntelligence(
           maxDistanceKm: Math.max(row.maxDistanceKm, persisted?.maxDistanceKm ?? 0),
         });
       }
-      const reception = statistics.getDailyReceptionRecord();
       const persistedToday = statsByDate.get(current.date);
       statsByDate.set(current.date, mergeCurrentDayStats({
         date: current.date,
         currentUniqueAircraftCount: current.uniqueAircraftCount,
         currentMaxConcurrentAircraft: current.maxConcurrentAircraft,
         currentMaxDistanceKm: current.maxDistanceKm,
-        currentReception: reception ? {
-          date: reception.date,
-          distanceKm: reception.distanceKm,
-          icaoHex: reception.icaoHex,
-          registration: reception.registration,
-          recordedAt: reception.recordedAt,
-          bearing: reception.bearing,
-        } : null,
         persisted: persistedToday,
       }));
     }
