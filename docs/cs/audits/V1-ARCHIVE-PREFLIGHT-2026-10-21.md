@@ -10,13 +10,13 @@
 
 ## Důkazy při kontrole
 
-- Prověřený commit main V1: `7b7624d3bb83509050863a4f3c64e8b324b5dfb5` (21. 10. 2026).
-- Poslední pozorované úspěšné CI na main bylo pro `53f137d8`; **nejde** o certifikaci aktuální hlavy větve.
-- T58 měření [#39633253019](https://github.com/Boym323/AirRadar/actions/runs/39633253019) a [#39649188552](https://github.com/Boym323/AirRadar/actions/runs/39649188552) skončila při autentizovaném ověření diagnostiky, ještě před sběrem vzorků. Z logu nelze určit, zda šlo o rozdílný token nebo chybu navazující kontroly.
-- [PR #1100](https://github.com/Boym323/AirRadar/pull/1100) obsahuje rozsáhlé opravy, ale **není** sloučeno ani produkčně ověřeno. Jeho CI selhalo na kontrole české dokumentace a evidovaný browser test vykazuje chyby MapLibre symbol workeru.
-- [PR #1101](https://github.com/Boym323/AirRadar/pull/1101) se týká dřívějšího plánu přepisu V2 a **nesmí** být automaticky začleněno do zmrazené V1.
-- Produkční mapování Prisma schématu a reálné databázové důkazy souběhu/obnovy workerů nejsou podle auditu PR #1100 dostupné.
-- Nově přidané anglické zadání samostatné V2 dosud nemá českou verzi; kontrola parity dokumentace zůstává blokována, dokud nebude doplněna.
+- Aktuální `main` V1 po dokumentačním zmrazení: `d95351f4642d965657a92de2638d96a081a9aaa9`. [CI main #39667409657](https://github.com/Boym323/AirRadar/actions/runs/39667409657) prošlo a nasazení bylo správně přeskočeno, protože šlo pouze o dokumentaci.
+- T58 měření [#39633253019](https://github.com/Boym323/AirRadar/actions/runs/39633253019) a [#39649188552](https://github.com/Boym323/AirRadar/actions/runs/39649188552) skončila při autentizovaném ověření diagnostiky před sběrem vzorků. Zda šlo o autentizaci nebo následnou diagnostickou projekci, zůstává **NEOVĚŘENO**.
+- Původní [PR #1100](https://github.com/Boym323/AirRadar/pull/1100) bylo nahrazeno a uzavřeno bez sloučení. Jeho 41 neduplicitních souborových změn je nad aktuálním main připraveno v konceptu [PR #1104](https://github.com/Boym323/AirRadar/pull/1104). Žádný runtime kód zatím nebyl sloučen ani nasazen.
+- [Release-preview #39668562558](https://github.com/Boym323/AirRadar/actions/runs/39668562558) úspěšně dokončilo produkční/core/browser testy, release testy/typecheck a výkon na kandidátu `9ac7acc0`. Samostatně prošel CodeQL i zátěžový benchmark. Dřívější lokální chybu MapLibre workeru tento CI browser běh **nezopakoval**; shoda se skutečnou produkcí ověřena není.
+- Starý přepis V2 uvnitř V1 [PR #1101](https://github.com/Boym323/AirRadar/pull/1101) a neověřený upgrade Prisma RC [PR #1045](https://github.com/Boym323/AirRadar/pull/1045) byly uzavřeny bez sloučení. Nový vývoj patří pouze do AirRadarV2.
+- Produkční mapování katalogu Prisma, prakticky ověřený rollback/obnova a souběžný delivery worker proti skutečné PostgreSQL zůstávají **NEOVĚŘENÉ**. Statické testy nenahrazují provozní důkazy.
+- Dříve chybějící české dokumenty byly doplněny a kontrola lokalizace úspěšně prošla. Zbylé podmínky a zodpovědnost eviduje [issue #1103](https://github.com/Boym323/AirRadar/issues/1103).
 
 ## Nezbytné podmínky definitivního zmrazení V1
 
