@@ -9,7 +9,7 @@
       "category": "platform",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Installable mobile PWA with offline last-state caching, browser-local favorite airports and an optional Web Push subscription transport. Retired rule-based alerts no longer produce notifications.",
+      "summary": "Installable mobile PWA with offline last-state caching and an optional Web Push subscription transport. Retired rule-based alerts no longer produce notifications.",
       "pages": [
         "/",
         "/airports/:icao"
@@ -28,7 +28,6 @@
         "PWA",
         "mobile mode",
         "push notifications",
-        "favorite airports",
         "offline state"
       ]
     },
@@ -214,8 +213,6 @@
       "changelogKeywords": [
         "map context",
         "metar",
-        "pirep",
-        "airep",
         "sigmet",
         "weather radar",
         "wind layer",
@@ -227,8 +224,6 @@
         "bds4,4",
         "bds44",
         "aircraft observed weather",
-        "weather fusion",
-        "multi-source weather",
         "weather evidence"
       ]
     },
@@ -255,10 +250,7 @@
       ],
       "changelogKeywords": [
         "statistics",
-        "daily recap",
-        "weekly recap",
-        "reception records",
-        "daily aviation story"
+        "reception records"
       ]
     },
     {
@@ -454,28 +446,6 @@
       ],
       "changelogKeywords": [
         "flightaware usage"
-      ]
-    },
-    {
-      "id": "investigation-links",
-      "name": "Investigation Links",
-      "category": "productivity",
-      "status": "production",
-      "introducedVersion": null,
-      "summary": "Bookmarkable URL state across analytical, comparison, navigation, procedure and sector-detail surfaces, with fail-closed query parsing and browser back/forward restoration without server persistence.",
-      "pages": [
-        "/navigation-integrity",
-        "/navigation"
-      ],
-      "apis": [],
-      "changelogScopes": [
-        "investigation-links"
-      ],
-      "changelogKeywords": [
-        "investigation links",
-        "deep links",
-        "bookmarkable state",
-        "navigation investigation links"
       ]
     },
     {
