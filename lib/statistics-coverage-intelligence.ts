@@ -4,7 +4,7 @@ import {
   type ReceiverCoverageIntelligenceV2,
   type ReceiverCoverageHourlyEvidenceRow,
 } from "@/lib/receiver-coverage-intelligence";
-import { MAX_PLAUSIBLE_GROUND_SPEED_KT, plausibleReceiverDistanceKm } from "@/lib/receiver-sanity";
+import { plausibleReceiverDistanceKm } from "@/lib/receiver-sanity";
 
 export type CoverageIntelligenceRange = "7d" | "30d";
 
@@ -36,15 +36,6 @@ export interface CoverageIntelligenceDailyStatsRow {
   maxGroundSpeedRegistration: string | null;
   maxGroundSpeedCallsign: string | null;
   maxGroundSpeedAt: string | null;
-}
-
-export interface CoverageIntelligenceHighestFlight {
-  flightId: number;
-  icaoHex: string;
-  callsign: string | null;
-  registration: string | null;
-  maxAltitudeFt: number;
-  observedAt: string;
 }
 
 export interface CoverageIntelligenceSector {
@@ -121,26 +112,6 @@ export interface CoverageIntelligenceResponse {
   };
   intelligence: ReceiverCoverageIntelligenceV1;
   intelligenceV2: ReceiverCoverageIntelligenceV2;
-  records: {
-    peakConcurrent: { date: string; count: number } | null;
-    farthestReception: {
-      date: string;
-      distanceKm: number;
-      icaoHex: string;
-      registration: string | null;
-      bearing: number;
-      recordedAt: string;
-    } | null;
-    fastestAircraft: {
-      date: string;
-      speedKt: number;
-      icaoHex: string;
-      registration: string | null;
-      callsign: string | null;
-      recordedAt: string;
-    } | null;
-    highestFlight: CoverageIntelligenceHighestFlight | null;
-  };
 }
 
 export const COVERAGE_INTELLIGENCE_BUCKET_COUNT = 36;
@@ -227,7 +198,6 @@ export function aggregateCoverageIntelligence(options: {
   statsRows: CoverageIntelligenceDailyStatsRow[];
   flightStartTimes: string[];
   flightRowsComplete: boolean;
-  highestFlight: CoverageIntelligenceHighestFlight | null;
   hourlyCoverageRows?: ReceiverCoverageHourlyEvidenceRow[];
 }): CoverageIntelligenceResponse {
   const periodDays = options.range === "7d" ? 7 : 30;
@@ -289,16 +259,6 @@ export function aggregateCoverageIntelligence(options: {
     ? [...exactHours.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? null
     : null;
 
-  const validStats = options.statsRows.filter((row) => Number.isFinite(row.maxConcurrentAircraft) && row.maxConcurrentAircraft > 0);
-  const peak = [...validStats].sort((a, b) => b.maxConcurrentAircraft - a.maxConcurrentAircraft || a.date.localeCompare(b.date))[0] ?? null;
-  const farthest = [...options.statsRows]
-    .filter((row) => finiteDistance(row.maxDistanceKm) !== null && row.maxDistanceIcaoHex && row.maxDistanceBearing !== null && Number.isFinite(row.maxDistanceBearing) && row.maxDistanceAt)
-    .sort((a, b) => b.maxDistanceKm - a.maxDistanceKm || a.date.localeCompare(b.date))[0] ?? null;
-  const fastest = [...options.statsRows]
-    .filter((row) => row.maxGroundSpeedKt !== null && Number.isFinite(row.maxGroundSpeedKt)
-      && row.maxGroundSpeedKt >= 30 && row.maxGroundSpeedKt <= MAX_PLAUSIBLE_GROUND_SPEED_KT
-      && row.maxGroundSpeedIcaoHex && row.maxGroundSpeedAt)
-    .sort((a, b) => (b.maxGroundSpeedKt ?? 0) - (a.maxGroundSpeedKt ?? 0) || a.date.localeCompare(b.date))[0] ?? null;
   const messageRows = options.statsRows
     .map((row) => finiteNonNegative(row.receiverMessagesCount))
     .filter((value): value is number => value !== null);
@@ -351,25 +311,5 @@ export function aggregateCoverageIntelligence(options: {
     },
     intelligence: coverageIntelligence.daily,
     intelligenceV2: coverageIntelligence.rolling,
-    records: {
-      peakConcurrent: peak ? { date: peak.date, count: Math.max(0, Math.trunc(peak.maxConcurrentAircraft)) } : null,
-      farthestReception: farthest ? {
-        date: farthest.date,
-        distanceKm: farthest.maxDistanceKm,
-        icaoHex: farthest.maxDistanceIcaoHex!,
-        registration: farthest.maxDistanceRegistration,
-        bearing: farthest.maxDistanceBearing!,
-        recordedAt: farthest.maxDistanceAt!,
-      } : null,
-      fastestAircraft: fastest ? {
-        date: fastest.date,
-        speedKt: fastest.maxGroundSpeedKt!,
-        icaoHex: fastest.maxGroundSpeedIcaoHex!,
-        registration: fastest.maxGroundSpeedRegistration,
-        callsign: fastest.maxGroundSpeedCallsign,
-        recordedAt: fastest.maxGroundSpeedAt!,
-      } : null,
-      highestFlight: options.highestFlight,
-    },
   };
 }

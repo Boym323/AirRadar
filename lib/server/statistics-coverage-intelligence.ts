@@ -11,12 +11,10 @@ import {
   type CoverageIntelligenceDailyAltitudeCoverageRow,
   type CoverageIntelligenceDailyCoverageRow,
   type CoverageIntelligenceDailyStatsRow,
-  type CoverageIntelligenceHighestFlight,
   type CoverageIntelligenceRange,
   type CoverageIntelligenceResponse,
 } from "@/lib/statistics-coverage-intelligence";
 import type { ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence";
-import { MAX_PLAUSIBLE_FLIGHT_ALTITUDE_FT } from "@/lib/receiver-sanity";
 
 function instantIso(value: Temporal.Instant | Date): string {
   return value instanceof Date ? value.toISOString() : value.toString();
@@ -97,7 +95,6 @@ function unavailable(range: CoverageIntelligenceRange, now: Date, timezone: stri
       hourly: [],
       sectors: [],
     },
-    records: { peakConcurrent: null, farthestReception: null, fastestAircraft: null, highestFlight: null },
   };
 }
 
@@ -134,7 +131,7 @@ export async function getCoverageIntelligence(
     let hourlyOverallQuery = schema.ReceiverCoverageHourly.where((row) => row.hour.gte(v2From));
     hourlyOverallQuery = hourlyOverallQuery.where({ dimension: "overall" });
 
-    const [coverageRaw, altitudeCoverageRaw, statsRaw, flightStartsRaw, highestRaw, hourlyAzimuthRaw, hourlyOverallRaw] = await Promise.all([
+    const [coverageRaw, altitudeCoverageRaw, statsRaw, flightStartsRaw, hourlyAzimuthRaw, hourlyOverallRaw] = await Promise.all([
       coverageQuery.all(),
       altitudeCoverageQuery.all(),
       statsQuery.all(),
@@ -142,13 +139,6 @@ export async function getCoverageIntelligence(
         .orderBy((flight) => flight.startTime.asc())
         .select("startTime")
         .limit(COVERAGE_INTELLIGENCE_FLIGHT_LIMIT + 1)
-        .all(),
-      boundedFlights()
-        .where((flight) => flight.maxAltitude.gt(0))
-        .where((flight) => flight.maxAltitude.lte(MAX_PLAUSIBLE_FLIGHT_ALTITUDE_FT))
-        .orderBy([(flight) => flight.maxAltitude.desc(), (flight) => flight.startTime.desc()])
-        .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration"))
-        .limit(1)
         .all(),
       hourlyAzimuthQuery.all(),
       hourlyOverallQuery.all(),
@@ -275,16 +265,6 @@ export async function getCoverageIntelligence(
       });
     }
 
-    const highestRow = highestRaw[0] ?? null;
-    const highestFlight: CoverageIntelligenceHighestFlight | null = highestRow && highestRow.maxAltitude !== null ? {
-      flightId: highestRow.id,
-      icaoHex: highestRow.aircraft.icaoHex,
-      callsign: highestRow.callsign,
-      registration: highestRow.registration ?? highestRow.aircraft.registration,
-      maxAltitudeFt: highestRow.maxAltitude,
-      observedAt: instantIso(highestRow.startTime),
-    } : null;
-
     const hourlyCoverageRows: ReceiverCoverageHourlyEvidenceRow[] = [...hourlyAzimuthRaw, ...hourlyOverallRaw].map((row) => ({
       hour: instantIso(row.hour),
       dimension: row.dimension,
@@ -305,7 +285,6 @@ export async function getCoverageIntelligence(
       statsRows: [...statsByDate.values()],
       flightStartTimes: flightStarts,
       flightRowsComplete,
-      highestFlight,
       hourlyCoverageRows,
     });
   } catch (error) {
