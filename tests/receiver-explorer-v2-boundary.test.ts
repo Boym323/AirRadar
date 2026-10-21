@@ -25,11 +25,11 @@ describe("Receiver Explorer V2 boundary", () => {
       "receiver-explorer-weak-sectors",
       "receiver-explorer-altitude",
       "receiver-explorer-trend",
-      "receiver-explorer-records",
       "receiver-explorer-reference-capture",
     ]) {
       expect(pageSource).toContain('data-testid="' + testId + '"');
     }
+    expect(pageSource).not.toContain('data-testid="receiver-explorer-records"');
   });
 
   it("keeps source mix explicitly live-only and range analytics historical", () => {
