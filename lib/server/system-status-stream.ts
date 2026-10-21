@@ -4,19 +4,25 @@ import type { SystemStatusResponse } from "@/lib/server/system-status-contract";
 /** Keep diagnostics fresh without creating one database probe per browser. */
 export const SYSTEM_STATUS_STREAM_INTERVAL_MS = 5_000;
 
-type Listener = (status: SystemStatusResponse) => void;
+type Listener = { send: (status: SystemStatusResponse) => void; detail: "full" | "public" };
 
 class SystemStatusStream {
   private readonly listeners = new Set<Listener>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private refreshInFlight: Promise<void> | null = null;
+  private refreshDetail: "full" | "public" | null = null;
+  private refreshAgainForAdmin = false;
   private latest: SystemStatusResponse | null = null;
+  private latestDetail: "full" | "public" = "public";
 
-  subscribe(listener: Listener): () => void {
+  subscribe(send: Listener["send"], detail: Listener["detail"] = "public"): () => void {
+    const listener = { send, detail };
     this.listeners.add(listener);
-    if (this.latest) listener(this.latest);
+    if (this.latest && (detail === "public" || this.latestDetail === "full")) send(this.latest);
     if (!this.timer) {
       this.timer = setInterval(() => { void this.refresh(); }, SYSTEM_STATUS_STREAM_INTERVAL_MS);
+      void this.refresh();
+    } else if (detail === "full" && this.latestDetail !== "full") {
       void this.refresh();
     }
 
@@ -30,13 +36,20 @@ class SystemStatusStream {
   }
 
   private async refresh(): Promise<void> {
-    if (this.refreshInFlight || this.listeners.size === 0) return;
-    this.refreshInFlight = readSystemStatus()
+    const detail = [...this.listeners].some((listener) => listener.detail === "full") ? "full" : "public";
+    if (this.listeners.size === 0) return;
+    if (this.refreshInFlight) {
+      if (detail === "full" && this.refreshDetail !== "full") this.refreshAgainForAdmin = true;
+      return;
+    }
+    this.refreshDetail = detail;
+    this.refreshInFlight = readSystemStatus(undefined, detail)
       .then((status) => {
         this.latest = status;
+        this.latestDetail = detail;
         for (const listener of this.listeners) {
           try {
-            listener(status);
+            listener.send(status);
           } catch {
             this.listeners.delete(listener);
           }
@@ -49,6 +62,10 @@ class SystemStatusStream {
       })
       .finally(() => {
         this.refreshInFlight = null;
+        this.refreshDetail = null;
+        const refreshForAdmin = this.refreshAgainForAdmin && [...this.listeners].some((listener) => listener.detail === "full");
+        this.refreshAgainForAdmin = false;
+        if (refreshForAdmin) void this.refresh();
       });
     await this.refreshInFlight;
   }

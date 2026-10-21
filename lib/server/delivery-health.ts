@@ -39,6 +39,7 @@ export async function getDeliveryHealthSnapshot(): Promise<DeliveryHealthSnapsho
   const degraded = Boolean(
     durable.failed > 0
     || durable.processing > 0 && !worker.running
+    || webPush.configured && !webPush.producerAvailable
     || worker.lastError
     || pushover.lastError
     || webPush.lastError,

@@ -1,12 +1,12 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
-import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { isWatchlistAdminSessionValid } from "@/lib/server/watchlist-auth";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
-  if (!isWatchlistSessionValid(request)) return Response.json({ error: "Not found" }, { status: 404 });
+  if (!isWatchlistAdminSessionValid(request)) return Response.json({ error: "Not found" }, { status: 404 });
   const raw = decodeURIComponent((await context.params).hex);
   const icaoHex = normalizeIcaoHex(raw);
   if (!icaoHex) return Response.json({ error: "Invalid aircraft identifier" }, { status: 400 });

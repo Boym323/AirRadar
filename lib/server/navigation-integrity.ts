@@ -410,16 +410,28 @@ export class NavigationIntegrityService {
     return { latest, classification: latest ? classifyNavigationIntegrity(latest) : null, regionalContext: { state: anomaly?.severity ?? "NORMAL", affectedAircraft: anomaly?.affectedAircraftCount ?? 0, anomaly } };
   }
 
-  async getHistory(from: Date, to: Date): Promise<NavigationIntegrityAnomaly[]> {
+  async getHistory(from: Date, to: Date): Promise<{ anomalies: NavigationIntegrityAnomaly[]; source: "database" | "memory"; complete: boolean }> {
     const local = [...store.active.values()].filter((item) => Date.parse(item.startedAt) < to.getTime() && (item.endedAt === null || Date.parse(item.endedAt) >= from.getTime()));
     const database = getPrisma();
-    if (!database) return local;
+    if (!database) return { anomalies: local, source: "memory", complete: false };
     try {
-      const rows = await trackDbOperation("navigation.history.query", async () => await database.orm.public.NavigationIntegrityAnomaly
-        .where((row) => row.startedAt.lt(instant(to.toISOString())))
-        .orderBy((row) => row.startedAt.desc())
-        .limit(200)
-        .all());
+      const table = database.orm.public.NavigationIntegrityAnomaly;
+      const beforeTo = instant(to.toISOString());
+      const fromInstant = instant(from.toISOString());
+      const [activeRows, endedRows] = await trackDbOperation("navigation.history.query", async () => await Promise.all([
+        table.where((row) => row.startedAt.lt(beforeTo))
+          .where({ endedAt: null })
+          .orderBy((row) => row.startedAt.desc())
+          .limit(201)
+          .all(),
+        table.where((row) => row.startedAt.lt(beforeTo))
+          .where((row) => row.endedAt.gte(fromInstant))
+          .orderBy((row) => row.startedAt.desc())
+          .limit(201)
+          .all(),
+      ]));
+      const rows = [...activeRows, ...endedRows]
+        .sort((left, right) => Date.parse(String(right.startedAt)) - Date.parse(String(left.startedAt)) || String(right.id).localeCompare(String(left.id)));
       const persisted = rows.map((row) => ({
         id: row.id,
         startedAt: String(row.startedAt),
@@ -439,10 +451,14 @@ export class NavigationIntegrityService {
         confidence: row.confidence as NavigationIntegrityAnomaly["confidence"],
         severity: row.severity as NavigationIntegrityAnomaly["severity"],
         evidence: JSON.parse(row.evidenceJson) as NavigationIntegrityAnomaly["evidence"],
-      })).filter((item) => item.endedAt === null || Date.parse(item.endedAt) >= from.getTime());
-      return persisted;
+      }));
+      return {
+        anomalies: persisted,
+        source: "database",
+        complete: activeRows.length < 201 && endedRows.length < 201 && persisted.length <= 200,
+      };
     } catch {
-      return local;
+      return { anomalies: local, source: "memory", complete: false };
     }
   }
 

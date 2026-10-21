@@ -426,9 +426,10 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(() => {
-    // No raw errors from HTTP, auth or FS paths are printed.
-    process.stderr.write("T5.7 soak unavailable; verify authorized diagnostics and private report paths.\n");
+  main().catch((error) => {
+    // Preserve the privacy boundary while making an unavailable preflight
+    // actionable. Never print raw HTTP, auth, filesystem, or provider errors.
+    process.stderr.write(`T5.7 soak unavailable (category=${classifyT57Failure(error)}); verify authorized diagnostics and private report paths.\n`);
     process.exitCode = 1;
   });
 }

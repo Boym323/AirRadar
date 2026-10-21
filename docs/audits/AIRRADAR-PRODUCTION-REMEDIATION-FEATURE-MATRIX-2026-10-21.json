@@ -1,0 +1,1257 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-21",
+  "source": "docs/audits/SELECTED-FEATURE-REVISED-2026-10-21.json",
+  "counts": {
+    "KEEP": 79,
+    "REMOVE": 99
+  },
+  "items": [
+    {
+      "id": "J01",
+      "title": "Příjem lokálních letadel přes readsb JSON · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J02",
+      "title": "Přímý příjem lokálních BEAST TCP rámců",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J03",
+      "title": "Rust akcelerace BEAST parseru a CRC24",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J04",
+      "title": "Automatické přepínání BEAST / JSON při výpadku",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J05",
+      "title": "Správa živého stavu letadel v RAM · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J06",
+      "title": "Veřejné API aktuálních letadel · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J07",
+      "title": "Živý stream SSE V1 – celé snapshoty · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J08",
+      "title": "Optimalizovaný SSE V2 – delta aktualizace",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J09",
+      "title": "Ukládání vzorkované historie do PostgreSQL",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "J11",
+      "title": "Kontinuita identity letadel, detekce výpadků a deduplikace · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R01",
+      "title": "Základní interaktivní mapa MapLibre · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R02",
+      "title": "Přepínání LOCAL / EXTENDED pokrytí",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R03",
+      "title": "Ikony letadel podle typu a směru",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R04",
+      "title": "Popisky letadel a řízení jejich kolizí",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R05",
+      "title": "Barevné režimy letadel podle provozních údajů",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R06",
+      "title": "Živý seznam provozu a filtrování letadel",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R07",
+      "title": "Detail vybraného letadla v mapovém panelu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R08",
+      "title": "Zobrazení živé letové stopy (trail)",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R09",
+      "title": "Sledování letadla kamerou mapy (follow)",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R10",
+      "title": "Současné sledování více letadel",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R11",
+      "title": "Zobrazení trasy mezi letišti a jejího průběhu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R12",
+      "title": "Vrstvy okolních letišť",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R14",
+      "title": "Mapové podklady, vzhled a předvolby vrstev",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R15",
+      "title": "Mapová HUD lišta a rychlé akce",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R17",
+      "title": "ATC sektory a vysílače přímo v mapě",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "R18",
+      "title": "Volitelné počasí a vzdušné prostory přímo v mapě",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "H03",
+      "title": "Fotografie letadel z Planespotters",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "H07",
+      "title": "Výškový, rychlostní a vertikální profil letu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "H14",
+      "title": "Souhrny letadla za 7/30 dní a celé období",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "A01",
+      "title": "Katalog letišť a vyhledávání podle ICAO",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "A02",
+      "title": "Detail letiště – dráhy, poloha, vybavení a frekvence",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "T08",
+      "title": "ATS tratě České republiky",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "T09",
+      "title": "ATS tratě Slovenska a Rakouska",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "T10",
+      "title": "NAVAID/FIX databáze a navigační průzkumník",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "T13",
+      "title": "Navigation Integrity – podezřelé anomálie ADS-B",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "T14",
+      "title": "Navigation Integrity – regionální mapa, historie a analýza",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "W01",
+      "title": "Aktuální METAR a TAF letišť",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "W02",
+      "title": "METAR značky a informace přímo v mapě",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "W03",
+      "title": "Meteorologický radar ČHMÚ s časovou osou",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "W06",
+      "title": "SIGMET a AirSIGMET výstrahy",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "W08",
+      "title": "Počasí měřené letadly z Mode-S / BDS 4,4",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "W09",
+      "title": "Profil a kvalita počasí pozorovaného letadlem",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "L11",
+      "title": "Push notifikace do prohlížeče",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "L12",
+      "title": "Externí Pushover upozornění",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E01",
+      "title": "ADSBHub – příjem externího síťového provozu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E02",
+      "title": "ADSB.lol – surový BEAST/SBS stream",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E03",
+      "title": "ADSB.lol – HTTP geografická záloha",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E04",
+      "title": "OGN/FLARM – letadla, kluzáky a další cíle",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E05",
+      "title": "OGN Device Database – identifikace a ochrana soukromí",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E06",
+      "title": "SoftRF SQLite – nouzová OGN whitelist databáze",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E07",
+      "title": "ACARS/VDL2 metadata přes RXW Hub",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E09",
+      "title": "FlightAware – doplňování letových plánů a diagnostika využití",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "E10",
+      "title": "ADSBDB – externí metadata letadel",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "S01",
+      "title": "Aktuální počítadla letadel a zpráv za sekundu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "S02",
+      "title": "Denní/7denní/30denní agregované statistiky – API",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "S03",
+      "title": "Receiver Coverage – polární mapa dosahu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "S04",
+      "title": "Analýza slabých sektorů a spolehlivosti příjmu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "S06",
+      "title": "Statistiky typů letadel, aerolinek a tratí – API",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "S09",
+      "title": "Logbook a agregované souhrny přijímače",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O01",
+      "title": "System Dashboard – stav všech komponent",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O02",
+      "title": "Veřejná kontrola zdraví aplikace a verze · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O03",
+      "title": "Receiver Monitoring – zdraví SDR/readsb příjmu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O04",
+      "title": "Diagnostika externích poskytovatelů a integrací",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O05",
+      "title": "CPU, RAM, GC a event-loop telemetrie",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O06",
+      "title": "Historie výkonu a aktuálních bottlenecků",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O07",
+      "title": "Databázová latence, fronty a diagnostika zapisování",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O08",
+      "title": "Systémové diagnostické SSE streamy",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O09",
+      "title": "T58 production soak, stall canary a CPU profiling",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O10",
+      "title": "Výkonové benchmarky a zátěžové testy",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O11",
+      "title": "Automatické CI, testy, CodeQL a bezpečnostní kontroly · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O12",
+      "title": "Automatické nasazení, health check a rollback · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O13",
+      "title": "Import/synchronizace eAIP, ATS a letištních dat",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "O15",
+      "title": "Správa přihlášení administrátora a bezpečnostních oprávnění · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "U01",
+      "title": "Responzivní rozhraní mobil/tablet/desktop · základ systému",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "U02",
+      "title": "Instalovatelná PWA aplikace",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "U03",
+      "title": "Offline cache posledního známého stavu",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "U04",
+      "title": "Česká a anglická lokalizace",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "U05",
+      "title": "Globální Command Search a navigace",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "U08",
+      "title": "Klávesové zkratky a rychlé ovládání",
+      "selection": "KEEP",
+      "verification": "PARTIAL",
+      "evidence": "Source anchors and selected-feature static audit pass; end-to-end behavior for this individual feature was not fully verified."
+    },
+    {
+      "id": "A03",
+      "title": "Airport Live Board – přehled provozu letiště",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A04",
+      "title": "Odvozené přílety, odlety a průlety",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A05",
+      "title": "Vyhodnocení použitých přistávacích drah",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A06",
+      "title": "Arrival Sequence / Approach Queue",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A07",
+      "title": "Arrival Flow, vytížení a stabilita drah (V8)",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A08",
+      "title": "Odhad terminálové poptávky / příletů (V9)",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A09",
+      "title": "Provozní výjimky a konfliktní údaje letiště",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A10",
+      "title": "Live Airport Network – okolní aktivní letiště",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A11",
+      "title": "Porovnání letišť",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "A12",
+      "title": "Historická statistika provozu letiště za 7/30 dní",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D01",
+      "title": "Digital Twin – základní projekce letu na 30 minut",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D02",
+      "title": "4D koridor – budoucí poloha, výška a čas",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D03",
+      "title": "Prediction Timeline v detailu letadla",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D04",
+      "title": "Budoucí průniky ATC sektorů a ATS tras",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D05",
+      "title": "Průniky s plánovanými AUP/UUP prostory",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D06",
+      "title": "Průniky s Navigation Integrity anomáliemi",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D07",
+      "title": "Operational Focus – prioritní situace letadla",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D08",
+      "title": "Operational Focus Change – změny priorit",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D09",
+      "title": "Regional Situation Graph – vazby mezi letadly",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D10",
+      "title": "Operational Attention – regionální upozornění",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D11",
+      "title": "Regional Focus Queue – pořadí prioritních letadel",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D12",
+      "title": "Regionální projekce za 5/15/30 minut",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D13",
+      "title": "Validace koridoru proti pozdějším pozicím",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D14",
+      "title": "Validace predikovaných událostí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D15",
+      "title": "Truth-first Validation – vyhodnocování podle skutečných událostí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D16",
+      "title": "Ukládání anonymních výsledků kalibrace",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D17",
+      "title": "Regional Attention Outcome – kontrola regionálních predikcí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D18",
+      "title": "Regional Attention Graduation – pravidla povýšení modelu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D19",
+      "title": "Trajectory Quality V2 – alternativní vertikální model",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D20",
+      "title": "Trajectory Quality V3 – výkonově orientovaný shadow model",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D21",
+      "title": "Outcome Validation pro modely V2 a V3",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D22",
+      "title": "Graduation/Promotion – výběr schváleného modelu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "D23",
+      "title": "Admin Calibration Center – diagnostika modelů",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "E08",
+      "title": "ACARS H1/FPN waypointy a mapová vrstva",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H01",
+      "title": "Samostatný detail letadla – registrace, typ, operátor",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H02",
+      "title": "Katalog a automatické doplňování metadat letadel",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H04",
+      "title": "Letový plán, volací znak a letiště OD/DO",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H05",
+      "title": "Historie konkrétního letadla a jeho letů",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H06",
+      "title": "Detail jednotlivého letu (Flight Story V2)",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H08",
+      "title": "Historické přehrávání konkrétního letu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H09",
+      "title": "Seznam a vyhledávání historických letů",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H10",
+      "title": "Porovnání dvou letů",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H11",
+      "title": "Time Machine – přehrávání všech letadel v čase",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H12",
+      "title": "Event Replay – ±10 minut kolem události",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "H13",
+      "title": "Historická identita NEW / RARE / RETURNING",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "J10",
+      "title": "Demo provoz se simulovanými letadly",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L01",
+      "title": "Watchlist – pravidla sledování letadel",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L02",
+      "title": "Hlídání ICAO, registrace, callsignu, typu a aerolinky",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L03",
+      "title": "Upozornění podle vzdálenosti od přijímače",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L04",
+      "title": "Fleet Explorer – vlastní sledované flotily",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L05",
+      "title": "Geofencing – vlastní sledované geografické oblasti",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L06",
+      "title": "Emergency squawk 7500/7600/7700",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L07",
+      "title": "Historie upozornění a událostí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L08",
+      "title": "Pravidla cooldownu a odstranění duplicit",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L09",
+      "title": "Notification Center – přijaté/nepřečtené zprávy",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L10",
+      "title": "Ztlumení oznámení pro letadlo nebo pravidlo",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L13",
+      "title": "Delivery Health – stav doručování zpráv",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L14",
+      "title": "Alert Rule Simulator – testování pravidel",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "L15",
+      "title": "Alert Effectiveness Analytics – účinnost upozornění",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "O14",
+      "title": "Automatická dokumentace, changelog a metriky růstu kódu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P01",
+      "title": "Flight Intelligence – automatické události letu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P02",
+      "title": "Rozpoznávání holding, go-around, diversion, orbit a neobvyklých zatáček",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P03",
+      "title": "Přehled událostí a analytická stránka",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P04",
+      "title": "Route Intelligence – interpretace letového plánu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P05",
+      "title": "Route Corridor Intelligence – odchylka od plánované trasy",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P06",
+      "title": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P07",
+      "title": "Predikce času příletu ETA",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P08",
+      "title": "Predikce přistávací dráhy",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P09",
+      "title": "Predikce změny přistávací dráhy",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P10",
+      "title": "Predikce budoucí trajektorie",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P11",
+      "title": "Explainable Prediction – vysvětlení podkladů predikcí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P12",
+      "title": "Prospektivní sběr a validace predikcí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P13",
+      "title": "Readiness a pravidla pro zveřejnění predikcí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P14",
+      "title": "Kalibrace a porovnání predikcí s výsledky",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "P15",
+      "title": "Predictive Operations Center – souhrn předpovědí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "R13",
+      "title": "Poloha přijímače, kružnice dosahu a měřítko",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "R16",
+      "title": "Režim prezentace mapy",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "S05",
+      "title": "Rekordy vzdálenosti a přijatých letadel",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "S07",
+      "title": "Historická heatmapa a profil provozu – API",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "S08",
+      "title": "Denní a týdenní recap – zbývající API",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T01",
+      "title": "ATC sektory včetně geometrie a výškových hranic",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T02",
+      "title": "Samostatný detail ATC sektoru",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T03",
+      "title": "ATC frekvence, vysílače a publikované služby",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T04",
+      "title": "Pravděpodobné ATC přiřazení vybraného letadla",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T05",
+      "title": "ATC handoff – odhad přechodu mezi sektory",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T06",
+      "title": "Historie provozu a přechodů mezi sektory – API",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T07",
+      "title": "Validace a diagnostika ATC dat",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T11",
+      "title": "Letové procedury SID/STAR a procedurální data",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "T12",
+      "title": "AUP/UUP – plánovaná aktivace vzdušného prostoru",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "U06",
+      "title": "Oblíbená letiště a lokální uživatelské preference",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "U07",
+      "title": "Sdílené záložkové odkazy na filtrování a analýzy",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W04",
+      "title": "Echo Top – výška radarových odrazů",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W05",
+      "title": "Model větru ICON-EU v různých letových hladinách",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W07",
+      "title": "PIREP/AIREP hlášení pilotů",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W10",
+      "title": "Weather Fusion – spojení více zdrojů počasí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W11",
+      "title": "Weather Avoidance – vyhodnocení možné odchylky kvůli počasí",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W12",
+      "title": "Počasí na trase zvoleného letu",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W13",
+      "title": "Historické mapové počasí v Time Machine",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    },
+    {
+      "id": "W14",
+      "title": "Weather Corridor – počasí v předpokládaném koridoru",
+      "selection": "REMOVE",
+      "verification": "UNCHANGED_NOT_REAUDITED",
+      "evidence": "No deletion was made in this remediation; existing REMOVE decisions were not re-proven in this run."
+    }
+  ]
+}

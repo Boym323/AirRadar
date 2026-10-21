@@ -28,7 +28,7 @@ describe("Delivery Health V1", () => {
 
   it("keeps delivery-health access behind the existing admin session", () => {
     const route = readFileSync(new URL("../app/api/admin/alerts/delivery-health/route.ts", import.meta.url), "utf8");
-    expect(route).toContain("isWatchlistSessionValid");
+    expect(route).toContain("isWatchlistAdminSessionValid");
     expect(route).toContain('"Cache-Control": "no-store"');
   });
 });

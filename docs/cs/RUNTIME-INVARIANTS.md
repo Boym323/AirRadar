@@ -19,6 +19,17 @@ Toto jsou kontrakty chování a bezpečnosti pro změny aktuálního systému.
   zahřívat volitelné cache ani spouštět požadavky na počasí, radar, vítr nebo
   enrichment.
 
+## Autorizace správců
+
+- Vypnutí `AIRRADAR_ADMIN_AUTH_ENABLED` nikdy neuděluje privilegovaný přístup.
+  Citlivá čtení `/api/admin` a všechny administrativní mutace musí při chybějící
+  nebo neplatné podepsané správcovské relaci selhat uzavřeně.
+- Sanitizované read-only projekce `/api/system/*` zůstávají dostupné bez relace.
+  Veřejné projekce mají ve výchozím stavu vynechat tajemství, text chyb providerů,
+  soukromé identifikátory hostů a přesné souřadnice přijímače.
+- Kontrola originu doplňuje autentizaci u změnových požadavků z prohlížeče;
+  nenahrazuje oprávnění správce.
+
 ## Time Machine
 
 - Time Machine je read-only a nikdy neřídí `AircraftStateService`.
@@ -26,6 +37,9 @@ Toto jsou kontrakty chování a bezpečnosti pro změny aktuálního systému.
   alertů ani odesílání notifikací.
 - Historická API okna i vracené řádky jsou omezené; přehrávání v prohlížeči
   drží omezený stav okna a používá UTC okamžiky.
+- Historie Navigation Integrity aplikuje obě časové hranice před limitem okna,
+  vrací stabilně seřazený výsledek a při zkrácení DB výsledků nebo paměťovém
+  fallbacku označí odpověď jako neúplnou.
 - Selhání historické databáze je fail-soft vůči živému radaru, SSE a ingestu.
 
 ## Sémantika identity a letu
