@@ -585,33 +585,3 @@ export function clearRouteIntelligenceCache(): void {
   staticCache.clear();
   networkKeyCache = new WeakMap<RouteIntelligenceNetwork, string>();
 }
-
-export {
-  buildRouteCorridorIntelligence,
-  ROUTE_CORRIDOR_CONFIRMATION,
-  ROUTE_CORRIDOR_THRESHOLDS_NM,
-} from "./corridor";
-export type {
-  RouteCorridorConfidence,
-  RouteCorridorObservation,
-  RouteCorridorResult,
-  RouteCorridorSnapshot,
-  RouteCorridorStatus,
-  RouteCorridorTrackerState,
-} from "./corridor";
-
-export {
-  buildTrajectoryConformance,
-  TRAJECTORY_CONFORMANCE_THRESHOLDS,
-} from "./conformance";
-export type {
-  ProbableDirectEvidence,
-  TrajectoryConformanceConfidence,
-  TrajectoryConformanceCounters,
-  TrajectoryConformanceEvidence,
-  TrajectoryConformanceInput,
-  TrajectoryConformanceResult,
-  TrajectoryConformanceSnapshot,
-  TrajectoryConformanceStatus,
-  TrajectoryConformanceTrackerState,
-} from "./conformance";

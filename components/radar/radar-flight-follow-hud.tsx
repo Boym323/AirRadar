@@ -2,13 +2,12 @@
 
 import type { AircraftView } from "@/lib/aircraft/types";
 import { formatAltitude, formatNumber, formatSpeed, t } from "@/lib/i18n";
-import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
+import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import styles from "./radar-flight-follow-hud.module.css";
 
 interface RadarFlightFollowHudProps {
   aircraft: AircraftView;
-  corridor: RouteCorridorSnapshot | null;
-  conformance: TrajectoryConformanceSnapshot | null;
+  route: RouteIntelligenceViewDTO | null;
   following: boolean;
   compact?: boolean;
   onToggle: () => void;
@@ -22,8 +21,7 @@ function verticalRate(value: number | null): string | null {
 
 export function RadarFlightFollowHud({
   aircraft,
-  corridor,
-  conformance,
+  route,
   following,
   compact = false,
   onToggle,
@@ -37,10 +35,8 @@ export function RadarFlightFollowHud({
   const destination = aircraft.enrichment?.route?.destinationAirport?.icaoCode
     || aircraft.enrichment?.route?.destination
     || null;
-  const nextPoint = corridor?.nextPoint?.name ?? null;
-  const nextEta = corridor?.etaToNextMinutes;
+  const nextPoint = route?.nextPoint?.name ?? null;
   const climb = verticalRate(aircraft.verticalRate);
-  const conformanceLabel = conformance ? t.routeConformance.statuses[conformance.status] : null;
 
   return <section
     className={`${styles.hud} ${following ? styles.following : ""} ${compact ? styles.compact : ""}`}
@@ -69,11 +65,6 @@ export function RadarFlightFollowHud({
       {nextPoint && <span className={styles.metric}>
         <small>{t.radar.followNext}</small>
         <strong>{nextPoint}</strong>
-        {nextEta !== null && nextEta !== undefined && <em>~{formatNumber(nextEta, 0)} min</em>}
-      </span>}
-      {conformanceLabel && <span className={styles.metric}>
-        <small>{t.radar.followTrajectory}</small>
-        <strong>{conformanceLabel}</strong>
       </span>}
     </div>}
 

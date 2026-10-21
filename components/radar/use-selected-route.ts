@@ -5,18 +5,11 @@ import type { AircraftView } from "@/lib/aircraft/types";
 import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import {
   analyzePublishedRoute,
-  buildRouteCorridorIntelligence,
-  buildTrajectoryConformance,
   getRouteIntelligenceUpdateSnapshot,
   subscribeRouteIntelligenceUpdates,
   toRouteIntelligenceViewDTO,
   type DynamicRouteState,
-  type RouteCorridorSnapshot,
-  type RouteCorridorTrackerState,
   type RouteIntelligenceViewDTO,
-  type TrajectoryConformanceCounters,
-  type TrajectoryConformanceSnapshot,
-  type TrajectoryConformanceTrackerState,
 } from "@/lib/route-intelligence";
 
 const MAX_ROUTE_REFERENCE_IDS = 24;
@@ -27,11 +20,8 @@ interface IdentifierLookupResponse {
   points?: AviationNavPoint[];
 }
 
-export interface SelectedRouteCorridorState {
+export interface SelectedRouteState {
   route: RouteIntelligenceViewDTO | null;
-  corridor: RouteCorridorSnapshot | null;
-  conformance: TrajectoryConformanceSnapshot | null;
-  conformanceDiagnostics: TrajectoryConformanceCounters | null;
   referenceLoading: boolean;
   referencePointCount: number;
 }
@@ -69,7 +59,7 @@ function validPoints(value: unknown): AviationNavPoint[] {
   }).slice(0, MAX_ROUTE_REFERENCE_IDS * 4);
 }
 
-export function useRouteCorridorIntelligence(aircraft: AircraftView | null): SelectedRouteCorridorState {
+export function useSelectedRoute(aircraft: AircraftView | null): SelectedRouteState {
   const atsVersion = useSyncExternalStore(
     subscribeRouteIntelligenceUpdates,
     getRouteIntelligenceUpdateSnapshot,
@@ -87,8 +77,6 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
   const [referenceLoading, setReferenceLoading] = useState(false);
   const referencePoints = referenceSnapshot.key === identifierKey ? referenceSnapshot.points : [];
   const previousDynamicRef = useRef<DynamicRouteState | null>(null);
-  const trackerRef = useRef<RouteCorridorTrackerState | null>(null);
-  const conformanceTrackerRef = useRef<TrajectoryConformanceTrackerState | null>(null);
   const routeIdentityRef = useRef("");
 
   useEffect(() => {
@@ -96,8 +84,6 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
     if (routeIdentityRef.current === routeIdentity) return;
     routeIdentityRef.current = routeIdentity;
     previousDynamicRef.current = null;
-    trackerRef.current = null;
-    conformanceTrackerRef.current = null;
   }, [aircraft?.icaoHex, aircraft?.enrichment?.flightPlan?.filedRoute, aircraft?.enrichment?.flightPlan?.waypoints]);
 
   useEffect(() => {
@@ -148,38 +134,16 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
     atsVersion,
   ]);
 
-  const observedAt = aircraft ? Date.parse(aircraft.lastSeen) : NaN;
-  const corridorResult = useMemo(() => {
-    if (!analysis?.v2 || !aircraft || !Number.isFinite(observedAt)) return null;
-    return buildRouteCorridorIntelligence(analysis.v2, {
-      observedAt,
-      lat: aircraft.lat,
-      lon: aircraft.lon,
-      trackDeg: aircraft.track,
-      groundSpeedKt: aircraft.groundSpeed,
-    }, trackerRef.current);
-  }, [analysis, aircraft, observedAt]);
-
-  const conformanceResult = useMemo(() => {
-    if (!analysis?.v2 || !corridorResult || !Number.isFinite(observedAt)) return null;
-    return buildTrajectoryConformance({
-      route: analysis.v2,
-      corridor: corridorResult.snapshot,
-      observedAt,
-    }, conformanceTrackerRef.current);
-  }, [analysis, corridorResult, observedAt]);
-
+  // R11 only: preserve the route matcher progress across successive positions.
+  // P05/P06 deviation classification and prediction trackers are intentionally retired.
   useEffect(() => {
-    if (analysis?.v2 && Number.isFinite(observedAt)) previousDynamicRef.current = analysis.v2.dynamic;
-    if (corridorResult) trackerRef.current = corridorResult.tracker;
-    if (conformanceResult) conformanceTrackerRef.current = conformanceResult.tracker;
-  }, [analysis, corridorResult, conformanceResult, observedAt]);
+    if (analysis?.v2 && aircraft && Number.isFinite(Date.parse(aircraft.lastSeen))) {
+      previousDynamicRef.current = analysis.v2.dynamic;
+    }
+  }, [analysis, aircraft?.lastSeen]);
 
   return {
     route: analysis ? toRouteIntelligenceViewDTO(analysis, aircraft?.enrichment?.route ?? null) : null,
-    corridor: corridorResult?.snapshot ?? null,
-    conformance: conformanceResult?.snapshot ?? null,
-    conformanceDiagnostics: conformanceResult?.tracker.counters ?? null,
     referenceLoading,
     referencePointCount: referencePoints.length,
   };

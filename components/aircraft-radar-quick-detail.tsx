@@ -10,7 +10,7 @@ import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
-import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
+import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { AircraftAltitudeChart } from "@/components/aircraft-detail-shared";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
@@ -50,8 +50,7 @@ export interface AircraftRadarQuickDetailProps {
   sigmetContext: AircraftSigmetContext[];
   sigmetDeviation: SigmetTrajectoryDeviation | null;
   sigmetStale: boolean;
-  routeCorridor?: RouteCorridorSnapshot | null;
-  routeConformance?: TrajectoryConformanceSnapshot | null;
+  selectedRoute?: RouteIntelligenceViewDTO | null;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -213,39 +212,21 @@ function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetC
   </QuickSection>;
 }
 
-function corridorEta(value: number | null): string | null {
-  if (value === null || !Number.isFinite(value)) return null;
-  if (value < 1) return "<1 min";
-  return `~${formatNumber(value, 0)} min`;
-}
-
-function RouteCorridorSection({ corridor, conformance }: { corridor: RouteCorridorSnapshot | null; conformance: TrajectoryConformanceSnapshot | null }) {
-  if (!corridor) return null;
-  const next = corridor.nextPoint
-    ? `${corridor.nextPoint.name}${corridor.distanceToNextNm === null ? "" : ` · ${formatNumber(corridor.distanceToNextNm, 1)} NM`}${corridor.etaToNextMinutes === null ? "" : ` · ${corridorEta(corridor.etaToNextMinutes)}`}`
-    : t.common.emptyValue;
-  const remaining = corridor.remainingDistanceNm === null
-    ? t.common.emptyValue
-    : `${corridor.remainingDistanceComplete ? "" : "~"}${formatNumber(corridor.remainingDistanceNm, 0)} NM${corridor.etaRemainingMinutes === null ? "" : ` · ${corridorEta(corridor.etaRemainingMinutes)}`}${corridor.remainingDistanceComplete ? "" : ` · ${t.routeCorridor.partialDistance}`}`;
-  return <QuickSection id="aircraft-quick-route-corridor-title" title={t.routeCorridor.title} className="aircraft-quick-route-corridor">
-    <div className="aircraft-quick-detail-grid" data-testid="route-corridor-intelligence">
-      <DetailValue label={t.routeCorridor.status} value={t.routeCorridor.statuses[corridor.status]} />
-      <DetailValue label={t.routeCorridor.progress} value={corridor.progressPercent === null ? null : `${formatNumber(corridor.progressPercent, 0)} %`} />
-      <DetailValue label={t.routeCorridor.nextPoint} value={next} />
-      <DetailValue label={t.routeCorridor.remaining} value={remaining} />
-      <DetailValue label={t.routeCorridor.crossTrack} value={corridor.crossTrackDeviationNm === null ? null : `${formatNumber(corridor.crossTrackDeviationNm, 1)} NM`} />
-      <DetailValue label={t.routeCorridor.expectedTrack} value={corridor.expectedTrackDeg === null ? null : formatTrack(corridor.expectedTrackDeg)} />
-      <DetailValue label={t.routeCorridor.trackDelta} value={corridor.trackDeltaDeg === null ? null : `${formatNumber(corridor.trackDeltaDeg, 0)}°`} />
-      <DetailValue label={t.routeCorridor.confidence} value={t.routeCorridor.confidenceValues[corridor.confidence]} />
-      {conformance && <DetailValue label={t.routeConformance.status} value={t.routeConformance.statuses[conformance.status]} />}
-      {conformance && <DetailValue label={t.routeConformance.confidence} value={t.routeConformance.confidenceValues[conformance.confidence]} />}
-      {conformance?.probableDirect && <DetailValue
-        label={t.routeConformance.probableDirect}
-        value={t.routeConformance.directSummary(conformance.probableDirect.skippedElements, conformance.probableDirect.rejoinedAt)}
-      />}
+// R11: route geometry and observed progress only. No P05 corridor classification
+// or P06 trajectory-conformance state is computed or displayed here.
+function SelectedRouteProgressSection({ route }: { route: RouteIntelligenceViewDTO | null }) {
+  if (!route || (!route.nextPoint && route.routeProgressPercent === null)) return null;
+  const next = route.nextPoint
+    ? `${route.nextPoint.name}${route.distanceToNext === null ? "" : ` · ${formatNumber(route.distanceToNext, 1)} NM`}`
+    : null;
+  const progress = route.routeProgressPercent;
+  return <QuickSection id="aircraft-quick-route-progress-title" title={t.route.context} className="aircraft-quick-route-progress">
+    <div className="aircraft-quick-detail-grid" data-testid="selected-route-progress">
+      <DetailValue label={t.radar.followNext} value={next} />
+      <DetailValue label={visualSystemV5EText(t.locale).flightProgress}
+        value={typeof progress === "number" && Number.isFinite(progress) ? `${formatNumber(progress, 0)} %` : null} />
     </div>
-    <p className="aircraft-quick-disclaimer">{t.routeCorridor.disclaimer}</p>
-    {conformance && <p className="aircraft-quick-disclaimer">{t.routeConformance.disclaimer}</p>}
+    <p className="aircraft-quick-disclaimer">{t.route.contextDisclaimer}</p>
   </QuickSection>;
 }
 
@@ -536,8 +517,7 @@ export function AircraftRadarQuickDetail({
   sigmetContext,
   sigmetDeviation,
   sigmetStale,
-  routeCorridor = null,
-  routeConformance = null,
+  selectedRoute = null,
   watchlisted,
   onBack,
   onClose,
@@ -556,7 +536,7 @@ export function AircraftRadarQuickDetail({
   const route = aircraft.enrichment?.route;
   const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
   const visual = visualSystemV5EText(t.locale);
-  const progress = routeCorridor?.progressPercent;
+  const progress = selectedRoute?.routeProgressPercent;
   const hasProgress = typeof progress === "number" && Number.isFinite(progress) && progress >= 0 && progress <= 100;
   const operator: string | null = route?.airline || metadata?.operator || null;
   const emergency = aircraft.emergency && aircraft.emergency.toLowerCase() !== "none" ? aircraft.emergency : null;
@@ -612,10 +592,9 @@ export function AircraftRadarQuickDetail({
             {sourceAge && <span data-freshness={aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds <= 60 ? "fresh" : "stale"}>{t.aircraft.positionAge}: {sourceAge}{aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds > 60 ? ` · ${t.intelligence.stale}` : ""}</span>}
           </div>
           <RouteSection route={route} visible={hasRouteData} />
-          {routeCorridor && hasProgress && <div className="aircraft-v5-route-progress" data-testid="aircraft-v5-route-progress" title={t.routeCorridor.disclaimer}>
+          {selectedRoute && hasProgress && <div className="aircraft-v5-route-progress" data-testid="aircraft-v5-route-progress" title={t.route.contextDisclaimer}>
             <div><strong>{visual.flightProgress}</strong><span>{formatNumber(progress, 0)} %</span></div>
             <progress aria-label={visual.flightProgress} value={progress} max={100} />
-            <small>{t.routeCorridor.confidence}: {t.routeCorridor.confidenceValues[routeCorridor.confidence]}</small>
           </div>}
           {!hasRouteData && <p className="aircraft-quick-route-state">{t.aircraft.noRouteData}</p>}
         </div>
@@ -635,7 +614,7 @@ export function AircraftRadarQuickDetail({
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
       <AircraftOverview aircraft={aircraft} emergency={emergency} emergencySquawk={emergencySquawk} historyTrail={historyTrail} />
-      <RouteCorridorSection corridor={routeCorridor} conformance={routeConformance} />
+      <SelectedRouteProgressSection route={selectedRoute} />
       <FlightStateSection aircraft={aircraft} />
     </div>}
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">

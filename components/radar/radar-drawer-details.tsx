@@ -26,8 +26,7 @@ interface RadarDrawerDetailsProps {
   sigmetContext: AircraftRadarQuickDetailProps["sigmetContext"];
   sigmetDeviation: AircraftRadarQuickDetailProps["sigmetDeviation"];
   sigmetStale: boolean;
-  routeCorridor: AircraftRadarQuickDetailProps["routeCorridor"];
-  routeConformance: AircraftRadarQuickDetailProps["routeConformance"];
+  selectedRoute: AircraftRadarQuickDetailProps["selectedRoute"];
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -49,8 +48,7 @@ export function RadarDrawerDetails({
   sigmetContext,
   sigmetDeviation,
   sigmetStale,
-  routeCorridor,
-  routeConformance,
+  selectedRoute,
   watchlisted,
   onBack,
   onClose,
@@ -77,8 +75,7 @@ export function RadarDrawerDetails({
       sigmetContext={sigmetContext}
       sigmetDeviation={sigmetDeviation}
       sigmetStale={sigmetStale}
-      routeCorridor={routeCorridor}
-      routeConformance={routeConformance}
+      selectedRoute={selectedRoute}
       watchlisted={watchlisted}
       onBack={onBack}
       onClose={onClose}

@@ -68,7 +68,7 @@ import { useRadarAircraftContext } from "@/components/radar/use-radar-aircraft-c
 import { useRadarOgnStream } from "@/components/radar/use-radar-ogn-stream";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext } from "@/components/radar/use-radar-weather-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
-import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
+import { useSelectedRoute } from "@/components/radar/use-selected-route";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
@@ -2062,7 +2062,7 @@ export function AirRadarApp() {
     ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
     : selectedAircraftSnapshot, [aircraftDetail, selectedAircraftSnapshot]);
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
-  const selectedRouteCorridor = useRouteCorridorIntelligence(selectedAircraft);
+  const selectedRoute = useSelectedRoute(selectedAircraft);
   const selectedSigmetContext = useMemo(() => aircraftSigmetContext(selectedAircraft, sigmetData), [selectedAircraft, sigmetData]);
   const selectedSigmetDeviation = useMemo(() => detectSigmetTrajectoryDeviation(
     selectedAircraft,
@@ -2082,7 +2082,7 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     const source = map.getSource(ROUTE_INTELLIGENCE_SOURCE_ID) as GeoJSONSource | undefined;
     const geojson = selectedAircraftVisible
-      ? createRouteIntelligenceGeoJSON(selectedRouteCorridor.route)
+      ? createRouteIntelligenceGeoJSON(selectedRoute.route)
       : emptyRouteIntelligenceGeoJSON();
     const active = selectedAircraftVisible && geojson.features.length > 0;
     routeIntelligenceActiveRef.current = active;
@@ -2093,7 +2093,7 @@ export function AirRadarApp() {
     for (const layer of [ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && !active ? "visible" : "none");
     }
-  }, [mapReady, selectedAircraftVisible, selectedRouteCorridor.route]);
+  }, [mapReady, selectedAircraftVisible, selectedRoute.route]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2317,8 +2317,7 @@ export function AirRadarApp() {
             {selectedAircraftVisible && selectedAircraft ? <RadarFlightFollowHud
               aircraft={selectedAircraft}
               compact={drawerState === "aircraft"}
-              corridor={selectedRouteCorridor.corridor}
-              conformance={selectedRouteCorridor.conformance}
+              route={selectedRoute.route}
               following={followSelected}
               onToggle={() => setFollowSelected((value) => !value)}
             /> : null}
@@ -2433,8 +2432,7 @@ export function AirRadarApp() {
             sigmetContext={selectedSigmetContext}
             sigmetDeviation={selectedSigmetDeviation}
             sigmetStale={sigmetData.stale}
-            routeCorridor={selectedRouteCorridor.corridor}
-            routeConformance={selectedRouteCorridor.conformance}
+            selectedRoute={selectedRoute.route}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
             onClose={closeRadarDrawer}

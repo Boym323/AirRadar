@@ -26,7 +26,6 @@ not yet been historically attributed.
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | — | `/api/logbook/summary`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap`<br>`/api/statistics/traffic-profile` | Receiver statistics APIs retained for internal consumers and compatible reception/history views; standalone recap pages and their public API are retired. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/runtime-performance`<br>`/api/system/integrations`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics, and receiver mass-drop guard state. |
-| Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 <!-- feature-registry:end -->
 
 ## Supported page routes
@@ -47,7 +46,7 @@ The JSON feature registry above is the machine-validated source of truth for API
 
 ## Retired features
 
-Legacy AlertEngine, its Watchlist/Fleet/Geofence rule APIs, notification-center UI, predictive intelligence, Flight Intelligence, Digital Twin, historical recap pages and standalone ATC/airport intelligence dashboards have been removed from this branch.
+Legacy AlertEngine, its Watchlist/Fleet/Geofence rule APIs, notification-center UI, predictive intelligence, Flight Intelligence, standalone Route Corridor Intelligence, Trajectory Conformance, Digital Twin, historical recap pages and standalone ATC/airport intelligence dashboards have been removed from this branch.
 
 **L11/L12 retention:** Web Push VAPID/subscription routes, Pushover durable delivery worker, delivery health diagnostics, and the existing delivery database tables remain. The `/api/watchlist/session` compatibility endpoint currently authenticates protected system and delivery diagnostics. No rules are evaluated by live ingest and transports alone do not originate new alerts. Historical records are preserved; this reduction does not apply destructive database migrations.
 
