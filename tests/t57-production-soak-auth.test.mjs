@@ -11,6 +11,13 @@ describe("T57/T58 authenticated diagnostics preflight", () => {
     assert.equal(classifyT57Failure(Object.assign(new Error("request timeout"), { name: "TimeoutError" })), "http_timeout");
   });
 
+  it("exposes only an allowlisted failure category for safe preflight logs", () => {
+    const secretBearingError = new Error("Session login refused (HTTP 401) token=must-never-appear");
+    const category = classifyT57Failure(secretBearingError);
+    assert.equal(category, "authentication_failure");
+    assert.equal(category.includes("must-never-appear"), false);
+  });
+
   it("does not use public diagnostics when admin authentication is disabled", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(JSON.stringify({ configured: false }), { status: 200 });
