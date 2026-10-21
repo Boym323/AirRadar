@@ -53,3 +53,8 @@ Pravidelné stahování T12 AUP/UUP bylo odpojeno od služby kontextu mapy. Hist
 ## Obnovené původní názvy REMOVE — 21. 10. 2026
 
 Bylo obnoveno všech **90/90 původních názvů REMOVE** z výběru uživatele z 19. 10. 2026. Seznam 73 chybějících názvů je tím **vyřešený**. Přesná vazba ID a názvu je uložena v `docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json`. **Důkaz odstranění je samostatná kontrola:** pouze 8 ID má individuální poznámky, zbývajících 82 má stále jen skupinové důkazy, nikoli prokázané individuální odstranění implementace. Sdílené moduly požadované schválenými funkcemi KEEP musí zůstat. Nejde o povolení merge/nasazení.
+
+
+## Kompletní ověřené názvy funkcí
+
+Uživatel dne 21. 10. 2026 dodal všech 178 přesných názvů. Kanonický katalog `docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json` zachovává výběr 88 KEEP a 90 REMOVE. Opraveny dvě nepřesnosti dřívější rekonstrukce u P01 a L01. Zdroj názvů je tím úplný pro KEEP i REMOVE, ale 82 skupinových důkazů odstranění není individuálním potvrzením zásahů do kódu.

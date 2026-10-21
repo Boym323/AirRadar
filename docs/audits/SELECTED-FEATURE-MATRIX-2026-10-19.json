@@ -307,7 +307,12 @@
     "removedPredictiveDiagAllocation": true,
     "originalRemoveNameMappings": 90,
     "originalRemoveNamesMissing": 0,
-    "originalRemoveNameSource": "docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json",
-    "remainingImplementationMappingGroupOnly": 82
+    "originalRemoveNameSource": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+    "remainingImplementationMappingGroupOnly": 82,
+    "originalInventoryPath": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+    "originalUserNamesConfirmed": 178,
+    "originalKeepNamesConfirmed": 88,
+    "originalRemoveNamesConfirmed": 90,
+    "individualImplementationEvidenceOpenForRemove": 82
   }
 }

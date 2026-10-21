@@ -96,3 +96,6 @@ All 90 REMOVE titles are restored from the user's original selection (2026-10-19
 | E08 | ACARS H1/FPN waypointy a mapová vrstva | Explicit retirement note | `lib/server/enrichment-cache.ts`, `app/api/aircraft/[hex]/communications/route.ts` |
 
 Original names are not source path mappings. See the complete historical removed routes and per-family retained dependency tests for verification.
+
+
+Canonical complete KEEP/REMOVE name source: `docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json`. The exact user titles supersede any earlier reconstruction.

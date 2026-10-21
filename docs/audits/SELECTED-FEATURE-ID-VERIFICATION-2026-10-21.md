@@ -53,3 +53,8 @@ T12 planned AUP/UUP polling was disconnected from the periodic map-context servi
 ## Restored original user REMOVE titles — 2026-10-21
 
 All **90/90** original REMOVE names have now been recovered from the user's original 19 October 2026 selection. The missing-title backlog of 73 is **closed**. The complete original ID-to-title source mapping is in `docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json`. **Retirement verification remains distinct:** only 8 IDs have individual notes, 82 remain family-level evidence and are not validated as one-to-one removal of every implementation. Shared modules needed by selected KEEP functions must survive. This restoration does not grant merge/deploy approval.
+
+
+## Complete verified feature descriptions
+
+The user supplied all 178 exact titles on 2026-10-21. The canonical catalog is `docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json` (88 KEEP, 90 REMOVE). Two titles in the earlier reconstruction are corrected: P01 and L01. This closes name provenance for KEEP as well as REMOVE, but DOES NOT make the 82 group-only REMOVE source-code proofs individual.

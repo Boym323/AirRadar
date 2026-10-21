@@ -15,7 +15,7 @@
     "W12",
     "E08"
   ],
-  "limitation": "All 90 original REMOVE titles now recovered from user's original 2026-10-19 selection; 82 have only family-level retirement evidence and are NOT individually verified by implementation/call graph. KEEP 88 retain family-level positive witnesses.",
+  "limitation": "All 178 titles sourced verbatim from user's 2026-10-21 full list; KEEP/REMOVE decisions separately inherited from 2026-10-19 selection. Only 8 REMOVE IDs have explicit retirement notes and 82 have group-level removal evidence. Full per-ID source implementation proof remains open.",
   "groups": {
     "J": {
       "name": "Simulated receiver",
@@ -155,7 +155,7 @@
       "evidenceSet": "J",
       "sharedDependencyContext": "J10 no synthetic runtime fallback; test fixture separate",
       "originalTitle": "Demo provoz se simulovanými letadly",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "R13",
@@ -166,7 +166,7 @@
       "evidenceSet": "R",
       "sharedDependencyContext": "R13 removed map receiver marker/rings, not receiver data or coverage",
       "originalTitle": "Poloha přijímače, kružnice dosahu a měřítko",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H01",
@@ -177,7 +177,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Samostatný detail letadla – registrace, typ, operátor",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H02",
@@ -188,7 +188,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Katalog a automatické doplňování metadat letadel",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H04",
@@ -199,7 +199,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Letový plán, volací znak a letiště OD/DO",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H05",
@@ -210,7 +210,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Historie konkrétního letadla a jeho letů",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H06",
@@ -221,7 +221,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Detail jednotlivého letu (Flight Story V2)",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H08",
@@ -232,7 +232,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Historické přehrávání konkrétního letu",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H09",
@@ -243,7 +243,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Seznam a vyhledávání historických letů",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H10",
@@ -254,7 +254,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Porovnání dvou letů",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H11",
@@ -265,7 +265,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Time Machine – přehrávání všech letadel v čase",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H12",
@@ -276,7 +276,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Event Replay – ±10 minut kolem události",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "H13",
@@ -287,7 +287,7 @@
       "evidenceSet": "H",
       "sharedDependencyContext": "Preserved H07/H14 and flight/position history records",
       "originalTitle": "Historická identita NEW / RARE / RETURNING",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A03",
@@ -298,7 +298,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Airport Live Board – přehled provozu letiště",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A04",
@@ -309,7 +309,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Odvozené přílety, odlety a průlety",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A05",
@@ -320,7 +320,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Vyhodnocení použitých přistávacích drah",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A06",
@@ -331,7 +331,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Arrival Sequence / Approach Queue",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A07",
@@ -342,7 +342,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Arrival Flow, vytížení a stabilita drah (V8)",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A08",
@@ -353,7 +353,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Odhad terminálové poptávky / příletů (V9)",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A09",
@@ -364,7 +364,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Provozní výjimky a konfliktní údaje letiště",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A10",
@@ -375,7 +375,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Live Airport Network – okolní aktivní letiště",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A11",
@@ -386,7 +386,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Porovnání letišť",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "A12",
@@ -397,7 +397,7 @@
       "evidenceSet": "A",
       "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR",
       "originalTitle": "Historická statistika provozu letiště za 7/30 dní",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T01",
@@ -408,7 +408,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "ATC sektory včetně geometrie a výškových hranic",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T02",
@@ -419,7 +419,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "Samostatný detail ATC sektoru",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T03",
@@ -430,7 +430,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "ATC frekvence, vysílače a publikované služby",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T04",
@@ -441,7 +441,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "Pravděpodobné ATC přiřazení vybraného letadla",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T05",
@@ -452,7 +452,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "ATC handoff – odhad přechodu mezi sektory",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T06",
@@ -463,7 +463,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "Historie provozu a přechodů mezi sektory – API",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T07",
@@ -474,7 +474,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "Validace a diagnostika ATC dat",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T11",
@@ -485,7 +485,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "Letové procedury SID/STAR a procedurální data",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "T12",
@@ -496,7 +496,7 @@
       "evidenceSet": "T",
       "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE",
       "originalTitle": "AUP/UUP – plánovaná aktivace vzdušného prostoru",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "W05",
@@ -507,7 +507,7 @@
       "evidenceSet": "W",
       "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints",
       "originalTitle": "Model větru ICON-EU v různých letových hladinách",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "W10",
@@ -518,7 +518,7 @@
       "evidenceSet": "W",
       "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints",
       "originalTitle": "Weather Fusion – spojení více zdrojů počasí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "W11",
@@ -529,7 +529,7 @@
       "evidenceSet": "W",
       "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints",
       "originalTitle": "Weather Avoidance – vyhodnocení možné odchylky kvůli počasí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "W12",
@@ -540,7 +540,7 @@
       "evidenceSet": "W",
       "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints",
       "originalTitle": "Počasí na trase zvoleného letu",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "W13",
@@ -551,7 +551,7 @@
       "evidenceSet": "W",
       "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints",
       "originalTitle": "Historické mapové počasí v Time Machine",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "W14",
@@ -562,7 +562,7 @@
       "evidenceSet": "W",
       "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints",
       "originalTitle": "Weather Corridor – počasí v předpokládaném koridoru",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P01",
@@ -572,8 +572,8 @@
       "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
-      "originalTitle": "Flight Intelligence – automatické události",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitle": "Flight Intelligence – automatické události letu",
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P02",
@@ -584,7 +584,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Rozpoznávání holding, go-around, diversion, orbit a neobvyklých zatáček",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P03",
@@ -595,7 +595,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Přehled událostí a analytická stránka",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P04",
@@ -606,7 +606,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Route Intelligence – interpretace letového plánu",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P05",
@@ -617,7 +617,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Route Corridor Intelligence – odchylka od plánované trasy",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P06",
@@ -628,7 +628,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P07",
@@ -639,7 +639,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Predikce času příletu ETA",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P08",
@@ -650,7 +650,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Predikce přistávací dráhy",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P09",
@@ -661,7 +661,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Predikce změny přistávací dráhy",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P10",
@@ -672,7 +672,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Predikce budoucí trajektorie",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P11",
@@ -683,7 +683,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Explainable Prediction – vysvětlení podkladů predikcí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P12",
@@ -694,7 +694,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Prospektivní sběr a validace predikcí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P13",
@@ -705,7 +705,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Readiness a pravidla pro zveřejnění predikcí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P14",
@@ -716,7 +716,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Kalibrace a porovnání predikcí s výsledky",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "P15",
@@ -727,7 +727,7 @@
       "evidenceSet": "P",
       "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility",
       "originalTitle": "Predictive Operations Center – souhrn předpovědí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D01",
@@ -738,7 +738,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Digital Twin – základní projekce letu na 30 minut",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D02",
@@ -749,7 +749,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "4D koridor – budoucí poloha, výška a čas",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D03",
@@ -760,7 +760,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Prediction Timeline v detailu letadla",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D04",
@@ -771,7 +771,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Budoucí průniky ATC sektorů a ATS tras",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D05",
@@ -782,7 +782,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Průniky s plánovanými AUP/UUP prostory",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D06",
@@ -793,7 +793,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Průniky s Navigation Integrity anomáliemi",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D07",
@@ -804,7 +804,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Operational Focus – prioritní situace letadla",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D08",
@@ -815,7 +815,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Operational Focus Change – změny priorit",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D09",
@@ -826,7 +826,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Regional Situation Graph – vazby mezi letadly",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D10",
@@ -837,7 +837,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Operational Attention – regionální upozornění",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D11",
@@ -848,7 +848,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Regional Focus Queue – pořadí prioritních letadel",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D12",
@@ -859,7 +859,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Regionální projekce za 5/15/30 minut",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D13",
@@ -870,7 +870,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Validace koridoru proti pozdějším pozicím",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D14",
@@ -881,7 +881,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Validace predikovaných událostí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D15",
@@ -892,7 +892,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Truth-first Validation – vyhodnocování podle skutečných událostí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D16",
@@ -903,7 +903,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Ukládání anonymních výsledků kalibrace",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D17",
@@ -914,7 +914,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Regional Attention Outcome – kontrola regionálních predikcí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D18",
@@ -925,7 +925,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Regional Attention Graduation – pravidla povýšení modelu",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D19",
@@ -936,7 +936,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Trajectory Quality V2 – alternativní vertikální model",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D20",
@@ -947,7 +947,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Trajectory Quality V3 – výkonově orientovaný shadow model",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D21",
@@ -958,7 +958,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Outcome Validation pro modely V2 a V3",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D22",
@@ -969,7 +969,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Graduation/Promotion – výběr schváleného modelu",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "D23",
@@ -980,7 +980,7 @@
       "evidenceSet": "D",
       "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts",
       "originalTitle": "Admin Calibration Center – diagnostika modelů",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L01",
@@ -990,8 +990,8 @@
       "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
-      "originalTitle": "Watchlist – pravidla sledování",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitle": "Watchlist – pravidla sledování letadel",
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L02",
@@ -1002,7 +1002,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Hlídání ICAO, registrace, callsignu, typu a aerolinky",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L03",
@@ -1013,7 +1013,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Upozornění podle vzdálenosti od přijímače",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L04",
@@ -1024,7 +1024,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Fleet Explorer – vlastní sledované flotily",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L05",
@@ -1035,7 +1035,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Geofencing – vlastní sledované geografické oblasti",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L06",
@@ -1046,7 +1046,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Emergency squawk 7500/7600/7700",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L07",
@@ -1057,7 +1057,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Historie upozornění a událostí",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L08",
@@ -1068,7 +1068,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Pravidla cooldownu a odstranění duplicit",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L09",
@@ -1079,7 +1079,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Notification Center – přijaté/nepřečtené zprávy",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L10",
@@ -1090,7 +1090,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Ztlumení oznámení pro letadlo nebo pravidlo",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L13",
@@ -1101,7 +1101,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Delivery Health – stav doručování zpráv",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L14",
@@ -1112,7 +1112,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Alert Rule Simulator – testování pravidel",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "L15",
@@ -1123,7 +1123,7 @@
       "evidenceSet": "L",
       "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility",
       "originalTitle": "Alert Effectiveness Analytics – účinnost upozornění",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     },
     {
       "id": "E08",
@@ -1134,7 +1134,7 @@
       "evidenceSet": "E",
       "sharedDependencyContext": "E08 live overlay retired; E07 RXW messages/metadata retained",
       "originalTitle": "ACARS H1/FPN waypointy a mapová vrstva",
-      "originalTitleSource": "2026-10-19T19:01:21Z"
+      "originalTitleSource": "User supplied exact 178-item catalog 2026-10-21"
     }
   ],
   "deletedApiRoutes": [
@@ -1340,14 +1340,25 @@
     "externalClients": "NOT_VERIFIED_NO_PRODUCTION_ACCESS_LOGS",
     "liveAB": "NOT_MEASURED",
     "ci": "PENDING",
-    "originalNames": "90/90 recovered from original user's selection",
-    "unresolvedNames": 0
+    "originalNames": "90/90 REMOVE and 88/88 KEEP confirmed 2026-10-21",
+    "unresolvedNames": 0,
+    "inventory": "178/178 exact user-provided titles; 88 KEEP and 90 REMOVE"
   },
   "originalRemoveNames": {
     "count": 90,
     "missing": 0,
-    "sourcePath": "docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json",
-    "sourceDate": "2026-10-19T19:01:21Z",
-    "meaning": "Original names verified; per-ID source implementation evidence remains incomplete"
+    "sourcePath": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+    "sourceDate": "2026-10-21",
+    "meaning": "Precise original REMOVE names confirmed in complete user-provided feature inventory. Source proof remains 8 explicit / 82 group-level."
+  },
+  "originalInventory": {
+    "file": "docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json",
+    "total": 178,
+    "keep": 88,
+    "remove": 90,
+    "missingTitles": 0,
+    "confirmedOn": "2026-10-21",
+    "individualRemovedSourceEvidence": 8,
+    "groupOnlyRemovedSourceEvidence": 82
   }
 }

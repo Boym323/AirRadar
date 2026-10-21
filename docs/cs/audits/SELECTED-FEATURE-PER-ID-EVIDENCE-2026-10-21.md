@@ -96,3 +96,6 @@ Všech 90 původních názvů REMOVE bylo obnoveno z původního výběru (2026-
 | E08 | ACARS H1/FPN waypointy a mapová vrstva | Výslovná zmínka o odstranění | `lib/server/enrichment-cache.ts`, `app/api/aircraft/[hex]/communications/route.ts` |
 
 Původní názvy nejsou mapováním na implementační soubory. Samostatně kontrolovat odstraněné API/stránky a sdílené závislosti, které musí zůstat.
+
+
+Kanonický zdroj všech názvů KEEP/REMOVE: `docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json`. Přesné názvy uživatele mají přednost před starší rekonstrukcí.

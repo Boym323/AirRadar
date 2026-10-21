@@ -53,9 +53,9 @@ describe("selected-feature ID audit", () => {
       removeItems:Array<{id:string;recoveredTitle:string;originalPerIdImplementationVerified:boolean}>;
     };
     expect(source.count).toBe(90);
-    expect(source.sourceDate).toBe("2026-10-19T19:01:21Z");
+    expect(source.sourceDate).toBe("2026-10-21");
     expect(source.items.map(item=>item.id)).toEqual(matrix.removeIds);
-    expect(source.items.every(item => item.title.length > 8 && item.source === "user-original-selection")).toBe(true);
+    expect(source.items.every(item => item.title.length > 8 && item.source === "user-complete-178-item-inventory-2026-10-21")).toBe(true);
     expect(new Set(source.items.map(item=>item.title)).size).toBe(90);
     expect(witnesses.originalTitleCount).toBe(90);
     expect(witnesses.remainingWithoutOriginalTitle).toBe(0);
@@ -64,6 +64,36 @@ describe("selected-feature ID audit", () => {
       expect(witnesses.removeItems[i].recoveredTitle).toBe(source.items[i].title);
       expect(witnesses.removeItems[i].originalPerIdImplementationVerified).toBe(false);
     }
+  });
+
+  it("uses exact user-supplied titles for all 178 IDs and preserves earlier KEEP / REMOVE decisions", () => {
+    const inventory = JSON.parse(readFileSync(new URL("docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json", root), "utf8")) as {
+      count: number; counts: {KEEP:number;REMOVE:number};
+      items: Array<{id:string;title:string;decision:"KEEP"|"REMOVE";core:boolean}>;
+    };
+    const witnesses = JSON.parse(readFileSync(new URL("docs/audits/SELECTED-FEATURE-KEEP-REMOVE-WITNESSES-2026-10-21.json", root), "utf8")) as {
+      originalKeepTitleCount: number; originalTitleCount: number;
+      keepItems:Array<{id:string;originalIndividualName:string}>;
+      removeItems:Array<{id:string;recoveredTitle:string}>;
+    };
+    expect(inventory.count).toBe(178);
+    expect(inventory.counts).toEqual({KEEP:88,REMOVE:90});
+    expect(inventory.items).toHaveLength(178);
+    expect(new Set(inventory.items.map(item=>item.id)).size).toBe(178);
+    expect(inventory.items.filter(x=>x.decision==="KEEP").map(x=>x.id)).toEqual(matrix.keepIds);
+    expect(new Set(inventory.items.filter(x=>x.decision==="REMOVE").map(x=>x.id))).toEqual(new Set(matrix.removeIds));
+    expect(witnesses.originalKeepTitleCount).toBe(88);
+    expect(witnesses.originalTitleCount).toBe(90);
+    const indexed = new Map(inventory.items.map(entry=>[entry.id,entry.title]));
+    for (const item of witnesses.keepItems) expect(item.originalIndividualName).toBe(indexed.get(item.id));
+    for (const item of witnesses.removeItems) expect(item.recoveredTitle).toBe(indexed.get(item.id));
+    expect(indexed.get("P01")).toBe("Flight Intelligence – automatické události letu");
+    expect(indexed.get("L01")).toBe("Watchlist – pravidla sledování letadel");
+    expect(indexed.get("T01")).toBe("ATC sektory včetně geometrie a výškových hranic");
+    expect(indexed.get("R17")).toBe("ATC sektory a vysílače přímo v mapě");
+    const core = inventory.items.filter(x=>x.core);
+    expect(core.map(x=>x.id)).toEqual(["J01","J05","J06","J07","J11","R01","O02","O11","O12","O15","U01"]);
+    expect(core.every(x=>x.decision==="KEEP")).toBe(true);
   });
 
   it("guards all explicitly retired page and API entrypoints", () => {

@@ -1,460 +1,460 @@
 {
   "schemaVersion": 1,
-  "source": "User's original AirRadar KEEP/REMOVE selection, 19 Oct 2026, repeated 20 Oct 2026",
-  "sourceDate": "2026-10-19T19:01:21Z",
-  "method": "Reconstructed ID-to-title list from user's earlier conversation; separate from repository usage and runtime implementation proof",
+  "source": "Exact full 178-item catalog explicitly supplied by user 2026-10-21, not reconstructed from reduction notes",
+  "sourceDate": "2026-10-21",
+  "method": "Exact user-supplied title lookup joined to REMOVE IDs from separately established selection; title is not proof of code removal",
   "category": "REMOVE",
   "count": 90,
   "items": [
     {
       "id": "J10",
       "title": "Demo provoz se simulovanými letadly",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "R13",
       "title": "Poloha přijímače, kružnice dosahu a měřítko",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H01",
       "title": "Samostatný detail letadla – registrace, typ, operátor",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H02",
       "title": "Katalog a automatické doplňování metadat letadel",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H04",
       "title": "Letový plán, volací znak a letiště OD/DO",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H05",
       "title": "Historie konkrétního letadla a jeho letů",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H06",
       "title": "Detail jednotlivého letu (Flight Story V2)",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H08",
       "title": "Historické přehrávání konkrétního letu",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H09",
       "title": "Seznam a vyhledávání historických letů",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H10",
       "title": "Porovnání dvou letů",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H11",
       "title": "Time Machine – přehrávání všech letadel v čase",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H12",
       "title": "Event Replay – ±10 minut kolem události",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "H13",
       "title": "Historická identita NEW / RARE / RETURNING",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A03",
       "title": "Airport Live Board – přehled provozu letiště",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A04",
       "title": "Odvozené přílety, odlety a průlety",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A05",
       "title": "Vyhodnocení použitých přistávacích drah",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A06",
       "title": "Arrival Sequence / Approach Queue",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A07",
       "title": "Arrival Flow, vytížení a stabilita drah (V8)",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A08",
       "title": "Odhad terminálové poptávky / příletů (V9)",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A09",
       "title": "Provozní výjimky a konfliktní údaje letiště",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A10",
       "title": "Live Airport Network – okolní aktivní letiště",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A11",
       "title": "Porovnání letišť",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "A12",
       "title": "Historická statistika provozu letiště za 7/30 dní",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T01",
       "title": "ATC sektory včetně geometrie a výškových hranic",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T02",
       "title": "Samostatný detail ATC sektoru",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T03",
       "title": "ATC frekvence, vysílače a publikované služby",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T04",
       "title": "Pravděpodobné ATC přiřazení vybraného letadla",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T05",
       "title": "ATC handoff – odhad přechodu mezi sektory",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T06",
       "title": "Historie provozu a přechodů mezi sektory – API",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T07",
       "title": "Validace a diagnostika ATC dat",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T11",
       "title": "Letové procedury SID/STAR a procedurální data",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "T12",
       "title": "AUP/UUP – plánovaná aktivace vzdušného prostoru",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "W05",
       "title": "Model větru ICON-EU v různých letových hladinách",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "W10",
       "title": "Weather Fusion – spojení více zdrojů počasí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "W11",
       "title": "Weather Avoidance – vyhodnocení možné odchylky kvůli počasí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "W12",
       "title": "Počasí na trase zvoleného letu",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "W13",
       "title": "Historické mapové počasí v Time Machine",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "W14",
       "title": "Weather Corridor – počasí v předpokládaném koridoru",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P01",
-      "title": "Flight Intelligence – automatické události",
-      "source": "user-original-selection"
+      "title": "Flight Intelligence – automatické události letu",
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P02",
       "title": "Rozpoznávání holding, go-around, diversion, orbit a neobvyklých zatáček",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P03",
       "title": "Přehled událostí a analytická stránka",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P04",
       "title": "Route Intelligence – interpretace letového plánu",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P05",
       "title": "Route Corridor Intelligence – odchylka od plánované trasy",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P06",
       "title": "Trajectory Conformance – odklon, návrat a pravděpodobné DCT",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P07",
       "title": "Predikce času příletu ETA",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P08",
       "title": "Predikce přistávací dráhy",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P09",
       "title": "Predikce změny přistávací dráhy",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P10",
       "title": "Predikce budoucí trajektorie",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P11",
       "title": "Explainable Prediction – vysvětlení podkladů predikcí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P12",
       "title": "Prospektivní sběr a validace predikcí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P13",
       "title": "Readiness a pravidla pro zveřejnění predikcí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P14",
       "title": "Kalibrace a porovnání predikcí s výsledky",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "P15",
       "title": "Predictive Operations Center – souhrn předpovědí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D01",
       "title": "Digital Twin – základní projekce letu na 30 minut",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D02",
       "title": "4D koridor – budoucí poloha, výška a čas",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D03",
       "title": "Prediction Timeline v detailu letadla",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D04",
       "title": "Budoucí průniky ATC sektorů a ATS tras",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D05",
       "title": "Průniky s plánovanými AUP/UUP prostory",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D06",
       "title": "Průniky s Navigation Integrity anomáliemi",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D07",
       "title": "Operational Focus – prioritní situace letadla",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D08",
       "title": "Operational Focus Change – změny priorit",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D09",
       "title": "Regional Situation Graph – vazby mezi letadly",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D10",
       "title": "Operational Attention – regionální upozornění",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D11",
       "title": "Regional Focus Queue – pořadí prioritních letadel",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D12",
       "title": "Regionální projekce za 5/15/30 minut",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D13",
       "title": "Validace koridoru proti pozdějším pozicím",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D14",
       "title": "Validace predikovaných událostí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D15",
       "title": "Truth-first Validation – vyhodnocování podle skutečných událostí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D16",
       "title": "Ukládání anonymních výsledků kalibrace",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D17",
       "title": "Regional Attention Outcome – kontrola regionálních predikcí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D18",
       "title": "Regional Attention Graduation – pravidla povýšení modelu",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D19",
       "title": "Trajectory Quality V2 – alternativní vertikální model",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D20",
       "title": "Trajectory Quality V3 – výkonově orientovaný shadow model",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D21",
       "title": "Outcome Validation pro modely V2 a V3",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D22",
       "title": "Graduation/Promotion – výběr schváleného modelu",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "D23",
       "title": "Admin Calibration Center – diagnostika modelů",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L01",
-      "title": "Watchlist – pravidla sledování",
-      "source": "user-original-selection"
+      "title": "Watchlist – pravidla sledování letadel",
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L02",
       "title": "Hlídání ICAO, registrace, callsignu, typu a aerolinky",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L03",
       "title": "Upozornění podle vzdálenosti od přijímače",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L04",
       "title": "Fleet Explorer – vlastní sledované flotily",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L05",
       "title": "Geofencing – vlastní sledované geografické oblasti",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L06",
       "title": "Emergency squawk 7500/7600/7700",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L07",
       "title": "Historie upozornění a událostí",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L08",
       "title": "Pravidla cooldownu a odstranění duplicit",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L09",
       "title": "Notification Center – přijaté/nepřečtené zprávy",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L10",
       "title": "Ztlumení oznámení pro letadlo nebo pravidlo",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L13",
       "title": "Delivery Health – stav doručování zpráv",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L14",
       "title": "Alert Rule Simulator – testování pravidel",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "L15",
       "title": "Alert Effectiveness Analytics – účinnost upozornění",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     },
     {
       "id": "E08",
       "title": "ACARS H1/FPN waypointy a mapová vrstva",
-      "source": "user-original-selection"
+      "source": "user-complete-178-item-inventory-2026-10-21"
     }
   ]
 }

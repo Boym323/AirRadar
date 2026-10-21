@@ -6,7 +6,7 @@
 
 - Výběr uživatele zahrnuje **88 KEEP a 90 REMOVE ID**. Každé ID má záznam v `docs/audits/SELECTED-FEATURE-KEEP-REMOVE-WITNESSES-2026-10-21.json`.
 - U 88 KEEP je zachovaný odpovídající **společný runtime vstup nebo modul**. Toto je skupinový důkaz funkční hranice, nikoli ověření původního významu každého ze 88 individuálních ID.
-- Podařilo se dohledat všech **90 z 90 původních názvů REMOVE** přímo z uživatelova zadání z 19. 10. 2026 a uložit do `docs/audits/SELECTED-FEATURE-ORIGINAL-REMOVE-NAMES-2026-10-21.json`. Starší audit nezávisle uvádí 8 ID s konkrétním důkazem o odstranění a 82 jen se skupinovým důkazem. Obnovení názvů **nedokazuje** odstranění jednotlivých implementací.
+- Uživatel předal **přesný kompletní inventář 178 položek dne 21. 10. 2026**, nyní uložený v `docs/audits/SELECTED-FEATURE-CANONICAL-INVENTORY-2026-10-21.json`: podle předchozího výběru **88 KEEP / 90 REMOVE**. Dvě drobné nepřesnosti dřívější rekonstrukce názvů P01 a L01 jsou opravené. Samostatně zůstává 8 konkrétních a 82 skupinových důkazů odstranění. Znalost názvů **nedokazuje** odstranění každé implementace.
 - Sdílené závislosti se nesmí odstranit: detail a historie pro H03/H07/H14 potřebují části spojené s odmítnutými H01/H02; R11 potřebuje trasový kontext, který sdílí H04; R17 potřebuje polygonovou ATC geometrii, kterou sdílí T01.
 - Dosavadní kontrola zahrnuje **50 odstraněných API** a **21 stránek**. Nový `scripts/selected-feature-premerge-audit.mjs` porovnává URL odkazy v živém zdrojovém kódu s **56 aktuálními API**, kontroluje hlavní backendové služby a jejich lifecycle. Vzdálené AWC `/api/data/*` patří poskytovateli počasí, nikoli AirRadaru; výjimka je omezena pouze na příslušné tři moduly.
 - TypeScript, Vitest a browser testy kontrolují další vazby. Skládané URL, reálná data a produkční zátěž vyžadují po nasazení vlastní smoke/benchmark.
@@ -16,7 +16,7 @@
 ## Podmínky pro merge
 
 1. Ověřit přesné SHA PR #1096 a `main`. Při změně základní větve znovu porovnat a otestovat.
-2. Zkontrolovat 90 obnovených původních názvů, 82 skupinových důkazů a záměrně sdílené závislosti. Neprohlašovat všech 178 individuálních implementací za ověřené bez konkrétního call graphu.
+2. Zkontrolovat 178 přesných názvů, zachovaný výběr KEEP/REMOVE, 82 skupinových důkazů a záměrně sdílené závislosti. Neprohlašovat všech 178 individuálních implementací za ověřené bez konkrétního call graphu.
 3. Vyžadovat zelené **CI, CodeQL a zátěžové testy 1×/2×/4× na stejném HEAD**. CI musí zahrnovat build, typy, Vitest, browser a výkonovou regresi.
 4. Spustit `node scripts/selected-feature-premerge-audit.mjs` a `npm run features:check`. Chybějící interní API kontrakt blokuje merge.
 5. Ověřit skutečný readsb/Beast příjem, SSE, mapu, detail letadla, historii, trasu/ATS/ATC, Navigation Integrity, letiště, METAR/SIGMET/ČHMÚ, volitelné OGN a RXW, sanitizovaný systémový stav a doručovací frontu.
