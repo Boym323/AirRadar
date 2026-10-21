@@ -275,6 +275,19 @@
       "lib/server/alert-status.ts -> lib/server/aircraft-state.ts (AlertStatus)",
       "lib/airspace-activity/{cz-aim,types}.ts -> lib/server/map-context.ts (AUP/UUP archive)"
     ],
-    "phase61Validation": "pending CI/CodeQL/1x-2x-4x release gates on staged head"
+    "phase61Validation": "PASS CI/CodeQL/1x-2x-4x on a8b693bcd75d2fc0d254e10f5acc6eef4d52a259",
+    "auditManifest": "docs/audits/SELECTED-FEATURE-ID-VERIFICATION-2026-10-21.json",
+    "perIdReviewedCount": 90,
+    "perIdExplicitEvidence": 8,
+    "perIdGroupEvidenceOnly": 82,
+    "unresolvedRuntime": [
+      "T12 MapContextArchiveService.pollAup still fetches and stores new AUP/UUP"
+    ],
+    "unresolvedExternalContractReview": "50 deleted HTTP API routes; access logs and external clients not observed",
+    "unresolvedDocumentation": [
+      "docs/ARCHITECTURE.md",
+      "docs/cs/ARCHITECTURE.md"
+    ],
+    "canonicalProductionLoc": "PENDING CI audit test"
   }
 }

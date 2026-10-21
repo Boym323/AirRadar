@@ -1,0 +1,1136 @@
+{
+  "schemaVersion": 1,
+  "auditDate": "2026-10-21",
+  "auditedHead": "a8b693bcd75d2fc0d254e10f5acc6eef4d52a259",
+  "prNumber": 1096,
+  "auditType": "source-tree and source-consumer boundary review; no production access",
+  "removedIdCount": 90,
+  "explicitlyMappedIds": [
+    "J10",
+    "R13",
+    "T11",
+    "T12",
+    "W10",
+    "W11",
+    "W12",
+    "E08"
+  ],
+  "limitation": "Original one-to-one 178-ID feature inventory was not available in repository audit sources. Individual removal cannot be certified from a family match alone. All 90 IDs are inventoried; 82 have only grouped evidence.",
+  "groups": {
+    "J": {
+      "name": "Simulated receiver",
+      "retired": [],
+      "retained": [
+        "lib/server/providers.ts",
+        "tests/retired-j10-provider.test.ts"
+      ],
+      "context": "J10 no synthetic runtime fallback; test fixture separate"
+    },
+    "R": {
+      "name": "Receiver overlay",
+      "retired": [],
+      "retained": [
+        "components/airradar-app.tsx",
+        "app/api/receiver/coverage/route.ts"
+      ],
+      "context": "R13 removed map receiver marker/rings, not receiver data or coverage"
+    },
+    "H": {
+      "name": "Historical UI/Flight Story",
+      "retired": [
+        "app/flights/page.tsx",
+        "app/history/page.tsx",
+        "app/api/history/flights/route.ts",
+        "app/api/time-machine/window/route.ts"
+      ],
+      "retained": [
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "context": "Preserved H07/H14 and flight/position history records"
+    },
+    "A": {
+      "name": "Airport intelligence/operations",
+      "retired": [
+        "app/api/airports/[icao]/operations/route.ts",
+        "app/api/airports/[icao]/movements/route.ts",
+        "app/api/airports/[icao]/traffic/route.ts"
+      ],
+      "retained": [
+        "app/api/airports/[icao]/route.ts",
+        "lib/server/airport-traffic.ts"
+      ],
+      "context": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    "T": {
+      "name": "ATC diagnostics/SID-STAR/planned AUP",
+      "retired": [
+        "app/api/atc/sectors/history/route.ts",
+        "app/api/atc/validation/route.ts",
+        "app/api/procedures/route.ts",
+        "app/api/airspace/activity/route.ts",
+        "app/api/map-context/aup/route.ts"
+      ],
+      "retained": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "lib/server/map-context.ts",
+        "lib/airspace-activity/cz-aim.ts"
+      ],
+      "context": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    "W": {
+      "name": "Modeled wind/fusion/avoidance/route weather",
+      "retired": [
+        "app/api/aircraft/[hex]/weather-fusion/route.ts",
+        "app/api/aircraft/[hex]/route-weather/route.ts"
+      ],
+      "retained": [
+        "app/api/weather/sigmet/route.ts",
+        "app/api/weather/airport/[icao]/route.ts"
+      ],
+      "context": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    "P": {
+      "name": "Predictive and Flight Intelligence",
+      "retired": [
+        "app/api/aircraft/[hex]/prediction/route.ts",
+        "app/api/intelligence/events/route.ts",
+        "app/api/operations/predictive/route.ts"
+      ],
+      "retained": [
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "context": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    "D": {
+      "name": "Operational Digital Twin",
+      "retired": [
+        "app/api/aircraft/[hex]/situation/route.ts",
+        "app/api/admin/operational-twin/outcome/route.ts",
+        "app/admin/operational-twin/calibration/page.tsx"
+      ],
+      "retained": [
+        "lib/server/aircraft-state.ts",
+        "app/api/navigation-integrity/current/route.ts"
+      ],
+      "context": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    "L": {
+      "name": "Legacy alert rule engines/watchlist/fleets",
+      "retired": [
+        "app/api/alerts/route.ts",
+        "app/api/admin/alerts/rules/route.ts",
+        "app/api/watchlist/route.ts",
+        "app/notifications/page.tsx"
+      ],
+      "retained": [
+        "lib/server/alert-delivery-worker.ts",
+        "lib/server/alerts-fleets-repository.ts",
+        "app/api/push/subscribe/route.ts",
+        "app/api/watchlist/session/route.ts"
+      ],
+      "context": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    "E": {
+      "name": "RXW H1/FPN overlay",
+      "retired": [
+        "app/api/aircraft/communications/waypoints/route.ts"
+      ],
+      "retained": [
+        "app/api/aircraft/[hex]/communications/route.ts",
+        "lib/server/rxw-hub-store.ts"
+      ],
+      "context": "E08 live overlay retired; E07 RXW messages/metadata retained"
+    }
+  },
+  "records": [
+    {
+      "id": "J10",
+      "family": "J",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "J",
+      "sharedDependencyContext": "J10 no synthetic runtime fallback; test fixture separate"
+    },
+    {
+      "id": "R13",
+      "family": "R",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "R",
+      "sharedDependencyContext": "R13 removed map receiver marker/rings, not receiver data or coverage"
+    },
+    {
+      "id": "H01",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H02",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H04",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H05",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H06",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H08",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H09",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H10",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H11",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H12",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "H13",
+      "family": "H",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "H",
+      "sharedDependencyContext": "Preserved H07/H14 and flight/position history records"
+    },
+    {
+      "id": "A03",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A04",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A05",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A06",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A07",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A08",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A09",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A10",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A11",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "A12",
+      "family": "A",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "A",
+      "sharedDependencyContext": "Preserved A01/A02 airport catalog, live local traffic and METAR"
+    },
+    {
+      "id": "T01",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T02",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T03",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T04",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T05",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T06",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T07",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T11",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "T12",
+      "family": "T",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "INCOMPLETE_ACTIVE_SCHEDULED_FETCH",
+      "evidenceSet": "T",
+      "sharedDependencyContext": "Preserve R17 and T08/T09/T10; T12 scheduled AUP polling is still LIVE"
+    },
+    {
+      "id": "W05",
+      "family": "W",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "W",
+      "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    {
+      "id": "W10",
+      "family": "W",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "W",
+      "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    {
+      "id": "W11",
+      "family": "W",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "W",
+      "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    {
+      "id": "W12",
+      "family": "W",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "W",
+      "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    {
+      "id": "W13",
+      "family": "W",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "W",
+      "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    {
+      "id": "W14",
+      "family": "W",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "W",
+      "sharedDependencyContext": "Retain current weather and SIGMET; no W10/W12 aircraft analytical endpoints"
+    },
+    {
+      "id": "P01",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P02",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P03",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P04",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P05",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P06",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P07",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P08",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P09",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P10",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P11",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P12",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P13",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P14",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "P15",
+      "family": "P",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "P",
+      "sharedDependencyContext": "Removed producer; residual predictiveEvaluatedAt empty-map diagnostics compatibility"
+    },
+    {
+      "id": "D01",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D02",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D03",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D04",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D05",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D06",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D07",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D08",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D09",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D10",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D11",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D12",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D13",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D14",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D15",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D16",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D17",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D18",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D19",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D20",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D21",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D22",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "D23",
+      "family": "D",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "D",
+      "sharedDependencyContext": "Removed runtime and Twin endpoints; preserve history/migration artifacts"
+    },
+    {
+      "id": "L01",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L02",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L03",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L04",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L05",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L06",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L07",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L08",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L09",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L10",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L13",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L14",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "L15",
+      "family": "L",
+      "requested": "REMOVE",
+      "reviewLevel": "GROUP_LEVEL_ONLY",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "L",
+      "sharedDependencyContext": "L11/L12 WebPush/Pushover and delivery history remain; disabled AlertStatus API compatibility"
+    },
+    {
+      "id": "E08",
+      "family": "E",
+      "requested": "REMOVE",
+      "reviewLevel": "EXPLICIT_ID_IN_REDUCTION_NOTES",
+      "assessment": "FAMILY_SURFACES_RETIRED_BUT_INDIVIDUAL_CALL_GRAPH_NOT_PROVEN",
+      "evidenceSet": "E",
+      "sharedDependencyContext": "E08 live overlay retired; E07 RXW messages/metadata retained"
+    }
+  ],
+  "deletedApiRoutes": [
+    "app/api/admin/alerts/analytics/route.ts",
+    "app/api/admin/alerts/delivery/route.ts",
+    "app/api/admin/alerts/fleets/[id]/matchers/[matcherId]/route.ts",
+    "app/api/admin/alerts/fleets/[id]/matchers/route.ts",
+    "app/api/admin/alerts/fleets/[id]/route.ts",
+    "app/api/admin/alerts/fleets/route.ts",
+    "app/api/admin/alerts/geofences/[id]/route.ts",
+    "app/api/admin/alerts/geofences/route.ts",
+    "app/api/admin/alerts/history/route.ts",
+    "app/api/admin/alerts/rules/[id]/route.ts",
+    "app/api/admin/alerts/rules/route.ts",
+    "app/api/admin/alerts/simulator/route.ts",
+    "app/api/admin/flights/[id]/evidence/route.ts",
+    "app/api/admin/operational-twin/calibration/route.ts",
+    "app/api/admin/operational-twin/event-outcome/route.ts",
+    "app/api/admin/operational-twin/outcome/route.ts",
+    "app/api/admin/operational-twin/regional-attention-graduation/route.ts",
+    "app/api/admin/operational-twin/regional-attention-outcome/route.ts",
+    "app/api/admin/predictive/readiness/route.ts",
+    "app/api/aircraft/[hex]/prediction/route.ts",
+    "app/api/aircraft/[hex]/route-weather/route.ts",
+    "app/api/aircraft/[hex]/situation/route.ts",
+    "app/api/aircraft/[hex]/weather-fusion/route.ts",
+    "app/api/aircraft/communications/waypoints/route.ts",
+    "app/api/airports/[icao]/movements/route.ts",
+    "app/api/airports/[icao]/operations/route.ts",
+    "app/api/airports/[icao]/traffic/route.ts",
+    "app/api/airspace/activity/route.ts",
+    "app/api/alerts/route.ts",
+    "app/api/atc/sectors/[id]/history/route.ts",
+    "app/api/atc/sectors/[id]/traffic/route.ts",
+    "app/api/atc/sectors/history/route.ts",
+    "app/api/atc/sectors/traffic/route.ts",
+    "app/api/atc/sectors/transitions/route.ts",
+    "app/api/atc/validation/route.ts",
+    "app/api/history/flights/[id]/route.ts",
+    "app/api/history/flights/route.ts",
+    "app/api/intelligence/analytics/route.ts",
+    "app/api/intelligence/events/route.ts",
+    "app/api/intelligence/stream/route.ts",
+    "app/api/map-context/aup/route.ts",
+    "app/api/operations/predictive/route.ts",
+    "app/api/operations/situation/route.ts",
+    "app/api/procedures/route.ts",
+    "app/api/recap/route.ts",
+    "app/api/time-machine/range/route.ts",
+    "app/api/time-machine/window/route.ts",
+    "app/api/watchlist/[id]/route.ts",
+    "app/api/watchlist/activity/route.ts",
+    "app/api/watchlist/route.ts"
+  ],
+  "deletedPageEntrypoints": [
+    "app/admin/alerts/analytics/page.tsx",
+    "app/admin/alerts/delivery-health/page.tsx",
+    "app/admin/alerts/page.tsx",
+    "app/admin/alerts/simulator/page.tsx",
+    "app/admin/operational-twin/calibration/page.tsx",
+    "app/airspace/page.tsx",
+    "app/airspace/sectors/[id]/page.tsx",
+    "app/alerts/page.tsx",
+    "app/compare/airports/page.tsx",
+    "app/compare/flights/page.tsx",
+    "app/fleet/page.tsx",
+    "app/flights/[id]/page.tsx",
+    "app/flights/page.tsx",
+    "app/history/page.tsx",
+    "app/intelligence/analytics/page.tsx",
+    "app/intelligence/page.tsx",
+    "app/notifications/page.tsx",
+    "app/operations/page.tsx",
+    "app/procedures/page.tsx",
+    "app/time-machine/page.tsx",
+    "app/watchlist/page.tsx"
+  ],
+  "preservedEndpoints": [
+    "app/api/aircraft/route.ts",
+    "app/api/aircraft/[hex]/route.ts",
+    "app/api/stream/route.ts",
+    "app/api/atc/sectors/route.ts",
+    "app/api/ats/routes/route.ts",
+    "app/api/navigation/data/route.ts",
+    "app/api/navigation-integrity/current/route.ts",
+    "app/api/ogn/state/route.ts",
+    "app/api/airports/[icao]/route.ts",
+    "app/api/history/[hex]/route.ts",
+    "app/api/statistics/route.ts",
+    "app/api/weather/sigmet/route.ts",
+    "app/api/weather/metar-map/route.ts",
+    "app/api/receiver/coverage/route.ts",
+    "app/api/push/subscribe/route.ts",
+    "app/api/push/vapid-public-key/route.ts",
+    "app/api/watchlist/session/route.ts",
+    "app/api/admin/alerts/delivery-health/route.ts",
+    "app/api/aircraft/[hex]/communications/route.ts",
+    "app/api/map-context/at/route.ts"
+  ],
+  "priorityFindings": [
+    {
+      "id": "T12_ACTIVE_POLL",
+      "priority": "P1",
+      "status": "OPEN",
+      "source": "lib/server/map-context.ts:409-428",
+      "evidence": "MapContextArchiveService.poll() runs pollAup(), calling getAirspaceActivity and writing planned AUP archival records even after removing /api/map-context/aup",
+      "action": "Decide whether new planned AUP ingestion is still required for retained historical map-context. If not, stop scheduling it and keep old archive read compatibility; test all modes.",
+      "noDataDeletion": true
+    },
+    {
+      "id": "ARCHITECTURE_STALE",
+      "priority": "P1",
+      "status": "OPEN",
+      "source": "docs/ARCHITECTURE.md",
+      "evidence": "Documentation still claims MockReadsbProvider fallback, Flight Story read boundary, AlertEngine, predictive modules and Digital Twin actively run",
+      "action": "Rewrite EN/CS architecture from current source and generated registry"
+    },
+    {
+      "id": "EXTERNAL_CLIENTS_UNKNOWN",
+      "priority": "P1",
+      "status": "OPEN",
+      "source": "deletedApiRoutes",
+      "evidence": "50 removed HTTP routes were present in PR diff; no server access logs/client inventory were reviewed",
+      "action": "Inspect gateway access logs, API consumers and bookmarks before merging; intentional 404 for retired routes"
+    },
+    {
+      "id": "PRODUCTION_AB_UNMEASURED",
+      "priority": "P1",
+      "status": "OPEN",
+      "source": "production unavailable from tooling",
+      "evidence": "CI synthetic 1x/2x/4x passes but does not measure live receiver traffic, DB load or production A/B",
+      "action": "After explicit release authorization collect same-workload T58 RSS/CPU/P95/P99, receiver freshness and route/cache deltas"
+    },
+    {
+      "id": "ALERT_STATUS_COMPAT",
+      "priority": "P2",
+      "status": "PRESERVE_UNTIL_CONTRACT_REVIEW",
+      "source": "lib/server/aircraft-state.ts:463-470",
+      "evidence": "getAlertStatus() exposes disabled status and reloadAlertConfig is a no-op; lib/server/alert-status.ts is imported",
+      "action": "Identify clients of these methods, then simplify; preserve L11/L12 delivery"
+    },
+    {
+      "id": "PREDICTIVE_DIAGNOSTICS_PLACEHOLDER",
+      "priority": "P2",
+      "status": "CANDIDATE",
+      "source": "lib/server/aircraft-state.ts:424",
+      "evidence": "predictiveEvaluatedAt empty Map created for memory retention diagnostics",
+      "action": "Check diagnostic schema clients before deleting placeholder"
+    },
+    {
+      "id": "STALE_VISUAL_FIXTURES",
+      "priority": "P2",
+      "status": "CANDIDATE",
+      "source": "scripts/production-gates.mjs:488-503,819-829",
+      "evidence": "mockWatchlist and mockNotifications branches for removed pages remain but no matching visualTargets observed",
+      "action": "Prove full target inventory unused and remove obsolete fixture branches in separate test-only patch"
+    }
+  ],
+  "productionMetrics": {
+    "canonicalTool": "scripts/code-metrics.mjs scanCodebase",
+    "metric": "tracked nonempty physical lines; production excludes tests/docs/migrations/generated/public assets",
+    "historicalLastSnapshot": {
+      "commit": "e2f9c70ddefd",
+      "day": "2026-10-19",
+      "productionLoc": 135145
+    },
+    "auditedBranchProductionLoc": null,
+    "status": "PENDING_CI_INSTRUMENTED_MEASUREMENT"
+  },
+  "gates": {
+    "previousHead": "a8b693bcd75d2fc0d254e10f5acc6eef4d52a259",
+    "ciRun": 39554500823,
+    "codeqlRun": 39554500821,
+    "syntheticLoadRun": 39554500816,
+    "conclusion": "all success",
+    "liveAB": "NOT_MEASURED",
+    "externalClientImpact": "NOT_VERIFIED"
+  }
+}
