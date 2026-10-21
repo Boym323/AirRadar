@@ -35,3 +35,9 @@ PostgreSQL sampled Flight, FlightPosition, FlightEvent and other historical tabl
 Public health/system responses are sanitized; protected provider diagnostics require an authenticated session. Provider requests are bounded and failures may never masquerade as successful local ADS-B. Keep ingress freshness, database/route-cache tails, event-loop T58 latency, RSS/CPU, SSE clients and delivery-queue health observable.
 
 Synthetic 1x/2x/4x benchmarks, TypeScript, Vitest, CodeQL and browser CI validate branch safety, but cannot replace same-workload live production A/B and ingress/client-log checks. The canonical production-source LOC metric uses scripts/code-metrics.mjs. Changes in PR #1096 do not alter running production until a separately authorized merge/deployment and rollback plan.
+
+## V2-01 dependency boundaries (staged, not deployed)
+
+V2-01 introduces side-effect-free browser-safe DTO contracts in `lib/contracts/history.ts` and `lib/contracts/weather-radar.ts`, and the receiver provider port in `lib/ports/aircraft-provider.ts`. Existing server import paths re-export the same types/constant for compatibility. The radar client imports the DTO and radar bounds directly from `lib/contracts/`. No receiver polling, SSE framing, persistence or schema changes are part of V2-01.
+
+Run `npm run architecture:check` to prevent new contract/port-to-implementation dependencies, protected runtime cycles and server-to-client imports. `npm run architecture:graph` audits the full runtime/type import graph; `node scripts/v2-architecture-graph.mjs --strict --json` also treats remaining legacy client-to-server reachability and all runtime cycles as errors. Check output and limitations in [the staged V2-01 report](audits/V2-01-BOUNDARY-REPORT-2026-10-21.md). The canonical KEEP manifest currently lists 88 entries; the task brief's count of 79 is stale. No per-ID runtime parity is claimed by the family candidate dependency matrix.
