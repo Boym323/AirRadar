@@ -24,7 +24,7 @@ describe("selected-feature ID audit", () => {
       expect(item.family).toBe(item.id.slice(0, 1));
       expect(item.evidenceSet).toBe(item.family);
       expect(audit.groups[item.evidenceSet]?.context).toBeTruthy();
-      expect(["EXPLICIT_ID_IN_REDUCTION_NOTES", "GROUP_LEVEL_ONLY"]).toContain(item.reviewLevel);
+      expect(["EXPLICIT_ID_IN_REDUCTION_NOTES", "GROUP_LEVEL_ONLY", "INDIVIDUAL_SOURCE_RETIREMENT"]).toContain(item.reviewLevel);
       if (item.id === "T12") expect(item.assessment).toBe("LIVE_COLLECTION_DISABLED_HISTORIC_ARCHIVE_RETAINED");
     }
   });
@@ -62,7 +62,10 @@ describe("selected-feature ID audit", () => {
     for (let i=0; i<90; i++) {
       expect(witnesses.removeItems[i].id).toBe(source.items[i].id);
       expect(witnesses.removeItems[i].recoveredTitle).toBe(source.items[i].title);
-      expect(witnesses.removeItems[i].originalPerIdImplementationVerified).toBe(false);
+      // A recovered name alone is not source proof. T05/W11 have separate
+      // negative source/CI evidence, while the remaining mapping stays unproven.
+      const independentlyVerified = source.items[i].id === "T05" || source.items[i].id === "W11";
+      expect(witnesses.removeItems[i].originalPerIdImplementationVerified).toBe(independentlyVerified);
     }
   });
 

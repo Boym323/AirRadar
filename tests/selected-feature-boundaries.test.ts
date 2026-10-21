@@ -154,7 +154,7 @@ describe("explicit selected-feature reduction contracts", () => {
     const panel = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
     expect(app).not.toContain("buildWeatherAvoidanceIntelligence");
     expect(panel).not.toContain("weather-avoidance-intelligence-v1");
-    expect(panel).toContain("sigmet-trajectory-deviation");
+    expect(panel).not.toContain("sigmet-trajectory-deviation");
     expect(panel).toContain("aircraft-sigmet-context");
   });
 
@@ -223,7 +223,7 @@ describe("explicit selected-feature reduction contracts", () => {
     expect(existsSync(new URL("lib/weather/avoidance-intelligence.ts", root))).toBe(false);
     expect(existsSync(new URL("tests/weather-avoidance-intelligence.test.ts", root))).toBe(false);
     const quick = readFileSync(new URL("components/aircraft-radar-quick-detail.tsx", root), "utf8");
-    expect(quick).toContain("sigmet-trajectory-deviation");
+    expect(quick).not.toContain("sigmet-trajectory-deviation");
     expect(quick).toContain("aircraft-sigmet-context");
   });
 
