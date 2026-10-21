@@ -19,15 +19,15 @@ describe("retired Weather Fusion and analytic corridor boundary", () => {
     expect(state).not.toContain("defaultWindAloftProvider.getWind");
   });
 
-  it("preserves actual weather products, observations, SIGMET and route context", () => {
+  it("preserves actual weather products, observations and SIGMET without W12 route analysis", () => {
     for (const path of [
       "lib/server/aviation-weather-provider.ts",
       "lib/server/aircraft-weather.ts",
       "lib/weather/aircraft-sigmet-context.ts",
-      "lib/weather/route-weather-context.ts",
       "app/api/weather/airport/route.ts",
       "app/api/weather/sigmet/route.ts",
       "components/airport-weather.tsx",
     ]) expect(exists(path), path).toBe(true);
+    expect(exists("lib/weather/route-weather-context.ts")).toBe(false);
   });
 });
