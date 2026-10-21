@@ -29,8 +29,8 @@
     {
       "id": "S08",
       "title": "Daily/weekly recap API",
-      "assessment": "ALREADY_ABSENT_ENDPOINT",
-      "action": "No recap endpoint present in current source tree; remove stale localization separately"
+      "assessment": "RECAP_ENDPOINT_TYPES_AND_TRANSLATIONS_REMOVED",
+      "action": "Daily/weekly recap endpoints were absent; removed obsolete recap wire types and both locale dictionaries."
     },
     {
       "id": "S05",
@@ -41,8 +41,8 @@
     {
       "id": "W07",
       "title": "PIREP/AIREP reports",
-      "assessment": "NO_DEDICATED_SOURCE_FOUND",
-      "action": "External pilot-report endpoints and modules absent; check stale labels and test references"
+      "assessment": "PILOT_REPORT_ENDPOINT_AND_TRANSLATIONS_REMOVED",
+      "action": "PIREP endpoint and provider already absent; removed obsolete PIREP/AIREP-only locale labels. Kept SIGMET and aircraft weather."
     },
     {
       "id": "U06",
@@ -59,14 +59,14 @@
     {
       "id": "O14",
       "title": "Automatic documentation, changelog and code growth metrics",
-      "assessment": "SHARED_CI_DEPENDENCY",
-      "action": "Retire growth-metric-only tooling, preserve docs and feature-registry checks required by O11/O12"
+      "assessment": "AUTOMATED_CHANGELOG_AND_CODE_GROWTH_TOOLS_RETIRED",
+      "action": "Removed automatic changelog generator, NPM commands and checks; source-footprint advisory, static feature registry check and CI remain for O10/O11."
     },
     {
       "id": "S07",
       "title": "Historical heatmap and traffic-profile API",
-      "assessment": "ALREADY_ABSENT_ENDPOINTS",
-      "action": "Delete orphaned heatmap localization module; preserve S02/S06/S09 aggregates"
+      "assessment": "HISTORICAL_HEATMAP_ENDPOINT_AND_TRANSLATIONS_REMOVED",
+      "action": "Historical heatmap/traffic profile endpoints already absent; removed orphan translation module plus recap/record locale labels."
     },
     {
       "id": "W04",
@@ -95,6 +95,18 @@
     {
       "path": "lib/aircraft/types.ts",
       "reason": "S08 obsolete recap and S05 record wire types"
+    },
+    {
+      "path": "scripts/changelog.mjs",
+      "reason": "O14 automatic changelog generator retired"
+    },
+    {
+      "path": "lib/i18n/en.ts",
+      "reason": "S08 S07 W07 stale locale blocks removed"
+    },
+    {
+      "path": "lib/i18n/cs.ts",
+      "reason": "S08 S07 W07 stale locale blocks removed"
     }
   ],
   "notClaimed": "This decision file does not certify nine independent code retirements. Shared paths remain until separately verified; historical selection audit is unchanged."

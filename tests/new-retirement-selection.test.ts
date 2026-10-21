@@ -20,6 +20,9 @@ describe("additional user-authorized removals (PR #1096)", () => {
   it("prevents obsolete historical heatmap, recap and pilot report endpoints from returning", () => {
     for (const path of [
       "lib/i18n/statistics-heatmap.ts",
+      "scripts/changelog.mjs",
+      "tests/changelog-v2.test.mjs",
+      "tests/changelog-release-history.test.ts",
       "lib/radar/presets.ts",
       "components/radar/radar-preset-menu.tsx",
       "components/radar/radar-preset-menu.module.css",
@@ -38,6 +41,13 @@ describe("additional user-authorized removals (PR #1096)", () => {
     const logbook = readFileSync(new URL("lib/server/logbook-summary.ts", root), "utf8");
     expect(logbook).not.toContain("todayReceptionRecord");
     expect(logbook).not.toContain("getReceptionRecords");
+    const en = readFileSync(new URL("lib/i18n/en.ts", root), "utf8");
+    const cs = readFileSync(new URL("lib/i18n/cs.ts", root), "utf8");
+    for (const locale of [en, cs]) {
+      expect(locale).not.toContain("  recap: {");
+      expect(locale).not.toContain("    pirepTitle:");
+      expect(locale).not.toContain("    receptionRecordsLegacyNote:");
+    }
     for (const path of [
       "app/api/statistics/route.ts",
       "app/api/weather/radar/frames/route.ts",

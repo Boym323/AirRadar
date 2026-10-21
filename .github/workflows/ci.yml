@@ -68,7 +68,6 @@ jobs:
         if: steps.scope.outputs.docs_only == 'true'
         run: |
           node scripts/docs-localization.mjs
-          node scripts/changelog.mjs check
       - name: Verify release gate planner
         if: steps.scope.outputs.docs_only != 'true'
         run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs tests/reconcile-manual-native-release-tags.test.mjs tests/t58-stall-canary.test.mjs
@@ -290,7 +289,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history and tags are required by changelog/release validation.
+          # Keep full history and tags for release validation.
           fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-node@v7
@@ -436,7 +435,6 @@ jobs:
           npm run docs:check
           npm run visual:check
           npm run icons:audit
-          npm run changelog:check
       - name: Verify release gate planner
         run: node --check scripts/production-gates.mjs && node --check scripts/ci-pr-validation-reuse.mjs && node --test tests/ci-release-plan.test.mjs tests/ci-browser-concurrency.test.mjs tests/ci-timing-report.test.mjs tests/ci-deploy-safety.test.mjs tests/ci-pr-validation-reuse.test.mjs tests/t58-stall-canary.test.mjs
       - name: Run release typecheck and verified-preview-aware Vitest
