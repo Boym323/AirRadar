@@ -70,6 +70,8 @@
     "audit:navigation-integrity-candidates": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-candidates.ts",
     "audit:db-write-amplification": "node scripts/audit-db-write-amplification.mjs",
     "audit:integrations": "node scripts/integration-audit.mjs",
+    "architecture:check": "node scripts/v2-architecture-graph.mjs --check",
+    "architecture:graph": "node scripts/v2-architecture-graph.mjs --json",
     "release-scope": "node scripts/release-scope.mjs",
     "features:check": "node scripts/features-registry.mjs check",
     "docs:check": "node scripts/docs-localization.mjs",
