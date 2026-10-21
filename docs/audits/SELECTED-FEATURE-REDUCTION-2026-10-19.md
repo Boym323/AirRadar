@@ -727,11 +727,11 @@ string/absence-only test files. The retained selected-feature suite still guards
 the live radar drawer, ATC/Navigation Integrity and SIGMET, and the independently
 tested ADS-B receiver, history, alerts delivery and T58 remain untouched.
 
-T12's planned AUP/UUP API and map presentation were already retired in phase 24.
-Remove the unreferenced `lib/airspace-activity` source parser, map adapter and
-DTOs together with their two retired-feature-only unit suites; strengthen the
-central test so they cannot reappear while canonical published ATC geometries,
-ATS navigation and live sector matching remain preserved.
+The T12 AUP/UUP *map/polling UI* was retired in phase 24, but the CZ AIM
+parser, response DTO and server reader are still used by retained
+`lib/server/map-context.ts` archive compatibility. Keep those three modules
+and the two behavior tests until that retained consumer is separately redesigned;
+do not confuse removed map overlays with orphan historical archive code.
 
 Remove the orphan Digital Twin calibration stylesheet (no mounted component) and
 six checked-in, non-runtime alert/fleet research reports. Preserve all database

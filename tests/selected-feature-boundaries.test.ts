@@ -377,13 +377,6 @@ describe("phase 24 retired T12 planned airspace surface", () => {
     const app = readFileSync(new URL("components/airradar-app.tsx", root), "utf8");
     const geo = readFileSync(new URL("lib/radar/airspace-geojson.ts", root), "utf8");
     expect(existsSync(new URL("app/api/airspace/activity/route.ts", root))).toBe(false);
-    // T12 parser, planned-map mapper and DTOs were only used by the retired
-    // polling/map lane. Published ATC geometries remain independent.
-    for (const orphan of [
-      "lib/airspace-activity/cz-aim.ts",
-      "lib/airspace-activity/map.ts",
-      "lib/airspace-activity/types.ts",
-    ]) expect(existsSync(new URL(orphan, root)), orphan).toBe(false);
     expect(existsSync(new URL("app/api/map-context/aup/route.ts", root))).toBe(false);
     expect(existsSync(new URL("components/radar/use-radar-atc-map-context.ts", root))).toBe(false);
     expect(app).not.toContain("showAupUup");

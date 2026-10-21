@@ -640,3 +640,24 @@ koridor trasy, kontrola odchylky, kontext drah a navigační data.
 Neznámé návrhy procedur zůstávají nerozpoznanými úseky, nikoliv domnělými
 publikovanými SID/STAR. Historické DTO typy zůstávají kompatibilní.
 Bez migrací, mazání historie nebo nasazení na produkci.
+
+## Fáze 60: vyčištění duplicitních testů a zbytků odstraněných funkcí
+
+Centrální sada testů vybraných funkcí již ověřuje nepřítomnost zrušených
+vrstev Operational Focus, Digital Twin a W11 Weather Avoidance. Pět
+duplicitních testů kontrolujících pouze stejné řetězce a nepřítomnost
+souborů je proto odstraněno. Zachovány jsou testy živého radaru,
+ATC/Navigation Integrity, SIGMET, příjmu ADS-B, historie, doručování
+upozornění a měření T58.
+
+Vrstva plánovaného AUP/UUP na mapě (T12) byla odstraněna ve fázi 24,
+ale parser CZ AIM, sdílené DTO a serverová čtečka jsou stále využívány
+archivní kompatibilitou v `lib/server/map-context.ts`. Tyto tři moduly
+i dva jejich věcné testy proto zůstávají, dokud nebude samostatně
+vyřešena závislost historického mapového kontextu.
+
+Odstraněn osiřelý styl kalibrace Digital Twin a šest starých
+neprodukčních výzkumných reportů Alert/Fleet. Nedotčeny zůstávají
+migrace a historická data, doručování Web Push/Pushover, provozní
+workery i jejich testy. Změny jsou pouze v rozpracovaném PR; bez
+merge do main či nasazení na produkci.
