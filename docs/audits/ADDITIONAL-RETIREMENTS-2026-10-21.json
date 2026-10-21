@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-21",
+  "prNumber": 1096,
+  "baseHead": "53b93651cf87be9ce14f42fecb0c45566e848439",
+  "purpose": "New user-approved removals supersede the October 19 KEEP decision for these nine IDs. Original historical 178-item inventory and its original 88/90 decisions remain immutable.",
+  "removedFromKeep": [
+    "R16",
+    "S08",
+    "S05",
+    "W07",
+    "U06",
+    "U07",
+    "O14",
+    "S07",
+    "W04"
+  ],
+  "revisedTotals": {
+    "keep": 79,
+    "remove": 99
+  },
+  "items": [
+    {
+      "id": "R16",
+      "title": "Map presentation mode",
+      "assessment": "NO_DEDICATED_SOURCE_FOUND",
+      "action": "Keep ordinary map rendering, aircraft labels and layer visuals; any mode-specific remnants need further review"
+    },
+    {
+      "id": "S08",
+      "title": "Daily/weekly recap API",
+      "assessment": "ALREADY_ABSENT_ENDPOINT",
+      "action": "No recap endpoint present in current source tree; remove stale localization separately"
+    },
+    {
+      "id": "S05",
+      "title": "Receiver distance and aircraft records",
+      "assessment": "ACTIVE_STANDALONE_API",
+      "action": "Retire /api/reception-records and record-only repository after resolving shared statistics/serialization references"
+    },
+    {
+      "id": "W07",
+      "title": "PIREP/AIREP reports",
+      "assessment": "NO_DEDICATED_SOURCE_FOUND",
+      "action": "External pilot-report endpoints and modules absent; check stale labels and test references"
+    },
+    {
+      "id": "U06",
+      "title": "Favorite airports and preferences",
+      "assessment": "SHARED_PREFERENCES",
+      "action": "Remove only favorites features, preserve layout/locale/appearance preferences necessary for U01/U04/R14"
+    },
+    {
+      "id": "U07",
+      "title": "Shareable filter and analysis bookmarks",
+      "assessment": "SHARED_ROUTING",
+      "action": "Remove specialized URL filter persistence while keeping ordinary navigation and selected-aircraft links"
+    },
+    {
+      "id": "O14",
+      "title": "Automatic documentation, changelog and code growth metrics",
+      "assessment": "SHARED_CI_DEPENDENCY",
+      "action": "Retire growth-metric-only tooling, preserve docs and feature-registry checks required by O11/O12"
+    },
+    {
+      "id": "S07",
+      "title": "Historical heatmap and traffic-profile API",
+      "assessment": "ALREADY_ABSENT_ENDPOINTS",
+      "action": "Delete orphaned heatmap localization module; preserve S02/S06/S09 aggregates"
+    },
+    {
+      "id": "W04",
+      "title": "Echo Top weather radar layer",
+      "assessment": "NO_DEDICATED_SOURCE_FOUND",
+      "action": "Preserve W03 real radar and timeline; isolate any Echo Top-only configuration"
+    }
+  ],
+  "applied": [
+    {
+      "path": "lib/i18n/statistics-heatmap.ts",
+      "reason": "Unreferenced localized copy for retired historical heatmap S07"
+    },
+    {
+      "path": "tests/new-retirement-selection.test.ts",
+      "reason": "Regression test recording current decisions and guarded absent endpoints"
+    }
+  ],
+  "notClaimed": "This decision file does not certify nine independent code retirements. Shared paths remain until separately verified; historical selection audit is unchanged."
+}
