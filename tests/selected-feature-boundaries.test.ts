@@ -437,3 +437,49 @@ describe("phase 34 retired FlightEvent ID lookup", () => {
     expect(existsSync(new URL("lib/server/alert-delivery-worker.ts", root))).toBe(true);
   });
 });
+
+describe("phase 61 retired-only runtime and historical UI boundaries", () => {
+  it("keeps eliminated prediction, airport analytics, Time Machine and modeled wind modules absent", () => {
+    for (const path of [
+      "lib/history/playback.ts",
+      "lib/predictive-intelligence",
+      "lib/server/predictive-readiness.ts",
+      "lib/server/aircraft-predictive-projection.ts",
+      "lib/server/time-machine.ts",
+      "lib/server/flight-story.ts",
+      "lib/flight-story/narrative.ts",
+      "lib/recap/daily-intelligence.ts",
+      "lib/server/airport-operations.ts",
+      "lib/server/airport-movements.ts",
+      "lib/airport-intelligence/v3.ts",
+      "components/airport-movement-analytics.tsx",
+      "lib/server/wind-aloft.ts",
+      "lib/weather/aircraft-wind-context.ts",
+      "lib/atc-sector-history.ts",
+      "lib/server/sector-traffic-context.ts",
+      "lib/procedures/index.ts",
+      "lib/procedures/pipeline.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(false);
+    const state = readFileSync(new URL("lib/server/aircraft-state.ts", root), "utf8");
+    expect(state).not.toContain("PredictiveStateStore");
+    expect(state).not.toContain("this.predictive.flushProspective");
+    expect(state).toContain("this.navigationIntegrity.observe(activeAircraft");
+    expect(state).toContain("recordAircraftSnapshot(");
+  });
+
+  it("preserves live airport weather, ATC/ATS navigation and durable historical data", () => {
+    for (const path of [
+      "lib/server/history.ts",
+      "app/api/history/[hex]/route.ts",
+      "lib/server/airport-detail.ts",
+      "lib/server/airport-traffic.ts",
+      "lib/server/airport-infrastructure.ts",
+      "lib/server/atc-sector-service.ts",
+      "app/api/atc/sectors/route.ts",
+      "app/api/ats/routes/route.ts",
+      "lib/airport-runway-wind.ts",
+      "lib/server/aviation-weather-provider.ts",
+      "lib/server/alert-delivery-worker.ts",
+    ]) expect(existsSync(new URL(path, root)), path).toBe(true);
+  });
+});

@@ -739,3 +739,24 @@ migrations, on-disk operational alert records, historic PostgreSQL rows,
 Web Push/Pushover delivery, runtime workers and related tests. Neither main nor
 the production deployment is changed. Validate this commit with full CI,
 CodeQL and 1x/2x/4x scaling before making any release decision.
+
+## Phase 61: consolidate obsolete removal tests and retire unused playback interpolation
+
+Four standalone absence-only regression files for retired Airport Intelligence,
+predictive shadow, Flight Story/Time Machine and modeled wind/ATC history are
+replaced by two explicit assertions in the selected-feature boundary suite.
+Live airport, ATC/ATS, weather, historical API and persisted delivery safeguards
+remain checked, alongside dedicated behavior tests.
+
+Remove the old `lib/history/playback.ts` interpolation helper and its
+corresponding test case in `history-v2.test.ts` (the retained flight-profile
+marker test and database history tests remain). Candidate was only referenced
+by the old playback test among inspected history/aircraft/map consumers; use
+full release typecheck, Vitest and browser build as a mandatory import/usage
+verification after deletion. No database, migration or persisted recording
+changes are allowed.
+
+Keep `lib/server/alert-status.ts`: the active `lib/server/aircraft-state.ts`
+still imports its `AlertStatus` type; similarly retain T12 CZ AIM archival
+types and implementation until the shared map-context history is redesigned.
+No change to main or production.

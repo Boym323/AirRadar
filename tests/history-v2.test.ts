@@ -10,7 +10,6 @@ import {
 import type { HistoryFlightSummary } from "@/lib/server/history";
 import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getPrisma } from "@/lib/server/db";
-import { playbackSampleAt, playbackTimeRange, type PlaybackPosition } from "@/lib/history/playback";
 import { buildFlightProfileSeries, flightProfilePlaybackX } from "@/components/flight-profile";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
@@ -371,18 +370,6 @@ describe("flight history v2", () => {
     }) as never);
     const result = await listHistoryFlights({ icaoHex: "abc123", limit: 1 });
     expect(result.flights[0]?.callsign).toBe("NEW");
-  });
-
-  it("keeps playback at the first and last observation at the boundaries", () => {
-    const positions: PlaybackPosition[] = [
-      { recordedAt: "2026-01-01T12:00:00Z", lat: 50, lon: 14, altitude: 8_000, groundSpeed: 200, track: 90 },
-      { recordedAt: "2026-01-01T12:01:00Z", lat: 51, lon: 15, altitude: 10_000, groundSpeed: 220, track: 100 },
-    ];
-    const range = playbackTimeRange(positions);
-    expect(range).toEqual({ start: Date.parse(positions[0].recordedAt), end: Date.parse(positions[1].recordedAt) });
-    expect(playbackSampleAt(positions, range!.start)).toMatchObject({ lat: 50, lon: 14, index: 0 });
-    expect(playbackSampleAt(positions, range!.end)).toMatchObject({ lat: 51, lon: 15, index: 1 });
-    expect(playbackSampleAt(positions, range!.start + 30_000)).toMatchObject({ lat: 50.5, lon: 14.5 });
   });
 
   it("maps one playback timestamp to a synchronized SVG profile marker", () => {

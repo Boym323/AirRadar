@@ -260,14 +260,21 @@
       "Review of external clients and production rollout"
     ],
     "retainedScalingDependency": "scripts/benchmark-atc-ring-stalls.ts (imported by scripts/benchmark-load-scaling.ts)",
-    "latestCleanupPhase": 60,
-    "removedDuplicateRetirementTests": 5,
+    "latestCleanupPhase": 61,
+    "removedDuplicateRetirementTests": 9,
     "removedRetiredT12Tests": 0,
     "removedOrphanT12SourceModules": 0,
     "removedOrphanTwinStylesheets": 1,
     "removedAlertFleetResearchReports": 6,
     "reviewedAtHead": "299314612e137d7257660c14bbea8622f3e4e8ec",
-    "note": "Phase 60 staged in draft PR; AUP/UUP source and tests retained after CI found map-context dependency; rerun quality gates.",
-    "retainedT12ArchiveDependency": "lib/server/map-context.ts imports live CZ AIM parser / shared types; two behavioral tests remain until a separate archive compatibility refactor"
+    "note": "Phase 61 consolidates four absence-only tests and retires old interpolator and test; no main/production changes",
+    "retainedT12ArchiveDependency": "lib/server/map-context.ts imports live CZ AIM parser / shared types; two behavioral tests remain until a separate archive compatibility refactor",
+    "removedLegacyPlaybackModules": 1,
+    "removedLegacyPlaybackOnlyTestCases": 1,
+    "retainedCompatibilityDependencies": [
+      "lib/server/alert-status.ts -> lib/server/aircraft-state.ts (AlertStatus)",
+      "lib/airspace-activity/{cz-aim,types}.ts -> lib/server/map-context.ts (AUP/UUP archive)"
+    ],
+    "phase61Validation": "pending CI/CodeQL/1x-2x-4x release gates on staged head"
   }
 }

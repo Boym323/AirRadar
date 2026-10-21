@@ -661,3 +661,23 @@ neprodukčních výzkumných reportů Alert/Fleet. Nedotčeny zůstávají
 migrace a historická data, doručování Web Push/Pushover, provozní
 workery i jejich testy. Změny jsou pouze v rozpracovaném PR; bez
 merge do main či nasazení na produkci.
+
+## Fáze 61: sjednocení zastaralých testů a odstranění pomocného přehrávání
+
+Čtyři samostatné soubory kontrolující pouze nepřítomnost zrušených
+funkcí Airport Intelligence, predikcí, Flight Story/Time Machine a
+modelovaného větru/historické ATC analytiky byly nahrazeny dvěma
+kontrolami v centrálním testu vybraných funkcí. Zůstávají zachované
+testy skutečného chování letišť, ATC/ATS, počasí, historie a doručování.
+
+Pomocný interpolátor `lib/history/playback.ts` a jeho konkrétní test
+ve `history-v2.test.ts` jsou odstraněny. Test živého profilu letu,
+historické databázové záznamy a jejich testy zůstávají zachované.
+V kontrolovaných konzumentech byl interpolátor používán pouze
+ve starém testu. Definitivní ověření neexistence dalších importů
+musí potvrdit kompletní sestavení, TypeScript, Vitest a browser gate.
+
+Kontrakt `lib/server/alert-status.ts` je zachován, protože ho stále
+importuje `lib/server/aircraft-state.ts`. Archivní typy CZ AIM AUP/UUP
+také zůstávají kvůli historickému mapovému kontextu. Bez změn
+databáze, migrací, historických dat, main a produkčního provozu.
