@@ -370,16 +370,18 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
   });
 
-  it("keeps the full ATS map dataset gated while selected Route Corridor reuses bounded route intelligence", () => {
+  it("keeps the full ATS map dataset gated while R11 uses bounded published-route matching", () => {
     expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus)");
     expect(appSource).not.toContain("selectedHasRouteData");
     expect(appSource).not.toContain("analyzePublishedRoute");
     expect(appSource).toContain("ROUTE_INTELLIGENCE_SOURCE_ID");
-    expect(appSource).toContain("useRouteCorridorIntelligence(selectedAircraft)");
+    expect(appSource).toContain("useSelectedRoute(selectedAircraft)");
     expect(selectedRouteSource).toContain("analyzePublishedRoute");
     expect(selectedRouteSource).toContain("/api/navigation/data?ids=");
     expect(selectedRouteSource).not.toContain("new EventSource");
     expect(selectedRouteSource).not.toContain("setInterval");
+    expect(selectedRouteSource).not.toContain("buildTrajectoryConformance");
+    expect(selectedRouteSource).not.toContain("buildRouteCorridorIntelligence");
     expect(appSource).toContain("selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin");
     expect(appSource).toContain("selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination");
   });

@@ -1,6 +1,6 @@
 # P04 / P05 / P06 — selective removal gap against R11 (21 Oct 2026)
 
-**Blocking scope finding.** Exact user catalog identifies P04, P05, P06 as REMOVE, but R11 — *display route between airports and its progress* — is KEEP. Earlier review passed because all three share the same route UI and because the full original titles were not available.
+**Original blocker (source remediation applied; live R11 confirmation still required).** Exact user catalog identifies P04, P05, P06 as REMOVE, but R11 — *display route between airports and its progress* — is KEEP. Earlier review passed because all three share the same route UI and because the full original titles were not available.
 
 ## P04 — Route Intelligence – interpretace letového plánu
 
@@ -8,7 +8,7 @@
 
 analyzePublishedRoute is invoked while rendering retained R11 route geometry.
 
-**Source evidence:** `components/radar/use-route-corridor-intelligence.ts:130-149`, `lib/route-intelligence/index.ts`.
+**Source evidence:** `components/radar/use-selected-route.ts (retained R11 matcher; original hook removed)`, `lib/route-intelligence/index.ts`.
 
 **Remediation:** Separate minimum published route reconstruction needed by R11 from independent rejected predictive/interpretative extras. Do not remove core route geometry.
 
@@ -26,7 +26,7 @@ buildRouteCorridorIntelligence actively computes corridor deviation/status and p
 
 **Status:** `ACTIVE_DESELECTED_RUNTIME`.
 
-buildTrajectoryConformance still computes in the active selected-aircraft hook and is displayed in radar drawer and Follow HUD; feature registry lists Trajectory Conformance as production. P06 is REMOVE.
+Before remediation, buildTrajectoryConformance still computed in the active selected-aircraft hook and is displayed in radar drawer and Follow HUD; feature registry lists Trajectory Conformance as production. P06 is REMOVE.
 
 **Source evidence:** `components/radar/use-route-corridor-intelligence.ts:163-175`, `components/aircraft-radar-quick-detail.tsx:240-248`, `components/radar/radar-flight-follow-hud.tsx:43-77`, `lib/route-intelligence/conformance.ts`, `docs/features.registry.json:185`.
 
@@ -36,7 +36,7 @@ buildTrajectoryConformance still computes in the active selected-aircraft hook a
 
 After targeted implementation, keep R11 published ATS route map, flight plan geometry, and remaining-route display operational. Remove P06 active conformance state-machine computation and product UI; remove independent P05 analytic classification without destroying plain R11 route progress; retain parsed filed-route data needed for R11 but avoid restoring separate P04 analytics. Update generated feature registry and EN/CS docs, retire obsolete conformance tests, introduce negative regression tests. Gate with TypeScript, full Vitest/browser CI, CodeQL and synthetic load 1×/2×/4×. No main/production changes until owner-approved merge.
 
-**Current disposition:** NOT IMPLEMENTED; PR #1096 remains draft and should not be merged simply because previous CI is green. This finding results from accurate user feature semantics, not a CI failure.
+**Historical disposition:** Not implemented at first discovery; this is now addressed in source by the remediation section below. PR #1096 remains draft; final CI and production R11 confirmation are required before merge.
 
 
 ## Source remediation committed (CI verification pending)

@@ -1,6 +1,6 @@
 # P04 / P05 / P06 — konflikt odstraněných analýz se zachovanou trasou R11 (21. 10. 2026)
 
-**Blokující nález.** Podle přesného seznamu uživatele jsou P04, P05 a P06 určeny k odstranění, zatímco R11 — *zobrazení trasy mezi letišti a jejího průběhu* — musí zůstat. Předchozí audit tento rozdíl nedokázal úplně rozlišit, protože funkce sdílejí mapu a dříve chyběly přesné názvy.
+**Původní blokující nález (oprava zdrojového kódu provedena; živé ověření R11 ještě zbývá).** Podle přesného seznamu uživatele jsou P04, P05 a P06 určeny k odstranění, zatímco R11 — *zobrazení trasy mezi letišti a jejího průběhu* — musí zůstat. Předchozí audit tento rozdíl nedokázal úplně rozlišit, protože funkce sdílejí mapu a dříve chyběly přesné názvy.
 
 ## P04 — Route Intelligence – interpretace letového plánu
 
@@ -8,7 +8,7 @@
 
 analyzePublishedRoute is invoked while rendering retained R11 route geometry.
 
-**Zdroj:** `components/radar/use-route-corridor-intelligence.ts:130-149`, `lib/route-intelligence/index.ts`.
+**Zdroj:** `components/radar/use-selected-route.ts (zachované zpracování R11; původní hook odstraněn)`, `lib/route-intelligence/index.ts`.
 
 **Nápravný krok:** Separate minimum published route reconstruction needed by R11 from independent rejected predictive/interpretative extras. Do not remove core route geometry.
 
@@ -26,7 +26,7 @@ buildRouteCorridorIntelligence actively computes corridor deviation/status and p
 
 **Stav:** `ACTIVE_DESELECTED_RUNTIME`.
 
-buildTrajectoryConformance still computes in the active selected-aircraft hook and is displayed in radar drawer and Follow HUD; feature registry lists Trajectory Conformance as production. P06 is REMOVE.
+Před opravou se buildTrajectoryConformance stále počítal v aktivním hooku letadla and is displayed in radar drawer and Follow HUD; feature registry lists Trajectory Conformance as production. P06 is REMOVE.
 
 **Zdroj:** `components/radar/use-route-corridor-intelligence.ts:163-175`, `components/aircraft-radar-quick-detail.tsx:240-248`, `components/radar/radar-flight-follow-hud.tsx:43-77`, `lib/route-intelligence/conformance.ts`, `docs/features.registry.json:185`.
 
@@ -36,7 +36,7 @@ buildTrajectoryConformance still computes in the active selected-aircraft hook a
 
 Po úpravě musí fungovat mapa publikované ATS trasy R11 a základní průběh letu. Výpočet a zobrazení P06 se musí vypnout, stejně jako nadbytečné analytické klasifikace P05. Pro R11 zachovat nezbytné zpracování letového plánu, ale neponechávat samostatné analytiky P04. Upravit registr funkcí i EN/CS dokumentaci, odstranit zastaralé conformance testy, doplnit negativní regresní testy a pustit TypeScript, Vitest, browser CI, CodeQL a zátěž 1×/2×/4×.
 
-**Aktuální stav:** IMPLEMENTACE JEŠTĚ NEOPRAVENA. Draft PR #1096 nemergovat pouze na základě předchozího zeleného CI; jde o rozpor se zadáním, nikoli o chybu, kterou stávající testy odhalí.
+**Původní stav:** V době nálezu implementace ještě nebyla opravená. Oprava zdrojového kódu je popsána níže. PR #1096 zůstává draft; před merge je nutné poslední zelené CI a ověření R11 v živém provozu.
 
 
 ## Oprava zdrojového kódu (čeká na závěrečné CI)
