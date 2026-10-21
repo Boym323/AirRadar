@@ -35,3 +35,9 @@ PostgreSQL záznamy Flight, FlightPosition, FlightEvent a další historické ta
 Veřejné zdravotní a systémové odpovědi jsou sanitizované, chráněné detaily providerů vyžadují přihlášení. Požadavky na providery jsou omezené a výpadek nesmí předstírat úspěšný lokální ADS-B příjem. Sledují se čerstvost příjmu, zpoždění DB a cache tras, událostní smyčka T58, RSS/CPU, SSE klienti a fronty doručení.
 
 Syntetická zátěž 1×/2×/4×, TypeScript, Vitest, CodeQL a prohlížečové CI ověřují bezpečnost větve, ale nenahrazují A/B měření živé produkce ani kontrolu přístupových logů. Kanonická metrika produkčních řádků je scripts/code-metrics.mjs. PR #1096 nemění běžící produkci bez zvláštního povolení merge/nasazení a rollback plánu.
+
+## Hranice závislostí V2-01 (připraveno ve větvi, nenasazeno)
+
+V2-01 zavádí kontrakty DTO bez vedlejších efektů pro prohlížeč v `lib/contracts/history.ts` a `lib/contracts/weather-radar.ts` a port lokálního přijímače v `lib/ports/aircraft-provider.ts`. Původní serverové cesty zachovávají exporty typů a konstanty kvůli kompatibilitě. Radarový klient využívá DTO a hranice počasí přímo z `lib/contracts/`. Tato etapa nemění polling přijímače, SSE, persistenci ani databázové schéma.
+
+Příkaz `npm run architecture:check` kontroluje nové nepřípustné závislosti kontraktů/portů na implementacích, cykly přes chráněné vrstvy a importy serveru do klientských komponent. `npm run architecture:graph` analyzuje celý importní graf. Přísný režim `node scripts/v2-architecture-graph.mjs --strict --json` označí také starší průniky serverového kódu do klientského grafu a všechny runtime cykly. Podrobnosti a omezení uvádí [report V2-01](../audits/V2-01-BOUNDARY-REPORT-2026-10-21.md). Kanonický inventář nyní obsahuje 88 KEEP funkcí; údaj 79 v zadání je neaktuální. Rodinná mapa kandidátních vlastníků nedokazuje individuální regresní paritu každého ID.
