@@ -28,10 +28,6 @@ export interface ReceiverStatisticsPersistenceSnapshot {
   uniqueAircraftCount: number;
   maxConcurrentAircraft: number;
   maxDistanceKm: number;
-  maxDistanceIcaoHex: string | null;
-  maxDistanceBearing: number | null;
-  maxDistanceRegistration: string | null;
-  maxDistanceAt: Date | null;
   aircraft: DailyAircraftStatisticsRecord[];
   coverage: DailyCoverageStatisticsRecord[];
 }
@@ -99,11 +95,6 @@ function normalizedHex(value: string): string {
   return value.trim().toUpperCase();
 }
 
-function timestampAsDate(value: Temporal.Instant | Date | null): Date | null {
-  if (value === null) return null;
-  return value instanceof Date ? value : new Date(value.epochMilliseconds);
-}
-
 function sortBreakdown(entries: Map<string, number>): Array<{ name: string; count: number }> {
   return [...entries.entries()]
     .map(([name, count]) => ({ name, count }))
@@ -130,10 +121,6 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
       uniqueAircraftCount: aggregate.uniqueAircraftCount,
       maxConcurrentAircraft: aggregate.maxConcurrentAircraft,
       maxDistanceKm: aggregate.maxDistanceKm,
-      maxDistanceIcaoHex: aggregate.maxDistanceIcaoHex,
-      maxDistanceBearing: aggregate.maxDistanceBearing,
-      maxDistanceRegistration: aggregate.maxDistanceRegistration,
-      maxDistanceAt: timestampAsDate(aggregate.maxDistanceAt),
       aircraft: aircraft.map((item) => ({
         icaoHex: item.icaoHex,
         aircraftType: item.aircraftType,
@@ -157,12 +144,6 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
           uniqueAircraftCount: snapshot.uniqueAircraftCount,
           maxConcurrentAircraft: snapshot.maxConcurrentAircraft,
           maxDistanceKm: snapshot.maxDistanceKm,
-          maxDistanceIcaoHex: snapshot.maxDistanceIcaoHex,
-          maxDistanceBearing: snapshot.maxDistanceBearing,
-          maxDistanceRegistration: snapshot.maxDistanceRegistration,
-          maxDistanceAt: snapshot.maxDistanceAt
-            ? Temporal.Instant.fromEpochMilliseconds(snapshot.maxDistanceAt.getTime())
-            : null,
           updatedAt,
         },
         create: {
@@ -170,12 +151,6 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
           uniqueAircraftCount: snapshot.uniqueAircraftCount,
           maxConcurrentAircraft: snapshot.maxConcurrentAircraft,
           maxDistanceKm: snapshot.maxDistanceKm,
-          maxDistanceIcaoHex: snapshot.maxDistanceIcaoHex,
-          maxDistanceBearing: snapshot.maxDistanceBearing,
-          maxDistanceRegistration: snapshot.maxDistanceRegistration,
-          maxDistanceAt: snapshot.maxDistanceAt
-            ? Temporal.Instant.fromEpochMilliseconds(snapshot.maxDistanceAt.getTime())
-            : null,
           updatedAt,
         },
       });
@@ -253,10 +228,6 @@ export class ReceiverStatistics {
   private uniqueAircraftCount = 0;
   private maxConcurrentAircraft = 0;
   private maxDistanceKm = 0;
-  private maxDistanceIcaoHex: string | null = null;
-  private maxDistanceBearing: number | null = null;
-  private maxDistanceRegistration: string | null = null;
-  private maxDistanceAt: Date | null = null;
   private version = 0;
   private aggregateDirtyVersion: number | null = null;
   private lastFlushAttemptAt = 0;
@@ -327,18 +298,7 @@ export class ReceiverStatistics {
 
       if (distanceKm > this.maxDistanceKm) {
         this.maxDistanceKm = distanceKm;
-        this.maxDistanceIcaoHex = icaoHex;
-        this.maxDistanceBearing = bearing;
-        this.maxDistanceRegistration = cleanValue(item.registration) ?? cleanValue(item.enrichment?.metadata?.registration);
-        this.maxDistanceAt = new Date(observedAt);
         this.markAggregateDirty();
-      } else if (distanceKm === this.maxDistanceKm && this.maxDistanceIcaoHex === icaoHex) {
-        const registration = cleanValue(item.registration) ?? cleanValue(item.enrichment?.metadata?.registration);
-        if (this.maxDistanceBearing !== bearing || (registration !== null && this.maxDistanceRegistration !== registration)) {
-          this.maxDistanceBearing = bearing;
-          this.maxDistanceRegistration = registration ?? this.maxDistanceRegistration;
-          this.markAggregateDirty();
-        }
       }
 
       const azimuthBucket = Math.min(COVERAGE_BUCKET_COUNT - 1, Math.floor(bearing / COVERAGE_BUCKET_SIZE_DEGREES));
@@ -467,10 +427,6 @@ export class ReceiverStatistics {
     this.uniqueAircraftCount = 0;
     this.maxConcurrentAircraft = 0;
     this.maxDistanceKm = 0;
-    this.maxDistanceIcaoHex = null;
-    this.maxDistanceBearing = null;
-    this.maxDistanceRegistration = null;
-    this.maxDistanceAt = null;
     this.aggregateDirtyVersion = null;
     this.lastFlushAttemptAt = this.clock().getTime();
     this.loaded = true;
@@ -508,17 +464,7 @@ export class ReceiverStatistics {
     this.uniqueAircraftCount = Math.max(this.uniqueAircraftCount, snapshot.uniqueAircraftCount);
     this.maxConcurrentAircraft = Math.max(this.maxConcurrentAircraft, snapshot.maxConcurrentAircraft);
     const persistedDistanceKm = plausibleReceiverDistanceKm(snapshot.maxDistanceKm);
-    if (persistedDistanceKm !== null && persistedDistanceKm > this.maxDistanceKm) {
-      this.maxDistanceKm = persistedDistanceKm;
-      this.maxDistanceIcaoHex = snapshot.maxDistanceIcaoHex;
-      this.maxDistanceBearing = snapshot.maxDistanceBearing;
-      this.maxDistanceRegistration = snapshot.maxDistanceRegistration;
-      this.maxDistanceAt = snapshot.maxDistanceAt;
-    } else if (persistedDistanceKm !== null && persistedDistanceKm === this.maxDistanceKm && this.maxDistanceIcaoHex === snapshot.maxDistanceIcaoHex) {
-      this.maxDistanceBearing ??= snapshot.maxDistanceBearing;
-      this.maxDistanceRegistration ??= snapshot.maxDistanceRegistration;
-      this.maxDistanceAt ??= snapshot.maxDistanceAt;
-    }
+    if (persistedDistanceKm !== null) this.maxDistanceKm = Math.max(this.maxDistanceKm, persistedDistanceKm);
     for (const item of snapshot.aircraft) {
       const icaoHex = normalizedHex(item.icaoHex);
       if (!icaoHex) continue;
@@ -585,10 +531,6 @@ export class ReceiverStatistics {
       uniqueAircraftCount: this.uniqueAircraftCount,
       maxConcurrentAircraft: this.maxConcurrentAircraft,
       maxDistanceKm: this.maxDistanceKm,
-      maxDistanceIcaoHex: this.maxDistanceIcaoHex,
-      maxDistanceBearing: this.maxDistanceBearing,
-      maxDistanceRegistration: this.maxDistanceRegistration,
-      maxDistanceAt: this.maxDistanceAt ? new Date(this.maxDistanceAt) : null,
       aircraft: [...this.dirtyAircraft.values()].map((item) => ({ ...item.record })),
       coverage: [...this.dirtyCoverage.values()].map((item) => ({ ...item.record })),
     };

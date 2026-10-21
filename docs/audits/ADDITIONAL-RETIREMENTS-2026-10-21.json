@@ -35,8 +35,8 @@
     {
       "id": "S05",
       "title": "Receiver distance and aircraft records",
-      "assessment": "RECEPTION_RECORDS_API_UI_AND_AGGREGATION_CONSUMER_RETIRED",
-      "action": "Removed record-only API, repository, dashboard display, old logbook matching and obsolete recap wire contracts; retained aggregate maxDistanceKm for coverage and legacy database persistence schema."
+      "assessment": "FULL_ACTIVE_S05_SOURCE_RETIRED_LEGACY_DB_COLUMNS_PRESERVED",
+      "action": "Removed records API, repository, logbook widgets and response types, and record metadata collection/persistence. Keep aggregate maxDistanceKm for S02/S03; existing nullable database columns remain as untouched legacy schema for safe migration compatibility."
     },
     {
       "id": "W07",
@@ -107,6 +107,10 @@
     {
       "path": "lib/i18n/cs.ts",
       "reason": "S08 S07 W07 stale locale blocks removed"
+    },
+    {
+      "path": "lib/server/statistics.ts",
+      "reason": "S05 removed tracking/persistence of individual reception-record metadata"
     }
   ],
   "notClaimed": "This decision file does not certify nine independent code retirements. Shared paths remain until separately verified; historical selection audit is unchanged."
