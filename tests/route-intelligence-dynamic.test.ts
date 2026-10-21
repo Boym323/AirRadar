@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeDynamicRoute,
   DYNAMIC_ROUTE_THRESHOLDS_NM,
-  matchObservedProcedure,
   type InterpretedRoute,
   type InterpretedRouteElement,
-  type ProcedureMatch,
   type RouteCoordinate,
   type RouteElementSource,
 } from "@/lib/route-intelligence";
@@ -35,11 +33,11 @@ function element(
   };
 }
 
-function route(elements: InterpretedRouteElement[], procedureMatches: ProcedureMatch[] = []): InterpretedRoute {
+function route(elements: InterpretedRouteElement[]): InterpretedRoute {
   const resolved = elements.filter((item) => item.status === "RESOLVED");
   return {
     id: "fixture-route", status: elements.every((item) => item.status === "RESOLVED") ? "RESOLVED" : "PARTIAL",
-    elements, procedureMatches, sources: elements.map((item) => item.source),
+    elements, procedureMatches: [], sources: elements.map((item) => item.source),
     coverage: {
       ats: { eligibleLegs: 0, matchedLegs: 0, percent: null },
       reconstruction: { totalElements: elements.length, resolvedElements: resolved.length, percent: elements.length ? resolved.length / elements.length * 100 : null },
@@ -48,16 +46,10 @@ function route(elements: InterpretedRouteElement[], procedureMatches: ProcedureM
   };
 }
 
-const airportProcedureMatch = (procedureId: string, type: "SID" | "STAR", airportIcao = "TEST"): ProcedureMatch => ({
-  status: "INFERRED_HIGH", selectedProcedureId: procedureId, candidateCount: 1, ambiguous: false,
-  ambiguityReason: null, confidence: 0.95, runwayCompatibility: "UNKNOWN", evidence: [],
-  candidates: [{ procedureId, airportIcao, designator: `${type}FIX`, type, transition: null, confidence: 0.95, runwayCompatibility: "UNKNOWN", evidence: [] }],
-});
-
 describe("dynamic route intelligence", () => {
   it("identifies SID phase and ordered current/next points", () => {
     const sid = element("sid-1", 1, point("RWY", 0), point("SIDFIX", 1), "PUBLISHED_SID", "SID", "sid-proc");
-    const state = analyzeDynamicRoute({ route: route([sid], [airportProcedureMatch("sid-proc", "SID")]), aircraft: { lat: 0.01, lon: 0.5, track: 90, altitude: 5_000 } });
+    const state = analyzeDynamicRoute({ route: route([sid]), aircraft: { lat: 0.01, lon: 0.5, track: 90, altitude: 5_000 } });
     expect(state.currentPhase).toBe("SID");
     expect(state.currentElement?.id).toBe("sid-1");
     expect(state.previousPoint?.id).toBe("RWY");
@@ -126,20 +118,4 @@ describe("dynamic route intelligence", () => {
     expect(analyzeDynamicRoute({ route: route([gap]), aircraft: { lat: null, lon: null, track: 90 } })).toMatchObject({ routeAdherence: "UNKNOWN", precision: "UNAVAILABLE", progressPrecision: "UNAVAILABLE" });
   });
 
-  it("requires airport context, direction, and two consecutive SID legs", () => {
-    const sid1 = element("sid-1", 1, point("R", 0), point("S1", 1), "PUBLISHED_SID", "SID", "sid-proc");
-    const sid2 = element("sid-2", 2, point("S1", 1), point("S2", 2), "PUBLISHED_SID", "SID", "sid-proc");
-    const sidRoute = route([sid1, sid2], [airportProcedureMatch("sid-proc", "SID")]);
-    expect(matchObservedProcedure({ route: sidRoute, procedureType: "SID", airportIcao: "TEST", observations: [{ lat: 0, lon: 0.8, track: 90 }, { lat: 0, lon: 1.2, track: 90 }] }).status).toBe("MATCHED");
-    expect(matchObservedProcedure({ route: sidRoute, procedureType: "SID", airportIcao: "TEST", observations: [{ lat: 0, lon: 0.8, track: 270 }, { lat: 0, lon: 1.2, track: 270 }] }).status).toBe("REJECTED");
-    expect(matchObservedProcedure({ route: sidRoute, procedureType: "SID", observations: [{ lat: 0, lon: 0.8, track: 90 }, { lat: 0, lon: 1.2, track: 90 }] }).status).toBe("UNRESOLVED");
-  });
-
-  it("does not confirm a STAR from one nearby pass or wrong airport", () => {
-    const star1 = element("star-1", 1, point("E", 0), point("S1", 1), "PUBLISHED_STAR", "STAR", "star-proc");
-    const star2 = element("star-2", 2, point("S1", 1), point("A", 2), "PUBLISHED_STAR", "STAR", "star-proc");
-    const starRoute = route([star1, star2], [airportProcedureMatch("star-proc", "STAR")]);
-    expect(matchObservedProcedure({ route: starRoute, procedureType: "STAR", airportIcao: "TEST", observations: [{ lat: 0, lon: 0.8, track: 90 }] }).status).toBe("REJECTED");
-    expect(matchObservedProcedure({ route: starRoute, procedureType: "STAR", airportIcao: "OTHER", observations: [{ lat: 0, lon: 0.8, track: 90 }, { lat: 0, lon: 1.2, track: 90 }] }).status).toBe("REJECTED");
-  });
 });

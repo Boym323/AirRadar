@@ -21,7 +21,6 @@ export const DYNAMIC_ROUTE_THRESHOLDS_NM = {
 
 export const DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG = 75;
 const MAX_FORWARD_JUMP_ELEMENTS = 1;
-const PROCEDURE_MATCH_MIN_LEGS = 2;
 
 export interface DynamicAircraftObservation {
   lat: number | null;
@@ -49,23 +48,6 @@ export interface DynamicRouteInput {
   altitude?: number | null;
   previousState?: DynamicRouteState | null;
   airportContext?: RouteAirportContext | null;
-}
-
-export interface ObservedProcedureInput {
-  route: InterpretedRoute;
-  procedureType: "SID" | "STAR";
-  observations: DynamicAircraftObservation[];
-  airportIcao?: string | null;
-}
-
-export interface ObservedProcedureMatch {
-  status: "MATCHED" | "REJECTED" | "UNRESOLVED";
-  procedureId: string | null;
-  procedureType: "SID" | "STAR";
-  consecutiveLegs: number;
-  matchedElementIds: string[];
-  confidence: "HIGH" | "MEDIUM" | null;
-  reason: string | null;
 }
 
 interface GeoSegment {
@@ -108,10 +90,6 @@ function validCoordinate(value: RouteCoordinate | null | undefined): value is Ro
     && value.lat <= 90
     && value.lon >= -180
     && value.lon <= 180;
-}
-
-function normalized(value: string | null | undefined): string {
-  return value?.trim().toUpperCase() ?? "";
 }
 
 function normalizeDegrees(value: number): number {
@@ -378,59 +356,6 @@ export function analyzeDynamicRoute(input: DynamicRouteInput): DynamicRouteState
     precision: geometryPrecision === "PARTIAL" ? "PARTIAL" : progress.precision,
     progressPrecision: progress.precision,
   };
-}
-
-function procedureElements(route: InterpretedRoute, type: "SID" | "STAR"): Array<ElementGeometry> {
-  return geometries(route).filter((geometry) => geometry.element.kind === `PUBLISHED_${type}` && geometry.element.phase === type);
-}
-
-function procedureAirportMatches(route: InterpretedRoute, type: "SID" | "STAR", airportIcao: string): boolean {
-  const matches = route.procedureMatches.filter((match) => {
-    const candidate = match.candidates.find((item) => item.procedureId === match.selectedProcedureId)
-      ?? match.candidates[0];
-    return candidate?.type === type && normalized(candidate.airportIcao) === normalized(airportIcao);
-  });
-  return matches.length > 0;
-}
-
-/**
- * Conservative observed procedure confirmation. A single pass never matches:
- * two distinct consecutive published legs, correct direction, and airport
- * context are all required.
- */
-export function matchObservedProcedure(input: ObservedProcedureInput): ObservedProcedureMatch {
-  const base: Omit<ObservedProcedureMatch, "status" | "reason"> = {
-    procedureId: null,
-    procedureType: input.procedureType,
-    consecutiveLegs: 0,
-    matchedElementIds: [],
-    confidence: null,
-  };
-  const airport = input.airportIcao?.trim() ?? "";
-  if (!airport) return { ...base, status: "UNRESOLVED", reason: "airport context is required" };
-  if (!procedureAirportMatches(input.route, input.procedureType, airport)) return { ...base, status: "REJECTED", reason: "route procedure airport context does not match" };
-  const procedure = procedureElements(input.route, input.procedureType);
-  if (procedure.length < PROCEDURE_MATCH_MIN_LEGS) return { ...base, status: "UNRESOLVED", reason: "fewer than two resolved procedure legs" };
-  const usableObservations = input.observations.filter(hasUsablePosition);
-  for (let start = 0; start <= procedure.length - PROCEDURE_MATCH_MIN_LEGS; start += 1) {
-    let nextLeg = start;
-    const matched: string[] = [];
-    for (const observation of usableObservations) {
-      const geometry = procedure[nextLeg];
-      if (!geometry) break;
-      const candidate = candidateFor({ lat: observation.lat, lon: observation.lon }, finite(observation.track) ? observation.track : null, geometry);
-      const withinLeg = candidate.alongTrackNm >= -Math.max(2, geometry.lengthNm * 0.2)
-        && candidate.alongTrackNm <= geometry.lengthNm + Math.max(2, geometry.lengthNm * 0.2);
-      if (candidate.distanceNm > DYNAMIC_ROUTE_THRESHOLDS_NM.nearRoute || !withinLeg || candidate.headingCompatible === false) break;
-      if (!matched.includes(geometry.element.id)) matched.push(geometry.element.id);
-      if (candidate.alongTrackNm > geometry.lengthNm * 0.7 && nextLeg < procedure.length - 1) nextLeg += 1;
-    }
-    if (matched.length >= PROCEDURE_MATCH_MIN_LEGS) {
-      const procedureId = matched.map((id) => input.route.elements.find((element) => element.id === id)?.source.procedureId).find(Boolean) ?? null;
-      return { ...base, status: "MATCHED", procedureId, consecutiveLegs: matched.length, matchedElementIds: matched, confidence: matched.length >= 3 ? "HIGH" : "MEDIUM", reason: null };
-    }
-  }
-  return { ...base, status: "REJECTED", reason: "ordered directional evidence did not cover two consecutive legs" };
 }
 
 export const analyzeDynamicRouteState = analyzeDynamicRoute;

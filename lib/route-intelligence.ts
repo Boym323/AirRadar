@@ -192,15 +192,12 @@ export {
   deriveDynamicRouteState,
   computeDynamicRouteState,
   analyzeRouteDynamics,
-  matchObservedProcedure,
   DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG,
   DYNAMIC_ROUTE_THRESHOLDS_NM,
 } from "./route-intelligence/dynamic";
 export type {
   DynamicAircraftObservation,
   DynamicRouteInput,
-  ObservedProcedureInput,
-  ObservedProcedureMatch,
   RouteAirportContext,
 } from "./route-intelligence/dynamic";
 
