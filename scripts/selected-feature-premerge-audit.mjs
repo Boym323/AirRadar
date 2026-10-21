@@ -71,7 +71,12 @@ if(/pollAup\s*\(|getAirspaceActivity\s*\(/.test(context)) failures.push("Retired
 if(/this\.alerts\.(?:observe|observeNewAircraft)\s*\(/.test(state)) failures.push("Retired alert rule execution in live state");
 const URL_LITERAL=/(["'\x60])(\/api\/[^"'\x60\s]*)\1/g;
 const dynamicMarker=String.fromCharCode(36,123);
-const references=[], ambiguous=[];
+const references=[], ambiguous=[], externalUpstream=[];
+const AWC_PROVIDER_SOURCES = new Set([
+  "lib/server/aviation-nav-data-provider.ts",
+  "lib/server/aviation-weather-provider.ts",
+  "lib/server/pirep-provider.ts",
+]);
 for(const {filename,source} of sources){
   URL_LITERAL.lastIndex=0;
   let m;
@@ -80,6 +85,12 @@ for(const {filename,source} of sources){
     const requested=raw.split("?")[0].split("#")[0];
     if (requested==="/api/") continue;
     const normalized=requested.replace(/\$\{[^}]+\}/g,"__DYNAMIC__");
+    // AWC /api/data/* is resolved against an explicit upstream base URL in these
+    // three providers. It is not a Next.js route and must not be removed.
+    if (AWC_PROVIDER_SOURCES.has(filename) && requested.startsWith("/api/data/")) {
+      externalUpstream.push({file:filename,url:requested});
+      continue;
+    }
     if(live.some(({rx})=>rx.test(normalized))){references.push({file:filename,url:requested});continue;}
     if(requested.includes(dynamicMarker)||requested.endsWith("/")){
       const prefix=normalized.split("__DYNAMIC__")[0];
@@ -96,7 +107,7 @@ const outcome={
   status: failures.length?"FAIL":"PASS",
   selection:{keep:keep.size,remove:remove.size,originalPerIdMappingMissing:audit.records.filter((r)=>r.reviewLevel==="GROUP_LEVEL_ONLY").length},
   inspected:{sourceFiles:sources.length,activeApis:routes.length,retiredApis:retired.length,retiredPages:audit.deletedPageEntrypoints.length},
-  activeReferences:references.length,ambiguousDynamic:ambiguous,failures,
+  activeReferences:references.length,externalUpstreamReferences:externalUpstream,ambiguousDynamic:ambiguous,failures,
   limit:"Static literals and retained runtime entrypoints checked; exact original semantics of 82 IDs and production deployment not established."
 };
 process.stdout.write(JSON.stringify(outcome,null,2)+"\n");

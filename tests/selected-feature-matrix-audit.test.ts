@@ -29,6 +29,21 @@ describe("selected-feature ID audit", () => {
     }
   });
 
+
+  it("covers every selected ID with source-backed family witnesses without claiming one-to-one semantics", () => {
+    const evidence = JSON.parse(readFileSync(new URL("docs/audits/SELECTED-FEATURE-KEEP-REMOVE-WITNESSES-2026-10-21.json", root), "utf8")) as {
+      keepItems: Array<{id:string;witnessFiles:string[];level:string}>;
+      removeItems: Array<{id:string;witnessFiles:string[];level:string}>;
+    };
+    expect(evidence.keepItems.map(x=>x.id)).toEqual(matrix.keepIds);
+    expect(evidence.removeItems.map(x=>x.id)).toEqual(matrix.removeIds);
+    for (const item of evidence.keepItems) {
+      expect(item.level).toBe("FAMILY_RUNTIME_POSITIVE_ANCHORS");
+      expect(item.witnessFiles.length).toBeGreaterThan(0);
+      for (const file of item.witnessFiles) expect(existsSync(new URL(file, root)), file).toBe(true);
+    }
+  });
+
   it("guards all explicitly retired page and API entrypoints", () => {
     expect(audit.deletedApiRoutes).toHaveLength(50);
     expect(audit.deletedPageEntrypoints).toHaveLength(21);

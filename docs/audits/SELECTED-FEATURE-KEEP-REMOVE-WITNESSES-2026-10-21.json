@@ -1,0 +1,1889 @@
+{
+  "version": 1,
+  "auditDate": "2026-10-21",
+  "purpose": "KEEP/REMOVE source witnesses (no fabricated original descriptions)",
+  "interpretation": "Every ID has a concrete preserved or retired family boundary, not a separately validated original feature implementation.",
+  "keepItems": [
+    {
+      "id": "J01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J05",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "J11",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R05",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R10",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R11",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R12",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R14",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R15",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R16",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R17",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "R18",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "H03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "H07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "H14",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "A01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "A02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "T08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "T09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "T10",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "T13",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "T14",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "W09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "L11",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "L12",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E05",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "E10",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S05",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "S09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "app/api/statistics/route.ts",
+        "app/api/system/status/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O05",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O09",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O10",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O11",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O12",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O13",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O14",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "O15",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "app/system/page.tsx",
+        "lib/server/runtime-performance.ts",
+        "app/api/system/runtime-performance/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U01",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U02",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U03",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U04",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U05",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U06",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U07",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    },
+    {
+      "id": "U08",
+      "originalIndividualName": null,
+      "level": "FAMILY_RUNTIME_POSITIVE_ANCHORS",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "app/page.tsx",
+        "app/api/search/route.ts"
+      ],
+      "disclaimer": "Independent feature semantics cannot be established without the original feature-name catalog."
+    }
+  ],
+  "removeItems": [
+    {
+      "id": "J10",
+      "recoveredTitle": "Demo provoz se simulovanými letadly",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/providers.ts",
+        "lib/server/aircraft-state.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "R13",
+      "recoveredTitle": "Poloha přijímače, kružnice dosahu a měřítko",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "components/airradar-app.tsx",
+        "lib/radar/airspace-geojson.ts",
+        "app/api/stream/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H01",
+      "recoveredTitle": "Samostatný detail letadla",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H02",
+      "recoveredTitle": "Katalog a automatické doplňování metadat",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H04",
+      "recoveredTitle": "Letový plán, volací znak a letiště OD/DO",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H05",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H06",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H08",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H09",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H10",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H11",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H12",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "H13",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/aircraft/[hex]/page.tsx",
+        "app/api/history/[hex]/route.ts",
+        "lib/server/history.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A03",
+      "recoveredTitle": "Airport Live Board",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A04",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A05",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A06",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A07",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A08",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A09",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A10",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A11",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "A12",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/airports/page.tsx",
+        "app/airports/[icao]/page.tsx",
+        "app/api/airports/[icao]/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T01",
+      "recoveredTitle": "ATC sektory včetně geometrie a výškových hranic",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T02",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T03",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T04",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T05",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T06",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T07",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T11",
+      "recoveredTitle": "SID/STAR postupy a importer",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "T12",
+      "recoveredTitle": "Plánované AUP/UUP vzdušného prostoru",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/api/atc/sectors/route.ts",
+        "app/api/ats/routes/route.ts",
+        "app/api/navigation/data/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "W05",
+      "recoveredTitle": "Model větru ICON-EU v různých letových hladinách",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "W10",
+      "recoveredTitle": "Aviation Weather Fusion",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "W11",
+      "recoveredTitle": "Weather Avoidance klasifikace",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "W12",
+      "recoveredTitle": "Počasí na trase a letištích odletu/příletu",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "W13",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "W14",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "app/weather/page.tsx",
+        "app/api/weather/metar-map/route.ts",
+        "app/api/weather/sigmet/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P01",
+      "recoveredTitle": "Flight Intelligence – automatické události letu",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P02",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P03",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P04",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P05",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P06",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P07",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P08",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P09",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P10",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P11",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P12",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P13",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P14",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "P15",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D01",
+      "recoveredTitle": "Digital Twin – základní projekce letu na 30 minut",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D02",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D03",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D04",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D05",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D06",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D07",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D08",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D09",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D10",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D11",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D12",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D13",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D14",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D15",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D16",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D17",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D18",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D19",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D20",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D21",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D22",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "D23",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L01",
+      "recoveredTitle": "Watchlist",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L02",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L03",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L04",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L05",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L06",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L07",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L08",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L09",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L10",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L13",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L14",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "L15",
+      "recoveredTitle": null,
+      "titleProvenance": "unavailable",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/alert-delivery-worker.ts",
+        "app/api/push/subscribe/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    },
+    {
+      "id": "E08",
+      "recoveredTitle": "ACARS H1/FPN waypointy a mapová vrstva",
+      "titleProvenance": "original user inventory or phase reduction notes",
+      "level": "GROUP_RUNTIME_RETIREMENT_BOUNDARY",
+      "witnessFiles": [
+        "lib/server/enrichment-cache.ts",
+        "app/api/aircraft/[hex]/communications/route.ts"
+      ],
+      "originalPerIdImplementationVerified": false
+    }
+  ],
+  "originalTitleCount": 17,
+  "remainingWithoutOriginalTitle": 73,
+  "knownSharedDependencyConflicts": [
+    "H01 retained aircraft detail is also required by H03/H07/H14",
+    "H02 identity/enrichment used by retained E integrations",
+    "H04 OD/DO context may be required by retained R11 ATS route",
+    "T01 sector geometry is retained for R17"
+  ]
+}
