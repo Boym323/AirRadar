@@ -37,6 +37,8 @@ jobs:
           cp native/airradar-native/target/release/libairradar_native.so /tmp/airradar_native.node
       - name: Install JavaScript dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Generate Prisma contract for ATC integration tests
+        run: npm run prisma:generate
       - name: TypeScript and Rust differential parity
         env:
           AIRRADAR_NATIVE_BEAST: '1'
