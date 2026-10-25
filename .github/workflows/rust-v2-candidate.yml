@@ -27,3 +27,53 @@ jobs:
         run: node --test tests/rust-v2-shadow-compare.test.mjs
       - name: Test Rust V2 to V1 candidate mapping
         run: npx vitest run tests/rust-v2-candidate.test.ts
+
+  live-public-shadow:
+    name: Existing public V1 ↔ Rust V2 API parity (read-only)
+    needs: shadow-contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare independently hosted public radar APIs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          echo '## V1 ↔ Rust V2 live API parity (read-only)' >> "$GITHUB_STEP_SUMMARY"
+          # One bounded GET per radar and sample; absolutely no DB access,
+          # operator credentials, API writes or special diagnostic headers.
+          success=0
+          overlap=0
+          for sample in 1 2 3; do
+            echo "Sample $sample of 3"
+            if node scripts/rust-v2-shadow-compare.mjs \
+              'https://airradar.pomykal.cz/api/aircraft' \
+              'https://airradarv2.pomykal.cz/api/v1/aircraft' > "$RUNNER_TEMP/shadow.json"; then
+              cat "$RUNNER_TEMP/shadow.json"
+              node --input-type=module -e '
+                import { readFileSync, appendFileSync } from "node:fs";
+                const r = JSON.parse(readFileSync(process.argv[1], "utf8"));
+                appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+                  `Sample: common=${r.common}, matchingPositions=${r.positionPairs}, p95Km=${r.positionP95Km ?? "N/A"}, assessment=${r.assessment}\\n\\n`);
+              ' "$RUNNER_TEMP/shadow.json"
+              success=$((success+1))
+              if node -e 'const r=JSON.parse(require("node:fs").readFileSync(process.argv[1]));process.exit(r.positionPairs>0?0:1)' "$RUNNER_TEMP/shadow.json"; then
+                overlap=$((overlap+1))
+              fi
+            else
+              echo "Sample $sample failed (public API unavailable or invalid)"
+              echo "Sample $sample unavailable or invalid" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            if [ "$sample" -lt 3 ]; then sleep 4; fi
+          done
+          echo "Successful samples: $success/3, with positional overlap: $overlap/3" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$success" -eq 0 ]; then
+            echo '::error::No public V1/V2 API pair could be fetched and validated.'
+            exit 1
+          fi
+          if [ "$overlap" -eq 0 ]; then
+            echo '::warning::API snapshots obtained but no simultaneously comparable positions; not parity evidence.'
+          fi
