@@ -57,6 +57,42 @@ jobs:
             echo "$target: curl_exit=$result http_status=$status" >> "$GITHUB_STEP_SUMMARY"
           done
           exit 0
+      - name: Inspect public JSON contract shape (no aircraft identities)
+        run: |
+          node --input-type=module <<'NODE'
+          const urls = [
+            ["V1", "https://airradar.pomykal.cz/api/aircraft?coverage=local"],
+            ["V2", "https://airradarv2.pomykal.cz/api/v1/aircraft"],
+          ];
+          for (const [label, url] of urls) {
+            try {
+              const response = await fetch(url, { signal: AbortSignal.timeout(6000), redirect: "error" });
+              const value = await response.json();
+              const data = value && typeof value === "object" ? value.data : null;
+              const generated = typeof data?.generatedAt === "string" ? Date.parse(data.generatedAt) : NaN;
+              const report = {
+                statusCode: response.status,
+                contentType: response.headers.get("content-type")?.split(";")[0] ?? null,
+                outerArray: Array.isArray(value?.aircraft),
+                outerCount: Array.isArray(value?.aircraft) ? value.aircraft.length : null,
+                online: typeof value?.sourceOnline === "boolean" ? value.sourceOnline : null,
+                status: typeof value?.status === "string" ? value.status : null,
+                dataObject: data !== null && typeof data === "object" && !Array.isArray(data),
+                kind: typeof data?.kind === "string" ? data.kind : null,
+                dataCount: Array.isArray(data?.aircraft) ? data.aircraft.length : null,
+                ageSec: Number.isFinite(generated) ? Number(((Date.now()-generated)/1000).toFixed(1)) : null,
+                sampleIdentity: label === "V1" && value?.aircraft?.length > 0
+                  ? { validHex: typeof value.aircraft[0]?.icaoHex === "string", validTimestamp: Number.isFinite(Date.parse(value.aircraft[0]?.lastSeen)) }
+                  : label === "V2" && data?.aircraft?.length > 0
+                  ? { validId: typeof data.aircraft[0]?.id === "string", validTimestamp: Number.isFinite(data.aircraft[0]?.lastMessageAt) }
+                  : null,
+              };
+              console.log(label, JSON.stringify(report));
+            } catch {
+              console.log(label, "JSON retrieval or validation failed");
+            }
+          }
+          NODE
       - name: Compare independently hosted public radar APIs
         shell: bash
         run: |
