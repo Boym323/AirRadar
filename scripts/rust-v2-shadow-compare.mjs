@@ -76,13 +76,14 @@ export function snapshotsForComparison(v1, v2) {
     const seen = Number(row?.lastMessageAt) * 1000;
     if (!id || !Number.isFinite(seen) || typeof row?.stale !== "boolean") { counts.v2Invalid++; continue; }
     const age = (rustGeneratedAt - seen) / 1000;
-    if (age > RECENT_S || age < -5 || row.stale) { counts.v2Old++; continue; }
+    // V2 stale means position stale, NOT message stale. Keep fresh identities.
+    if (age > RECENT_S || age < -5) { counts.v2Old++; continue; }
     if (current.v2.has(id)) fail("Duplicate Rust identifier");
     const p = object(row.position);
     const posAt = row.lastPositionAt;
     const posAge = typeof posAt === "number" && Number.isFinite(posAt)
       ? (rustGeneratedAt / 1000 - posAt) : Number.POSITIVE_INFINITY;
-    const position = p && posAge >= -2 && posAge <= POSITION_S
+    const position = !row.stale && p && posAge >= -2 && posAge <= POSITION_S
       && row.positionOrigin !== "estimated" && row.positionOrigin !== "unknown"
       ? boundedPosition(p.lat, p.lon) : null;
     current.v2.set(id, { seen, position });
