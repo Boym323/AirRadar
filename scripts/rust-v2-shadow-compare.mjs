@@ -10,6 +10,8 @@ import { resolve } from "node:path";
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_TRACKS = 10000;
 const RECENT_S = 30;
+const POSITION_S = 15;
+const MAX_SNAPSHOT_AGE_MS = 30_000;
 const PAIR_DRIFT_S = 15;
 const DEG = Math.PI / 180;
 
@@ -43,7 +45,9 @@ export function snapshotsForComparison(v1, v2) {
     fail("Invalid, oversized or unavailable radar snapshot");
   }
   const rustGeneratedAt = Date.parse(rust.generatedAt);
-  if (!Number.isFinite(rustGeneratedAt)) fail("Rust snapshot timestamp invalid");
+  if (!Number.isFinite(rustGeneratedAt) || Math.abs(Date.now() - rustGeneratedAt) > MAX_SNAPSHOT_AGE_MS) {
+    fail("Rust snapshot timestamp missing or stale");
+  }
   const current = { v1: new Map(), v2: new Map() };
   const counts = { v1Invalid: 0, v2Invalid: 0, v1Old: 0, v2Old: 0 };
   for (const row of left.aircraft) {
@@ -54,7 +58,10 @@ export function snapshotsForComparison(v1, v2) {
     if (age > RECENT_S || age < -5) { counts.v1Old++; continue; }
     if (row.origin === "adsblol" || row.origin === "adsbhub") continue;
     if (current.v1.has(id)) fail("Duplicate V1 identifier");
-    current.v1.set(id, { seen, position: boundedPosition(row.lat, row.lon) });
+    const positionAge = row.seenPosSeconds;
+    const position = typeof positionAge === "number" && Number.isFinite(positionAge)
+      && (positionAge < 0 || positionAge > POSITION_S) ? null : boundedPosition(row.lat, row.lon);
+    current.v1.set(id, { seen, position });
   }
   for (const row of rust.aircraft) {
     const id = normalizeId(row?.id);
@@ -64,7 +71,13 @@ export function snapshotsForComparison(v1, v2) {
     if (age > RECENT_S || age < -5 || row.stale) { counts.v2Old++; continue; }
     if (current.v2.has(id)) fail("Duplicate Rust identifier");
     const p = object(row.position);
-    current.v2.set(id, { seen, position: p ? boundedPosition(p.lat, p.lon) : null });
+    const posAt = row.lastPositionAt;
+    const posAge = typeof posAt === "number" && Number.isFinite(posAt)
+      ? (rustGeneratedAt / 1000 - posAt) : Number.POSITIVE_INFINITY;
+    const position = p && posAge >= -2 && posAge <= POSITION_S
+      && row.positionOrigin !== "estimated" && row.positionOrigin !== "unknown"
+      ? boundedPosition(p.lat, p.lon) : null;
+    current.v2.set(id, { seen, position });
   }
   return { current, counts, rustGeneratedAt };
 }
