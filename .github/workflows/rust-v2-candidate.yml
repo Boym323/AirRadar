@@ -1,0 +1,29 @@
+name: Rust V2 Candidate Compatibility
+on:
+  pull_request:
+    paths:
+      - 'lib/server/rust-v2-candidate.ts'
+      - 'scripts/rust-v2-shadow-compare.mjs'
+      - 'tests/rust-v2-candidate.test.ts'
+      - 'tests/rust-v2-shadow-compare.test.mjs'
+      - '.github/workflows/rust-v2-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Test read-only HTTP and aggregate comparison
+        run: node --test tests/rust-v2-shadow-compare.test.mjs
+      - name: Test Rust V2 to V1 candidate mapping
+        run: npx vitest run tests/rust-v2-candidate.test.ts
