@@ -31,11 +31,14 @@ export function matchAtcRing(point: LonLat, ring: LonLat[]): "inside" | "boundar
   const fallback = () => pointInPolygon(point, [ring]);
   if (!nativeMatch || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return fallback();
   // Generic mutable inputs must not reuse stale bytes if their coordinates change.
-  const frozen = Object.isFrozen(ring) && ring.every((vertex) => Object.isFrozen(vertex));
-  let packed = frozen ? encodedRings.get(ring) : undefined;
+  // Fast cache hit performs no per-vertex frozen check: the check is
+  // required only when first packing a ring.
+  const containerFrozen = Object.isFrozen(ring);
+  let packed = containerFrozen ? encodedRings.get(ring) : undefined;
   if (packed === undefined) {
+    const immutable = containerFrozen && ring.every((vertex) => Object.isFrozen(vertex));
     packed = encodeRing(ring);
-    if (frozen) encodedRings.set(ring, packed);
+    if (immutable) encodedRings.set(ring, packed);
   }
   if (packed === null) return fallback();
   try {
