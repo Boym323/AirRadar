@@ -61,7 +61,9 @@ export function snapshotsForComparison(v1, v2) {
     const positionAge = row.seenPosSeconds;
     const position = typeof positionAge === "number" && Number.isFinite(positionAge)
       && (positionAge < 0 || positionAge > POSITION_S) ? null : boundedPosition(row.lat, row.lon);
-    current.v1.set(id, { seen, position });
+    const source = ["ADS-B", "MLAT", "TIS-B", "Mode-S", "UNKNOWN"].includes(row.source)
+      ? row.source : "OTHER";
+    current.v1.set(id, { seen, position, source });
   }
   for (const row of rust.aircraft) {
     const id = normalizeId(row?.id);
@@ -86,9 +88,25 @@ export function compareRadarSnapshots(v1, v2) {
   const { current, counts, rustGeneratedAt } = snapshotsForComparison(v1, v2);
   let common = 0, timed = 0, positionPairs = 0, outliers5km = 0, v1Only = 0, v2Only = 0, missingPositions = 0;
   const distances = [];
+  const missingFromRust = {
+    seenUnder5s: 0, seen5to15s: 0, seen15to30s: 0,
+    adsb: 0, mlat: 0, tisb: 0, modeS: 0, unknownOrOther: 0,
+  };
   for (const [id, a] of current.v1) {
     const b = current.v2.get(id);
-    if (!b) { v1Only++; continue; }
+    if (!b) {
+      v1Only++;
+      const age = (Date.now() - a.seen) / 1000;
+      if (age < 5) missingFromRust.seenUnder5s++;
+      else if (age < 15) missingFromRust.seen5to15s++;
+      else missingFromRust.seen15to30s++;
+      if (a.source === "ADS-B") missingFromRust.adsb++;
+      else if (a.source === "MLAT") missingFromRust.mlat++;
+      else if (a.source === "TIS-B") missingFromRust.tisb++;
+      else if (a.source === "Mode-S") missingFromRust.modeS++;
+      else missingFromRust.unknownOrOther++;
+      continue;
+    }
     common++;
     if (Math.abs(a.seen - b.seen) > PAIR_DRIFT_S * 1000) continue;
     timed++;
@@ -104,7 +122,7 @@ export function compareRadarSnapshots(v1, v2) {
     mode: "READ_ONLY_RUST_SHADOW",
     assessment: common > 0 && timed > 0 && positionPairs > 0 ? "MEASURED_NOT_ACCEPTED" : "INSUFFICIENT_OVERLAP",
     v1Current: current.v1.size, rustCurrent: current.v2.size, common,
-    v1Only, rustOnly: v2Only, comparableTime: timed, positionPairs, missingPositions,
+    v1Only, rustOnly: v2Only, missingFromRust, comparableTime: timed, positionPairs, missingPositions,
     positionOutliersOver5Km: outliers5km,
     positionP95Km: p95 === null ? null : Number(p95.toFixed(3)),
     rustSnapshotAgeSeconds: Number(((Date.now() - rustGeneratedAt) / 1000).toFixed(1)),
