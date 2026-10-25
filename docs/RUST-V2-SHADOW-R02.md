@@ -60,3 +60,27 @@ classes and receiver health before proposing actual cutover.
 
 This PR provides a working test and measurement foundation; it **does not**
 claim a complete Rust rewrite or an already measured CPU reduction.
+
+## Živý výsledek 25. 10. 2026 — DF18/DF11 a opravená stale semantika
+
+**Oprava měřicího nástroje:** Rust V2 `stale=true` označuje neaktuální
+**polohu**, nikoli neaktuální příjem letadla. Původní shadow implementace
+vyřazovala i čerstvě slyšená letadla bez polohy, a tím nadhodnocovala
+V1-only rozdíl. `rustV2ToV1Candidate()` teď zachovává čerstvý identifikátor,
+ale přiděluje souřadnice jen při validované čerstvé poloze.
+
+- V2 `main` `de282bf5` přidal ověřené DF18 CF0/1, výsledek původního
+  srovnání ještě obsahoval chybný filtr `stale`.
+- Po opravě filtru V1/Rust bylo V1-only už jen 3/5/5 (většinou DF11 bez
+  polohy), nikoli dříve hlášených 10–16.
+- V2 `main` `931cdffe` přidal CRC24/PI validovaný a dvojitě potvrzený DF11;
+  [DEV nasazení PASS](https://github.com/Boym323/AirRadarV2/actions/runs/40235165530).
+- [Opakovaný živý parity test po DF11](https://github.com/Boym323/AirRadar/actions/runs/40234262802):
+  V1 39/39/39, Rust 40/40/40, shodných 38/38/38,
+  pouze V1 1/1/1 a pouze Rust 2/2/2. Rozdíl P95 polohy
+  0,774/1,029/0,250 km; bez outlieru přes 5 km.
+- Tyto časově oddělené tři snímky nejsou úplný dlouhodobý soak,
+  CPU/RAM benchmark ani schválení provozního přepnutí.
+
+V1 PR #1108 zůstává samostatný **read-only nástroj a nepřipojený kandidátní
+adaptér**. Na V1 `main` ani do jeho DB nic nepíše.
