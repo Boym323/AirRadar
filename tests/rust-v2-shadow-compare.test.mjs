@@ -19,6 +19,14 @@ describe("manual read-only Rust V2 shadow comparator", () => {
     assert.equal(JSON.stringify(report).includes(id), false);
     assert.equal(JSON.stringify(report).includes("49.90"), false);
   });
+  it("classifies absent targets using safe DF/readsb buckets without identities", () => {
+    const v1 = { aircraft: [{ ...baseV1.aircraft[0], icaoHex: "123456", source: "ADS-B", sourceType: "adsb_icao" }] };
+    const r = compareRadarSnapshots(v1, baseV2);
+    assert.equal(r.v1Only, 1);
+    assert.equal(r.missingFromRust.readsbAdsb, 1);
+    assert.equal(r.missingFromRust.withPosition, 1);
+    assert.equal(JSON.stringify(r).includes("123456"), false);
+  });
   it("counts divergence while avoiding misleading comparison of unsynchronized positions", () => {
     const changed = structuredClone(baseV2);
     changed.data.aircraft[0].lastMessageAt = (now - 20000)/1000;
