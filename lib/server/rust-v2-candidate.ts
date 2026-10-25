@@ -74,7 +74,8 @@ export function rustV2ToV1Candidate(
       throw new Error("Invalid Rust V2 observation");
     }
     const seen = Math.max(0, generatedSeconds - messageAt);
-    if (seen > MAX_MESSAGE_AGE_S || row.stale) continue;
+    // In Rust V2, stale applies to position freshness, not aircraft identity.
+    if (seen > MAX_MESSAGE_AGE_S) continue;
     const telemetry = object(row.telemetry) ?? {};
     const callsign = optionalText(row.callsign, /^[A-Za-z0-9-]{1,8}$/);
     const squawk = optionalText(row.squawk, SQUAWK);
@@ -88,7 +89,7 @@ export function rustV2ToV1Candidate(
     const lon = position === null ? null : validNumber(position.lon, -180, 180);
     if (position !== null && (lat === null || lon === null)) throw new Error("Invalid Rust V2 coordinates");
     const positionAge = posAt === null ? null : generatedSeconds - posAt;
-    const usablePosition = lat !== null && lon !== null && positionAge !== null
+    const usablePosition = !row.stale && lat !== null && lon !== null && positionAge !== null
       && positionAge >= -2 && positionAge <= MAX_POSITION_AGE_S
       && row.positionOrigin !== "estimated" && row.positionOrigin !== "unknown";
     const type = row.positionOrigin === "mlat" ? "mlat"
