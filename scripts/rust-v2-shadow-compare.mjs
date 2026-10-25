@@ -63,7 +63,13 @@ export function snapshotsForComparison(v1, v2) {
       && (positionAge < 0 || positionAge > POSITION_S) ? null : boundedPosition(row.lat, row.lon);
     const source = ["ADS-B", "MLAT", "TIS-B", "Mode-S", "UNKNOWN"].includes(row.source)
       ? row.source : "OTHER";
-    current.v1.set(id, { seen, position, source });
+    const rawType = typeof row.sourceType === "string" ? row.sourceType.toLowerCase() : "";
+    const sourceType = /^df(0|4|5|11|16|17|18|20|21)$/.test(rawType) ? rawType
+      : rawType === "adsb_icao" || rawType === "adsb_icao_nt" || rawType === "adsb_other"
+        ? "readsb_adsb"
+      : rawType === "mode_s" || rawType === "mode-s" ? "mode_s"
+      : "other";
+    current.v1.set(id, { seen, position, source, sourceType });
   }
   for (const row of rust.aircraft) {
     const id = normalizeId(row?.id);
@@ -91,6 +97,8 @@ export function compareRadarSnapshots(v1, v2) {
   const missingFromRust = {
     seenUnder5s: 0, seen5to15s: 0, seen15to30s: 0,
     adsb: 0, mlat: 0, tisb: 0, modeS: 0, unknownOrOther: 0,
+    readsbAdsb: 0, df17: 0, df18: 0, df11: 0, otherDf: 0,
+    otherType: 0, withPosition: 0, withoutPosition: 0,
   };
   for (const [id, a] of current.v1) {
     const b = current.v2.get(id);
@@ -105,6 +113,14 @@ export function compareRadarSnapshots(v1, v2) {
       else if (a.source === "TIS-B") missingFromRust.tisb++;
       else if (a.source === "Mode-S") missingFromRust.modeS++;
       else missingFromRust.unknownOrOther++;
+      if (a.sourceType === "readsb_adsb") missingFromRust.readsbAdsb++;
+      else if (a.sourceType === "df17") missingFromRust.df17++;
+      else if (a.sourceType === "df18") missingFromRust.df18++;
+      else if (a.sourceType === "df11") missingFromRust.df11++;
+      else if (a.sourceType.startsWith("df")) missingFromRust.otherDf++;
+      else missingFromRust.otherType++;
+      if (a.position) missingFromRust.withPosition++;
+      else missingFromRust.withoutPosition++;
       continue;
     }
     common++;
