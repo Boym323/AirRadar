@@ -38,6 +38,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Probe exact HTTPS API statuses (no response bodies)
+        shell: bash
+        run: |
+          set +e
+          for target in V1 V2; do
+            if [ "$target" = V1 ]; then
+              url='https://airradar.pomykal.cz/api/aircraft?coverage=local'
+            else
+              url='https://airradarv2.pomykal.cz/api/v1/aircraft'
+            fi
+            # Do not log response bodies, private headers, DNS resolutions or cookies.
+            status="$(curl --silent --show-error --output /dev/null \
+              --max-time 8 --max-filesize 8388608 \
+              --write-out '%{http_code}' "$url")"
+            result=$?
+            echo "$target: curl_exit=$result http_status=$status"
+            echo "$target: curl_exit=$result http_status=$status" >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit 0
       - name: Compare independently hosted public radar APIs
         shell: bash
         run: |
