@@ -93,6 +93,26 @@ jobs:
             }
           }
           NODE
+      - name: Verify anonymous Rust ingest diagnostics
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch('https://airradarv2.pomykal.cz/api/v1/ingest-status', {
+            method: 'GET', redirect: 'error', signal: AbortSignal.timeout(8000),
+          });
+          if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+            throw new Error('Rust public ingest diagnostics HTTP/content-type invalid');
+          }
+          const body = await response.json();
+          const allowed = ['mode', 'stage', 'jsonConfigured', 'beastConfigured', 'jsonHealthy',
+            'jsonLastOkAgeSeconds', 'jsonLastErrorAgeSeconds', 'beastConnected',
+            'beastLastFrameAgeSeconds', 'ingestTickAgeSeconds', 'aircraftCount'];
+          if (body.mode !== 'read_only' || !allowed.every(k => Object.hasOwn(body, k))
+              || Object.keys(body).some(k => !allowed.includes(k))) {
+            throw new Error('Unsafe or incomplete Rust public ingest status');
+          }
+          console.log('V2 sanitized ingest:', JSON.stringify(body));
+          NODE
       - name: Compare independently hosted public radar APIs
         shell: bash
         run: |
