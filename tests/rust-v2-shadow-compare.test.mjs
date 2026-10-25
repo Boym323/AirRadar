@@ -43,6 +43,16 @@ describe("manual read-only Rust V2 shadow comparator", () => {
     assert.equal(report.positionPairs, 0);
     assert.equal(report.missingPositions, 1);
   });
+  it("retains fresh Rust identity when only position is stale", () => {
+    const rust = structuredClone(baseV2);
+    rust.data.aircraft[0].stale = true;
+    const result = compareRadarSnapshots(baseV1, rust);
+    assert.equal(result.common, 1);
+    assert.equal(result.v1Only, 0);
+    assert.equal(result.rustOnly, 0);
+    assert.equal(result.positionPairs, 0);
+    assert.equal(result.missingPositions, 1);
+  });
   it("refuses a stale engine snapshot even if individual aircraft timestamps look recent", () => {
     const stale = structuredClone(baseV2);
     stale.data.generatedAt = new Date(now - 60_000).toISOString();
