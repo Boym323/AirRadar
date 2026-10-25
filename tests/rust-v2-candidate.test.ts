@@ -37,6 +37,16 @@ describe("AirRadar V2 Rust candidate adapter (not wired into V1 runtime)", () =>
     ]), receiver, now);
     expect(result.aircraft.map(x => [x.lat, x.lon, x.trail.length])).toEqual([[null, null, 0], [null, null, 0]]);
   });
+  it("keeps recently received Rust aircraft whose location is stale", () => {
+    const result = rustV2ToV1Candidate(frame([{
+      ...craft, stale: true, lastPositionAt: 1792540799,
+    }]), receiver, now);
+    expect(result.aircraft).toHaveLength(1);
+    expect(result.aircraft[0]).toMatchObject({
+      icaoHex: "ABC123", lat: null, lon: null, lastSeen: now.toISOString(),
+    });
+    expect(result.aircraft[0].trail).toHaveLength(0);
+  });
   it("refuses non-live, old, duplicate, malformed and oversized state", () => {
     expect(() => rustV2ToV1Candidate({ ...frame(), status: "waiting_for_observations" }, receiver, now)).toThrow();
     expect(() => rustV2ToV1Candidate(frame(), receiver, new Date(now.getTime() + 31_000))).toThrow();
