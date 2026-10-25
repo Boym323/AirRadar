@@ -192,6 +192,66 @@ fn crc24(data: &[u8]) -> u32 {
     crc ^ parity
 }
 
+
+// V1 Rust migration R-01: geometry hot path for a single prepared ATC ring.
+// Flat little-endian f64 [lon, lat] pairs avoid per-vertex N-API crossings.
+// Return 0=outside, 1=inside, 2=boundary, -1=invalid (TS fallback).
+// Mirrors lib/atc-context/geometry.ts ringContains, including 1e-9 tolerance.
+fn ring_contains_f64(packed: &[u8], x: f64, y: f64) -> i32 {
+    if !x.is_finite() || !y.is_finite() || packed.len() % 16 != 0 {
+        return -1;
+    }
+    let n = packed.len() / 16;
+    if n == 0 {
+        return 0;
+    }
+    // Validate before returning a match: malformed input cannot be accepted
+    // solely because an earlier edge happened to contain the query point.
+    for vertex in packed.chunks_exact(16) {
+        let lon = f64::from_le_bytes(vertex[0..8].try_into().unwrap());
+        let lat = f64::from_le_bytes(vertex[8..16].try_into().unwrap());
+        if !lon.is_finite() || !lat.is_finite() {
+            return -1;
+        }
+    }
+    let point = |i: usize| -> (f64, f64) {
+        let offset = i * 16;
+        (
+            f64::from_le_bytes(packed[offset..offset + 8].try_into().unwrap()),
+            f64::from_le_bytes(packed[offset + 8..offset + 16].try_into().unwrap()),
+        )
+    };
+    let mut inside = false;
+    let mut previous = n - 1;
+    let epsilon = 1e-9_f64;
+    for i in 0..n {
+        let (ax, ay) = point(previous);
+        let (bx, by) = point(i);
+        let min_y = ay.min(by);
+        let max_y = ay.max(by);
+        if y >= min_y - epsilon && y <= max_y + epsilon {
+            let cross = (y - ay) * (bx - ax) - (x - ax) * (by - ay);
+            if cross.abs() < epsilon {
+                let min_x = ax.min(bx);
+                let max_x = ax.max(bx);
+                if x >= min_x - epsilon && x <= max_x + epsilon {
+                    return 2;
+                }
+            }
+        }
+        if (by > y) != (ay > y) && x < ((ax - bx) * (y - by)) / (ay - by) + bx {
+            inside = !inside;
+        }
+        previous = i;
+    }
+    if inside { 1 } else { 0 }
+}
+
+#[napi(js_name = "atcRingContains")]
+pub fn atc_ring_contains(packed: Buffer, longitude: f64, latitude: f64) -> i32 {
+    ring_contains_f64(&packed, longitude, latitude)
+}
+
 #[napi(js_name = "NativeBeastParser")]
 pub struct NativeBeastParser {
     parser: Parser,
@@ -240,6 +300,25 @@ mod tests {
             }
         }
         output
+    }
+
+
+    #[test]
+    fn atc_rust_geometry_matches_boundary_inside_outside() {
+        let mut polygon = Vec::new();
+        for (x, y) in [(14.0_f64, 50.0_f64), (15.0, 50.0), (15.0, 51.0), (14.0, 51.0), (14.0, 50.0)] {
+            polygon.extend_from_slice(&x.to_le_bytes());
+            polygon.extend_from_slice(&y.to_le_bytes());
+        }
+        assert_eq!(ring_contains_f64(&polygon, 14.5, 50.5), 1);
+        assert_eq!(ring_contains_f64(&polygon, 14.0, 50.5), 2);
+        assert_eq!(ring_contains_f64(&polygon, 14.0, 50.0), 2);
+        assert_eq!(ring_contains_f64(&polygon, 16.0, 50.5), 0);
+        assert_eq!(ring_contains_f64(&polygon[..polygon.len() - 1], 14.5, 50.5), -1);
+        assert_eq!(ring_contains_f64(&polygon, f64::NAN, 50.5), -1);
+        let mut invalid = polygon;
+        invalid[0..8].copy_from_slice(&f64::NAN.to_le_bytes());
+        assert_eq!(ring_contains_f64(&invalid, 14.5, 50.5), -1);
     }
 
     #[test]

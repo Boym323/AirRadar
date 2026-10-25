@@ -15,6 +15,8 @@ export interface NativeBeastParser {
 interface NativeBeastBindings {
   NativeBeastParser: new (maxBufferedBytes?: number) => NativeBeastParser;
   modeSCrc(payload: Buffer): number;
+  /** Optional in new addon builds; old BEAST-only addons remain compatible. */
+  atcRingContains?: (packed: Buffer, longitude: number, latitude: number) => number;
 }
 
 export interface NativeAccelerationStatus {

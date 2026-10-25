@@ -97,3 +97,32 @@ medians were TS framing/native CRC 30.63 ms, Rust framing/native CRC
 28.03 ms, Rust framing+inline CRC 28.73 ms. Inline CRC remained about
 2.5% slower than the separate native CRC and is deliberately not a default.
 No live ingest, memory trend, or event-loop P99 change is claimed.
+
+## R-01: opt-in Rust ATC geometry (AirRadar V1)
+
+The existing addon now exposes `atcRingContains` for the hot-path single-ring
+ATC containment predicate in `lib/atc-context/engine.ts`. It matches the
+reference `ringContains` algorithm, including boundary tolerance; vertical
+limits, ATC dataset versioning, validity and public assignment formats remain
+in TypeScript. The addon is **not** a full Rust ADS-B state owner.
+
+Enable **only after native parity CI passes**, on an isolated DEV environment:
+
+```dotenv
+AIRRADAR_NATIVE_BEAST=1
+AIRRADAR_NATIVE_ATC=1
+AIRRADAR_NATIVE_ADDON_PATH=/absolute/path/to/airradar_native.node
+```
+
+Default `AIRRADAR_NATIVE_ATC` is off. If the symbol is missing, inputs are
+malformed/oversized, or native call fails, the JavaScript reference is used.
+Frozen immutable prepared rings have a weakly cached packed representation;
+mutable test inputs are never cached. No additional receiver connection or
+PostgreSQL writes are introduced.
+
+Tests: `cargo test --manifest-path native/airradar-native/Cargo.toml --lib`,
+regular TypeScript geometry/ATC tests, and Rust native parity CI with
+`tests/atc-native-parity.test.ts` plus `tests/atc-context-engine.test.ts`.
+Before enabling in production, run matched real-world ATC matching CPU, Node
+event-loop p95/p99, RSS and T58 benchmarks; N-API crossing or initial packing
+may outweigh savings. Keep this flag OFF on regression.

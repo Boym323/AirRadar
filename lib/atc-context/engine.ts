@@ -7,7 +7,8 @@ import { onAtcDataCacheInvalidated } from "@/lib/server/atc-data";
 import { getAtcDataSnapshot } from "@/lib/server/providers";
 import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 import type { Aircraft } from "@/lib/aircraft/types";
-import { angleDifference, bbox, bboxAsync, bboxContains, bearing, distanceNm, distanceToSegmentNm, pointInPolygon } from "./geometry";
+import { angleDifference, bbox, bboxAsync, bboxContains, bearing, distanceNm, distanceToSegmentNm } from "./geometry";
+import { matchAtcRing } from "@/lib/server/atc-native-geometry";
 import type { AtcContextDataset, AtcContextInput, AtcContextLookupDiagnostics, AtcContextResult, AtsRouteMatch, ContextAirspace, ContextConfidence, ContextPoint, PreparedAtcContextDataset, PreparedAtcSectorDataset, VerticalMatch } from "./types";
 
 const SUPPORTED = new Set(["CZ", "SK", "AT"]);
@@ -281,7 +282,7 @@ function horizontalMatch(entry: PreparedAirspace, point: [number, number]): "ins
     const polygon = entry.sector.polygons[polygonIndex];
     const box = entry.boxes[polygonIndex];
     if (!polygon || !box || !bboxContains(box, point)) continue;
-    const containment = pointInPolygon(point, [polygon as unknown as [number, number][]]);
+    const containment = matchAtcRing(point, polygon as [number, number][]);
     if (containment === "boundary") return "boundary";
     if (containment === "inside") result = "inside";
   }
@@ -316,7 +317,7 @@ export function getCurrentAtcSectorIds(
     const horizontal = entry.boxes.some((box, polygonIndex) => {
       const polygon = sector.polygons[polygonIndex];
       return Boolean(polygon) && bboxContains(box, point)
-        && pointInPolygon(point, [polygon as unknown as [number, number][]]) !== null;
+        && matchAtcRing(point, polygon as [number, number][]) !== null;
     });
     if (horizontal && verticalMatch(sector, input).match !== "false") ids.add(sector.id);
   }
