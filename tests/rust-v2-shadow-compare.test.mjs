@@ -27,6 +27,19 @@ describe("manual read-only Rust V2 shadow comparator", () => {
     assert.equal(result.comparableTime, 0);
     assert.equal(result.assessment, "INSUFFICIENT_OVERLAP");
   });
+  it("does not count stale coordinates as a positional match", () => {
+    const stale = structuredClone(baseV2);
+    stale.data.aircraft[0].lastPositionAt = (now - 90_000) / 1000;
+    const report = compareRadarSnapshots(baseV1, stale);
+    assert.equal(report.common, 1);
+    assert.equal(report.positionPairs, 0);
+    assert.equal(report.missingPositions, 1);
+  });
+  it("refuses a stale engine snapshot even if individual aircraft timestamps look recent", () => {
+    const stale = structuredClone(baseV2);
+    stale.data.generatedAt = new Date(now - 60_000).toISOString();
+    assert.throws(() => compareRadarSnapshots(baseV1, stale));
+  });
   it("omits network-only targets and refuses invalid snapshots", () => {
     const candidate = { aircraft: [
       { ...baseV1.aircraft[0], origin: "adsblol" },
