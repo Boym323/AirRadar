@@ -57,7 +57,7 @@ function ringContains(point: LonLat, ring: LonLat[]): "inside" | "boundary" | nu
   const length = indexed?.length ?? ring.length;
   for (let cursor = 0; cursor < length; cursor++) {
     const i = indexed ? indexed[cursor]! : cursor;
-    const j = (i + ring.length - 1) % ring.length;
+    const j = i === 0 ? ring.length - 1 : i - 1;
     const a = ring[j];
     const b = ring[i];
     const ay = a[1];
