@@ -30,9 +30,6 @@ jobs:
 
   live-public-shadow:
     name: Existing public V1 ↔ Rust V2 API parity (read-only)
-    # External DEV API availability is advisory; the isolated adapter is not in V1 runtime.
-    # Contract/unit tests above remain mandatory. Failure here still stays visible.
-    continue-on-error: true
     needs: shadow-contracts
     runs-on: ubuntu-24.04
     timeout-minutes: 3
@@ -42,6 +39,7 @@ jobs:
         with:
           node-version: '22'
       - name: Probe exact HTTPS API statuses (no response bodies)
+        id: probe
         shell: bash
         run: |
           set +e
@@ -58,9 +56,18 @@ jobs:
             result=$?
             echo "$target: curl_exit=$result http_status=$status"
             echo "$target: curl_exit=$result http_status=$status" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$target" = V2 ]; then
+              if [ "$result" -eq 0 ] && [ "$status" = 200 ]; then
+                echo "v2_healthy=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "v2_healthy=false" >> "$GITHUB_OUTPUT"
+                echo "::warning::V2 DEV endpoint unavailable: live parity inconclusive, not PASS. Mandatory offline contract tests remain enforced."
+              fi
+            fi
           done
           exit 0
       - name: Inspect public JSON contract shape (no aircraft identities)
+        if: steps.probe.outputs.v2_healthy == 'true'
         run: |
           node --input-type=module <<'NODE'
           const urls = [
@@ -97,6 +104,7 @@ jobs:
           }
           NODE
       - name: Verify anonymous Rust ingest diagnostics
+        if: steps.probe.outputs.v2_healthy == 'true'
         shell: bash
         run: |
           node --input-type=module <<'NODE'
@@ -117,6 +125,7 @@ jobs:
           console.log('V2 sanitized ingest:', JSON.stringify(body));
           NODE
       - name: Compare independently hosted public radar APIs
+        if: steps.probe.outputs.v2_healthy == 'true'
         shell: bash
         run: |
           set -Eeuo pipefail
