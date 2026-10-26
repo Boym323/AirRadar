@@ -10,6 +10,20 @@ const artifact = process.env.DB_WRITE_AUDIT_ARTIFACT ?? "artifacts/db-write-ampl
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
 
 async function query(text) { return (await pool.query(text)).rows; }
+function statementType(queryText) {
+  const query = queryText.trim().toLowerCase();
+  if (query.startsWith("with")) {
+    if (/\bon\s+conflict\b/.test(query) || /\binsert\s+into\b/.test(query)) return "upsert";
+    if (/\bupdate\b/.test(query)) return "update";
+    if (/\bdelete\s+from\b/.test(query)) return "delete";
+    return "select";
+  }
+  if (query.startsWith("insert")) return /\bon\s+conflict\b/.test(query) ? "upsert" : "insert";
+  if (query.startsWith("update")) return "update";
+  if (query.startsWith("delete")) return "delete";
+  if (query.startsWith("select")) return "select";
+  return "other";
+}
 async function capture(label) {
   const tables = await query(`
     select c.relname as table_name, coalesce(s.n_tup_ins,0)::bigint as n_tup_ins,
@@ -26,7 +40,8 @@ async function capture(label) {
   let statements = [];
   let pgStatStatementsAvailable = false;
   try {
-    statements = await query(`select queryid, calls::bigint, rows::bigint, total_exec_time, mean_exec_time, shared_blks_hit::bigint, shared_blks_read::bigint, left(regexp_replace(query,'\\s+',' ','g'),500) as query from pg_stat_statements where query ~* '^\\s*update' order by calls desc limit 100`);
+    statements = (await query(`select queryid, calls::bigint, rows::bigint, total_exec_time, mean_exec_time, shared_blks_hit::bigint, shared_blks_read::bigint, shared_blks_dirtied::bigint, shared_blks_written::bigint, temp_blks_read::bigint, temp_blks_written::bigint, blk_read_time, blk_write_time, left(regexp_replace(query,'\\s+',' ','g'),500) as query from pg_stat_statements where query ~* '^\\s*(select|insert|update|delete|with)' order by total_exec_time desc limit 200`))
+      .map((row) => ({ ...row, statementType: statementType(row.query) }));
     pgStatStatementsAvailable = true;
   } catch { /* Extension is intentionally not enabled just for this audit. */ }
   let service = {};
@@ -61,11 +76,15 @@ const beforeDb = started.database[0] ?? {}; const afterDb = ended.database[0] ??
 const delta = (field) => Number(afterDb[field] ?? 0) - Number(beforeDb[field] ?? 0);
 const cpuPercentOneCore = started.service.CPUUsageNSec !== undefined && ended.service.CPUUsageNSec !== undefined
   ? (Number(ended.service.CPUUsageNSec) - Number(started.service.CPUUsageNSec)) / (minutes * 60_000_000_000) * 100 : null;
+const topStatementsByType = Object.fromEntries(["select", "insert", "upsert", "update", "delete"].map((type) => [
+  type,
+  ended.statements.filter((statement) => statement.statementType === type).slice(0, 5),
+]));
 await mkdir(artifact.substring(0, artifact.lastIndexOf("/")), { recursive: true });
 await writeFile(artifact, JSON.stringify({
   schemaVersion: 1, generatedAt: new Date().toISOString(), measurement: { startedAt: started.capturedAt, endedAt: ended.capturedAt, durationMinutes: minutes },
   baseline: { transactionsPerMin: (delta("xact_commit") + delta("xact_rollback")) / minutes, updatesPerMin: delta("tup_updated") / minutes, insertsPerMin: delta("tup_inserted") / minutes, deletesPerMin: delta("tup_deleted") / minutes },
-  perTable: rates, queryAttribution: ended.statements, pgStatStatementsAvailable: ended.pgStatStatementsAvailable,
+  perTable: rates, queryAttribution: ended.statements, topStatementsByType, pgStatStatementsAvailable: ended.pgStatStatementsAvailable,
   wal: { before: started.wal, after: ended.wal, delta: (ended.wal.length && started.wal.length) ? Object.fromEntries(Object.keys(ended.wal[0]).filter((key) => typeof ended.wal[0][key] === "string" && /^\d+$/.test(ended.wal[0][key]) && key in started.wal[0]).map((key) => [key, Number(ended.wal[0][key]) - Number(started.wal[0][key])])) : null },
   service: { before: started.service, after: ended.service, cpuPercentOneCore },
   traffic: { before: started.traffic, after: ended.traffic },
