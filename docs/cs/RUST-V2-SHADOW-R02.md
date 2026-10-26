@@ -33,3 +33,11 @@ V1 používá vynucené `coverage=local`; V2 nepřijímá parametry URL. Povolen
 Původní porovnání nesprávně považovalo `stale=true` za zastaralý příjem; oprava ponechává čerstvý identifikátor bez neověřené polohy. Rust V2 přidal podporu DF18 (CF0/1) a následně dvojitě potvrzený DF11 s CRC24/PI.
 
 [Opakovaný živý parity test](https://github.com/Boym323/AirRadar/actions/runs/40234262802) naměřil ve třech odečtech V1 39/39/39, Rust 40/40/40, společných 38/38/38, V1-only 1/1/1 a Rust-only 2/2/2. P95 vzdálenosti bylo 0,774/1,029/0,250 km, bez odchylky přes 5 km. Jde o časově oddělené vzorky, nikoliv o dlouhodobý soak nebo důkaz možného přepnutí.
+
+## Omezení a pravidla bezpečné přejímky
+
+Ve V1 nejsou z Rust V2 zatím dostupná úplná provozní metadata včetně pokročilé diagnostiky a statistik, počítadel zpráv, některých atributů letadel, Comm-B ani všech informací o trasách. Nezavádět žádné náhradní hodnoty, které se v odpovědi V2 skutečně nenacházejí. I správný převod DTO pouze potvrzuje tvar a validaci dat, nikoliv jejich úplnost pro současné komponenty V1. Nesprávné časové značky, nepodporované kategorie a podezřelé pozice musí být odmítnuty nebo označeny jako nedostupné.
+
+Každé měření je nutné interpretovat v kontextu datového zdroje a časového posunu. Dvě nezávislé služby mohou ve stejný okamžik vidět odlišný počet letadel i při společném přijímači. Z tohoto důvodu samotné počty identit ani jeden okamžitý rozdíl pozic nejsou podkladem pro rozhodnutí o produkční migraci. Porovnávací nástroj nikdy neobsahuje přihlašovací údaje a nesmí zapisovat žádnou surovou telemetrii na disk nebo do veřejného logu.
+
+[Ověřený DEV deployment podpory DF11](https://github.com/Boym323/AirRadarV2/actions/runs/40235165530) potvrdil samostatný krok ve V2; na aktuálním V1 se kvůli tomu nemění nastavení ingestu, databáze ani plánovače. Pokud není V2 veřejné API dostupné, živá parita zůstává **neprůkazná** a provede se znovu po opravě V2; není dovoleno zaměnit výpadek služby za úspěšné porovnání.
