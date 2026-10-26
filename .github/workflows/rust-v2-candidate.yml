@@ -1,0 +1,166 @@
+name: Rust V2 Candidate Compatibility
+on:
+  pull_request:
+    paths:
+      - 'lib/server/rust-v2-candidate.ts'
+      - 'scripts/rust-v2-shadow-compare.mjs'
+      - 'tests/rust-v2-candidate.test.ts'
+      - 'tests/rust-v2-shadow-compare.test.mjs'
+      - '.github/workflows/rust-v2-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Test read-only HTTP and aggregate comparison
+        run: node --test tests/rust-v2-shadow-compare.test.mjs
+      - name: Test Rust V2 to V1 candidate mapping
+        run: npx vitest run tests/rust-v2-candidate.test.ts
+
+  live-public-shadow:
+    name: Existing public V1 ↔ Rust V2 API parity (read-only)
+    needs: shadow-contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Probe exact HTTPS API statuses (no response bodies)
+        id: probe
+        shell: bash
+        run: |
+          set +e
+          for target in V1 V2; do
+            if [ "$target" = V1 ]; then
+              url='https://airradar.pomykal.cz/api/aircraft?coverage=local'
+            else
+              url='https://airradarv2.pomykal.cz/api/v1/aircraft'
+            fi
+            # Do not log response bodies, private headers, DNS resolutions or cookies.
+            status="$(curl --silent --show-error --output /dev/null \
+              --max-time 8 --max-filesize 8388608 \
+              --write-out '%{http_code}' "$url")"
+            result=$?
+            echo "$target: curl_exit=$result http_status=$status"
+            echo "$target: curl_exit=$result http_status=$status" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$target" = V2 ]; then
+              if [ "$result" -eq 0 ] && [ "$status" = 200 ]; then
+                echo "v2_healthy=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "v2_healthy=false" >> "$GITHUB_OUTPUT"
+                echo "::warning::V2 DEV endpoint unavailable: live parity inconclusive, not PASS. Mandatory offline contract tests remain enforced."
+              fi
+            fi
+          done
+          exit 0
+      - name: Inspect public JSON contract shape (no aircraft identities)
+        if: steps.probe.outputs.v2_healthy == 'true'
+        run: |
+          node --input-type=module <<'NODE'
+          const urls = [
+            ["V1", "https://airradar.pomykal.cz/api/aircraft?coverage=local"],
+            ["V2", "https://airradarv2.pomykal.cz/api/v1/aircraft"],
+          ];
+          for (const [label, url] of urls) {
+            try {
+              const response = await fetch(url, { signal: AbortSignal.timeout(6000), redirect: "error" });
+              const value = await response.json();
+              const data = value && typeof value === "object" ? value.data : null;
+              const generated = typeof data?.generatedAt === "string" ? Date.parse(data.generatedAt) : NaN;
+              const report = {
+                statusCode: response.status,
+                contentType: response.headers.get("content-type")?.split(";")[0] ?? null,
+                outerArray: Array.isArray(value?.aircraft),
+                outerCount: Array.isArray(value?.aircraft) ? value.aircraft.length : null,
+                online: typeof value?.sourceOnline === "boolean" ? value.sourceOnline : null,
+                status: typeof value?.status === "string" ? value.status : null,
+                dataObject: data !== null && typeof data === "object" && !Array.isArray(data),
+                kind: typeof data?.kind === "string" ? data.kind : null,
+                dataCount: Array.isArray(data?.aircraft) ? data.aircraft.length : null,
+                ageSec: Number.isFinite(generated) ? Number(((Date.now()-generated)/1000).toFixed(1)) : null,
+                sampleIdentity: label === "V1" && value?.aircraft?.length > 0
+                  ? { validHex: typeof value.aircraft[0]?.icaoHex === "string", validTimestamp: Number.isFinite(Date.parse(value.aircraft[0]?.lastSeen)) }
+                  : label === "V2" && data?.aircraft?.length > 0
+                  ? { validId: typeof data.aircraft[0]?.id === "string", validTimestamp: Number.isFinite(data.aircraft[0]?.lastMessageAt) }
+                  : null,
+              };
+              console.log(label, JSON.stringify(report));
+            } catch {
+              console.log(label, "JSON retrieval or validation failed");
+            }
+          }
+          NODE
+      - name: Verify anonymous Rust ingest diagnostics
+        if: steps.probe.outputs.v2_healthy == 'true'
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch('https://airradarv2.pomykal.cz/api/v1/ingest-status', {
+            method: 'GET', redirect: 'error', signal: AbortSignal.timeout(8000),
+          });
+          if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+            throw new Error('Rust public ingest diagnostics HTTP/content-type invalid');
+          }
+          const body = await response.json();
+          const allowed = ['mode', 'stage', 'jsonConfigured', 'beastConfigured', 'jsonHealthy',
+            'jsonLastOkAgeSeconds', 'jsonLastErrorAgeSeconds', 'beastConnected',
+            'beastLastFrameAgeSeconds', 'ingestTickAgeSeconds', 'aircraftCount'];
+          if (body.mode !== 'read_only' || !allowed.every(k => Object.hasOwn(body, k))
+              || Object.keys(body).some(k => !allowed.includes(k))) {
+            throw new Error('Unsafe or incomplete Rust public ingest status');
+          }
+          console.log('V2 sanitized ingest:', JSON.stringify(body));
+          NODE
+      - name: Compare independently hosted public radar APIs
+        if: steps.probe.outputs.v2_healthy == 'true'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          echo '## V1 ↔ Rust V2 live API parity (read-only)' >> "$GITHUB_STEP_SUMMARY"
+          # One bounded GET per radar and sample; absolutely no DB access,
+          # operator credentials, API writes or special diagnostic headers.
+          success=0
+          overlap=0
+          for sample in 1 2 3; do
+            echo "Sample $sample of 3"
+            if node scripts/rust-v2-shadow-compare.mjs \
+              'https://airradar.pomykal.cz/api/aircraft' \
+              'https://airradarv2.pomykal.cz/api/v1/aircraft' > "$RUNNER_TEMP/shadow.json"; then
+              cat "$RUNNER_TEMP/shadow.json"
+              node --input-type=module -e '
+                import { readFileSync, appendFileSync } from "node:fs";
+                const r = JSON.parse(readFileSync(process.argv[1], "utf8"));
+                appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+                  `Sample: common=${r.common}, matchingPositions=${r.positionPairs}, p95Km=${r.positionP95Km ?? "N/A"}, assessment=${r.assessment}\\n\\n`);
+              ' "$RUNNER_TEMP/shadow.json"
+              success=$((success+1))
+              if node -e 'const r=JSON.parse(require("node:fs").readFileSync(process.argv[1]));process.exit(r.positionPairs>0?0:1)' "$RUNNER_TEMP/shadow.json"; then
+                overlap=$((overlap+1))
+              fi
+            else
+              echo "Sample $sample failed (public API unavailable or invalid)"
+              echo "Sample $sample unavailable or invalid" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            if [ "$sample" -lt 3 ]; then sleep 4; fi
+          done
+          echo "Successful samples: $success/3, with positional overlap: $overlap/3" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$success" -eq 0 ]; then
+            echo '::error::No public V1/V2 API pair could be fetched and validated.'
+            exit 1
+          fi
+          if [ "$overlap" -eq 0 ]; then
+            echo '::warning::API snapshots obtained but no simultaneously comparable positions; not parity evidence.'
+          fi
