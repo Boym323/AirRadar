@@ -16,8 +16,8 @@ jobs:
   shadow-contracts:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -30,12 +30,15 @@ jobs:
 
   live-public-shadow:
     name: Existing public V1 ↔ Rust V2 API parity (read-only)
+    # External DEV API availability is advisory; the isolated adapter is not in V1 runtime.
+    # Contract/unit tests above remain mandatory. Failure here still stays visible.
+    continue-on-error: true
     needs: shadow-contracts
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Probe exact HTTPS API statuses (no response bodies)
