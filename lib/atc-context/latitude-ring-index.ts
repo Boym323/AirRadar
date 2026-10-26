@@ -17,6 +17,7 @@ const CHUNK_SIZE = 1024;
 
 type RingScanIndex = ReadonlyMap<number, Uint32Array>;
 const cached = new WeakMap<LonLat[], RingScanIndex | null>();
+const EMPTY_EDGES = new Uint32Array(0);
 
 class IndexBuilder {
   readonly buckets = new Map<number, number[]>();
@@ -69,7 +70,7 @@ export function indexedEdgesForPoint(ring: LonLat[], latitude: number): Uint32Ar
     cached.set(ring, index);
   }
   // An empty band is a definitive outside result, represented as 0 edges.
-  return index?.get(Math.floor(latitude * BAND_SCALE)) ?? (index ? new Uint32Array(0) : null);
+  return index?.get(Math.floor(latitude * BAND_SCALE)) ?? (index ? EMPTY_EDGES : null);
 }
 
 /**
