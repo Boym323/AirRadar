@@ -1,0 +1,27 @@
+name: V1 ATC latitude index parity and CPU
+on:
+  pull_request:
+    paths:
+      - 'lib/atc-context/**'
+      - 'tests/atc-latitude-index.test.ts'
+      - 'scripts/benchmark-atc-ring-stalls.ts'
+      - '.github/workflows/v1-atc-latitude-index.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  atc-geometry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: ATC geometry and prepared-dataset parity
+        run: npx vitest run tests/atc-latitude-index.test.ts tests/atc-context-engine.test.ts
+      - name: Large real boundary same-run CPU and parity
+        run: |
+          JITI_TSCONFIG_PATHS=true node --import jiti -e 'import("./scripts/benchmark-atc-ring-stalls.ts").then(m => m.runV1AtcLatitudeIndexBenchmark()).then(result => { console.log(JSON.stringify(result, null, 2)); if(result.mismatches !== 0) process.exitCode = 1; })'

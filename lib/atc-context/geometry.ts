@@ -1,4 +1,5 @@
 import { distanceToGreatCircleSegmentKm, haversineDistanceKm, initialBearing } from "@/lib/geo";
+import { indexedEdgesForPoint } from "./latitude-ring-index";
 
 export type LonLat = [number, number];
 export type PolygonRings = LonLat[][];
@@ -52,7 +53,11 @@ function ringContains(point: LonLat, ring: LonLat[]): "inside" | "boundary" | nu
   const x = point[0];
   const y = point[1];
   const epsilon = 1e-9;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+  const indexed = indexedEdgesForPoint(ring, y);
+  const length = indexed?.length ?? ring.length;
+  for (let cursor = 0; cursor < length; cursor++) {
+    const i = indexed ? indexed[cursor]! : cursor;
+    const j = (i + ring.length - 1) % ring.length;
     const a = ring[j];
     const b = ring[i];
     const ay = a[1];

@@ -79,6 +79,34 @@ async function measure(points: LonLat[], ring: Ring, predicate: (point: LonLat, 
   };
 }
 
+/** A/B against the pre-index implementation, on the exact same ring and points.
+ * Build cost is reported separately and never counted in hot-path throughput. */
+export async function runV1AtcLatitudeIndexBenchmark(): Promise<object> {
+  const source = JSON.parse(readFileSync(new URL("../data/atc/sk-state-boundary.json", import.meta.url), "utf8"));
+  const raw = longestRing(source);
+  if (raw.length < 40_000 || raw.length > 100_000) throw new Error("atc_fixture_invalid");
+  const ring = Object.freeze(raw.map((point) => Object.freeze([point[0], point[1]] as LonLat))) as unknown as Ring;
+  const points = positionsFor(ring, 128);
+  const before = await measure(points, ring, legacyPointInPolygon);
+  const { prewarmFrozenAtcRing } = await import("../lib/atc-context/latitude-ring-index");
+  const prewarmStart = performance.now();
+  const indexed = await prewarmFrozenAtcRing(ring);
+  const buildMs = performance.now() - prewarmStart;
+  if (!indexed) throw new Error("atc_index_build_rejected_fixture");
+  let mismatches = 0;
+  for (const point of points) {
+    if (legacyPointInPolygon(point, [ring]) !== pointInPolygon(point, [ring])) mismatches++;
+  }
+  if (mismatches) throw new Error(`atc_index_semantic_mismatch:${mismatches}`);
+  const after = await measure(points, ring, pointInPolygon);
+  return {
+    scenario: "v1-atc-latitude-index", vertices: ring.length, points: points.length,
+    mismatches, buildMs: Number(buildMs.toFixed(3)), before, after,
+    relativeCpu: before.cpuMs > 0 ? Number((after.cpuMs / before.cpuMs).toFixed(3)) : null,
+    limitation: "CI synthetic positions, same hardware and run; not a production T58/CPU claim.",
+  };
+}
+
 export async function runAtcRingScenario(multiplier: number) {
   if (![1, 2, 4].includes(multiplier)) throw new Error("invalid_atc_ring_multiplier");
   const source = JSON.parse(readFileSync(new URL("../data/atc/sk-state-boundary.json", import.meta.url), "utf8"));
