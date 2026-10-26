@@ -8,6 +8,7 @@ import { getAtcDataSnapshot } from "@/lib/server/providers";
 import { measureRuntime, measureRuntimeAsync } from "@/lib/server/runtime-performance";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { angleDifference, bbox, bboxAsync, bboxContains, bearing, distanceNm, distanceToSegmentNm, pointInPolygon } from "./geometry";
+import { prewarmFrozenAtcRing } from "./latitude-ring-index";
 import type { AtcContextDataset, AtcContextInput, AtcContextLookupDiagnostics, AtcContextResult, AtsRouteMatch, ContextAirspace, ContextConfidence, ContextPoint, PreparedAtcContextDataset, PreparedAtcSectorDataset, VerticalMatch } from "./types";
 
 const SUPPORTED = new Set(["CZ", "SK", "AT"]);
@@ -136,6 +137,11 @@ export async function prepareAtcSectorDatasetAsync(
     }
   });
   if (!options.owned) deepFreeze(ownedSectors);
+  // CPU-heavy ring scanning now indexes latitude bands outside the live event
+  // loop. Only deeply frozen rings qualify; mutable custom providers fall back.
+  for (const sector of ownedSectors) {
+    for (const ring of sector.polygons) await prewarmFrozenAtcRing(ring as [number, number][]);
+  }
   return measureRuntime("atc.dataset.deep-freeze", sectors.length, () => freezeSectorIndex(ownedSectors, airspaces, atcGrid));
 }
 
@@ -227,6 +233,9 @@ export async function prepareAtcContextDatasetAsync(
   });
 
   if (!options.owned) deepFreeze(ownedDataset);
+  for (const sector of ownedDataset.sectors) {
+    for (const ring of sector.polygons) await prewarmFrozenAtcRing(ring as [number, number][]);
+  }
   return measureRuntime("atc.dataset.deep-freeze", ownedDataset.sectors.length, () => ({
     ...ownedDataset,
     prepared: true as const,
