@@ -21,6 +21,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Generate required Prisma contract for ATC integration imports
+        run: npm run prisma:generate
       - name: ATC geometry and prepared-dataset parity
         run: npx vitest run tests/atc-latitude-index.test.ts tests/atc-context-engine.test.ts
       - name: Large real boundary same-run CPU and parity
