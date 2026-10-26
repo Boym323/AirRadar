@@ -143,6 +143,70 @@ describe("historical flight maintenance", () => {
     expect(positionCreate).toHaveBeenCalledTimes(1);
   });
 
+  it("caches durable identity, open flight and last position between samples", async () => {
+    const firstAt = new Date("2026-01-01T12:00:00Z");
+    const secondAt = new Date("2026-01-01T12:00:20Z");
+    const aircraft = normalizeAircraft(
+      { hex: "CA1CED", flight: "CACHE1", lat: 50, lon: 14, seen: 0, seen_pos: 0 },
+      { lat: 50, lon: 14, name: "Test" },
+      firstAt,
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    const aircraftLookup = vi.fn().mockResolvedValue({
+      id: 123, registration: null, registrationCountry: null, registrationCountryCode: null,
+      aircraftType: null, manufacturer: null, model: null, operator: null,
+    });
+    const openFlight = {
+      id: 456, aircraftId: 123, callsign: "CACHE1", registration: null, aircraftType: null,
+      airline: null, origin: null, destination: null, destinationProvenanceJson: null,
+      maxAltitude: null, minDistanceKm: null,
+      startTime: Temporal.Instant.fromEpochMilliseconds(firstAt.getTime()),
+      lastSeenAt: Temporal.Instant.fromEpochMilliseconds(firstAt.getTime() - 10_000),
+      endTime: null,
+    };
+    const flightLookup = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(openFlight) }),
+      }),
+    });
+    const positionLookup = vi.fn().mockReturnValue({
+      orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+    });
+    const flightUpdate = vi.fn().mockResolvedValue(undefined);
+    const positionCreate = vi.fn().mockResolvedValue({ id: 789 });
+    const database = {
+      orm: {
+        public: {
+          Aircraft: {
+            where: vi.fn().mockReturnValue({ first: aircraftLookup }),
+            update: vi.fn().mockResolvedValue(undefined),
+          },
+          Flight: {
+            where: vi.fn((filter: Record<string, unknown>) => "aircraftId" in filter
+              ? flightLookup()
+              : { update: flightUpdate }),
+            create: vi.fn(),
+          },
+          FlightPosition: { where: positionLookup, create: positionCreate },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+
+    const first = await recordAircraftSnapshot([aircraft], firstAt);
+    const second = await recordAircraftSnapshot([{ ...aircraft, lastSeen: secondAt.toISOString(), lat: 50.01, lon: 14.01 }], secondAt);
+
+    expect(first.failed).toEqual([]);
+    expect(second.failed).toEqual([]);
+    expect(aircraftLookup).toHaveBeenCalledTimes(1);
+    expect(flightLookup).toHaveBeenCalledTimes(1);
+    expect(positionLookup).toHaveBeenCalledTimes(1);
+    expect(flightUpdate).toHaveBeenCalledTimes(2);
+    expect(positionCreate).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps existing Flight and FlightPosition timestamp inputs temporal", async () => {
     const recordedAt = new Date("2026-01-01T12:00:10Z");
     const previousSeenAt = Temporal.Instant.fromEpochMilliseconds(new Date("2026-01-01T12:00:00Z").getTime());

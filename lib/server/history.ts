@@ -19,7 +19,7 @@ import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
 import { filterPlausibleTrailPoints, isPlausibleTransition } from "@/lib/aircraft/trail";
 import { pruneAircraftWeatherRetention } from "@/lib/server/aircraft-weather";
-import { aircraftDurableValues, changedAircraftValues } from "@/lib/server/aircraft-update-policy";
+import { aircraftDurableValues, changedAircraftValues, type AircraftDurableValues } from "@/lib/server/aircraft-update-policy";
 import { observeDestination } from "@/lib/server/destination-provenance";
 
 export interface HistoryResponse {
@@ -260,8 +260,47 @@ const aircraftPersistenceDiagnostics = {
 const HISTORY_RUNTIME_CACHE_MAX_ENTRIES = 10_000;
 const durableFlightPresence = new Map<number, boolean>();
 const latestFlightPositions = new Map<number, { recordedAtMs: number; lat: number; lon: number } | null>();
+type HistoryAircraftPersistenceRow = AircraftDurableValues & { id: number };
+type HistoryFlightPersistenceRow = {
+  id: number;
+  aircraftId: number;
+  callsign: string | null;
+  registration: string | null;
+  aircraftType: string | null;
+  airline: string | null;
+  origin: string | null;
+  destination: string | null;
+  destinationProvenanceJson?: string | null;
+  maxAltitude: number | null;
+  minDistanceKm: number | null;
+  startTime: Temporal.Instant | Date;
+  lastSeenAt: Temporal.Instant | Date;
+  endTime: Temporal.Instant | Date | null;
+};
 
-function rememberBounded<T>(cache: Map<number, T>, key: number, value: T): void {
+/**
+ * The recorder is single-lane per ICAO in the live service. These bounded
+ * rows avoid repeating durable identity/open-flight reads on every sample;
+ * a cache miss still performs the authoritative database lookup.
+ */
+const durableAircraftRows = new Map<string, HistoryAircraftPersistenceRow>();
+const openFlightRows = new Map<number, HistoryFlightPersistenceRow>();
+let historyCacheDatabase: NonNullable<ReturnType<typeof getPrisma>> | null = null;
+
+function resetHistoryRuntimeCaches(): void {
+  durableFlightPresence.clear();
+  latestFlightPositions.clear();
+  durableAircraftRows.clear();
+  openFlightRows.clear();
+}
+
+function ensureHistoryRuntimeCache(database: NonNullable<ReturnType<typeof getPrisma>>): void {
+  if (historyCacheDatabase === database) return;
+  resetHistoryRuntimeCaches();
+  historyCacheDatabase = database;
+}
+
+function rememberBounded<K, T>(cache: Map<K, T>, key: K, value: T): void {
   cache.delete(key);
   cache.set(key, value);
   while (cache.size > HISTORY_RUNTIME_CACHE_MAX_ENTRIES) {
@@ -269,6 +308,21 @@ function rememberBounded<T>(cache: Map<number, T>, key: number, value: T): void 
     if (oldest === undefined) break;
     cache.delete(oldest);
   }
+}
+
+function removeFlightRuntimeState(aircraftId: number, flightId: number): void {
+  openFlightRows.delete(aircraftId);
+  latestFlightPositions.delete(flightId);
+}
+
+function cacheableAircraftRow(row: unknown): row is HistoryAircraftPersistenceRow {
+  return Boolean(row && typeof row === "object" && typeof (row as { id?: unknown }).id === "number");
+}
+
+function cacheableFlightRow(row: unknown): row is HistoryFlightPersistenceRow {
+  return Boolean(row && typeof row === "object"
+    && typeof (row as { id?: unknown }).id === "number"
+    && "lastSeenAt" in row);
 }
 
 export function getAircraftPersistenceDiagnostics() {
@@ -1095,6 +1149,7 @@ export async function closeStaleFlights(
   database: NonNullable<ReturnType<typeof getPrisma>>,
   now = new Date(),
 ): Promise<void> {
+  ensureHistoryRuntimeCache(database);
   const cutoff = new Date(now.getTime() - getFlightContinuityGapMs());
   const schema = database.orm.public;
   const cutoffInstant = Temporal.Instant.fromEpochMilliseconds(cutoff.getTime());
@@ -1109,6 +1164,7 @@ export async function closeStaleFlights(
     await schema.Flight.where({ id: flight.id }).update({
       endTime: Temporal.Instant.fromEpochMilliseconds(endTime.getTime()),
     });
+    removeFlightRuntimeState(flight.aircraftId, flight.id);
   });
 }
 
@@ -1125,6 +1181,7 @@ export async function recordAircraftSnapshot(
       failed: [],
     };
   }
+  ensureHistoryRuntimeCache(database);
 
   const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [], newAircraft: [] };
   const candidates = uniqueAircraftByHex(aircraft).filter((item) => (
@@ -1172,38 +1229,53 @@ export async function recordAircraftSnapshot(
       const metadata = item.enrichment?.metadata;
       aircraftPersistenceDiagnostics.attempts += 1;
       const nextAircraft = aircraftDurableValues(item);
-      type AircraftPersistenceRow = typeof nextAircraft & { id: number };
-      let dbAircraft: AircraftPersistenceRow | null = null;
+      let dbAircraft: HistoryAircraftPersistenceRow | null = durableAircraftRows.get(item.icaoHex) ?? null;
       let usedAircraftUpsert = false;
       const aircraftTable = schema.Aircraft as unknown as {
-        where?: (filter: { icaoHex: string }) => { first(): Promise<AircraftPersistenceRow | null> };
-        upsert?: (input: Record<string, unknown>) => Promise<AircraftPersistenceRow>;
+        where?: (filter: { icaoHex: string }) => { first(): Promise<HistoryAircraftPersistenceRow | null> };
+        upsert?: (input: Record<string, unknown>) => Promise<HistoryAircraftPersistenceRow>;
       };
       if (typeof aircraftTable.where === "function") {
-        dbAircraft = await statement("aircraft.lookup", () => aircraftTable.where!({ icaoHex: item.icaoHex }).first());
+        if (!dbAircraft) {
+          dbAircraft = await statement("aircraft.lookup", async () => {
+            const row = await aircraftTable.where!({ icaoHex: item.icaoHex }).first();
+            return cacheableAircraftRow(row) ? row : row as HistoryAircraftPersistenceRow | null;
+          });
+        }
       } else if (typeof aircraftTable.upsert === "function") {
         // Narrow test adapters and older persistence shims may only expose upsert.
-        dbAircraft = await statement("aircraft.write", () => aircraftTable.upsert!({
+        dbAircraft = await statement("aircraft.write", async () => {
+          const row = await aircraftTable.upsert!({
           conflictOn: { icaoHex: item.icaoHex },
           update: { ...nextAircraft, updatedAt: recordedAtInstant },
           create: { icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant },
-        }));
+          });
+          return cacheableAircraftRow(row) ? row : row as HistoryAircraftPersistenceRow;
+        });
         usedAircraftUpsert = true;
         aircraftPersistenceDiagnostics.executed += 1;
       }
       if (!dbAircraft) {
-        dbAircraft = await statement("aircraft.write", () => schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant }));
+        dbAircraft = await statement("aircraft.write", async () => {
+          const row = await schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant });
+          return cacheableAircraftRow(row)
+            ? row
+            : ({ ...(row as object), id: (row as { id: number }).id, ...nextAircraft } as HistoryAircraftPersistenceRow);
+        });
         aircraftPersistenceDiagnostics.executed += 1;
       } else if (!usedAircraftUpsert) {
         const aircraftChanges = changedAircraftValues(dbAircraft, nextAircraft);
         if (Object.keys(aircraftChanges).length > 0) {
-          dbAircraft = await statement("aircraft.write", () => schema.Aircraft.where({ id: dbAircraft!.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant }));
+          const currentAircraft = dbAircraft;
+          await statement("aircraft.write", () => schema.Aircraft.where({ id: currentAircraft.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant }));
+          dbAircraft = { ...currentAircraft, ...nextAircraft };
           aircraftPersistenceDiagnostics.executed += 1;
         } else {
           aircraftPersistenceDiagnostics.skippedUnchanged += 1;
         }
       }
       if (!dbAircraft) throw new Error("Aircraft persistence returned no row");
+      const aircraftRowForCache = dbAircraft;
 
       // A first-ever alert must be based on a durable Flight, not on a
       // process-local Aircraft row. Look up the active flight first: when one
@@ -1211,11 +1283,18 @@ export async function recordAircraftSnapshot(
       // existence SELECT can be skipped (common after restart/cache eviction).
       // Only probe previous flights when no active flight was found. Retain
       // the optional capability guard for narrow persistence test adapters.
-      let flight = await statement("flight.lookup", () => schema.Flight
-        .where({ aircraftId: dbAircraft!.id })
-        .where({ endTime: null })
-        .orderBy((row) => row.startTime.desc())
-        .first());
+      let flight: HistoryFlightPersistenceRow | null = openFlightRows.get(dbAircraft.id) ?? null;
+      const hadCachedFlight = openFlightRows.has(dbAircraft.id);
+      if (!hadCachedFlight) {
+        flight = await statement("flight.lookup", async () => {
+          const row = await schema.Flight
+            .where({ aircraftId: dbAircraft!.id })
+            .where({ endTime: null })
+            .orderBy((row) => row.startTime.desc())
+            .first();
+          return cacheableFlightRow(row) ? row : row as HistoryFlightPersistenceRow | null;
+        });
+      }
       let firstDurableFlight = false;
       if (!durableFlightPresence.has(dbAircraft.id)) {
         if (flight) {
@@ -1264,6 +1343,7 @@ export async function recordAircraftSnapshot(
         }
       }
 
+      let flightRowForCache: HistoryFlightPersistenceRow | null = flight;
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
           const previousFlight = flight;
@@ -1275,7 +1355,7 @@ export async function recordAircraftSnapshot(
         }
         const route = item.enrichment?.route;
         const destinationObservation = observeDestination(null, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
-        flight = await statement("flight.write", () => schema.Flight.create({
+        const createdFlight = await statement("flight.write", () => schema.Flight.create({
           aircraftId: dbAircraft!.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
           callsign: item.callsign,
@@ -1290,11 +1370,38 @@ export async function recordAircraftSnapshot(
           startTime: recordedAtInstant,
           lastSeenAt: recordedAtInstant,
         }));
+        flight = createdFlight as HistoryFlightPersistenceRow;
+        flightRowForCache = {
+          ...(cacheableFlightRow(createdFlight) ? createdFlight : {}),
+          id: (createdFlight as { id: number }).id,
+          aircraftId: dbAircraft!.id,
+          callsign: item.callsign,
+          registration: item.registration ?? metadata?.registration ?? null,
+          aircraftType: item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType ?? null,
+          airline: item.enrichment?.route?.airline ?? null,
+          origin: item.enrichment?.route?.origin ?? null,
+          destination: route?.destination ?? null,
+          destinationProvenanceJson: destinationObservation.value,
+          maxAltitude: altitude ?? null,
+          minDistanceKm: item.distanceKm,
+          startTime: recordedAtInstant,
+          lastSeenAt: recordedAtInstant,
+          endTime: null,
+        };
         rememberBounded(latestFlightPositions, flight.id, null);
       } else {
         const currentFlight = flight;
         const route = item.enrichment?.route;
         const destinationObservation = observeDestination((currentFlight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
+        const nextMaxAltitude = Math.max(currentFlight.maxAltitude ?? 0, altitude ?? 0) || null;
+        const currentMinDistance = currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY;
+        const observedDistance = item.distanceKm ?? Number.POSITIVE_INFINITY;
+        const nextMinDistance = Math.min(currentMinDistance, observedDistance) === Number.POSITIVE_INFINITY
+          ? null
+          : Math.min(currentMinDistance, observedDistance);
+        const nextDestinationProvenanceJson = destinationObservation.changed
+          ? destinationObservation.value
+          : currentFlight.destinationProvenanceJson ?? null;
         await statement("flight.write", () => schema.Flight.where({ id: currentFlight.id }).update({
           callsign: currentFlight.callsign ?? item.callsign,
           registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
@@ -1303,12 +1410,24 @@ export async function recordAircraftSnapshot(
           origin: currentFlight.origin ?? item.enrichment?.route?.origin,
           destination: currentFlight.destination ?? route?.destination,
           ...(destinationObservation.changed ? { destinationProvenanceJson: destinationObservation.value } : {}),
-          maxAltitude: Math.max(currentFlight.maxAltitude ?? 0, altitude ?? 0) || null,
-          minDistanceKm: Math.min(currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
-            ? null
-            : Math.min(currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
+          maxAltitude: nextMaxAltitude,
+          minDistanceKm: nextMinDistance,
           lastSeenAt: recordedAtInstant,
         }));
+        flightRowForCache = {
+          ...currentFlight,
+          callsign: currentFlight.callsign ?? item.callsign,
+          registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration ?? null,
+          aircraftType: currentFlight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType ?? null,
+          airline: currentFlight.airline ?? item.enrichment?.route?.airline ?? null,
+          origin: currentFlight.origin ?? item.enrichment?.route?.origin ?? null,
+          destination: currentFlight.destination ?? route?.destination ?? null,
+          destinationProvenanceJson: nextDestinationProvenanceJson,
+          maxAltitude: nextMaxAltitude,
+          minDistanceKm: nextMinDistance,
+          lastSeenAt: recordedAtInstant,
+          endTime: null,
+        };
       }
 
       if (!flight) throw new Error("Flight persistence returned no row");
@@ -1335,6 +1454,8 @@ export async function recordAircraftSnapshot(
         recordedAtMs: effectiveRecordedAt.getTime(), lat: latitude, lon: longitude,
       });
       rememberBounded(durableFlightPresence, dbAircraft.id, true);
+      rememberBounded(durableAircraftRows, item.icaoHex, aircraftRowForCache);
+      if (flightRowForCache && cacheableFlightRow(flightRowForCache)) rememberBounded(openFlightRows, dbAircraft.id, flightRowForCache);
       const altitudeDecision = item.altitudeDecision;
       const anomalyType = altitudeDecision?.anomaly ?? null;
       if (anomalyType && altitudeDecision && shouldPersistAltitudeAnomaly(item.icaoHex, anomalyType, recordedAt.getTime())) {
