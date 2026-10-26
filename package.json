@@ -112,7 +112,7 @@
     "eslint-config-next": "^16.3.8",
     "playwright": "^1.63.0",
     "postcss": "8.5.29",
-    "prisma": "8.0.0-rc.13",
+    "prisma": "8.0.0-rc.26",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vite": "^8.3.1",
