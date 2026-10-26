@@ -13,10 +13,12 @@ permissions:
 jobs:
   atc-geometry:
     runs-on: ubuntu-24.04
+    env:
+      AIRRADAR_ATC_LATITUDE_INDEX: '1'
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
