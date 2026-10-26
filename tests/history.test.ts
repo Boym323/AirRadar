@@ -207,6 +207,100 @@ describe("historical flight maintenance", () => {
     expect(positionCreate).toHaveBeenCalledTimes(2);
   });
 
+  it("groups warm steady-state aircraft and falls back when the batch transaction fails", async () => {
+    const firstAt = new Date("2026-01-01T12:00:00Z");
+    const secondAt = new Date("2026-01-01T12:00:20Z");
+    const items = ["CA1CE1", "CA1CE2", "CA1CE3", "CA1CE4"].map((hex, index) => {
+      const value = normalizeAircraft(
+        { hex, flight: `CACHE${index}`, lat: 50, lon: 14 + index / 100, seen: 0, seen_pos: 0 },
+        { lat: 50, lon: 14, name: "Test" },
+        firstAt,
+      );
+      if (!value) throw new Error("test aircraft could not be normalized");
+      return value;
+    });
+    const aircraftRows = new Map<string, Record<string, unknown>>();
+    const flights = new Map<number, Record<string, unknown>>();
+    let nextAircraftId = 100;
+    let nextFlightId = 200;
+    let transactions = 0;
+    let failNextBatch = false;
+    const aircraftWhere = vi.fn((filter: { icaoHex: string }) => ({ first: vi.fn().mockResolvedValue(aircraftRows.get(filter.icaoHex) ?? null) }));
+    const aircraftCreate = vi.fn(async (input: Record<string, unknown>) => {
+      const row = { ...input, id: nextAircraftId++ };
+      aircraftRows.set(String(input.icaoHex), row);
+      return row;
+    });
+    const flightWhere = vi.fn((filter: Record<string, unknown>) => {
+      if ("aircraftId" in filter) {
+        const aircraftId = Number(filter.aircraftId);
+        const open = flights.get(aircraftId) ?? null;
+        return {
+          limit: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue(open ? [open] : []) }),
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(open) }),
+          }),
+        };
+      }
+      if ("id" in filter) {
+        return { update: vi.fn(async (values: Record<string, unknown>) => Object.assign(flights.get(Number(filter.id)) ?? {}, values)) };
+      }
+      return { where: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }) };
+    });
+    const flightCreate = vi.fn(async (input: Record<string, unknown>) => {
+      const row = { ...input, id: nextFlightId++ };
+      flights.set(Number(input.aircraftId), row);
+      return row;
+    });
+    const positionWhere = vi.fn(() => ({
+      orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+      limit: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }) }),
+      deleteAndCount: vi.fn().mockResolvedValue(0),
+    }));
+    const positionCreate = vi.fn().mockResolvedValue({ id: 300 });
+    const database = {
+      orm: {
+        public: {
+          Aircraft: { where: aircraftWhere, create: aircraftCreate },
+          Flight: { where: flightWhere, create: flightCreate },
+          FlightPosition: { where: positionWhere, create: positionCreate },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => {
+        transactions += 1;
+        if (failNextBatch && transactions === items.length + 2) {
+          failNextBatch = false;
+          throw new Error("simulated batch failure");
+        }
+        return callback(database);
+      },
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+
+    const initial = await recordAircraftSnapshot(items, firstAt);
+    const warm = await recordAircraftSnapshot(items.map((item, index) => ({
+      ...item,
+      lastSeen: secondAt.toISOString(),
+      lat: 50.01,
+      lon: 14 + index / 100 + 0.01,
+    })), secondAt);
+    expect(initial.failed).toEqual([]);
+    expect(warm.failed).toEqual([]);
+    expect(transactions).toBe(items.length + 1);
+    expect(positionCreate).toHaveBeenCalledTimes(items.length * 2);
+
+    failNextBatch = true;
+    const fallback = await recordAircraftSnapshot(items.map((item, index) => ({
+      ...item,
+      lastSeen: new Date(secondAt.getTime() + 20_000).toISOString(),
+      lat: 50.02,
+      lon: 14 + index / 100 + 0.02,
+    })), new Date(secondAt.getTime() + 20_000));
+    expect(fallback.failed).toEqual([]);
+    expect(transactions).toBe(items.length + 6);
+    expect(positionCreate).toHaveBeenCalledTimes(items.length * 3);
+  });
+
   it("keeps existing Flight and FlightPosition timestamp inputs temporal", async () => {
     const recordedAt = new Date("2026-01-01T12:00:10Z");
     const previousSeenAt = Temporal.Instant.fromEpochMilliseconds(new Date("2026-01-01T12:00:00Z").getTime());

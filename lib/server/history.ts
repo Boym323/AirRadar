@@ -79,6 +79,7 @@ export const HISTORY_FLIGHT_LIMIT = 100;
 export const HISTORY_RETENTION_BATCH_SIZE = 10_000;
 export const HISTORY_RETENTION_MAX_BATCHES = 20;
 export const AIRCRAFT_RECENT_FLIGHT_LIMIT = 10;
+export const HISTORY_SNAPSHOT_TRANSACTION_BATCH_SIZE = 8;
 
 export type HistoryFlightRange = "today" | "yesterday" | "7d";
 
@@ -1193,7 +1194,7 @@ export async function recordAircraftSnapshot(
 
   // Local diagnostics only: disabled by default and never changes SQL writes.
   const profileStatements = process.env.HISTORY_STATEMENT_PHASE_PROFILE_ENABLED?.trim().toLowerCase() === "true";
-  await runWithConcurrency(candidates, 8, async (item) => {
+  const persistOne = async (item: Aircraft): Promise<void> => {
     // Provider adapters may omit numeric fields at runtime even though the
     // normalized TypeScript type represents them as `null`. Invalid
     // coordinates are filtered before entering the persistence concurrency
@@ -1478,6 +1479,186 @@ export async function recordAircraftSnapshot(
     } catch {
       // History is best-effort; one aircraft must not reject the other writes.
       result.failed.push(item.icaoHex);
+    }
+  };
+
+  /**
+   * Steady-state samples already have all continuity inputs in RAM. Grouping
+   * those small updates in one transaction cuts transaction/WAL overhead while
+   * leaving cache misses and flight-boundary changes on the isolated path.
+   * Any batch error is retried per aircraft, preserving fail-soft isolation.
+   */
+  const canUseCachedTransaction = (item: Aircraft): boolean => {
+    try {
+      const cachedAircraft = durableAircraftRows.get(item.icaoHex);
+      const currentFlight = cachedAircraft ? openFlightRows.get(cachedAircraft.id) : undefined;
+      if (!cachedAircraft || !currentFlight || !latestFlightPositions.has(currentFlight.id)) return false;
+      if (item.altitudeDecision?.anomaly) return false;
+      if (Object.keys(changedAircraftValues(cachedAircraft, aircraftDurableValues(item))).length > 0) return false;
+      const observedAt = positionObservedAt(item);
+      const effectiveRecordedAt = observedAt === null ? recordedAt : new Date(observedAt);
+      return !(
+        Boolean(currentFlight.callsign && item.callsign && currentFlight.callsign !== item.callsign)
+        || effectiveRecordedAt.getTime() - timestampAsDate(currentFlight.lastSeenAt).getTime() > getFlightContinuityGapMs()
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const persistCachedBatch = async (items: Aircraft[]): Promise<void> => {
+    const staged: Array<{
+      item: Aircraft;
+      aircraft: HistoryAircraftPersistenceRow;
+      flight: HistoryFlightPersistenceRow;
+      effectiveRecordedAt: Date;
+      latitude: number;
+      longitude: number;
+      skipped: boolean;
+    }> = [];
+    let statementCount = 0;
+    const statement = async <T>(phase: HistoryStatementPhase, operation: () => Promise<T>): Promise<T> => {
+      statementCount += 1;
+      if (!profileStatements) return operation();
+      const started = performance.now();
+      let succeeded = false;
+      try {
+        const value = await operation();
+        succeeded = true;
+        return value;
+      } finally {
+        historyStatementProfiler.observe(phase, performance.now() - started, succeeded);
+      }
+    };
+
+    await trackDbTransaction("history.snapshot", () => database.transaction(async (transaction) => {
+      const schema = transaction.orm.public;
+      for (const item of items) {
+        const aircraftRow = durableAircraftRows.get(item.icaoHex);
+        const currentFlight = aircraftRow ? openFlightRows.get(aircraftRow.id) : undefined;
+        if (!aircraftRow || !currentFlight) throw new Error("History cache changed during batch preparation");
+        const observedAt = positionObservedAt(item);
+        const effectiveRecordedAt = observedAt === null ? recordedAt : new Date(observedAt);
+        const latitude = item.lat!;
+        const longitude = item.lon!;
+        const previousPosition = latestFlightPositions.get(currentFlight.id);
+        if (previousPosition && effectiveRecordedAt.getTime() > previousPosition.recordedAtMs
+          && !isPlausibleTransition(
+            { recordedAt: new Date(previousPosition.recordedAtMs).toISOString(), lat: previousPosition.lat, lon: previousPosition.lon },
+            { recordedAt: effectiveRecordedAt.toISOString(), lat: latitude, lon: longitude },
+          )) {
+          staged.push({ item, aircraft: aircraftRow, flight: currentFlight, effectiveRecordedAt, latitude, longitude, skipped: true });
+          continue;
+        }
+
+        const altitude: number | undefined = typeof item.altitude === "number" && Number.isFinite(item.altitude) ? item.altitude : undefined;
+        const groundSpeed: number | undefined = typeof item.groundSpeed === "number" && Number.isFinite(item.groundSpeed) ? item.groundSpeed : undefined;
+        const track: number | undefined = typeof item.track === "number" && Number.isFinite(item.track) ? item.track : undefined;
+        const verticalRate: number | undefined = typeof item.verticalRate === "number" && Number.isFinite(item.verticalRate) ? item.verticalRate : undefined;
+        const route = item.enrichment?.route;
+        const destinationObservation = observeDestination(
+          currentFlight.destinationProvenanceJson,
+          route?.destination,
+          effectiveRecordedAt.toISOString(),
+          route?.source ?? null,
+          item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null,
+        );
+        const nextMaxAltitude = Math.max(currentFlight.maxAltitude ?? 0, altitude ?? 0) || null;
+        const currentMinDistance = currentFlight.minDistanceKm ?? Number.POSITIVE_INFINITY;
+        const observedDistance = item.distanceKm ?? Number.POSITIVE_INFINITY;
+        const nextMinDistance = Math.min(currentMinDistance, observedDistance) === Number.POSITIVE_INFINITY
+          ? null
+          : Math.min(currentMinDistance, observedDistance);
+        const nextDestinationProvenanceJson = destinationObservation.changed
+          ? destinationObservation.value
+          : currentFlight.destinationProvenanceJson ?? null;
+        const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(effectiveRecordedAt.getTime());
+        await statement("flight.write", () => schema.Flight.where({ id: currentFlight.id }).update({
+          callsign: currentFlight.callsign ?? item.callsign,
+          registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
+          aircraftType: currentFlight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
+          airline: currentFlight.airline ?? item.enrichment?.route?.airline,
+          origin: currentFlight.origin ?? item.enrichment?.route?.origin,
+          destination: currentFlight.destination ?? route?.destination,
+          ...(destinationObservation.changed ? { destinationProvenanceJson: destinationObservation.value } : {}),
+          maxAltitude: nextMaxAltitude,
+          minDistanceKm: nextMinDistance,
+          lastSeenAt: recordedAtInstant,
+        }));
+        await statement("position.write", () => schema.FlightPosition.create({
+          flightId: currentFlight.id,
+          recordedAt: recordedAtInstant,
+          lat: latitude,
+          lon: longitude,
+          ...(altitude === undefined ? {} : { altitude }),
+          ...(altitude !== undefined && altitude !== null && item.altitudeObservation ? {
+            altitudeSource: item.altitudeObservation.source,
+            altitudeProvider: item.altitudeObservation.provider,
+            altitudeProtocol: item.altitudeObservation.protocol,
+            altitudeType: item.altitudeObservation.altitudeType,
+            altitudeObservedAt: timestampAsInstant(new Date(item.altitudeObservation.observedAt)),
+            altitudeDecisionReason: item.altitudeDecision?.reason ?? null,
+          } : {}),
+          ...(groundSpeed === undefined ? {} : { groundSpeed }),
+          ...(track === undefined ? {} : { track }),
+          ...(verticalRate === undefined ? {} : { verticalRate }),
+        }));
+        staged.push({
+          item,
+          aircraft: aircraftRow,
+          flight: {
+            ...currentFlight,
+            callsign: currentFlight.callsign ?? item.callsign,
+            registration: currentFlight.registration ?? item.registration ?? item.enrichment?.metadata?.registration ?? null,
+            aircraftType: currentFlight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType ?? null,
+            airline: currentFlight.airline ?? item.enrichment?.route?.airline ?? null,
+            origin: currentFlight.origin ?? item.enrichment?.route?.origin ?? null,
+            destination: currentFlight.destination ?? route?.destination ?? null,
+            destinationProvenanceJson: nextDestinationProvenanceJson,
+            maxAltitude: nextMaxAltitude,
+            minDistanceKm: nextMinDistance,
+            lastSeenAt: recordedAtInstant,
+            endTime: null,
+          },
+          effectiveRecordedAt,
+          latitude,
+          longitude,
+          skipped: false,
+        });
+      }
+    }), () => statementCount);
+
+    for (const entry of staged) {
+      result.succeeded.push(entry.item.icaoHex);
+      if (entry.skipped) continue;
+      rememberBounded(latestFlightPositions, entry.flight.id, {
+        recordedAtMs: entry.effectiveRecordedAt.getTime(), lat: entry.latitude, lon: entry.longitude,
+      });
+      rememberBounded(durableFlightPresence, entry.aircraft.id, true);
+      rememberBounded(durableAircraftRows, entry.item.icaoHex, entry.aircraft);
+      rememberBounded(openFlightRows, entry.aircraft.id, entry.flight);
+    }
+  };
+
+  const cachedCandidates = candidates.filter(canUseCachedTransaction);
+  const cachedSet = new Set(cachedCandidates);
+  const uncachedCandidates = candidates.filter((item) => !cachedSet.has(item));
+  await runWithConcurrency(uncachedCandidates, 8, persistOne);
+  const cachedBatches: Aircraft[][] = [];
+  for (let offset = 0; offset < cachedCandidates.length; offset += HISTORY_SNAPSHOT_TRANSACTION_BATCH_SIZE) {
+    cachedBatches.push(cachedCandidates.slice(offset, offset + HISTORY_SNAPSHOT_TRANSACTION_BATCH_SIZE));
+  }
+  await runWithConcurrency(cachedBatches, 2, async (batch) => {
+    if (batch.length === 1) {
+      await persistOne(batch[0]!);
+      return;
+    }
+    try {
+      await persistCachedBatch(batch);
+    } catch {
+      // A single bad row must not discard other aircraft. The transaction
+      // rolled back, so retrying each item is safe and preserves isolation.
+      await runWithConcurrency(batch, 8, persistOne);
     }
   });
 
