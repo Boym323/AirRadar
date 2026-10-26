@@ -1,10 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { dayKey } from "@/lib/server/config";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, ReceiverPosition } from "@/lib/aircraft/types";
-import { ReceiverStatistics } from "@/lib/server/statistics";
+import { getPrisma } from "@/lib/server/db";
+import { DatabaseReceiverStatisticsPersistence, ReceiverStatistics } from "@/lib/server/statistics";
 import type { ReceiverStatisticsPersistence, ReceiverStatisticsPersistenceSnapshot } from "@/lib/server/statistics";
 import { coverageChartPoints, coveragePolygonPath, summarizeCoverage } from "@/lib/statistics-coverage";
+
+vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
+
+afterEach(() => {
+  vi.mocked(getPrisma).mockReset();
+});
 
 const receiver: ReceiverPosition = { lat: 50, lon: 14, name: "Test" };
 const fixtureClock = () => new Date("2026-09-08T12:00:00.000Z");
@@ -106,6 +113,45 @@ describe("receiver statistics", () => {
     const restarted = new ReceiverStatistics({ persistence, clock: () => at });
     await restarted.load();
     expect(restarted.getResponse(0, null).daily.maxDistanceKm).toBe(123.4);
+  });
+
+  it("skips the aggregate upsert for aircraft-only changes and updates only dirty aggregate fields", async () => {
+    const aggregateUpsert = vi.fn().mockResolvedValue(undefined);
+    const aircraftUpsert = vi.fn().mockResolvedValue(undefined);
+    const coverageUpsert = vi.fn().mockResolvedValue(undefined);
+    const database = {
+      orm: {
+        public: {
+          ReceiverDailyStats: { upsert: aggregateUpsert },
+          ReceiverDailyAircraft: { upsert: aircraftUpsert },
+          ReceiverDailyCoverage: { upsert: coverageUpsert },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+    const persistence = new DatabaseReceiverStatisticsPersistence();
+    const base: ReceiverStatisticsPersistenceSnapshot = {
+      date: "2026-09-08",
+      uniqueAircraftCount: 8,
+      maxConcurrentAircraft: 4,
+      maxDistanceKm: 123.4,
+      aircraft: [{ icaoHex: "ABC123", aircraftType: "A320", airline: "TEST" }],
+      coverage: [{ azimuthBucket: 12, maxDistanceKm: 123.4 }],
+    };
+
+    await persistence.save({ ...base, aggregateDirty: false });
+    expect(aggregateUpsert).not.toHaveBeenCalled();
+    expect(aircraftUpsert).toHaveBeenCalledTimes(1);
+    expect(coverageUpsert).toHaveBeenCalledTimes(1);
+
+    await persistence.save({ ...base, aircraft: [], coverage: [], aggregateDirty: true, aggregateFields: ["maxDistanceKm"] });
+    expect(aggregateUpsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({ maxDistanceKm: 123.4 }),
+      create: expect.objectContaining({ uniqueAircraftCount: 8, maxConcurrentAircraft: 4, maxDistanceKm: 123.4 }),
+    }));
+    expect(aggregateUpsert.mock.calls[0]?.[0].update).not.toHaveProperty("uniqueAircraftCount");
+    expect(aggregateUpsert.mock.calls[0]?.[0].update).not.toHaveProperty("maxConcurrentAircraft");
   });
 
   it("puts north and the 359 degree edge in the expected buckets", () => {

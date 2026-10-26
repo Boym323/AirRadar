@@ -23,6 +23,8 @@ export interface DailyCoverageStatisticsRecord {
   maxDistanceKm: number;
 }
 
+export type ReceiverStatisticsAggregateField = "uniqueAircraftCount" | "maxConcurrentAircraft" | "maxDistanceKm";
+
 export interface ReceiverStatisticsPersistenceSnapshot {
   date: string;
   uniqueAircraftCount: number;
@@ -30,6 +32,9 @@ export interface ReceiverStatisticsPersistenceSnapshot {
   maxDistanceKm: number;
   aircraft: DailyAircraftStatisticsRecord[];
   coverage: DailyCoverageStatisticsRecord[];
+  /** Internal write projection; omitted by legacy/custom persistence adapters. */
+  aggregateDirty?: boolean;
+  aggregateFields?: ReceiverStatisticsAggregateField[];
 }
 
 export interface ReceiverStatisticsPersistence {
@@ -139,21 +144,20 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
     const updatedAt = Temporal.Instant.fromEpochMilliseconds(Date.now());
     await trackDbTransaction("receiver.daily-stats", () => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
-      await schema.ReceiverDailyStats.upsert({
-        update: {
+      if (snapshot.aggregateDirty !== false) {
+        const aggregateValues = {
           uniqueAircraftCount: snapshot.uniqueAircraftCount,
           maxConcurrentAircraft: snapshot.maxConcurrentAircraft,
           maxDistanceKm: snapshot.maxDistanceKm,
-          updatedAt,
-        },
-        create: {
-          date: snapshot.date,
-          uniqueAircraftCount: snapshot.uniqueAircraftCount,
-          maxConcurrentAircraft: snapshot.maxConcurrentAircraft,
-          maxDistanceKm: snapshot.maxDistanceKm,
-          updatedAt,
-        },
-      });
+        };
+        const allAggregateFields: ReceiverStatisticsAggregateField[] = ["uniqueAircraftCount", "maxConcurrentAircraft", "maxDistanceKm"];
+        const fields = snapshot.aggregateFields?.length ? snapshot.aggregateFields : allAggregateFields;
+        const aggregateUpdate = Object.fromEntries(fields.map((field) => [field, aggregateValues[field]]));
+        await schema.ReceiverDailyStats.upsert({
+          update: { ...aggregateUpdate, updatedAt },
+          create: { date: snapshot.date, ...aggregateValues, updatedAt },
+        });
+      }
 
       for (const item of snapshot.aircraft) {
         const table = schema.ReceiverDailyAircraft as typeof schema.ReceiverDailyAircraft & {
@@ -237,6 +241,7 @@ export class ReceiverStatistics {
   private persistenceFailureCount = 0;
   private lastSuccessfulPersistenceAt: string | null = null;
   private loaded = false;
+  private readonly dirtyAggregateFields = new Set<ReceiverStatisticsAggregateField>();
 
   constructor(options: ReceiverStatisticsOptions = {}) {
     this.timezone = options.timezone ?? getAppTimezone();
@@ -276,7 +281,7 @@ export class ReceiverStatistics {
     this.ensureDay(observedAt);
     if (aircraft.length > this.maxConcurrentAircraft) {
       this.maxConcurrentAircraft = aircraft.length;
-      this.markAggregateDirty();
+      this.markAggregateDirty("maxConcurrentAircraft");
     }
 
     const canCalculateCoverage = validReceiver(receiver);
@@ -298,7 +303,7 @@ export class ReceiverStatistics {
 
       if (distanceKm > this.maxDistanceKm) {
         this.maxDistanceKm = distanceKm;
-        this.markAggregateDirty();
+        this.markAggregateDirty("maxDistanceKm");
       }
 
       const azimuthBucket = Math.min(COVERAGE_BUCKET_COUNT - 1, Math.floor(bearing / COVERAGE_BUCKET_SIZE_DEGREES));
@@ -428,6 +433,7 @@ export class ReceiverStatistics {
     this.maxConcurrentAircraft = 0;
     this.maxDistanceKm = 0;
     this.aggregateDirtyVersion = null;
+    this.dirtyAggregateFields.clear();
     this.lastFlushAttemptAt = this.clock().getTime();
     this.loaded = true;
   }
@@ -440,7 +446,7 @@ export class ReceiverStatistics {
       this.uniqueAircraftCount += 1;
       this.incrementBreakdown(this.typeCounts, aircraftType);
       this.incrementBreakdown(this.airlineCounts, airline);
-      this.markAggregateDirty();
+      this.markAggregateDirty("uniqueAircraftCount");
       this.markAircraftDirty(record);
       return;
     }
@@ -507,9 +513,10 @@ export class ReceiverStatistics {
     else map.delete(value);
   }
 
-  private markAggregateDirty(): void {
+  private markAggregateDirty(field: ReceiverStatisticsAggregateField): void {
     this.version += 1;
     this.aggregateDirtyVersion = this.version;
+    this.dirtyAggregateFields.add(field);
   }
 
   private markAircraftDirty(record: DailyAircraftStatisticsRecord): void {
@@ -533,6 +540,8 @@ export class ReceiverStatistics {
       maxDistanceKm: this.maxDistanceKm,
       aircraft: [...this.dirtyAircraft.values()].map((item) => ({ ...item.record })),
       coverage: [...this.dirtyCoverage.values()].map((item) => ({ ...item.record })),
+      aggregateDirty: this.aggregateDirtyVersion !== null,
+      aggregateFields: [...this.dirtyAggregateFields],
     };
   }
 
@@ -573,6 +582,7 @@ export class ReceiverStatistics {
           if (this.dirtyCoverage.get(bucket)?.version === version) this.dirtyCoverage.delete(bucket);
         }
         if (this.aggregateDirtyVersion === pending.aggregateVersion) this.aggregateDirtyVersion = null;
+        if (this.aggregateDirtyVersion === null) this.dirtyAggregateFields.clear();
       })
       .catch((error) => {
         // Keep dirty state for the next throttled attempt; live tracking is
