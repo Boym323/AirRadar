@@ -1276,7 +1276,10 @@ export async function recordAircraftSnapshot(
         }
       }
       if (!dbAircraft) throw new Error("Aircraft persistence returned no row");
-      const aircraftRowForCache = dbAircraft;
+      // Some narrow persistence adapters return only the primary key from a
+      // write. Keep the durable values complete in RAM so that the next
+      // sample does not manufacture a false metadata change.
+      const aircraftRowForCache: HistoryAircraftPersistenceRow = { ...dbAircraft, ...nextAircraft };
 
       // A first-ever alert must be based on a durable Flight, not on a
       // process-local Aircraft row. Look up the active flight first: when one

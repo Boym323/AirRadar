@@ -207,6 +207,58 @@ describe("historical flight maintenance", () => {
     expect(positionCreate).toHaveBeenCalledTimes(2);
   });
 
+  it("does not reuse history cache rows after a database client restart", async () => {
+    const recordedAt = new Date("2026-01-01T12:00:00Z");
+    const aircraft = normalizeAircraft(
+      { hex: "E5A101", flight: "RESTART1", lat: 50, lon: 14, seen: 0, seen_pos: 0 },
+      { lat: 50, lon: 14, name: "Test" },
+      recordedAt,
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    const makeDatabase = (aircraftId: number, flightId: number) => {
+      const aircraftLookup = vi.fn().mockResolvedValue({
+        id: aircraftId, registration: null, registrationCountry: null, registrationCountryCode: null,
+        aircraftType: null, manufacturer: null, model: null, operator: null,
+      });
+      const flightCreate = vi.fn().mockImplementation(async (input: Record<string, unknown>) => ({ ...input, id: flightId }));
+      const positionCreate = vi.fn().mockResolvedValue({ id: flightId + 100 });
+      const flightWhere = vi.fn((filter: Record<string, unknown>) => {
+        if ("aircraftId" in filter) return {
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+          }),
+          limit: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }),
+        };
+        return { update: vi.fn() };
+      });
+      const database = {
+        orm: {
+          public: {
+            Aircraft: { where: vi.fn().mockReturnValue({ first: aircraftLookup }) },
+            Flight: { where: flightWhere, create: flightCreate },
+            FlightPosition: { create: positionCreate },
+          },
+        },
+        transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+      };
+      return { database, aircraftLookup, flightCreate };
+    };
+
+    const first = makeDatabase(701, 801);
+    vi.mocked(getPrisma).mockReturnValue(first.database as never);
+    expect((await recordAircraftSnapshot([aircraft], recordedAt)).failed).toEqual([]);
+
+    const restarted = makeDatabase(702, 802);
+    vi.mocked(getPrisma).mockReturnValue(restarted.database as never);
+    expect((await recordAircraftSnapshot([aircraft], recordedAt)).failed).toEqual([]);
+
+    expect(first.aircraftLookup).toHaveBeenCalledTimes(1);
+    expect(restarted.aircraftLookup).toHaveBeenCalledTimes(1);
+    expect(first.flightCreate).toHaveBeenCalledTimes(1);
+    expect(restarted.flightCreate).toHaveBeenCalledTimes(1);
+  });
+
   it("groups warm steady-state aircraft and falls back when the batch transaction fails", async () => {
     const firstAt = new Date("2026-01-01T12:00:00Z");
     const secondAt = new Date("2026-01-01T12:00:20Z");
