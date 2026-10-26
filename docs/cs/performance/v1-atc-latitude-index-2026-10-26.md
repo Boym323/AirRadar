@@ -1,8 +1,8 @@
 # AirRadar V1 – index šířkových pásem ATC polygonů (26. 10. 2026)
 
-**Stav:** Implementace a specializovaná CI přejímka PASS v draft PR
-[#1114](https://github.com/Boym323/AirRadar/pull/1114).
-**Produkční `main` a běžící V1 zůstávají beze změny.**
+**Stav:** Připraveno pro sloučení jako **ve výchozím stavu vypnutá** optimalizace.
+Bez `AIRRADAR_ATC_LATITUDE_INDEX=1` se používá původní geometrie V1; žádný index se nepřipravuje ani nepoužívá.
+Aktivace se schvaluje až po samostatném A/B T58 DEV soaku a kontrole rollbacku.
 
 ## Proč
 Velké CZ/SK ATC ringy obsahují až desítky tisíc souřadnic.
@@ -20,7 +20,7 @@ při vícenásobném vyhodnocování ATC kontextu.
   nesmí zmizet hraniční bod ani segment ležící na hranici pásma.
 - Asynchronní příprava datasetu zavolá `prewarmFrozenAtcRing` a po každých
   nejvýše 1 024 hranách uvolní event loop. Sync cesta používá lazy build.
-- Žádné zásahy do DB, ADS-B, zdrojů dat, streamu, UI ani konfigurace.
+- Žádné zásahy do DB, ADS-B, zdrojů dat, streamu ani UI. Nová **volitelná** proměnná `AIRRADAR_ATC_LATITUDE_INDEX=1`; default OFF.
 - Index zanikne, když GC uvolní starý připravený ATC ring.
 
 ## Kontrolovaná A/B zkouška současného V1 kódu
@@ -60,9 +60,8 @@ PASS také pro TypeScript, integrační test ATC a mutable/frozen/hole parity.
 
 ## Zbývající brány
 1. CodeQL a obecné škálovací testy PR bez regresí.
-2. Původní V1 CI zatím selhává **před sestavením** na auditu stávajících
-   produkčních závislostí (Next.js/undici); neobcházet audit kvůli optimalizaci.
-3. Před produkčním sloučením změřit stejné T58 scénáře při reálném provozu:
+2. Audit Next.js a undici byl opraven v PR #1111; při začlenění indexu se nesmí vypnout žádná bezpečnostní brána.
+3. Před **zapnutím optimalizace na produkci** změřit stejné T58 scénáře při reálném provozu:
    CPU, RSS, P95/P99 event-loop, maximální stall, přesnost ATC výběru a
    schopnost rollbacku. Srovnat se stejným hardwarem a verzemi.
 4. Konfliktní Rust ATC pilot [PR #1107](https://github.com/Boym323/AirRadar/pull/1107)
