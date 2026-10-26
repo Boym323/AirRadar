@@ -23,29 +23,40 @@ při vícenásobném vyhodnocování ATC kontextu.
 - Žádné zásahy do DB, ADS-B, zdrojů dat, streamu, UI ani konfigurace.
 - Index zanikne, když GC uvolní starý připravený ATC ring.
 
-## Kontrolovaná syntetická A/B zkouška na reálném SK polygonu
+## Kontrolovaná A/B zkouška současného V1 kódu
 
-[GitHub Actions #40294252784](https://github.com/Boym323/AirRadar/actions/runs/40294252784)
-– stejný runner, 128 deterministických souřadnic, 46 993 vrcholů.
+[GitHub Actions #40295058778](https://github.com/Boym323/AirRadar/actions/runs/40295058778)
+– stejný runner, 128 deterministických poloh, SK polygon s 46 993 vrcholy.
+Obě větve volají **stejný aktuální `pointInPolygon` z V1**. Před = mutable
+polygon bez indexu, po = shodná hluboce zmrazená geometrie s indexem.
 
-| Metrika | Před (bez indexu) | Po (s indexem) |
+| Metrika | Aktuální V1 bez indexu | V1 s indexem |
 |---|---:|---:|
-| P50 jednoho dotazu | 4,625 ms | 0,128 ms |
-| P95 jednoho dotazu | 9,501 ms | 0,418 ms |
-| P99 jednoho dotazu | 9,642 ms | 0,475 ms |
-| Max jednoho dotazu | 9,904 ms | 0,491 ms |
-| CPU všech 128 dotazů | 842,657 ms | 22,080 ms |
-| Max zpoždění event loopu | 13,230 ms | 1,220 ms |
-| Neshody klasifikace hran | — | **0/128** |
-| Jednorázová asynchronní příprava indexu | — | 11,325 ms |
+| P50 jednoho dotazu | 0,172 ms | 0,092 ms |
+| P95 jednoho dotazu | 0,425 ms | 0,283 ms |
+| P99 jednoho dotazu | 1,533 ms | 0,291 ms |
+| Max jednoho dotazu | 1,842 ms | 0,293 ms |
+| CPU 128 dotazů | 38,081 ms | 14,782 ms |
+| Max zpoždění event loopu | 1,924 ms | 1,143 ms |
+| Neshody klasifikace | — | **0 ze 128** |
+| Asynchronní příprava indexu | — | 5,887 ms |
 
-**Limity interpretace:** samotná geometrie na synteticky vybraných polohách
-nad skutečným polygonem, nikoli živý end-to-end T58 test, ani CPU celého
-produkčního procesu. Údaj o RSS nelze ze dvou krátkých rozdílných časových
-oken přímo srovnat. Uváděný CPU poměr ≈0,026 se týká pouze této operace.
+Pozor: [předběžný běh #40294252784](https://github.com/Boym323/AirRadar/actions/runs/40294252784)
+porovnával nový index vůči **starší pre-V8 geometrické referenci**, takže
+P95 9,50 → 0,42 ms ani CPU 843 → 22 ms **nejsou korektní měření proti
+aktuální V1**. Výsledky z tohoto běhu se nesmějí citovat jako zrychlení
+současné produkce. Správné porovnání v tabulce výše znamená zlepšení
+CPU o přibližně 61 %, P95 o 34 % a P99 o 81 % jen pro tento výpočet.
 
-[Samostatná CI #40294518103](https://github.com/Boym323/AirRadar/actions/runs/40294518103)
-navíc ověřila TypeScript typecheck, ATC engine integraci a index parity PASS.
+**Limity:** syntetické polohy nad reálným polygonem, nikoli živý T58 soak
+ani CPU/RSS celé produkce. Rozdílná krátká okna RSS a GC se nedají
+poctivě zaměnit za důkaz nižší RAM v produkci. Varianta `owned: true`
+skutečně používá hluboce zmrazené polygonové body z
+`getAtcDataSnapshot()`/`freezeAtcSector()`, takže asynchronní index
+je použitelný pro reálné ATC datasety bez jejich mutace.
+
+[Specializovaná CI](https://github.com/Boym323/AirRadar/actions/runs/40295058778)
+PASS také pro TypeScript, integrační test ATC a mutable/frozen/hole parity.
 
 ## Zbývající brány
 1. CodeQL a obecné škálovací testy PR bez regresí.
