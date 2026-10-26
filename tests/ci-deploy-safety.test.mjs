@@ -22,6 +22,16 @@ test("metadata automation is retired without weakening PR or release validation"
   assert.doesNotMatch(job("validate"), /automation\/repository-metadata/);
 });
 
+test("main builds are serialized before release version allocation", () => {
+  const workflowHeader = workflow.split("\n jobs:")[0].replace("\n jobs:", "\njobs:");
+  assert.match(workflowHeader, /airradar-main-release-serial/);
+  assert.match(workflowHeader, /cancel-in-progress:.*github\\.event_name == 'pull_request'.*github\\.event_name == 'workflow_dispatch'/);
+  const scope = job("release-scope");
+  assert.match(scope, /git tag --list .* --merged HEAD --sort=-version:refname/);
+  assert.match(scope, /git diff --name-only -z "\\$\\{latest_tag\\}" "\\$\\{GITHUB_SHA\\}"/);
+  assert.match(scope, /__unknown_change__/);
+});
+
 test("PR previews cannot trigger self-hosted production deploy", () => {
   const deploy = job("deploy");
   assert.match(deploy, /^    if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main' && needs\.release-scope\.outputs\.deploy == 'true'$/m);

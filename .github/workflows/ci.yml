@@ -11,8 +11,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # Never let a newer docs-only push replace a queued deploy-bearing main run.
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'workflow_dispatch' && format('dispatch-{0}', github.ref) || format('main-sha-{0}', github.sha) }}
+  # Serialize the *entire* main release: calculating a semver tag during
+  # parallel builds lets multiple commits claim the same tag. The deploy-only
+  # lock is too late. GitHub may replace a pending run, so release-scope below
+  # compares against the latest published tag instead of only push.before.
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && 'airradar-main-release-serial') || github.event_name == 'workflow_dispatch' && format('dispatch-{0}', github.ref) || format('main-sha-{0}', github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
 jobs:
@@ -214,7 +217,6 @@ jobs:
         id: scope
         shell: bash
         env:
-          PUSH_BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -Eeuo pipefail
@@ -229,10 +231,19 @@ jobs:
               printf '%s\0' '__unknown_change__' > "$changes"
               echo "::warning::Cannot verify PR base: selecting full release gates"
             fi
-          elif [[ "$PUSH_BEFORE" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$PUSH_BEFORE" =~ ^0{40}$ ]] \
-            && git cat-file -e "$PUSH_BEFORE^{commit}" \
-            && git merge-base --is-ancestor "$PUSH_BEFORE" "$GITHUB_SHA"; then
-            git diff --name-only -z "$PUSH_BEFORE" "$GITHUB_SHA" > "$changes"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
+            # A pending main run may be superseded in GitHub's concurrency
+            # queue. Diff against the last released commit so the eventual
+            # run cannot silently skip code changes from a displaced push.
+            version_series="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")')"
+            latest_tag="$(git tag --list "v${version_series}.*" --merged HEAD --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
+            if [[ -n "${latest_tag}" ]] && git merge-base --is-ancestor "${latest_tag}" "${GITHUB_SHA}"; then
+              git diff --name-only -z "${latest_tag}" "${GITHUB_SHA}" > "$changes"
+              echo "[release-scope] Compare from last released tag: ${latest_tag} -> ${GITHUB_SHA}"
+            else
+              printf '%s\0' '__unknown_change__' > "$changes"
+              echo "::warning::Cannot verify push base: selecting full release gates"
+            fi
           else
             printf '%s\0' '__unknown_change__' > "$changes"
             echo "::warning::Cannot verify push base: selecting full release gates"
