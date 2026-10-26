@@ -85,9 +85,12 @@ export async function runV1AtcLatitudeIndexBenchmark(): Promise<object> {
   const source = JSON.parse(readFileSync(new URL("../data/atc/sk-state-boundary.json", import.meta.url), "utf8"));
   const raw = longestRing(source);
   if (raw.length < 40_000 || raw.length > 100_000) throw new Error("atc_fixture_invalid");
+  // Compare the SAME current V1 implementation, switching only ring mutability.
+  // Mutable rings intentionally take the existing unindexed geometry path.
+  const plainRing = raw.map((point) => [point[0], point[1]] as LonLat);
   const ring = Object.freeze(raw.map((point) => Object.freeze([point[0], point[1]] as LonLat))) as unknown as Ring;
   const points = positionsFor(ring, 128);
-  const before = await measure(points, ring, legacyPointInPolygon);
+  const before = await measure(points, plainRing, pointInPolygon);
   const { prewarmFrozenAtcRing } = await import("../lib/atc-context/latitude-ring-index");
   const prewarmStart = performance.now();
   const indexed = await prewarmFrozenAtcRing(ring);
@@ -95,7 +98,7 @@ export async function runV1AtcLatitudeIndexBenchmark(): Promise<object> {
   if (!indexed) throw new Error("atc_index_build_rejected_fixture");
   let mismatches = 0;
   for (const point of points) {
-    if (legacyPointInPolygon(point, [ring]) !== pointInPolygon(point, [ring])) mismatches++;
+    if (pointInPolygon(point, [plainRing]) !== pointInPolygon(point, [ring])) mismatches++;
   }
   if (mismatches) throw new Error(`atc_index_semantic_mismatch:${mismatches}`);
   const after = await measure(points, ring, pointInPolygon);
