@@ -1,27 +1,29 @@
 # AirRadar V1 → Rust: R-01 ATC geometry pilot
 
-Status: **PR proposal; not merged or deployed**. No modifications to V1
-production or DB. V2's separate Rust engine remains isolated.
+Status: **safe to merge as an opt-in, inactive pilot**. Production remains
+unchanged until explicit runtime approval. No change to V1 aircraft source,
+DB, ingest or external APIs; V2 remains isolated.
 
 ## Scope
-- Existing optional N-API addon gains `atcRingContains` (f64 packed ring).
-- The most frequently exercised V1 ATC context ring predicate can opt into Rust
-  through `matchAtcRing`, preserving bounding-box checks, altitude, validity,
-  context shape and all existing public APIs.
-- No second source of aircraft truth, no V2 writes, no ingest duplication.
-- Rust's different compiler/runtime semantics are checked by a seeded
-  TypeScript/Rust parity suite (5k points plus boundary fixtures).
-- Optional addon compatibility: old builds without the symbol use the JS
-  reference. Defaults unchanged. `AIRRADAR_NATIVE_ATC=1` also requires the
-  existing `AIRRADAR_NATIVE_BEAST=1` loader and an absolute addon path.
+- The existing optional N-API addon adds `atcRingContains` for packed f64 rings.
+- `matchAtcRing` optionally replaces the ATC ring predicate while retaining
+  bounding boxes, altitude checks, validity, context and public response shape.
+- No new source of truth, history writes, additional BEAST sockets or ingest.
+- Rust/TypeScript parity tests include seeded 5,000 points and boundary cases.
+- Older native addons without the new symbol transparently use the JS reference.
+- Activation requires **both** `AIRRADAR_NATIVE_BEAST=1` and
+  `AIRRADAR_NATIVE_ATC=1`, plus a valid absolute addon path. Default remains OFF.
+- The independently optional JS latitude index (#1114) is preserved in V1;
+  it is not activated by this Rust pilot and has its own enablement flag.
 
 ## Gates
-1. Rust unit tests, TS typecheck and ATC regressions and native CI PASS.
-2. Under identical local replay, compare ATC CPU, p95/p99 event-loop lag,
-   T58 stalls and RSS between OFF and ON. Reject if regression.
-3. Keep V1 archive/maintenance policy until explicitly reversed; never merge
-   from this draft without separate approval, and audit GitHub main auto-deploy.
-4. Later: evaluate moving state owner and SSE to the V2 Rust engine through a
-   separately reviewed process boundary and shadow no-write comparison.
+1. Rust unit, native parity, TypeScript, ATC integration, CodeQL and release
+   checks must pass before merging the inactive code.
+2. **Before activation**, run identical local replay and measure CPU, p95/p99
+   event-loop latency, maximum T58 stalls, RSS, and rollback from ON to OFF.
+3. Keep V1 state ownership and archive/maintenance policy; do not activate
+   both ATC accelerators together before dedicated combined A/B validation.
+4. Any eventual migration of aircraft state/SSE into V2 requires a separate
+   review, read-only shadow comparison and controlled cutover.
 
-No performance improvement is claimed from implementation alone.
+Passing tests does not prove a production CPU or memory reduction.
