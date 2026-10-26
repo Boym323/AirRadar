@@ -5,6 +5,7 @@ on:
       - dependabot/npm_and_yarn/prisma-8.0.0-rc.26
     paths:
       - package.json
+      - prisma/contract.prisma
       - .github/workflows/prisma-lock-refresh.yml
 permissions:
   contents: write
