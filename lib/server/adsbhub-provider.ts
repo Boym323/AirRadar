@@ -124,7 +124,7 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
     socket.setNoDelay?.(true);
     socket.setTimeout?.(this.staleMs);
     socket.once("connect", () => { this.connected = true; this.connectionSince = Date.now(); this.retryMs = 1000; this.lastError = null; });
-    socket.on("data", (chunk) => this.handleData(chunk));
+    socket.on("data", (chunk) => this.handleData(typeof chunk === "string" ? Buffer.from(chunk, "latin1") : chunk));
     socket.once("timeout", () => { this.lastError = "stale connection"; socket.destroy(); });
     socket.once("error", (error) => { this.lastError = error.message; });
     socket.once("close", () => {

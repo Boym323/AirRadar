@@ -66,7 +66,11 @@ export class AdsbLolRawProvider implements NetworkAircraftProvider {
     if (this.stopped || this.sockets[kind]) return;
     const socket = net.createConnection({ host: this.hosts[kind], port: this.ports[kind] }); this.sockets[kind] = socket; socket.setNoDelay(true); socket.setTimeout(this.staleMs);
     socket.once("connect", () => { this.connected[kind] = true; this.retryMs[kind] = 1000; this.lastError = null; this.transition(`${kind} connected`); });
-    socket.on("data", (chunk) => kind === "beast" ? this.handleBeast(chunk) : this.handleMlat(chunk));
+    socket.on("data", (chunk) => {
+      const bytes = typeof chunk === "string" ? Buffer.from(chunk, "latin1") : chunk;
+      if (kind === "beast") this.handleBeast(bytes);
+      else this.handleMlat(bytes);
+    });
     socket.on("timeout", () => socket.destroy()); socket.on("error", (error) => { this.lastError = `${kind}: ${error.message}`; });
     socket.once("close", () => { if (this.sockets[kind] === socket) this.sockets[kind] = null; this.connected[kind] = false; if (!this.stopped) this.scheduleReconnect(kind); });
   }
