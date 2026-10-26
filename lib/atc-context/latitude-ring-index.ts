@@ -53,7 +53,9 @@ class IndexBuilder {
 }
 
 function eligible(ring: LonLat[]): boolean {
-  return ring.length >= MIN_RING_POINTS && Object.isFrozen(ring);
+  // Opt-in: production V1 keeps the exact legacy geometry until T58 canary approval.
+  return process.env.AIRRADAR_ATC_LATITUDE_INDEX === "1"
+    && ring.length >= MIN_RING_POINTS && Object.isFrozen(ring);
 }
 
 /** Lazy index for the synchronous prepared-ATC API. The first call pays setup cost. */
