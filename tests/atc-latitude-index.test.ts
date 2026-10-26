@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { pointInPolygon, type LonLat } from "@/lib/atc-context/geometry";
 import { prewarmFrozenAtcRing } from "@/lib/atc-context/latitude-ring-index";
 
@@ -12,6 +12,24 @@ function denseRectangle(): LonLat[] {
 }
 
 describe("V1 immutable ATC scanline index parity", () => {
+  const old = process.env.AIRRADAR_ATC_LATITUDE_INDEX;
+  beforeAll(() => { process.env.AIRRADAR_ATC_LATITUDE_INDEX = "1"; });
+  afterAll(() => {
+    if (old === undefined) delete process.env.AIRRADAR_ATC_LATITUDE_INDEX;
+    else process.env.AIRRADAR_ATC_LATITUDE_INDEX = old;
+  });
+
+  it("does not index even frozen rings when production opt-in is unset", async () => {
+    process.env.AIRRADAR_ATC_LATITUDE_INDEX = "0";
+    try {
+      const ring = Object.freeze(denseRectangle().map((point) => Object.freeze([...point] as LonLat))) as unknown as LonLat[];
+      expect(await prewarmFrozenAtcRing(ring)).toBe(false);
+      expect(pointInPolygon([14.5, 49.5], [ring])).toBe("inside");
+    } finally {
+      process.env.AIRRADAR_ATC_LATITUDE_INDEX = "1";
+    }
+  });
+
   it("preserves inside/boundary/outside and holes for thousands of edges", async () => {
     const input = denseRectangle();
     const queries: LonLat[] = [[14.5, 49.5], [14, 49.5], [15, 50],
