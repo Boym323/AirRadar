@@ -1,0 +1,34 @@
+name: V1 ATC latitude index parity and CPU
+on:
+  pull_request:
+    paths:
+      - 'lib/atc-context/**'
+      - 'tests/atc-latitude-index.test.ts'
+      - 'scripts/benchmark-atc-ring-stalls.ts'
+      - 'scripts/run-v1-atc-index-benchmark.ts'
+      - '.github/workflows/v1-atc-latitude-index.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  atc-geometry:
+    runs-on: ubuntu-24.04
+    env:
+      AIRRADAR_ATC_LATITUDE_INDEX: '1'
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Generate required Prisma contract for ATC integration imports
+        run: npm run prisma:generate
+      - name: V1 TypeScript compiler + generated Next types
+        run: npm run typecheck
+      - name: ATC geometry and prepared-dataset parity
+        run: npx vitest run tests/atc-latitude-index.test.ts tests/atc-context-engine.test.ts
+      - name: Large real boundary same-run CPU and parity
+        run: |
+          JITI_TSCONFIG_PATHS=true npx jiti scripts/run-v1-atc-index-benchmark.ts
