@@ -10,7 +10,7 @@ import type { Aircraft, ProviderSnapshot, PublicStateSnapshot } from "@/lib/airc
 
 const receiver = { lat: 50, lon: 14, name: "Performance fixture" };
 
-function fixtureAircraft(count: number): Aircraft[] {
+export function fixtureAircraft(count: number): Aircraft[] {
   return Array.from({ length: count }, (_, index) => {
     const item = normalizeAircraft({
       hex: (index + 1).toString(16).padStart(6, "0"),
@@ -137,7 +137,7 @@ function detailLookupBenchmark(count: number) {
 // a fixed observation time so run-to-run traffic selection is deterministic.
 // Wall time is observational and must never become a CI threshold on shared
 // runners. Compare repeated runs on matched hardware/Node version instead.
-function sourceMergeBenchmark(count: number) {
+export function sourceMergeBenchmark(count: number, changedRatio = 1) {
   const localAircraft = fixtureAircraft(count);
   const half = Math.floor(count / 2);
   const networkAircraft = fixtureAircraft(count).map((aircraft, index) => ({
@@ -145,8 +145,11 @@ function sourceMergeBenchmark(count: number) {
     icaoHex: index < half ? aircraft.icaoHex : (count + index + 1).toString(16).padStart(6, "0"),
     origin: "adsblol" as const,
   }));
-  const local = new Map(localAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
-  const network = new Map(networkAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+  const allAircraft = [...localAircraft, ...networkAircraft];
+  const changedLimit = Math.round(allAircraft.length * Math.min(1, Math.max(0, changedRatio)));
+  const changed = new Set(allAircraft.slice(0, changedLimit));
+  const local = new Map(localAircraft.map((aircraft) => [aircraft.icaoHex, changed.has(aircraft) ? { ...aircraft } : aircraft]));
+  const network = new Map(networkAircraft.map((aircraft) => [aircraft.icaoHex, changed.has(aircraft) ? { ...aircraft } : aircraft]));
   const options = {
     localStaleAfterMs: 15_000,
     networkStaleAfterMs: 60_000,
@@ -171,15 +174,33 @@ function sourceMergeBenchmark(count: number) {
     const sorted = values.slice().sort((a, b) => a - b);
     return Math.round(sorted[Math.floor(sorted.length / 2)]! * 100) / 100;
   };
+  const percentile = (values: number[], quantile: number) => {
+    const sorted = values.slice().sort((left, right) => left - right);
+    return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * quantile) - 1)]!;
+  };
+  const wallSamples = samples.map((sample) => sample.wallMs);
+  const cpuSamples = samples.map((sample) => sample.cpuMs);
   return {
     scenario: "source-merge-union",
     count,
+    changedRatio,
+    changedIdentities: changedLimit,
+    unchangedIdentities: allAircraft.length - changedLimit,
     overlap: half,
     merged: expected,
+    evaluationsPerPass: expected,
     iterationsPerSample: 10,
     samples: samples.length,
-    wallMsMedian: median(samples.map((sample) => sample.wallMs)),
-    cpuMsMedian: median(samples.map((sample) => sample.cpuMs)),
+    wallMsMedian: median(wallSamples),
+    wallMsP95: Number(percentile(wallSamples, 0.95).toFixed(2)),
+    wallMsP99: Number(percentile(wallSamples, 0.99).toFixed(2)),
+    wallMsMax: Number(Math.max(...wallSamples).toFixed(2)),
+    cpuMsMedian: median(cpuSamples),
+    cpuMsP95: Number(percentile(cpuSamples, 0.95).toFixed(2)),
+    cpuMsP99: Number(percentile(cpuSamples, 0.99).toFixed(2)),
+    cpuMsMax: Number(Math.max(...cpuSamples).toFixed(2)),
+    cpuMsPerPass: Number((median(cpuSamples) / 10).toFixed(3)),
+    cpuUsPerEvaluation: Number((median(cpuSamples) * 1_000 / (10 * expected)).toFixed(3)),
     // Values include altitude-provenance logic and process-local diagnostics;
     // they cannot attribute the entire cost to source arbitration.
   };
@@ -188,11 +209,15 @@ function sourceMergeBenchmark(count: number) {
 // Keep these sizes aligned with the runtime audit contract. The benchmark is
 // intentionally report-only; hosted runner wall-clock values are informative.
 async function main() {
-  const counts = [100, 1_000, 5_000];
+  const counts = [50, 250, 1_000, 5_000];
   const results = [
     ...counts.map(snapshotApplyBenchmark),
     ...counts.map(detailLookupBenchmark),
-    ...counts.map(sourceMergeBenchmark),
+    ...counts.flatMap((count) => [
+      sourceMergeBenchmark(count, 0),
+      sourceMergeBenchmark(count, 0.1),
+      sourceMergeBenchmark(count, 1),
+    ]),
     ...counts.flatMap((count) => [fanoutBenchmark(count, 1, "local"), fanoutBenchmark(count, 20, "local")]),
     ...counts.map((count) => fanoutBenchmark(count, 20, "extended")),
     ...counts.map((count) => sseBenchmark(count, 20)),
