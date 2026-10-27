@@ -94,6 +94,31 @@ describe("canonical aircraft icon classification", () => {
     expect(result.presentationKind).toBe("b737");
   });
 
+  it.each(["A1", "A2", "A3", "A4", "A5", "A6", "B4"])(
+    "uses V2 emitter category %s as an immediate fallback without a known type",
+    category => {
+      const result = classifyAircraftIcon({ ...base, category });
+      expect(result.asset).toBe(`/aircraft-icons-tar1090/category-${category}.svg`);
+      expect(result.reason).toBe(`fallback ADS-B category ${category}`);
+      expect(result.kind).toBe("airplane");
+      // The category fallback must not hide the initial metadata enrichment.
+      expect(aircraftIconNeedsInitialMetadata({ ...base, category })).toBe(true);
+    },
+  );
+
+  it("keeps exact aircraft-type sprites ahead of generic emitter-category fallbacks", () => {
+    const result = classifyAircraftIcon({ ...base, category: "A1", aircraftType: "B738" });
+    expect(result.asset).toBe("/aircraft-icons-tar1090/B738.svg");
+    expect(aircraftIconNeedsInitialMetadata({ ...base, category: "A1", aircraftType: "B738" })).toBe(false);
+  });
+
+  it("never invents a category icon for absent, reserved or invalid codes", () => {
+    for (const category of [null, "A0", "B0", "B3", "B7", "Z9", "INVALID"]) {
+      const result = classifyAircraftIcon({ ...base, category });
+      expect(result.asset).toBe("/aircraft-icons-tar1090/unknown.svg");
+    }
+  });
+
   it("requests initial metadata only when the first icon identity is unresolved", () => {
     expect(aircraftIconNeedsInitialMetadata(base)).toBe(true);
     expect(aircraftIconNeedsInitialMetadata({ ...base, aircraftType: "A320" })).toBe(false);

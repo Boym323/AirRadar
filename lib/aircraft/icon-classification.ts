@@ -26,6 +26,10 @@ export function aircraftPresentationKindForType(type: string): AircraftPresentat
   return "airplane";
 }
 
+// V2 R03: use receiver-sourced ADS-B emitter categories only when no exact
+// type-specific sprite is available. No callsign/kinematics heuristics or fetch.
+const EMITTER_CATEGORY_FALLBACKS = new Set(["A1", "A2", "A3", "A4", "A5", "A6", "B4"]);
+
 type Input = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
 
 function candidates(a: Input): string[] {
@@ -50,11 +54,22 @@ export function classifyAircraftIcon(a: Input): AircraftIconClassification {
   if (helicopter) return { kind: "helicopter", presentationKind: "helicopter", asset: TAR1090_ICON_CODES.has(type) ? `/aircraft-icons-tar1090/${type}.svg` : (TAR1090_CATEGORY_ICON_ASSETS.A7 ?? null), reason: `known rotorcraft type ${type || "from metadata description"}` };
   const presentationKind = aircraftPresentationKindForType(type);
   if (TAR1090_ICON_CODES.has(type)) return { kind: "airplane", presentationKind, asset: `/aircraft-icons-tar1090/${type}.svg`, reason: `tar1090 type ${type}` };
+  if (EMITTER_CATEGORY_FALLBACKS.has(category)) {
+    return {
+      kind: "airplane",
+      presentationKind,
+      asset: TAR1090_CATEGORY_ICON_ASSETS[category as keyof typeof TAR1090_CATEGORY_ICON_ASSETS],
+      reason: `fallback ADS-B category ${category}`,
+    };
+  }
   return { kind: "airplane", presentationKind, asset: TAR1090_UNKNOWN_ICON_ASSET, reason: "unknown aircraft type" };
 }
 
 export function aircraftIconNeedsInitialMetadata(a: Input): boolean {
   const classification = classifyAircraftIcon({ ...a, enrichment: undefined });
-  return classification.asset === TAR1090_UNKNOWN_ICON_ASSET;
+  // A category-only silhouette is useful immediately, but must not suppress
+  // the existing initial metadata lookup for an exact aircraft type.
+  return classification.asset === TAR1090_UNKNOWN_ICON_ASSET
+    || classification.reason.startsWith("fallback ADS-B category ");
 }
 

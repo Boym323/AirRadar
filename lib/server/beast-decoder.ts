@@ -8,6 +8,21 @@ import { altitudeObservationFor, recordBeastAltitudeDecode, selectAltitudeObserv
 interface Cpr { odd: boolean; lat: number; lon: number; receivedAt: number; }
 interface Track { aircraft: Partial<Aircraft> & { icaoHex: string }; cprEven?: Cpr; cprOdd?: Cpr; lastMessageAt: number; lastPositionAt: number | null; altitudeAt: number | null; baroAltitudeAt: number | null; geomAltitudeAt: number | null; altitudeDf: number | null; altitudeTypeCode: number | null; altitudeSubtype: number | null; groundSpeedAt: number | null; trackAt: number | null; verticalRateAt: number | null; extendedTelemetryAt: number | null; }
 
+// V2 G-05/ADR-0015: DF17 identification Type Code identifies the
+// category family (TC4=A, TC3=B, TC2=C), not the category number.
+// The subtype in ME[0] carries the number. Reserved codes are never used
+// for presentation, even if the frame CRC is valid.
+const TRUSTED_EMITTER_CATEGORIES = new Set([
+  "A1", "A2", "A3", "A4", "A5", "A6", "A7",
+  "B1", "B2", "B4", "B6", "C1", "C2",
+]);
+
+function verifiedBeastEmitterCategory(typeCode: number, subtype: number): string | null {
+  const family = typeCode === 4 ? "A" : typeCode === 3 ? "B" : typeCode === 2 ? "C" : null;
+  const category = family === null ? null : `${family}${subtype}`;
+  return category && TRUSTED_EMITTER_CATEGORIES.has(category) ? category : null;
+}
+
 const CHARSET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ#####_###############0123456789######";
 const MOD = (value: number, modulus: number) => ((value % modulus) + modulus) % modulus;
 function cprN(lat: number, odd: boolean): number {
@@ -255,7 +270,16 @@ export class BeastDecoder {
     a.icaoHex = icaoHex;
     a.lastSeen = new Date(observedAt).toISOString();
     a.source = a.source ?? "ADS-B"; a.origin = this.origin; a.sourceType = `df${df}`; a.trail ??= [];
-    if (me && typeCode !== null && typeCode >= 1 && typeCode <= 4) { a.callsign = callsignField(me.subarray(1, 7)); a.category = `A${typeCode}`; }
+    if (me && typeCode !== null && typeCode >= 1 && typeCode <= 4) {
+      a.callsign = callsignField(me.subarray(1, 7));
+      // Only DF17 and DF18 CF=0 have an ordinary ICAO identification contract
+      // in this V1 decoder. CF=1 is non-ICAO and CF=2/3/5/6 have different
+      // identity/provenance semantics; never trust their icon category here.
+      if (df === 17 || (df === 18 && (p[0]! & 7) === 0)) {
+        const category = verifiedBeastEmitterCategory(typeCode, me[0]! & 7);
+        if (category !== null) a.category = category;
+      }
+    }
     if (me && typeCode !== null && typeCode >= 5 && typeCode <= 8) {
       const velocity = modeSValue(me);
       const movement = modeSBits(velocity, 5, 7);
