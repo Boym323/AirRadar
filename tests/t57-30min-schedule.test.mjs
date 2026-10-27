@@ -39,6 +39,8 @@ test("30-minute workflow is manual, pinned, authenticated and sanitized", () => 
   assert.match(workflow, /T57_WATCHLIST_ADMIN_TOKEN/);
   assert.match(workflow, /scripts\/t57-production-soak\.mjs --preflight/);
   assert.match(workflow, /scripts\/t57-production-soak\.mjs >/);
+  assert.match(workflow, /requiredSources/);
+  assert.doesNotMatch(workflow, /scripts\/t58-report\.mjs preflight/);
   assert.match(workflow, /T57_TOTAL_SECONDS: "1800"/);
   assert.match(workflow, /T57_INTERVAL_SECONDS: "30"/);
   assert.doesNotMatch(workflow, /T57_TOTAL_SECONDS: "86400"/);
