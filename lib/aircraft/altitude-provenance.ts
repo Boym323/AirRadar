@@ -145,19 +145,35 @@ function decisionKey(icaoHex: string, decision: AltitudeDecision): string {
   return `${icaoHex}:${decision.selected?.source ?? "none"}:${decision.selected?.observedAt ?? "none"}:${decision.reason}:${decision.anomaly ?? ""}`;
 }
 
-export function selectAltitudeObservation(
+function selectAltitudeObservationCore(
   icaoHex: string,
-  candidates: Array<AltitudeObservation | null>,
+  all: AltitudeObservation[],
   now = Date.now(),
 ): AltitudeDecision {
-  const all = candidates.filter((item): item is AltitudeObservation => item !== null);
   bump("altitudeCandidates");
-  const valid = all.filter((item) => {
-    if (!validValue(item.valueFt)) { bump("altitudeInvalidRejected"); return false; }
-    if (item.freshnessAgeMs !== null && item.freshnessAgeMs > effectiveFreshness(item)) { bump("altitudeStaleRejected"); return false; }
-    return true;
-  });
-  valid.sort((a, b) => SOURCE_PRIORITY[a.source] - SOURCE_PRIORITY[b.source] || (a.freshnessAgeMs ?? Infinity) - (b.freshnessAgeMs ?? Infinity));
+  let valid: AltitudeObservation[];
+  if (all.length === 1) {
+    const only = all[0]!;
+    if (!validValue(only.valueFt)) {
+      bump("altitudeInvalidRejected");
+      valid = [];
+    } else if (only.freshnessAgeMs !== null && only.freshnessAgeMs > effectiveFreshness(only)) {
+      bump("altitudeStaleRejected");
+      valid = [];
+    } else {
+      // Reuse the decision candidate array for the common local-only and
+      // network-only path. There is no ordering work to perform for one item.
+      valid = all;
+    }
+  } else {
+    valid = [];
+    for (const item of all) {
+      if (!validValue(item.valueFt)) { bump("altitudeInvalidRejected"); continue; }
+      if (item.freshnessAgeMs !== null && item.freshnessAgeMs > effectiveFreshness(item)) { bump("altitudeStaleRejected"); continue; }
+      valid.push(item);
+    }
+  }
+  if (valid.length > 1) valid.sort((a, b) => SOURCE_PRIORITY[a.source] - SOURCE_PRIORITY[b.source] || (a.freshnessAgeMs ?? Infinity) - (b.freshnessAgeMs ?? Infinity));
   let selected = valid[0] ?? null;
   const previous = previousByIcao.get(icaoHex);
   const rejected: AltitudeDecision["rejected"] = [];
@@ -201,7 +217,7 @@ export function selectAltitudeObservation(
         : selected.source === "READSB_JSON" ? "READSB_JSON_FRESH_PRIORITY"
           : selected.source === "NETWORK" || selected.source === "MLAT" || selected.source === "TIS_B" ? "NETWORK_FALLBACK" : "OTHER_FALLBACK";
   const finalSelected = anomaly === "IMPLAUSIBLE_JUMP" ? previous ?? null : selected;
-  const decision: AltitudeDecision = { selected: finalSelected, candidates: all.slice(0, 8), reason, rejected, anomaly };
+  const decision: AltitudeDecision = { selected: finalSelected, candidates: all.length > 8 ? all.slice(0, 8) : all, reason, rejected, anomaly };
   const key = decisionKey(icaoHex, decision);
   if (seenDecisions.get(icaoHex) !== key) {
     seenDecisions.set(icaoHex, key);
@@ -225,11 +241,24 @@ export function selectAltitudeObservation(
   return decision;
 }
 
+export function selectAltitudeObservation(
+  icaoHex: string,
+  candidates: Array<AltitudeObservation | null>,
+  now = Date.now(),
+): AltitudeDecision {
+  return selectAltitudeObservationCore(icaoHex, candidates.filter((item): item is AltitudeObservation => item !== null), now);
+}
+
 export function altitudeObservationFor(aircraft: Aircraft | undefined, field: "altitude" | "baroAltitude" | "geomAltitude" = "altitude", now = Date.now()): AltitudeObservation | null {
   return observation(aircraft, field, now);
 }
 export function selectAircraftAltitude(icaoHex: string, local: Aircraft | undefined, network: Aircraft | undefined, now = Date.now()): AltitudeDecision {
-  return selectAltitudeObservation(icaoHex, [observation(local, "altitude", now), observation(network, "altitude", now)] , now);
+  const candidates: AltitudeObservation[] = [];
+  const localObservation = observation(local, "altitude", now);
+  if (localObservation) candidates.push(localObservation);
+  const networkObservation = observation(network, "altitude", now);
+  if (networkObservation) candidates.push(networkObservation);
+  return selectAltitudeObservationCore(icaoHex, candidates, now);
 }
 export function recordBeastAltitudeDecode(icaoHex: string, item: AltitudeObservation, decision: AltitudeDecision): void {
   if (item.source !== "LOCAL_BEAST") return;

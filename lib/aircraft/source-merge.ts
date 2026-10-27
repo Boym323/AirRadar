@@ -54,6 +54,25 @@ function messageAgeMs(aircraft: Aircraft, now: number): number {
   return Math.max(elapsed, seen ?? 0);
 }
 
+type MessageAgeCache = {
+  local?: number;
+  network?: number;
+};
+
+function cachedMessageAge(
+  aircraft: Aircraft,
+  local: Aircraft | undefined,
+  network: Aircraft | undefined,
+  now: number,
+  cache: MessageAgeCache,
+): number {
+  const key = aircraft === local ? "local" : aircraft === network ? "network" : undefined;
+  if (key && cache[key] !== undefined) return cache[key]!;
+  const age = messageAgeMs(aircraft, now);
+  if (key) cache[key] = age;
+  return age;
+}
+
 function sourceTypeRank(aircraft: Aircraft): number {
   if (aircraft.source === "ADS-B") return 4;
   if (aircraft.source === "MLAT") return 3;
@@ -66,16 +85,25 @@ function originRank(aircraft: Aircraft): number {
   return originOf(aircraft) === "local" ? 1 : 0;
 }
 
-function compareObservationFreshness(left: Aircraft, right: Aircraft, now: number, tieMs: number): number {
-  const ageDifference = messageAgeMs(left, now) - messageAgeMs(right, now);
+function compareObservationFreshness(
+  left: Aircraft,
+  right: Aircraft,
+  local: Aircraft | undefined,
+  network: Aircraft | undefined,
+  now: number,
+  tieMs: number,
+  ageCache: MessageAgeCache,
+): number {
+  const ageDifference = cachedMessageAge(left, local, network, now, ageCache)
+    - cachedMessageAge(right, local, network, now, ageCache);
   if (Math.abs(ageDifference) > tieMs) return ageDifference;
   const originDifference = originRank(right) - originRank(left);
   if (originDifference !== 0) return originDifference;
   return sourceTypeRank(right) - sourceTypeRank(left);
 }
 
-function isFreshObservation(aircraft: Aircraft, staleAfterMs: number, now: number): boolean {
-  const age = messageAgeMs(aircraft, now);
+function isFreshObservation(aircraft: Aircraft, staleAfterMs: number, now: number, ageCache: MessageAgeCache, local: Aircraft | undefined, network: Aircraft | undefined): boolean {
+  const age = cachedMessageAge(aircraft, local, network, now, ageCache);
   return Number.isFinite(age) && age <= staleAfterMs;
 }
 
@@ -139,16 +167,21 @@ function selectedEmergencyObservation(
   network: Aircraft | undefined,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number },
   now: number,
+  ageCache: MessageAgeCache,
 ): Aircraft | undefined {
+  const localValue = local ? emergencyValue(local) : null;
+  const networkValue = network ? emergencyValue(network) : null;
+  if (localValue === null && networkValue === null) return undefined;
+  const cache = ageCache;
   const localCandidate = local
-    && isFreshObservation(local, staleAfterFor(local, options.localStaleAfterMs, options.networkStaleAfterMs), now)
-    && emergencyValue(local) !== null ? local : undefined;
+    && localValue !== null
+    && isFreshObservation(local, staleAfterFor(local, options.localStaleAfterMs, options.networkStaleAfterMs), now, cache, local, network) ? local : undefined;
   const networkCandidate = network
-    && isFreshObservation(network, staleAfterFor(network, options.localStaleAfterMs, options.networkStaleAfterMs), now)
-    && emergencyValue(network) !== null ? network : undefined;
+    && networkValue !== null
+    && isFreshObservation(network, staleAfterFor(network, options.localStaleAfterMs, options.networkStaleAfterMs), now, cache, local, network) ? network : undefined;
   if (localCandidate && networkCandidate) {
     // Array.sort was stable: an exact tie must still prefer the local item.
-    return compareObservationFreshness(localCandidate, networkCandidate, now, EMERGENCY_TIE_MS) <= 0
+    return compareObservationFreshness(localCandidate, networkCandidate, local, network, now, EMERGENCY_TIE_MS, cache) <= 0
       ? localCandidate : networkCandidate;
   }
   return localCandidate ?? networkCandidate;
@@ -169,18 +202,23 @@ function selectedSquawk(
   options: { localStaleAfterMs: number; networkStaleAfterMs: number },
   now: number,
   emergencyObservation: Aircraft | undefined,
+  ageCache: MessageAgeCache,
 ): string | null {
   const emergencySquawk = emergencyObservation ? squawkValue(emergencyObservation) : null;
   if (isEmergencySquawk(emergencySquawk)) return emergencySquawk;
 
+  const localValue = local ? squawkValue(local) : null;
+  const networkValue = network ? squawkValue(network) : null;
+  if (localValue === null && networkValue === null) return null;
+  const cache = ageCache;
   const localCandidate = local
-    && isFreshObservation(local, staleAfterFor(local, options.localStaleAfterMs, options.networkStaleAfterMs), now)
-    && squawkValue(local) !== null ? local : undefined;
+    && localValue !== null
+    && isFreshObservation(local, staleAfterFor(local, options.localStaleAfterMs, options.networkStaleAfterMs), now, cache, local, network) ? local : undefined;
   const networkCandidate = network
-    && isFreshObservation(network, staleAfterFor(network, options.localStaleAfterMs, options.networkStaleAfterMs), now)
-    && squawkValue(network) !== null ? network : undefined;
+    && networkValue !== null
+    && isFreshObservation(network, staleAfterFor(network, options.localStaleAfterMs, options.networkStaleAfterMs), now, cache, local, network) ? network : undefined;
   const selected = localCandidate && networkCandidate
-    ? (compareObservationFreshness(localCandidate, networkCandidate, now, SQUAWK_TIE_MS) <= 0
+    ? (compareObservationFreshness(localCandidate, networkCandidate, local, network, now, SQUAWK_TIE_MS, cache) <= 0
       ? localCandidate : networkCandidate)
     : localCandidate ?? networkCandidate;
   return selected ? squawkValue(selected) : null;
@@ -208,6 +246,7 @@ export function mergeAircraftObservations(
   // local-first/fresh-network arbitration provide a continuity fallback.
   if (!local && !network) return null;
   const now = options.now ?? Date.now();
+  const messageAgeCache: MessageAgeCache = {};
   const lockLocal = options.preferredOrigin === "local" && Boolean(local && hasUsablePosition(local));
   const lockNetwork = options.preferredOrigin === "network"
     && Boolean(network && isFreshPosition(network, options.networkStaleAfterMs, now));
@@ -225,7 +264,7 @@ export function mergeAircraftObservations(
   const fallbackPosition = selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
   const kinematics = selectedPosition ?? base;
   const position = selectedPosition ?? fallbackPosition;
-  const emergencyObservation = selectedEmergencyObservation(selectedLocal, selectedNetwork, options, now);
+  const emergencyObservation = selectedEmergencyObservation(selectedLocal, selectedNetwork, options, now, messageAgeCache);
   const lat = position?.lat ?? null;
   const lon = position?.lon ?? null;
   const distanceKm = lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null;
@@ -246,7 +285,7 @@ export function mergeAircraftObservations(
     verticalRate: kinematics.verticalRate,
     baroRate: kinematics.baroRate,
     geomRate: kinematics.geomRate,
-    squawk: selectedSquawk(selectedLocal, selectedNetwork, options, now, emergencyObservation),
+    squawk: selectedSquawk(selectedLocal, selectedNetwork, options, now, emergencyObservation, messageAgeCache),
     category: nonEmpty(selectedLocal?.category, selectedNetwork?.category),
     emergency: emergencyObservation ? emergencyValue(emergencyObservation) : null,
     // RSSI, raw Beast signal and message counts are receiver-local
