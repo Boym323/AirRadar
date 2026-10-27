@@ -31,6 +31,9 @@ Zbylých 27 funkcí se stavem **NOT_STARTED** ve V2 (letiště/NAVAID, počasí,
 
 ## Rozsah prvního přenosu
 
+Ve V1 opraveno také dekódování ADS-B identifikačních rámců BEAST: původní `A${typeCode}` chybně interpretovalo Type Code jako číslo kategorie. Převzatá logika V2 používá **TC4=A, TC3=B, TC2=C** a spodní tři bity zprávy jako podtyp. Akceptuje pouze A1–A7, B1/B2/B4/B6 a C1/C2 z CRC-validních rámců DF17 nebo DF18 CF=0. Rezervované hodnoty nepřepisují poslední platnou kategorii. Příjem DF18 s odlišnou identitou zůstává předmětem samostatné paritní přejímky; nevydáváme jej za dokončenou migraci. Doplněny jsou přímo testy dekodéru, CRC i negativních případů.
+
+
 Při neznámém typu letadla čte V1 již existující `AircraftView.category` z aktuálního datového toku a vybere již přibalené SVG pro kategorie A1–A6/B4. Nepřibývá HTTP, polling, SQL, vlákno ani nový DOM/MapLibre marker. Neznámé/rezervované hodnoty používají původní fallback; speciální vrtulníky, kluzáky, drony a pozemní objekty zůstávají beze změny. Kategoriová ikona nenahrazuje stávající počáteční doplnění přesného typu.
 
-**Před merge ověřit:** cílený Vitest klasifikace ikon, lint, TypeScript, audit ikon a příslušný browser smoke mapy. Přítomnost nových testů v PR **není důkaz jejich proběhnutí**.
+**Před merge ověřit:** cílené Vitest klasifikace ikon a BEAST dekodéru, lint, TypeScript, audit ikon a příslušný browser smoke mapy. Přítomnost nových testů v PR **není důkaz jejich proběhnutí**.
