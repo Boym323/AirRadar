@@ -86,7 +86,7 @@ describe("BeastDecoder", () => {
     expect(decoder.decode(df17Frame(0x4840d6, "222cc371c32ce0"))?.category).toBe("A2");
     expect(decoder.decode(df17Frame(0x4840d6, "202cc371c32ce0"))?.category).toBe("A2");
     const corrupted = df17Frame(0x4840d6, "232cc371c32ce0");
-    corrupted.payload[5] ^= 0x01;
+    corrupted.payload[5] = corrupted.payload[5]! ^ 0x01;
     expect(decoder.decode(corrupted)).toBeNull();
     expect(decoder.snapshot()[0].category).toBe("A2");
   });
