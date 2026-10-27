@@ -1,0 +1,89 @@
+{
+  "total_count": 7,
+  "workflows": [
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/AirRadar%20V2%20%C2%B7%20CI/badge.svg",
+      "created_at": "2026-10-21T19:01:29.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/ci.yml",
+      "id": 392070813,
+      "name": "AirRadar V2 · CI",
+      "node_id": "W_kwDOVSnRjc4XXoad",
+      "path": ".github/workflows/ci.yml",
+      "state": "active",
+      "updated_at": "2026-10-24T18:56:45.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/392070813"
+    },
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/AirRadar%20V2%20%C2%B7%20Statistiky/badge.svg",
+      "created_at": "2026-10-21T20:01:48.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/development-metrics.yml",
+      "id": 392125111,
+      "name": "AirRadar V2 · Statistiky",
+      "node_id": "W_kwDOVSnRjc4XX1q3",
+      "path": ".github/workflows/development-metrics.yml",
+      "state": "active",
+      "updated_at": "2026-10-24T18:56:45.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/392125111"
+    },
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/AirRadar%20V2%20%C2%B7%20DEV%20release/badge.svg",
+      "created_at": "2026-10-22T11:44:51.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/g02-dev-candidate.yml",
+      "id": 392824146,
+      "name": "AirRadar V2 · DEV release",
+      "node_id": "W_kwDOVSnRjc4XagVS",
+      "path": ".github/workflows/g02-dev-candidate.yml",
+      "state": "active",
+      "updated_at": "2026-10-24T18:56:45.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/392824146"
+    },
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/AirRadar%20V2%20%C2%B7%20G04%20PostgreSQL/badge.svg",
+      "created_at": "2026-10-22T21:17:25.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/g04-postgres-migrations.yml",
+      "id": 393376767,
+      "name": "AirRadar V2 · G04 PostgreSQL",
+      "node_id": "W_kwDOVSnRjc4XcnP_",
+      "path": ".github/workflows/g04-postgres-migrations.yml",
+      "state": "active",
+      "updated_at": "2026-10-24T18:56:45.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/393376767"
+    },
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/G-05%20jednor%C3%A1zov%C3%A9%20vygenerov%C3%A1n%C3%AD%20npm%20lockfile/badge.svg",
+      "created_at": "2026-10-23T21:02:26.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/g05-lockfile-temp.yml",
+      "id": 394560967,
+      "name": "G-05 jednorázové vygenerování npm lockfile",
+      "node_id": "W_kwDOVSnRjc4XhIXH",
+      "path": ".github/workflows/g05-lockfile-temp.yml",
+      "state": "active",
+      "updated_at": "2026-10-23T21:02:26.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/394560967"
+    },
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/Jednor%C3%A1zov%C3%A1%20synchronizace%20npm%20lockfilu/badge.svg",
+      "created_at": "2026-10-21T20:41:35.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/lockfile-bootstrap.yml",
+      "id": 392158967,
+      "name": "Jednorázová synchronizace npm lockfilu",
+      "node_id": "W_kwDOVSnRjc4XX973",
+      "path": ".github/workflows/lockfile-bootstrap.yml",
+      "state": "active",
+      "updated_at": "2026-10-21T20:41:35.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/392158967"
+    },
+    {
+      "badge_url": "https://github.com/Boym323/AirRadarV2/workflows/One-time%20V2%20DEV%20retirement%20preflight%20(read-only)/badge.svg",
+      "created_at": "2026-10-27T14:55:46.000Z",
+      "html_url": "https://github.com/Boym323/AirRadarV2/blob/main/.github/workflows/v2-retirement-preflight.yml",
+      "id": 398376541,
+      "name": "One-time V2 DEV retirement preflight (read-only)",
+      "node_id": "W_kwDOVSnRjc4Xvr5d",
+      "path": ".github/workflows/v2-retirement-preflight.yml",
+      "state": "active",
+      "updated_at": "2026-10-27T14:55:46.000Z",
+      "url": "https://api.github.com/repos/Boym323/AirRadarV2/actions/workflows/398376541"
+    }
+  ]
+}

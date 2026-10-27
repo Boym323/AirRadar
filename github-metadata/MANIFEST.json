@@ -1,0 +1,46 @@
+{
+  "archivalPurpose": "GitHub-hosted metadata not included in a Git bundle; snapshots are informational, not an API-restorable GitHub clone.",
+  "files": {
+    "issue-comments.json": {
+      "bytes": 67866,
+      "items": 14,
+      "sha256": "ae73570e622fae5c61f4198b888a17e7a53c622161d80377ca94ed7adb0bc0dc"
+    },
+    "issues.json": {
+      "bytes": 408650,
+      "items": 60,
+      "sha256": "8029fbadc69c94df271224be2e385388672d56848f0d11c55466afa221d6dfd8"
+    },
+    "pull-requests.json": {
+      "bytes": 1127500,
+      "items": 59,
+      "sha256": "a3148fa36e5fd11daecdb86e508e9f6afcc2c7835af1bd6e34ca66f0b57833fb"
+    },
+    "pull-review-comments.json": {
+      "bytes": 3,
+      "items": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "releases.json": {
+      "bytes": 424384,
+      "items": 63,
+      "sha256": "1b83cbc3fa2c667916a20a909e5a8c9fc1796f9d18264c6fff2699055ad2367c"
+    },
+    "repository.json": {
+      "bytes": 5582,
+      "items": null,
+      "sha256": "d8b0ab862951e155ccaab41c663517336f3a318968df705e4f5c143b29bed6fc"
+    },
+    "workflow-runs.json": {
+      "bytes": 9213432,
+      "items": 667,
+      "sha256": "c0aedeace549eb780169dd41d9dcc1b8e2f264ec712ff5bc9aae90b13d3b22f5"
+    },
+    "workflows.json": {
+      "bytes": 4462,
+      "items": null,
+      "sha256": "c6d6f844dd64f6c8421002dffc73591914379ef7348ea8ade19a617cd8230e94"
+    }
+  },
+  "source": "https://api.github.com/repos/Boym323/AirRadarV2"
+}
