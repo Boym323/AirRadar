@@ -31,6 +31,9 @@ The 27 **NOT_STARTED** V2 features (airport detail/NAVAID, weather, push/Pushove
 
 ## Scope of the first port
 
+The V1 BEAST identification decoder also previously used incorrect `A${typeCode}` metadata. The V2 G-05/ADR-0015 contract is now applied: **TC4=A, TC3=B, TC2=C**, with the low three identification bits representing the subtype, and only A1–A7, B1/B2/B4/B6, C1/C2 allowed after frame CRC verification. Only DF17 and ordinary-ICAO DF18 CF=0 are currently eligible for this category trust. Reserved codes do not overwrite a previously known category. Broader DF18 identity/provenance parity is an **open gate**, not claimed complete. CRC and reserved-category regression tests are included.
+
+
 The category fallback reads the existing `AircraftView.category` from the current readsb/BEAST-derived pipeline and selects **already bundled** category SVGs, only when no exact type-specific tar1090 SVG exists. It adds no network calls, polling, SQL, threads or React/MapLibre mounts. Unsupported/reserved categories remain at the pre-existing fallback. The special rotorcraft/glider/UAV and ground classifications stay unchanged. Category-only presentation does not suppress initial type metadata enrichment.
 
-**Verification required before merging:** targeted `vitest` aircraft icon classification, lint, TypeScript, icon audit, and representative map/browser smoke. Tests are committed, but this source inventory itself does not imply those commands or a production deploy have passed.
+**Verification required before merging:** targeted `vitest` aircraft icon classification and BEAST decoder, lint, TypeScript, icon audit, and representative map/browser smoke. Tests are committed, but this source inventory itself does not imply those commands or a production deploy have passed.
