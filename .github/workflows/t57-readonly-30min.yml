@@ -1,0 +1,129 @@
+name: T57 30-minute read-only production soak
+
+on:
+  workflow_dispatch:
+
+run-name: "T57 30m read-only production soak #${{ github.run_number }}"
+
+concurrency:
+  group: airradar-t57-30-minute-read-only-soak
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    name: Collect and publish sanitized T57 report
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Require the production branch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || {
+            echo "This workflow must be dispatched from main" >&2
+            exit 1
+          }
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Validate collector and schedule
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node --check scripts/t57-production-soak.mjs
+          node --check scripts/t57-soak-analysis.mjs
+          node --check scripts/t58-report.mjs
+          node --test tests/t57-30min-schedule.test.mjs tests/t57-production-soak-auth.test.mjs
+
+      - name: Prepare private runner directory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t57-30m"
+          chmod 700 "$RUNNER_TEMP/t57-30m"
+
+      - name: Read-only preflight and pin deployed commit
+        id: preflight
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${WATCHLIST_ADMIN_TOKEN:-}" ]] || {
+            echo "T57_WATCHLIST_ADMIN_TOKEN is not configured" >&2
+            exit 1
+          }
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t57-30m/preflight.json"
+          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t57-30m/preflight.json")"
+          git rev-parse --verify "$deployed_sha^{commit}" >/dev/null
+          printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
+          echo "Read-only telemetry ready; production commit prefix pinned."
+
+      - name: Collect exactly 30 minutes of read-only telemetry
+        id: soak
+        shell: bash
+        env:
+          WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+          T57_BASE_URL: https://airradar.pomykal.cz
+          T57_EXPECTED_COMMIT: ${{ steps.preflight.outputs.deployed_sha }}
+          T57_TOTAL_SECONDS: "1800"
+          # One extra polling slot captures the sample at the 1800-second
+          # endpoint; T57_TOTAL_SECONDS remains the hard measurement limit.
+          T57_CHUNK_SECONDS: "1830"
+          T57_INTERVAL_SECONDS: "30"
+          T57_WARMUP_SECONDS: "300"
+          T57_OUTPUT: ${{ runner.temp }}/t57-30m/soak.ndjson
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          # The collector performs only authenticated GETs. It never restarts,
+          # writes to PostgreSQL, opens SSE, forces GC or takes a heap snapshot.
+          # The raw journal remains private to the ephemeral runner.
+          node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-30m/collector-result.json"
+
+      - name: Validate and publish only the sanitized report
+        id: prepare
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          summary="$RUNNER_TEMP/t57-30m/soak.summary.json"
+          markdown="$RUNNER_TEMP/t57-30m/soak.summary.md"
+          if [[ -s "$summary" && -s "$markdown" ]]; then
+            node scripts/t58-report.mjs verify "$summary"
+            printf 'report_ready=true\n' >> "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/t57-30m/collector-result.json" >> "$GITHUB_STEP_SUMMARY"
+            cat "$markdown" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf 'report_ready=false\n' >> "$GITHUB_OUTPUT"
+            echo "No complete sanitized T57 report was produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload sanitized aggregates only
+        if: ${{ always() && steps.prepare.outputs.report_ready == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: t57-readonly-30m-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t57-30m/soak.summary.json
+            ${{ runner.temp }}/t57-30m/soak.summary.md
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Remove private raw journal from the runner
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -f "$RUNNER_TEMP/t57-30m/soak.ndjson" "$RUNNER_TEMP/t57-30m/preflight.json"

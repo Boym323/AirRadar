@@ -42,6 +42,7 @@ function raw(minute = 0) {
       autocommitOperationAttribution: { processId: 1234, diagnosticsStoreId: "PRIVATE_STORE" },
       aircraftCount: 60, activeSseClients: 1,
       localTrailOverLimitAircraftCount: 0, networkTrailOverLimitAircraftCount: 0,
+      cgroupMemoryCurrentBytes: (1500 + minute) * MiB, cgroupMemoryMaxBytes: 4096 * MiB,
       // Production /api/system/status puts retentionAttribution directly in runtime.
       retentionAttribution: {
           scope: "process-local",
@@ -64,7 +65,8 @@ function raw(minute = 0) {
     runtime: {
       status: "enabled", rssBytes: (1400 + minute) * MiB,
       heapUsedBytes: (800 + minute) * MiB, heapTotalBytes: 1100 * MiB,
-      externalBytes: 30 * MiB, cpuIntervalPercent: 55,
+      externalBytes: 30 * MiB, arrayBuffersBytes: 12 * MiB,
+      cpuIntervalPercent: 55,
       majorGcCount: minute, v8HeapSpaces: [{ name: "old_space", usedBytes: 750 * MiB }],
       postMajorGc: { observedAtMs: epoch + minute * 60_000 - 2000,
         heapUsedBytes: (750 + minute) * MiB,
@@ -118,6 +120,8 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(result.sample.retention.aircraft.local.count).toBe(20);
     expect(result.sample.hotPaths).toHaveLength(1);
     expect(result.sample.eventLoopWindows[0].p99Ms).toBe(150);
+    expect(result.sample.arrayBuffersBytes).toBe(12 * MiB);
+    expect(result.sample.cgroupMemoryCurrentBytes).toBe(1501 * MiB);
     expect(result.sample.operationalTwinForensics.enabled).toBe(true);
     expect(result.sample.operationalTwinForensics.phases.truthPoints.calls).toBe(100);
     expect(JSON.stringify(result.sample)).not.toContain("SHOULD_NOT_LEAK");
@@ -252,6 +256,10 @@ describe("T5.7C 24-hour read-only soak", () => {
     expect(result.verdict).toBe("PASS_WITH_LIMITATIONS");
     expect(result.eventLoopWindows).toBe(61);
     expect(result.postMajorGcTrendMiB.oldSpace).toBe(59);
+    expect(result.memoryMiB.external.p50).toBe(30);
+    expect(result.memoryMiB.arrayBuffers.p50).toBe(12);
+    expect(result.memoryMiB.cgroupMemoryCurrent.p50).toBe(1530);
+    expect(result.memoryMiB.cgroupMemoryMax.p95).toBe(4096);
     expect(result.hotPathsByWindowCpuMs[0]).toMatchObject({
       name: "snapshot.trail-update", windows: 61, calls: 610, cpuMs: 1830,
     });

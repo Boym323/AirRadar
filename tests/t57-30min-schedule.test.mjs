@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { durationSetting, MIN_T57_SOAK_SECONDS, scheduledPollDelayMs } from "../scripts/t57-production-soak.mjs";
 import { readFileSync } from "node:fs";
 
+const workflow = readFileSync(new URL("../.github/workflows/t57-readonly-30min.yml", import.meta.url), "utf8");
+
 test("short read-only production soak accepts exactly 30 minutes, not less", () => {
   assert.equal(MIN_T57_SOAK_SECONDS, 1800);
   const original = process.env.T57_SECONDS;
@@ -30,4 +32,17 @@ test("chunk finalization keeps its cursor in scope and schedules each poll once"
   const target = 10_000;
   assert.equal(scheduledPollDelayMs(target, 9_000), 1_000);
   assert.equal(scheduledPollDelayMs(target, 10_001), 0);
+});
+
+test("30-minute workflow is manual, pinned, authenticated and sanitized", () => {
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /T57_WATCHLIST_ADMIN_TOKEN/);
+  assert.match(workflow, /scripts\/t57-production-soak\.mjs --preflight/);
+  assert.match(workflow, /scripts\/t57-production-soak\.mjs >/);
+  assert.match(workflow, /T57_TOTAL_SECONDS: "1800"/);
+  assert.match(workflow, /T57_INTERVAL_SECONDS: "30"/);
+  assert.doesNotMatch(workflow, /T57_TOTAL_SECONDS: "86400"/);
+  assert.doesNotMatch(workflow, /\$\{\{ runner\.temp\/t57-30m\/soak\.ndjson \}\}/);
+  assert.match(workflow, /soak\.summary\.json/);
+  assert.match(workflow, /soak\.summary\.md/);
 });
