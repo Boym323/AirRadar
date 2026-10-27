@@ -98,6 +98,47 @@ describe("BeastDecoder", () => {
     expect(aircraft?.category).toBeNull();
   });
 
+  it("keeps V2 DF18 CF0 ICAO and CF1 non-ICAO identities disjoint at the same 24-bit address", () => {
+    const decoder = new BeastDecoder(receiver);
+    const message = "212cc371c32ce0";
+    expect(decoder.decode(df17Frame(0xabc123, message, 0x90))?.icaoHex).toBe("ABC123");
+    expect(decoder.decode(df17Frame(0xabc123, message, 0x91))?.icaoHex).toBe("~ABC123");
+    expect(decoder.snapshot().map(row => row.icaoHex).sort()).toEqual(["ABC123", "~ABC123"]);
+    expect(decoder.snapshot().map(row => row.category)).toEqual(["A1", "A1"]);
+  });
+
+  it.each([2, 3, 4, 5, 6, 7])(
+    "rejects DF18 control field CF=%s instead of attributing TIS-B/ADS-R to ICAO",
+    cf => {
+      const decoder = new BeastDecoder(receiver);
+      expect(decoder.decode(df17Frame(0xabc123, "212cc371c32ce0", 0x90 + cf))).toBeNull();
+      expect(decoder.getTrackCount()).toBe(0);
+    },
+  );
+
+  it("does not combine CPR frames from DF18 ICAO and non-ICAO tracks", () => {
+    const even = "58378144453ae1";
+    const odd = "583784b655251f";
+    const decoder = new BeastDecoder(receiver);
+    const now = Date.parse("2026-01-01T00:00:00Z");
+    expect(decoder.decode(df17Frame(0xabc123, even, 0x90), now)?.lat).toBeNull();
+    expect(decoder.decode(df17Frame(0xabc123, odd, 0x91), now + 1_000)?.lat).toBeNull();
+    const ownOdd = decoder.decode(df17Frame(0xabc123, odd, 0x90), now + 2_000);
+    expect(ownOdd?.icaoHex).toBe("ABC123");
+    expect(ownOdd?.lat).toBeCloseTo(49.9, 2);
+    const records = decoder.snapshot();
+    expect(records).toHaveLength(2);
+    expect(records.find(row => row.icaoHex === "~ABC123")?.lat).toBeNull();
+  });
+
+  it("retains CRC rejection for a corrupted DF18 CF1 payload", () => {
+    const message = df17Frame(0xabc123, "212cc371c32ce0", 0x91);
+    message.payload[5] = message.payload[5]! ^ 1;
+    const decoder = new BeastDecoder(receiver);
+    expect(decoder.decode(message)).toBeNull();
+    expect(decoder.getTrackCount()).toBe(0);
+  });
+
   it("decodes the 12-bit DF17 Q-bit altitude without using the DF4/20 AC13 layout", () => {
     // TC11: ME altitude bits are 0xbf0 = 37,000 ft. The field is 12 bits;
     // the following T/F/CPR bits are not part of the altitude.
