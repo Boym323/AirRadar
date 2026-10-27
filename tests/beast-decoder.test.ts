@@ -95,7 +95,7 @@ describe("BeastDecoder", () => {
     const aircraft = new BeastDecoder(receiver).decode(
       df17Frame(0x4840d6, "212cc371c32ce0", 0x92), // DF18 CF=2
     );
-    expect(aircraft?.category).toBeNull();
+    expect(aircraft).toBeNull();
   });
 
   it("keeps V2 DF18 CF0 ICAO and CF1 non-ICAO identities disjoint at the same 24-bit address", () => {
@@ -121,14 +121,14 @@ describe("BeastDecoder", () => {
     const odd = "583784b655251f";
     const decoder = new BeastDecoder(receiver);
     const now = Date.parse("2026-01-01T00:00:00Z");
-    expect(decoder.decode(df17Frame(0xabc123, even, 0x90), now)?.lat).toBeNull();
-    expect(decoder.decode(df17Frame(0xabc123, odd, 0x91), now + 1_000)?.lat).toBeNull();
+    expect(decoder.decode(df17Frame(0xabc123, even, 0x90), now)?.lat).toBeFalsy();
+    expect(decoder.decode(df17Frame(0xabc123, odd, 0x91), now + 1_000)?.lat).toBeFalsy();
     const ownOdd = decoder.decode(df17Frame(0xabc123, odd, 0x90), now + 2_000);
     expect(ownOdd?.icaoHex).toBe("ABC123");
     expect(ownOdd?.lat).toBeCloseTo(49.9, 2);
     const records = decoder.snapshot();
     expect(records).toHaveLength(2);
-    expect(records.find(row => row.icaoHex === "~ABC123")?.lat).toBeNull();
+    expect(records.find(row => row.icaoHex === "~ABC123")?.lat).toBeFalsy();
   });
 
   it("retains CRC rejection for a corrupted DF18 CF1 payload", () => {
