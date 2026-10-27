@@ -126,7 +126,7 @@ describe("BeastDecoder", () => {
     const ownOdd = decoder.decode(df17Frame(0xabc123, odd, 0x90), now + 2_000);
     expect(ownOdd?.icaoHex).toBe("ABC123");
     expect(ownOdd?.lat).toBeCloseTo(49.9, 2);
-    const records = decoder.snapshot();
+    const records = decoder.snapshot(now + 2_000);
     expect(records).toHaveLength(2);
     expect(records.find(row => row.icaoHex === "~ABC123")?.lat).toBeFalsy();
   });
