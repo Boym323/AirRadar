@@ -21,6 +21,14 @@ V2's `contracts/feature-matrix.json` describes 45 active feature IDs; the curren
 
 The 27 **NOT_STARTED** V2 features (airport detail/NAVAID, weather, push/Pushover, statistics, system health, PWA/i18n/search, emergency codes) are a **backlog**, not 27 migrations. V1 already implements a substantial subset; reconcile each with `docs/features.registry.json` if needed, without restoring features deliberately retired from V1.
 
+## Verified migration and archive status
+
+- **PR [#1115](https://github.com/Boym323/AirRadar/pull/1115) merged** to V1 `main` as `6a8f5dea`. [Production workflow #40514851874](https://github.com/Boym323/AirRadar/actions/runs/40514851874) passed, including the Deploy production job. This is not a physical-GPU benchmark.
+- **PR [#1117](https://github.com/Boym323/AirRadar/pull/1117) merged** as `8b62549f`. DF18 CF0/CF1 identity isolation passed PR CI, BEAST native parity, CodeQL and synthetic load tests. Check the separate production release.
+- **Complete V2 Git history bundle was made and restoration-tested**: isolated V1 [`archive/airradarv2-complete-history-20261027` branch](https://github.com/Boym323/AirRadar/tree/archive/airradarv2-complete-history-20261027) holds `AirRadarV2-full-history.bundle` (1,664,501 bytes, SHA-256 `12d3c50172cf3e51e5bde50e3f1c667cbba2bfc0153895128e102a474ddd7c36`), 158 refs including 34 branches and 63 tags, original V2 `main` `7f0ad16bc7a4577a4348b188941a07c8f18b01c1`. [Archival workflow #40516350354](https://github.com/Boym323/AirRadar/actions/runs/40516350354) verified `git bundle verify`, exact refs parity after a mirror clone, and pushed the bundle into a separate archival branch. It was **not added to V1 production main**.
+- After obtaining the bundle and checksum from the archival branch: `sha256sum -c SHA256SUMS.txt`, then `git clone --mirror AirRadarV2-full-history.bundle AirRadarV2-restored.git`. A GitHub-hosted archive **is not an independent offline backup**; download an additional off-GitHub copy before deleting V2.
+- **External DEV LXC remains unmodified**. Before retirement, inventory and stop verified `airradarv2*` systemd services/timers, repo-scoped runner, reverse proxy/DNS and V2-only DEV PostgreSQL role/database, after checking consumers and needed data. No admin connection to those hosts was available here. **Nothing was stopped or deleted on DEV infrastructure or PostgreSQL.**
+
 ## Gates before deleting V2
 
 1. **Source preservation:** export a full V2 Git mirror outside the repository/GitHub, including tags/history; retain relevant ADRs, contract fixtures, original icon license/provenance, DEV runbooks and benchmark evidence. A branch or link into V2 is not a durable backup once V2 is deleted.
@@ -36,4 +44,4 @@ The V1 BEAST identification decoder also previously used incorrect `A${typeCode}
 
 The category fallback reads the existing `AircraftView.category` from the current readsb/BEAST-derived pipeline and selects **already bundled** category SVGs, only when no exact type-specific tar1090 SVG exists. It adds no network calls, polling, SQL, threads or React/MapLibre mounts. Unsupported/reserved categories remain at the pre-existing fallback. The special rotorcraft/glider/UAV and ground classifications stay unchanged. Category-only presentation does not suppress initial type metadata enrichment.
 
-**Verification required before merging:** targeted `vitest` aircraft icon classification and BEAST decoder, lint, TypeScript, icon audit, and representative map/browser smoke. Tests are committed, but this source inventory itself does not imply those commands or a production deploy have passed.
+**Verification:** PR #1115 CI and production release workflow passed, and PR #1117 passed its PR CI, BEAST parity, CodeQL and synthetic load tests. Hardware/mobile benchmarks still require separate field measurements.
