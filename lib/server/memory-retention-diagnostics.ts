@@ -135,6 +135,9 @@ export function getMemoryRetentionDiagnostics(input: {
       lastHistorySample: input.lastHistorySample.size,
       predictiveEvaluatedAt: 0, // Retained serialized field; producer retired.
       atcResolutionKeys: input.atcResolutionKeys.size,
+      // Retained T57 auxiliary field; the shadow-prediction producer was retired
+      // and no runtime map is allocated in the current V1 implementation.
+      atcShadowPredictionKeys: 0,
     },
     snapshotCacheEntries: input.snapshotCacheEntries,
     listeners: input.listeners,

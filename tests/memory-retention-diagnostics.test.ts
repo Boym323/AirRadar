@@ -42,6 +42,7 @@ describe("memory retention diagnostics", () => {
     expect(result.auxiliaryMaps.sourcePreferenceMissingSince).toBe(1);
     expect(result.snapshotCacheEntries).toBe(2);
     expect(result.auxiliaryMaps.predictiveEvaluatedAt).toBe(0);
+    expect(result.auxiliaryMaps.atcShadowPredictionKeys).toBe(0);
   });
   it("reads each source only once while retaining independent aircraft and trail age windows", () => {
     const now = Date.parse("2026-10-10T12:00:00.000Z");
