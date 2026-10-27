@@ -214,6 +214,7 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       heapUsedBytes: safe(runtime.heapUsedBytes),
       heapTotalBytes: safe(runtime.heapTotalBytes),
       externalBytes: safe(runtime.externalBytes),
+      arrayBuffersBytes: safe(runtime.arrayBuffersBytes),
       oldSpaceBytes: safe(oldSpace?.usedBytes),
       cpuPercent: safe(runtime.cpuIntervalPercent),
       cgroupCpuQuotaCores: safe(system.cgroupCpuQuotaCores),
@@ -221,6 +222,8 @@ export function projectT57SoakSample(status, metrics, at = new Date().toISOStrin
       cgroupCpuThrottledUsec: safe(system.cgroupCpuThrottledUsec),
       cgroupCpuThrottleStatus: ["available", "controller_disabled", "unavailable"].includes(system.cgroupCpuThrottleStatus)
         ? system.cgroupCpuThrottleStatus : null,
+      cgroupMemoryCurrentBytes: safe(system.cgroupMemoryCurrentBytes),
+      cgroupMemoryMaxBytes: safe(system.cgroupMemoryMaxBytes),
       majorGcCount: safe(runtime.majorGcCount),
       postMajorGc: gc && safe(gc.observedAtMs) !== null ? {
         observedAtMs: safe(gc.observedAtMs), heapUsedBytes: safe(gc.heapUsedBytes),
@@ -636,7 +639,12 @@ export function analyzeT57Soak(records) {
     memoryMiB: {
       rss: series(steady, (r) => megabytes(r.rssBytes)),
       heapUsed: series(steady, (r) => megabytes(r.heapUsedBytes)),
+      heapTotal: series(steady, (r) => megabytes(r.heapTotalBytes)),
+      external: series(steady, (r) => megabytes(r.externalBytes)),
+      arrayBuffers: series(steady, (r) => megabytes(r.arrayBuffersBytes)),
       oldSpace: series(steady, (r) => megabytes(r.oldSpaceBytes)),
+      cgroupMemoryCurrent: series(steady, (r) => megabytes(r.cgroupMemoryCurrentBytes)),
+      cgroupMemoryMax: series(steady, (r) => megabytes(r.cgroupMemoryMaxBytes)),
     },
     postMajorGcTrendMiB: {
       heapUsed: gcTrend("heapUsedBytes"),
