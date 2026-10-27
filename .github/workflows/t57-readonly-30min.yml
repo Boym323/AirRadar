@@ -65,7 +65,17 @@ jobs:
             exit 1
           }
           node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t57-30m/preflight.json"
-          deployed_sha="$(node scripts/t58-report.mjs preflight "$RUNNER_TEMP/t57-30m/preflight.json")"
+          deployed_sha="$(node -e '
+            const fs = require("node:fs");
+            const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            const sources = new Set(value.requiredSources ?? []);
+            if (value.status !== "TELEMETRY_READY" || value.telemetryMode !== "admin" ||
+                !/^[0-9a-f]{8,40}$/i.test(value.commit ?? "") ||
+                !sources.has("admin-system-status") ||
+                !sources.has("runtime-performance") ||
+                !sources.has("retention-attribution")) process.exit(1);
+            process.stdout.write(value.commit);
+          ' "$RUNNER_TEMP/t57-30m/preflight.json")"
           git rev-parse --verify "$deployed_sha^{commit}" >/dev/null
           printf 'deployed_sha=%s\n' "$deployed_sha" >> "$GITHUB_OUTPUT"
           echo "Read-only telemetry ready; production commit prefix pinned."
