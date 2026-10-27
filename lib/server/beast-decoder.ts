@@ -248,9 +248,15 @@ export class BeastDecoder {
     if (!longFrame && ![0, 4, 5, 11].includes(df)) return null;
     const parity = trustedModeSCrcForFrame(frame) ?? modeSCrc(p);
     if (longFrame && (df === 17 || df === 18) && parity !== 0) return null;
+    // V2 G-02/DF18 contract: CF=0 carries an ICAO identity; CF=1 is
+    // non-ICAO. Other CF values need TIS-B/ADS-R/IMF provenance validation
+    // and must not silently impersonate a direct ADS-B ICAO aircraft.
+    const df18Control = df === 18 ? p[0]! & 7 : null;
+    if (df18Control !== null && df18Control !== 0 && df18Control !== 1) return null;
     let icaoHex: string;
     if (longFrame && (df === 17 || df === 18)) {
-      icaoHex = p.subarray(1, 4).toString("hex").toUpperCase();
+      const hex = p.subarray(1, 4).toString("hex").toUpperCase();
+      icaoHex = df18Control === 1 ? `~${hex}` : hex;
     } else if (df === 11) {
       icaoHex = p.subarray(1, 4).toString("hex").toUpperCase();
     } else {
@@ -272,10 +278,9 @@ export class BeastDecoder {
     a.source = a.source ?? "ADS-B"; a.origin = this.origin; a.sourceType = `df${df}`; a.trail ??= [];
     if (me && typeCode !== null && typeCode >= 1 && typeCode <= 4) {
       a.callsign = callsignField(me.subarray(1, 7));
-      // Only DF17 and DF18 CF=0 have an ordinary ICAO identification contract
-      // in this V1 decoder. CF=1 is non-ICAO and CF=2/3/5/6 have different
-      // identity/provenance semantics; never trust their icon category here.
-      if (df === 17 || (df === 18 && (p[0]! & 7) === 0)) {
+      // DF18 CF=1 can use verified emitter metadata, but always under the
+      // distinct ~HEX identity. No TIS-B/ADS-R category is accepted here.
+      if (df === 17 || df18Control === 0 || df18Control === 1) {
         const category = verifiedBeastEmitterCategory(typeCode, me[0]! & 7);
         if (category !== null) a.category = category;
       }
