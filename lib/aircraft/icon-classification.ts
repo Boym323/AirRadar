@@ -28,7 +28,7 @@ export function aircraftPresentationKindForType(type: string): AircraftPresentat
 
 // V2 R03: use receiver-sourced ADS-B emitter categories only when no exact
 // type-specific sprite is available. No callsign/kinematics heuristics or fetch.
-const EMITTER_CATEGORY_FALLBACKS = new Set(["A1", "A2", "A3", "A4", "A5", "A6", "B4"]);
+const EMITTER_CATEGORY_FALLBACKS = new Set(["A1", "A2", "A3", "A4", "A5", "A6", "B2", "B4"]);
 
 type Input = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
 

@@ -13,13 +13,21 @@ V2's `contracts/feature-matrix.json` describes 45 active feature IDs; the curren
 | J06/J07/J08 HTTP and SSE snapshot/delta | `app/api/aircraft/route.ts`, `app/api/stream/route.ts`, `lib/server/sse-delta.ts`, `lib/aircraft/sse-v2.ts` | Existing V1; compare sequence-gap/reconnect/fanout contract |
 | J09 sampled PostgreSQL history | V1 aircraft history/sampling pipeline | Existing V1 with different schema/ORM; **do not** deploy V2 SQLx writer or run migrations on V1 DB |
 | R01/R04/R06/R08/R09/R12/R14 map, labels, traffic, trail, follow, airports, styles | `components/radar/`, `lib/radar/`, `lib/server/airport-catalog.ts` | Already present; check visual parity on 320px/mobile and live load |
-| R03 category-specific aircraft silhouettes | `lib/aircraft/icon-classification.ts` and existing tar1090 assets | **Ported incrementally in this change**: category-only fallbacks A1–A6/B4 without extra API/DB/marker layers; exact type assets keep priority |
+| R03 category-specific aircraft silhouettes | `lib/aircraft/icon-classification.ts` and existing tar1090 assets | **Ported incrementally in this change**: category-only fallbacks A1–A6/B2/B4 without extra API/DB/marker layers; exact type assets keep priority |
 | R03 V2 original Path2D silhouette artwork | `apps/web/src/radar/aircraft-icons.ts` in V2 | Keep source in an external archive if desired; V1 already has a substantially richer asset family. Do not replace artwork merely to move code |
 | G-05.11 selective GeoJSON `updateData` | V1 `lib/radar/aircraft-webgl-layer.ts`, `live-aircraft-changes.ts` | **Not transplantable as-is**: V1 aircraft use a custom WebGL layer, not V2's GeoJSON aircraft source. Only reconsider after matched render benchmarks |
 | G-06 draft static OurAirports catalog | `lib/airports/ourairports.ts`, `lib/server/airport-catalog.ts` | Existing V1 catalog/airport API is richer; importing V2's static copy would duplicate data |
 | V2 Vite frontend, Rust Axum server and DEV systemd/SQLx deploy | V1 Next.js production release/runtime | Keep V1 architecture. Never switch deployment or attach two ingest owners as part of UI migration |
 
 The 27 **NOT_STARTED** V2 features (airport detail/NAVAID, weather, push/Pushover, statistics, system health, PWA/i18n/search, emergency codes) are a **backlog**, not 27 migrations. V1 already implements a substantial subset; reconcile each with `docs/features.registry.json` if needed, without restoring features deliberately retired from V1.
+
+## Verified migration and archive status
+
+- **PR [#1115](https://github.com/Boym323/AirRadar/pull/1115) merged** to V1 `main` as `6a8f5dea`. [Production workflow #40514851874](https://github.com/Boym323/AirRadar/actions/runs/40514851874) passed, including the Deploy production job. This is not a physical-GPU benchmark.
+- **PR [#1117](https://github.com/Boym323/AirRadar/pull/1117) merged** as `8b62549f`. DF18 CF0/CF1 identity isolation passed PR CI, BEAST native parity, CodeQL and synthetic load tests. Check the separate production release.
+- **Complete V2 Git history bundle was made and restoration-tested**: isolated V1 [`archive/airradarv2-complete-history-20261027` branch](https://github.com/Boym323/AirRadar/tree/archive/airradarv2-complete-history-20261027) holds `AirRadarV2-full-history.bundle` (1,664,501 bytes, SHA-256 `12d3c50172cf3e51e5bde50e3f1c667cbba2bfc0153895128e102a474ddd7c36`), 158 refs including 34 branches and 63 tags, original V2 `main` `7f0ad16bc7a4577a4348b188941a07c8f18b01c1`. [Archival workflow #40516350354](https://github.com/Boym323/AirRadar/actions/runs/40516350354) verified `git bundle verify`, exact refs parity after a mirror clone, and pushed the bundle into a separate archival branch. It was **not added to V1 production main**.
+- After obtaining the bundle and checksum from the archival branch: `sha256sum -c SHA256SUMS.txt`, then `git clone --mirror AirRadarV2-full-history.bundle AirRadarV2-restored.git`. A GitHub-hosted archive **is not an independent offline backup**; download an additional off-GitHub copy before deleting V2.
+- **External DEV LXC remains unmodified**. Before retirement, inventory and stop verified `airradarv2*` systemd services/timers, repo-scoped runner, reverse proxy/DNS and V2-only DEV PostgreSQL role/database, after checking consumers and needed data. No admin connection to those hosts was available here. **Nothing was stopped or deleted on DEV infrastructure or PostgreSQL.**
 
 ## Gates before deleting V2
 
@@ -36,4 +44,4 @@ The V1 BEAST identification decoder also previously used incorrect `A${typeCode}
 
 The category fallback reads the existing `AircraftView.category` from the current readsb/BEAST-derived pipeline and selects **already bundled** category SVGs, only when no exact type-specific tar1090 SVG exists. It adds no network calls, polling, SQL, threads or React/MapLibre mounts. Unsupported/reserved categories remain at the pre-existing fallback. The special rotorcraft/glider/UAV and ground classifications stay unchanged. Category-only presentation does not suppress initial type metadata enrichment.
 
-**Verification required before merging:** targeted `vitest` aircraft icon classification and BEAST decoder, lint, TypeScript, icon audit, and representative map/browser smoke. Tests are committed, but this source inventory itself does not imply those commands or a production deploy have passed.
+**Verification:** PR #1115 CI and production release workflow passed, and PR #1117 passed its PR CI, BEAST parity, CodeQL and synthetic load tests. Hardware/mobile benchmarks still require separate field measurements.

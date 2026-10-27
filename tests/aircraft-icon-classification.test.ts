@@ -94,7 +94,7 @@ describe("canonical aircraft icon classification", () => {
     expect(result.presentationKind).toBe("b737");
   });
 
-  it.each(["A1", "A2", "A3", "A4", "A5", "A6", "B4"])(
+  it.each(["A1", "A2", "A3", "A4", "A5", "A6", "B2", "B4"])(
     "uses V2 emitter category %s as an immediate fallback without a known type",
     category => {
       const result = classifyAircraftIcon({ ...base, category });
