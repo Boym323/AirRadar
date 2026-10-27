@@ -17,9 +17,9 @@ function crc(payload: Buffer): number {
   return Number(value & 0xffffffn);
 }
 
-function df17Frame(icao: number, meHex: string): BeastFrame {
+function df17Frame(icao: number, meHex: string, firstByte = 0x8d): BeastFrame {
   const payload = Buffer.alloc(14);
-  payload[0] = 0x8d;
+  payload[0] = firstByte;
   payload[1] = icao >>> 16;
   payload[2] = icao >>> 8;
   payload[3] = icao;
@@ -54,8 +54,50 @@ describe("BeastDecoder", () => {
   });
   it("decodes ICAO and callsign from a deterministic DF17 identification frame", () => {
     const aircraft = new BeastDecoder(receiver).decode(frame("8d4840d6202cc371c32ce0576098"), Date.parse("2026-01-01T00:00:00Z"));
-    expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", category: "A4", source: "ADS-B" });
+    // TC4 + ME subtype 0 means reserved A0, not A4.
+    expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", category: null, source: "ADS-B" });
   });
+  it.each([
+    ["212cc371c32ce0", "A1"],
+    ["272cc371c32ce0", "A7"],
+    ["192cc371c32ce0", "B1"],
+    ["1a2cc371c32ce0", "B2"],
+    ["1c2cc371c32ce0", "B4"],
+    ["1e2cc371c32ce0", "B6"],
+    ["112cc371c32ce0", "C1"],
+    ["122cc371c32ce0", "C2"],
+  ] as const)("decodes V2 trustworthy DF17 emitter category %s as %s", (message, category) => {
+    const decoder = new BeastDecoder(receiver);
+    const aircraft = decoder.decode(df17Frame(0x4840d6, message), Date.parse("2026-01-01T00:00:00Z"));
+    expect(aircraft?.category).toBe(category);
+    expect(aircraft?.callsign).toBe("KLM1023");
+  });
+
+  it.each(["202cc371c32ce0", "082cc371c32ce0", "182cc371c32ce0", "1b2cc371c32ce0", "132cc371c32ce0"])(
+    "never maps reserved or unsupported identification code %s into a type",
+    message => {
+      const aircraft = new BeastDecoder(receiver).decode(df17Frame(0x4840d6, message));
+      expect(aircraft?.category).toBeNull();
+    },
+  );
+
+  it("retains the last verified emitter category after reserved metadata and rejects corrupted CRC", () => {
+    const decoder = new BeastDecoder(receiver);
+    expect(decoder.decode(df17Frame(0x4840d6, "222cc371c32ce0"))?.category).toBe("A2");
+    expect(decoder.decode(df17Frame(0x4840d6, "202cc371c32ce0"))?.category).toBe("A2");
+    const corrupted = df17Frame(0x4840d6, "232cc371c32ce0");
+    corrupted.payload[5] ^= 0x01;
+    expect(decoder.decode(corrupted)).toBeNull();
+    expect(decoder.snapshot()[0].category).toBe("A2");
+  });
+
+  it("does not treat non-ICAO/TIS-B DF18 emitter categories as verified ICAO identities", () => {
+    const aircraft = new BeastDecoder(receiver).decode(
+      df17Frame(0x4840d6, "212cc371c32ce0", 0x92), // DF18 CF=2
+    );
+    expect(aircraft?.category).toBeNull();
+  });
+
   it("decodes the 12-bit DF17 Q-bit altitude without using the DF4/20 AC13 layout", () => {
     // TC11: ME altitude bits are 0xbf0 = 37,000 ft. The field is 12 bits;
     // the following T/F/CPR bits are not part of the altitude.
