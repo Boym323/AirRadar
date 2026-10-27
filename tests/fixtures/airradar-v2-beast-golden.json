@@ -1,0 +1,88 @@
+{
+  "description": "Syntetické lokální BEAST rámce, generované DF17 s ICAO ABC123 a CPR kolem 49.9/15.3. Jde o golden envelope/CRC data, nikoli kompletní decode polohy.",
+  "clockHz": 12000000,
+  "receiverId": "rx-primary",
+  "valid": [
+    {
+      "name": "adsb_even",
+      "type": "33",
+      "receiverTicks": 12000000,
+      "rssi": 26,
+      "modeS": "8dabc12358378144453ae11de076",
+      "hex": "1a33000000b71b001a1a8dabc12358378144453ae11de076",
+      "df": 17,
+      "parity": "crc24_zero_syndrome",
+      "cpr": "even"
+    },
+    {
+      "name": "adsb_odd",
+      "type": "33",
+      "receiverTicks": 24000000,
+      "rssi": 45,
+      "modeS": "8dabc123583784b655251fe6099b",
+      "hex": "1a330000016e36002d8dabc123583784b655251fe6099b",
+      "df": 17,
+      "parity": "crc24_zero_syndrome",
+      "cpr": "odd"
+    },
+    {
+      "name": "mode_s_short",
+      "type": "32",
+      "receiverTicks": 36000000,
+      "rssi": 255,
+      "modeS": "00000000000000",
+      "hex": "1a32000002255100ff00000000000000",
+      "df": 0,
+      "parity": "not_asserted_for_ap",
+      "cpr": null
+    },
+    {
+      "name": "mode_a_c",
+      "type": "31",
+      "receiverTicks": 0,
+      "rssi": 26,
+      "modeS": "1a00",
+      "hex": "1a310000000000001a1a1a1a00",
+      "df": null,
+      "parity": "not_applicable",
+      "cpr": null
+    }
+  ],
+  "invalid": [
+    {
+      "name": "cut_frame",
+      "hex": "1a33000000b71b001a1a8dabc1235837814445",
+      "expected": "incomplete"
+    },
+    {
+      "name": "unknown_type",
+      "hex": "1a35",
+      "expected": "unsupported"
+    },
+    {
+      "name": "lone_escape",
+      "hex": "1a331a",
+      "expected": "incomplete"
+    },
+    {
+      "name": "bad_df17_parity",
+      "hex": "1a33000000b71b001a1a8dabc12358378144453ae11de000",
+      "expected": "bad_crc"
+    }
+  ],
+  "knownCrc": {
+    "data": "8d40621d58c382d690c8ac",
+    "parity": "2863a7"
+  },
+  "cprPair": {
+    "even": "adsb_even",
+    "odd": "adsb_odd",
+    "decodeReference": {
+      "lat": 49.899994,
+      "lon": 15.29998,
+      "toleranceDegrees": 0.0001
+    },
+    "missingOddExpected": "no_position",
+    "excessiveTimeDifferenceExpected": "no_position"
+  }
+}
