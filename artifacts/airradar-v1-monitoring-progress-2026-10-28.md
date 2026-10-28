@@ -200,3 +200,18 @@ unavailable because all 24 database `stats_reset` values are `null`; WAL
 
 This recheck does not change the verdict: **INSUFFICIENT_EVIDENCE**, with the
 24-hour endpoint still required at or after `2026-10-29T16:58:03.944Z`.
+
+## Latest live recheck — 2026-10-28 19:04 UTC
+
+The host clock is still before the required endpoint. The JSONL now contains
+25 unique samples through `2026-10-28T19:03:53.984Z`, an elapsed span of
+2.10 hours. The timer remains active/waiting with `Persistent=yes`. The
+cadence-aware result is unchanged at `20 / 28 = 71.43%`; there are no duplicate
+timestamps and eight timer-gap diagnostics.
+
+Updated descriptive values: process CPU P50/P95/max
+`14.5046% / 89.7898% / 100%`, RSS P50/P95/max `464785408 / 641462272 /
+1193857024` bytes, event-loop P99 P50/P95/max `26.296 / 122.814 / 163.054 ms`,
+maximum lock waiting `0`, PostgreSQL transaction deltas unavailable because
+`stats_reset=null` in all 25 samples, and DB-host CPU unavailable in all 25
+samples. Verdict remains **INSUFFICIENT_EVIDENCE**; no 24h PASS is claimed.
