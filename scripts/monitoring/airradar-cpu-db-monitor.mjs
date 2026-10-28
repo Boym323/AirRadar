@@ -57,33 +57,47 @@ async function fetchRuntime(baseUrl, cookie) {
 
 async function query(client, text) { return (await client.query(text)).rows; }
 
-async function collectDatabase(client) {
-  const database = (await query(client, `
-    SELECT datname, xact_commit::bigint, xact_rollback::bigint,
-      tup_inserted::bigint, tup_updated::bigint, tup_deleted::bigint,
-      blks_read::bigint, blks_hit::bigint, temp_files::bigint,
-      temp_bytes::bigint, stats_reset
-    FROM pg_stat_database WHERE datname = current_database()`))[0] ?? null;
-  let wal = null;
+async function optionalQuery(client, savepoint, text) {
   try {
-    wal = (await query(client, `SELECT wal_records::bigint, wal_fpi::bigint,
+    await client.query(`SAVEPOINT ${savepoint}`);
+    const rows = await query(client, text);
+    await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    return rows;
+  } catch {
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    return [];
+  }
+}
+
+export async function collectDatabase(client) {
+  await client.query("BEGIN TRANSACTION READ ONLY");
+  try {
+    const database = (await query(client, `
+      SELECT datname, xact_commit::bigint, xact_rollback::bigint,
+        tup_inserted::bigint, tup_updated::bigint, tup_deleted::bigint,
+        blks_read::bigint, blks_hit::bigint, temp_files::bigint,
+        temp_bytes::bigint, stats_reset
+      FROM pg_stat_database WHERE datname = current_database()`))[0] ?? null;
+    const wal = (await optionalQuery(client, "airradar_wal", `SELECT wal_records::bigint, wal_fpi::bigint,
       wal_bytes::numeric, wal_buffers_full::bigint, stats_reset FROM pg_stat_wal`))[0] ?? null;
-  } catch { /* PostgreSQL version or privilege without pg_stat_wal. */ }
-  const activity = (await query(client, `
-    SELECT count(*) FILTER (WHERE state = 'active')::int AS active,
-      count(*) FILTER (WHERE wait_event IS NOT NULL)::int AS waiting,
-      count(*) FILTER (WHERE wait_event_type = 'Lock')::int AS lock_waiting,
-      count(*) FILTER (WHERE state = 'idle in transaction')::int AS idle_in_transaction
-    FROM pg_stat_activity WHERE datname = current_database()`))[0] ?? null;
-  let statements = null;
-  try {
-    statements = (await query(client, `
+    const activity = (await query(client, `
+      SELECT count(*) FILTER (WHERE state = 'active')::int AS active,
+        count(*) FILTER (WHERE wait_event IS NOT NULL)::int AS waiting,
+        count(*) FILTER (WHERE wait_event_type = 'Lock')::int AS lock_waiting,
+        count(*) FILTER (WHERE state = 'idle in transaction')::int AS idle_in_transaction
+      FROM pg_stat_activity WHERE datname = current_database()`))[0] ?? null;
+    const statements = (await optionalQuery(client, "airradar_statements", `
       SELECT count(*)::int AS statement_count, coalesce(sum(calls), 0)::bigint AS calls,
         coalesce(sum(total_exec_time), 0)::double precision AS total_exec_time_ms,
         coalesce(max(mean_exec_time), 0)::double precision AS max_mean_exec_time_ms
       FROM pg_stat_statements`))[0] ?? null;
-  } catch { /* Optional extension; absence is a valid contract state. */ }
-  return { database, wal, activity, statementsAvailable: statements !== null, statements };
+    await client.query("COMMIT");
+    return { database, wal, activity, statementsAvailable: statements !== null, statements };
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch { /* Preserve the original database error. */ }
+    throw error;
+  }
 }
 
 async function fetchHostCpu() {

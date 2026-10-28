@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { createAdminCookie, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
+import { collectDatabase, createAdminCookie, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
 import { summarize } from "../scripts/monitoring/airradar-monitor-report.mjs";
 
 const runtime = (overrides = {}) => projectRuntimeTelemetry({
@@ -12,6 +12,41 @@ const runtime = (overrides = {}) => projectRuntimeTelemetry({
 });
 
 describe("AirRadar CPU/DB monitoring contract", () => {
+  it("collects PostgreSQL statistics only inside an explicit read-only transaction", async () => {
+    const queries = [];
+    const client = {
+      async query(text) {
+        queries.push(text.replace(/\s+/g, " ").trim());
+        if (text.includes("FROM pg_stat_database")) return { rows: [{ datname: "airradar", xact_commit: "1" }] };
+        if (text.includes("FROM pg_stat_wal")) return { rows: [{ wal_records: "2" }] };
+        if (text.includes("FROM pg_stat_activity")) return { rows: [{ active: 0, waiting: 0, lock_waiting: 0, idle_in_transaction: 0 }] };
+        if (text.includes("FROM pg_stat_statements")) return { rows: [{ statement_count: 0, calls: "0", total_exec_time_ms: 0, max_mean_exec_time_ms: 0 }] };
+        return { rows: [] };
+      },
+    };
+    const result = await collectDatabase(client);
+    assert.equal(result.database.datname, "airradar");
+    assert.equal(queries[0], "BEGIN TRANSACTION READ ONLY");
+    assert.equal(queries.at(-1), "COMMIT");
+    assert.ok(queries.some((query) => query.startsWith("SAVEPOINT")));
+    assert.ok(queries.every((query) => !/\b(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE)\b/i.test(query)));
+  });
+
+  it("rolls back the shared-account read-only transaction when a required read fails", async () => {
+    const queries = [];
+    const client = {
+      async query(text) {
+        queries.push(text.replace(/\s+/g, " ").trim());
+        if (text.includes("FROM pg_stat_database")) throw new Error("stats unavailable");
+        return { rows: [] };
+      },
+    };
+    await assert.rejects(() => collectDatabase(client), /stats unavailable/);
+    assert.equal(queries[0], "BEGIN TRANSACTION READ ONLY");
+    assert.match(queries[1], /^SELECT datname,/);
+    assert.equal(queries.at(-1), "ROLLBACK");
+  });
+
   it("does not deny V8 executable memory in the Node systemd sampler", () => {
     const unit = readFileSync(new URL("../deploy/systemd/airradar-cpu-db-monitor.service", import.meta.url), "utf8");
     assert.doesNotMatch(unit, /^MemoryDenyWriteExecute=yes$/m);

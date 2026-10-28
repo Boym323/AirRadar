@@ -15,6 +15,11 @@ PostgreSQL.
 Při chybějícím admin cookie nebo povinné telemetrii sampler skončí chybou.
 Nedostupný exporter je `unavailable`, nikoli nulová hodnota.
 
+Všechny PostgreSQL dotazy vzorku běží v jedné explicitní transakci
+`BEGIN TRANSACTION READ ONLY` / `COMMIT`. Volitelné statistiky používají
+savepoint, takže chybějící view neukončí transakci v aborted stavu. Jde o
+ochranu sdíleného aplikačního účtu do hloubky, nikoli o least-privilege roli.
+
 ## Instalace a canary
 
 Po instalaci jednotek vytvořte `/etc/airradar/monitoring.env` s režimem `0600`:
@@ -77,8 +82,9 @@ runtime telemetrie, PostgreSQL statistik, validního JSONL, režimů `0600` a
 kontroly úniku credentials. CPU vzdáleného PostgreSQL hostitele je
 `unavailable` (`not_configured`), nikoli nula.
 
-Timer zůstává záměrně vypnutý. Role `airradar` není read-only: má zápisová
-oprávnění na 35 aplikačních tabulkách a CREATE na databázi/schema. Je nutná
-samostatná least-privilege monitorovací role nebo schválená ekvivalentní změna.
-Dosavadní evidence má pouze čtyři vzorky v neúplném okně; 24hodinová
-kontinuita, retence, výpadky a časově sladěné agregace proto nejsou potvrzené.
+Sdílená role `airradar` zůstává bezpečnostním kompromisem: používá ji aplikace
+a má zápisová oprávnění na aplikačních tabulkách. Explicitní read-only
+transakce brání zápisu tohoto sampleru, ale neodebírá širší oprávnění účtu a
+není least-privilege řešením. Dosavadní evidence má pouze čtyři vzorky v
+neúplném okně; 24hodinová kontinuita, retence, výpadky a časově sladěné
+agregace proto nejsou potvrzené.

@@ -16,6 +16,12 @@ Each sample combines:
 - optional node_exporter `node_cpu_seconds_total`, explicitly labelled as
   whole-host CPU and never as PostgreSQL-process CPU.
 
+Every PostgreSQL sample runs all statistics SELECTs inside one explicit
+`BEGIN TRANSACTION READ ONLY` / `COMMIT` transaction. Optional statistics use
+savepoints so an unavailable view cannot leave the shared connection in an
+aborted transaction. This is a defense-in-depth restriction for the shared
+application account; it is not a least-privilege database role.
+
 The monitor fails closed when the admin cookie or required runtime telemetry is
 missing. A missing exporter is recorded as `unavailable`, never as zero.
 
@@ -94,11 +100,11 @@ statistics were read, four JSONL samples parsed successfully, files remained
 CPU is `unavailable` (`not_configured`), not zero. The application listens on
 `192.168.1.142:3000`.
 
-Activation remains intentionally blocked. The configured `airradar` database
-role is not read-only: it has write grants on 35 application tables (and CREATE
-on the database/schema). A dedicated least-privilege monitoring role or an
-explicitly approved equivalent is required before enabling the timer. The timer
-is therefore still disabled. The current local report contains only four
-samples over a partial window, so 24-hour continuity, retention, outage
-recovery, and time-aligned CPU/DB aggregation are not yet proven and must not
-be reported as complete.
+The configured `airradar` database role remains a documented security
+compromise: it is shared with the application and has write grants on
+application tables. The explicit read-only transaction prevents this sampler
+from writing, but does not remove the account's broader privileges and is not a
+least-privilege solution. The current local report contains only four samples
+over a partial window, so 24-hour continuity, retention, outage recovery, and
+time-aligned CPU/DB aggregation are not yet proven and must not be reported as
+complete.
