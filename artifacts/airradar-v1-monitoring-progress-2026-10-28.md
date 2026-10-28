@@ -299,3 +299,20 @@ timer/service journal events, known or explicitly unknown statistics reset
 boundaries, and no unaccounted interior gaps. Then run the bounded report over
 explicit `startAt`/`endAt` boundaries and retain the final CPU, RSS,
 event-loop, WAL, transaction, lock-wait, outage, and availability evidence.
+
+## Post-deploy canary — 2026-10-28 19:37 UTC
+
+The production deployment completed in CI run
+[40755230952](https://github.com/Boym323/AirRadar/actions/runs/40755230952).
+`/api/version` now reports production `1.0.571`, commit `fbd30d46`, and
+`/api/health` remains `ok` with fresh local-beast/readsb ingest. The timer is
+still `active/waiting` with `OnUnitActiveSec=60s` and
+`RandomizedDelaySec=15s`.
+
+The explicit read-only canary at `2026-10-28T19:37:19.771Z` produced a sample
+with a 64-hex process fingerprint. The sample contains no PID or secret;
+`pg_stat_database.stats_reset` is still `null`, while the WAL reset marker is
+`2026-09-06T20:03:35.203Z`. This proves the repaired collector is live, but is
+not a 24-hour result. The post-deploy window starts at this canary and remains
+**INSUFFICIENT_EVIDENCE** until its complete 24-hour boundary and journal
+coverage are available.
