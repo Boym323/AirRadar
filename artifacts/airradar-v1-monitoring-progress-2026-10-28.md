@@ -325,3 +325,17 @@ limitation, not evidence of an AirRadar ingest outage; the local production
 canary above succeeded. The timer-backed monitor JSONL and its journal remain
 the authoritative source for issue #1134 until the T57 endpoint contract is
 repaired or an equivalent approved read-only automation is used.
+
+Follow-up diagnosis found that the first failed run supplied the full production
+SHA while `/api/version` intentionally exposes only the eight-character public
+commit prefix. The authorized admin diagnostics validate correctly; that failure
+was a soak commit-prefix direction check, not a telemetry or ingest outage. A
+corrected read-only run
+[40756361032](https://github.com/Boym323/AirRadar/actions/runs/40756361032)
+was then started with the safe public prefix `fbd30d46`. It also did not yield a
+24-hour report: its preflight stopped on the separate
+`t58_operational_twin_forensics_disabled` contract limitation before collection.
+This remains an automation limitation, not evidence of an AirRadar outage.
+The exact production commit remains `fbd30d4682ac0ce348cafce20496410d463e8386`;
+the monitor's own timer-backed JSONL and journal remain the authoritative
+follow-up evidence source.
