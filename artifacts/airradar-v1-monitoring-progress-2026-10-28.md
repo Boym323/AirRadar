@@ -215,3 +215,29 @@ Updated descriptive values: process CPU P50/P95/max
 maximum lock waiting `0`, PostgreSQL transaction deltas unavailable because
 `stats_reset=null` in all 25 samples, and DB-host CPU unavailable in all 25
 samples. Verdict remains **INSUFFICIENT_EVIDENCE**; no 24h PASS is claimed.
+
+## Continuity evidence clarification — 2026-10-28
+
+The report now treats continuity as an evidence state, not an assumption:
+
+- `identityStatus=unknown` when samples do not contain a safe process identity;
+  the report does not emit the identity value, PID, or another internal ID.
+- `identityStatus=stable_observed` only when the supplied safe identity remains
+  constant; a change is `restart_detected`.
+- `stats_reset=null` is `unknown_stats_reset`. It is not classified as a reset,
+  but it also cannot confirm counter continuity, so transaction deltas remain
+  unavailable.
+- A constant `stats_reset` plus non-decreasing counters is reported as
+  `continuous_since_stats_reset`; a changed reset marker or decreasing counter
+  is `reset_detected`.
+
+PostgreSQL 17 documents `stats_reset` as the timestamp at which the statistics
+were last reset and states that `pg_stat_database` counters are accumulated
+since the last reset. The live `null` value therefore does not identify the
+reset boundary; no stronger continuity claim is made. Reference: [PostgreSQL
+17 cumulative statistics documentation](https://www.postgresql.org/docs/17/monitoring-stats.html).
+
+The report also accepts explicit `startAt`/`endAt` bounds so the final audit can
+select a real post-activation interval and report installation-era gaps
+separately. The current host still has only 2.10 elapsed hours of data, so no
+final 24-hour result is available.
