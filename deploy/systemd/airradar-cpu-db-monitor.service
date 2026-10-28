@@ -1,0 +1,25 @@
+[Unit]
+Description=AirRadar read-only CPU and PostgreSQL monitoring sample
+After=network-online.target airradar.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=airradar
+Group=airradar
+WorkingDirectory=/var/www/airradar
+EnvironmentFile=/etc/airradar/monitoring.env
+ExecStart=/usr/bin/node /var/www/airradar/scripts/monitoring/airradar-cpu-db-monitor.mjs
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/airradar/monitoring
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target

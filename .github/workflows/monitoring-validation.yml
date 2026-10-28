@@ -1,0 +1,35 @@
+name: Monitoring validation
+
+on:
+  pull_request:
+    paths:
+      - "scripts/monitoring/**"
+      - "tests/airradar-cpu-db-monitor.test.mjs"
+      - "deploy/systemd/airradar-cpu-db-monitor.*"
+      - "docs/monitoring-cpu-postgres.md"
+      - ".github/workflows/monitoring-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/monitoring/**"
+      - "tests/airradar-cpu-db-monitor.test.mjs"
+      - "deploy/systemd/airradar-cpu-db-monitor.*"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.18.0
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/airradar-cpu-db-monitor.test.mjs
+      - run: node --check scripts/monitoring/airradar-cpu-db-monitor.mjs
+      - run: node --check scripts/monitoring/airradar-monitor-report.mjs
+      - run: systemd-analyze verify deploy/systemd/airradar-cpu-db-monitor.service deploy/systemd/airradar-cpu-db-monitor.timer

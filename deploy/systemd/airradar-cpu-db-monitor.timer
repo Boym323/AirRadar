@@ -1,0 +1,12 @@
+[Unit]
+Description=AirRadar CPU and PostgreSQL monitoring sample timer
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+RandomizedDelaySec=15s
+Persistent=true
+Unit=airradar-cpu-db-monitor.service
+
+[Install]
+WantedBy=timers.target
