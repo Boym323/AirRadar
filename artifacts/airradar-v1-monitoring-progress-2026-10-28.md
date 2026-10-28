@@ -179,3 +179,24 @@ The report now accepts optional start/finish timestamps for service duration;
 duration is reported separately from trigger cadence. No production collection,
 authentication, PostgreSQL privilege, timer configuration, or exporter was
 changed.
+
+## Current recheck — 2026-10-28 19:03 UTC
+
+The monitor remains active and waiting with `Persistent=yes` and
+`RandomizedDelaySec=15s`. The JSONL now has 24 unique samples through
+`2026-10-28T19:02:48.506Z`; the elapsed span is 2.08 hours, not 24 hours.
+Using the merged journal-time calculation, there are 20 successful timer
+events, 8 missing cadence slots, and 28 expected events: availability is
+`71.43%` for this partial post-activation evidence. No duplicate timestamps
+were found.
+
+The current descriptive CPU/DB values remain: process CPU P50/P95/max
+`14.5046% / 89.7898% / 100%`, RSS P50/P95/max `418045952 / 641462272 /
+1193857024` bytes, event-loop P99 P50/P95/max `26.296 / 122.814 / 163.054 ms`,
+maximum lock waiting `0`, and 24/24 DB-host CPU observations
+`unavailable/not_configured`. Both PostgreSQL transaction deltas remain
+unavailable because all 24 database `stats_reset` values are `null`; WAL
+`stats_reset` remains stable at `2026-09-06T20:03:35.203Z`.
+
+This recheck does not change the verdict: **INSUFFICIENT_EVIDENCE**, with the
+24-hour endpoint still required at or after `2026-10-29T16:58:03.944Z`.
