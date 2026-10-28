@@ -19,9 +19,9 @@ retence, V8 limit, datové kontrakty ani produkční nastavení.
 
 | Položka | Důkaz |
 |---|---|
-| Auditovaný GitHub `main` | `11647e8411b0d6b1e834f270c63c0863c7f02a07` |
-| Nasazený commit | `f17a19f635f0cec38e03a7bff786e7cdf24a3197` |
-| Release | `1.0.565`, build `2026-10-28T13:25:05Z` |
+| Auditovaný GitHub `main` | `b105f3379db62fa2cec4bbd03650b51d739ed5c1` |
+| Implementace optimalizace | `f17a19f635f0cec38e03a7bff786e7cdf24a3197` |
+| Finálně nasazený commit/release | `b105f337`, `1.0.566`, build `2026-10-28T16:21:08Z` |
 | Start procesu | `2026-10-28T13:28:12.500Z` |
 | Identita procesu | stabilní PID/store identita během admin vzorku |
 | Native akcelerace | aktivní Rust BEAST parser a Rust CRC |
@@ -150,7 +150,8 @@ aplikovatelná:
 - CI [#40696132199](https://github.com/Boym323/AirRadar/actions/runs/40696132199)
   a CodeQL [#40696132276](https://github.com/Boym323/AirRadar/actions/runs/40696132276)
   prošly na mergnutém implementačním commitu.
-- PR #1129 je mergnuté a nasazené jako `f17a19f`; nový deployment nebyl nutný.
+- PR #1129 je mergnuté; finální dokumentační release je nasazený jako
+  `b105f337` / `1.0.566` standardním workflow.
 - Rollback je standardní code rollback/redeploy; schema rollback není třeba.
 
 ## Omezení a neúspěšné experimenty
