@@ -196,6 +196,9 @@ export class ReceiverCoverageAnalytics {
     const database = getPrisma();
     if (!this.pending.size || !database) return Promise.resolve();
 
+    // Snapshot the rollout mode per flush so concurrent instances can use
+    // different modes safely during a rolling deployment or canary change.
+    const atomicBatchEnabled = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED?.trim().toLowerCase() !== "false";
     const batch = this.pending;
     this.pending = new Map();
     this.flushing = batch;
@@ -250,8 +253,11 @@ export class ReceiverCoverageAnalytics {
               inserted: boolean;
             }>>;
           }).query;
-          const atomicBatchEnabled = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED?.trim().toLowerCase() !== "false";
-          if (atomicBatchEnabled && raw && typeof query === "function" && rows.length > 0) {
+          if (atomicBatchEnabled && raw && typeof query === "function" && typeof execute === "function" && rows.length > 0) {
+            // Shared advisory lock allows concurrent atomic writers, but
+            // excludes the exclusive-lock ORM fallback. The fallback must
+            // never read a row while an atomic writer is updating it.
+            await execute(raw.sql`SELECT pg_advisory_xact_lock_shared(784231947)`.affectedCount().build());
             const payload = JSON.stringify(rows.map((row) => ({
               hour: row.hour.toString(),
               dimension: row.dimension,
@@ -337,10 +343,9 @@ export class ReceiverCoverageAnalytics {
             return;
           }
 
-          // The compatibility path still has to be safe when the canary is
-          // disabled. Serialize fallback read-modify-write flushes across
-          // processes using a transaction-scoped advisory lock. This is only
-          // a safety net for runtimes without the atomic raw query path.
+          // The compatibility path takes the EXCLUSIVE counterpart to the
+          // atomic path's SHARED lock. Every cooperating writer must acquire
+          // the lock before touching coverage rows, including in mixed mode.
           if (raw && typeof execute === "function") {
             await execute(raw.sql`SELECT pg_advisory_xact_lock(784231947)`.affectedCount().build());
           }
@@ -348,18 +353,16 @@ export class ReceiverCoverageAnalytics {
           for (const row of rows) {
             const hourMs = row.hour.epochMilliseconds;
             const rowKey = row.bucketKey;
-            const hourCache = this.persistedRows.get(hourMs);
-            let existing = hourCache?.get(rowKey);
-            if (!existing) {
-              const loaded = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
-              if (loaded) {
-                existing = {
-                  availableCount: loaded.availableCount,
-                  capturedCount: loaded.capturedCount,
-                  referenceProviders: loaded.referenceProviders,
-                };
-              }
-            }
+            // The persisted cache belongs to this process and can be stale
+            // after another instance commits. Always load the durable row
+            // UNDER the exclusive lock, never build absolute counters from
+            // a cached pre-lock snapshot.
+            const loaded = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
+            const existing = loaded ? {
+              availableCount: loaded.availableCount,
+              capturedCount: loaded.capturedCount,
+              referenceProviders: loaded.referenceProviders,
+            } : null;
             if (existing) {
               const providers = new Set([
                 ...existing.referenceProviders.split(",").map((item: string) => item.trim()).filter(Boolean),
