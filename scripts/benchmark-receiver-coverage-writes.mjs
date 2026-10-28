@@ -63,6 +63,9 @@ async function walPosition() {
 async function legacy(rows) {
   let statements = 1;
   await client.query("BEGIN");
+  // Match the production fallback: exclusive lock and fresh row reads.
+  await client.query("SELECT pg_advisory_xact_lock(784231947)");
+  statements += 1;
   for (const row of rows) {
     const existing = await client.query(
       'SELECT "availableCount", "capturedCount", "referenceProviders" FROM "receiverCoverageHourly" WHERE "hour" = $1 AND "bucketKey" = $2',
@@ -91,6 +94,9 @@ async function legacy(rows) {
 async function atomic(rows) {
   const payload = JSON.stringify(rows);
   await client.query("BEGIN");
+  // Match the production atomic path: shared lock excludes ORM fallback
+  // while still permitting multiple atomic writers.
+  await client.query("SELECT pg_advisory_xact_lock_shared(784231947)");
   await client.query(`
     WITH input AS MATERIALIZED (
       SELECT x."hour", x."dimension", x."bucketKey", x."availableCount", x."capturedCount", x."referenceProviders"
@@ -128,7 +134,7 @@ async function atomic(rows) {
     ) SELECT * FROM updated UNION ALL SELECT * FROM inserted
   `, [payload]);
   await client.query("COMMIT");
-  return 3;
+  return 4;
 }
 
 async function reset(rows) {
