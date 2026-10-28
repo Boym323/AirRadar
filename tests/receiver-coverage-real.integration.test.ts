@@ -14,7 +14,7 @@ describe.skipIf(!enabled)("ReceiverCoverageHourly real PostgreSQL integration", 
     Math.floor(Date.now() / 3_600_000) * 3_600_000,
   );
   const suffix = `real-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const keys = [`${suffix}-a`, `${suffix}-b`, `${suffix}-c`, `${suffix}-d`, `${suffix}-concurrent`];
+  const keys = [`${suffix}-a`, `${suffix}-b`, `${suffix}-c`, `${suffix}-d`, `${suffix}-concurrent`, `${suffix}-mixed`, `${suffix}-fallback`];
   const triggerName = `airradar_${suffix.replace(/[^a-z0-9]/gi, "_")}_fail`;
   const functionName = `${triggerName}_fn`;
 
@@ -125,5 +125,91 @@ describe.skipIf(!enabled)("ReceiverCoverageHourly real PostgreSQL integration", 
     await Promise.all([first.flush(), second.flush()]);
     const row = await database.orm.public.ReceiverCoverageHourly.where({ hour, bucketKey: keys[4] }).first();
     expect(row).toMatchObject({ availableCount: 18, capturedCount: 14, referenceProviders: "adsbhub,local" });
+  });
+
+  it("preserves every delta when atomic and fallback writers overlap with a stale fallback cache", async () => {
+    const key = keys[5]!;
+    await database.orm.public.ReceiverCoverageHourly.create({
+      hour, dimension: "real", bucketKey: key, availableCount: 100, capturedCount: 80, referenceProviders: "seed",
+    });
+
+    const fallback = new ReceiverCoverageAnalytics({ enabled: true });
+    const atomic = new ReceiverCoverageAnalytics({ enabled: true });
+    const fallbackInternals = fallback as unknown as Pending & {
+      persistedRows: Map<number, Map<string, { availableCount: number; capturedCount: number; referenceProviders: string }>>;
+    };
+    fallbackInternals.persistedRows.set(hour.epochMilliseconds, new Map([[key, {
+      availableCount: 1, capturedCount: 1, referenceProviders: "obsolete",
+    }]]));
+    fallbackInternals.pending.set(hour.epochMilliseconds, {
+      buckets: new Map([[key, { available: 5, captured: 3 }]]),
+      providers: new Set(["local"]),
+    });
+    (atomic as unknown as Pending).pending.set(hour.epochMilliseconds, {
+      buckets: new Map([[key, { available: 10, captured: 7 }]]),
+      providers: new Set(["adsbhub"]),
+    });
+
+    const previous = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED;
+    try {
+      // flush() captures the mode synchronously before opening a transaction:
+      // two cooperating instances can therefore run different modes concurrently.
+      process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = "false";
+      const fallbackFlush = fallback.flush();
+      process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = "true";
+      const atomicFlush = atomic.flush();
+      await Promise.all([fallbackFlush, atomicFlush]);
+    } finally {
+      if (previous === undefined) delete process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED;
+      else process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = previous;
+    }
+
+    const persisted = await database.orm.public.ReceiverCoverageHourly.where({ hour, bucketKey: key }).first();
+    expect(persisted).toMatchObject({
+      availableCount: 115, capturedCount: 90, referenceProviders: "adsbhub,local,seed",
+    });
+    expect(fallback.getDiagnostics()).toMatchObject({ flushSuccesses: 1, flushFailures: 0 });
+    expect(atomic.getDiagnostics()).toMatchObject({ flushSuccesses: 1, flushFailures: 0 });
+  });
+
+  it("serializes concurrent fallback writers and ignores both stale process caches", async () => {
+    const key = keys[6]!;
+    await database.orm.public.ReceiverCoverageHourly.create({
+      hour, dimension: "real", bucketKey: key, availableCount: 100, capturedCount: 80, referenceProviders: "seed",
+    });
+
+    const first = new ReceiverCoverageAnalytics({ enabled: true });
+    const second = new ReceiverCoverageAnalytics({ enabled: true });
+    for (const [analytics, available, captured, provider] of [
+      [first, 5, 3, "local"],
+      [second, 7, 4, "adsbhub"],
+    ] as const) {
+      const internals = analytics as unknown as Pending & {
+        persistedRows: Map<number, Map<string, { availableCount: number; capturedCount: number; referenceProviders: string }>>;
+      };
+      internals.persistedRows.set(hour.epochMilliseconds, new Map([[key, {
+        availableCount: 1, capturedCount: 1, referenceProviders: "obsolete",
+      }]]));
+      internals.pending.set(hour.epochMilliseconds, {
+        buckets: new Map([[key, { available, captured }]]),
+        providers: new Set([provider]),
+      });
+    }
+
+    const previous = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED;
+    process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = "false";
+    try {
+      await Promise.all([first.flush(), second.flush()]);
+    } finally {
+      if (previous === undefined) delete process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED;
+      else process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = previous;
+    }
+
+    const persisted = await database.orm.public.ReceiverCoverageHourly.where({ hour, bucketKey: key }).first();
+    expect(persisted).toMatchObject({
+      availableCount: 112, capturedCount: 87, referenceProviders: "adsbhub,local,seed",
+    });
+    expect(first.getDiagnostics()).toMatchObject({ flushSuccesses: 1, flushFailures: 0 });
+    expect(second.getDiagnostics()).toMatchObject({ flushSuccesses: 1, flushFailures: 0 });
   });
 });
