@@ -1,0 +1,114 @@
+name: Receiver coverage PostgreSQL validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/server/receiver-coverage-analytics.ts'
+      - 'tests/receiver-coverage-real.integration.test.ts'
+      - 'tests/receiver-coverage-persistence.test.ts'
+      - 'scripts/benchmark-receiver-coverage-writes.mjs'
+      - '.github/workflows/receiver-coverage-postgres-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-postgres:
+    # Isolated verification for PR #1129; manual runs are allowed after merge.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 1129
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: airradar_test
+          POSTGRES_PASSWORD: airradar_test
+          POSTGRES_DB: airradar_v1_cov_pr1129
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U airradar_test -d airradar_v1_cov_pr1129"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # This disposable Actions-only PostgreSQL instance has no production access.
+      DATABASE_URL: postgresql://airradar_test:airradar_test@127.0.0.1:5432/airradar_v1_cov_pr1129
+      AIRRADAR_REAL_ORM_INTEGRATION: '1'
+      RECEIVER_COVERAGE_BENCHMARK_REPEATS: '5'
+      RECEIVER_COVERAGE_BENCHMARK_WARMUPS: '2'
+      RECEIVER_COVERAGE_BENCHMARK_ARTIFACT: artifacts/performance/receiver-coverage-hourly-ab-pr1129-verified.json
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Generate Prisma contract
+        run: npm run prisma:generate
+      - name: Bootstrap disposable PostgreSQL from the emitted contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          # An empty test DB needs all contract objects, including the manual
+          # flight-history index intentionally excluded from tracked migrations.
+          # Prisma's db init is designed for this disposable bootstrap; it does
+          # not change migrations or create production schema changes.
+          node --input-type=module <<'NODE'
+          const url = new URL(process.env.DATABASE_URL);
+          if (url.pathname !== "/airradar_v1_cov_pr1129" || !["127.0.0.1", "localhost"].includes(url.hostname)) {
+            throw new Error("Refusing to initialize anything except the disposable PR #1129 database");
+          }
+          NODE
+          npx prisma db init --db "$DATABASE_URL"
+          npx prisma db verify --db "$DATABASE_URL"
+      - name: Unit regression for stale cache and shared advisory lock
+        run: npx vitest run tests/receiver-coverage-persistence.test.ts
+      - name: Real PostgreSQL integration — atomic path
+        env:
+          AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED: 'true'
+        run: npx vitest run --config vitest.integration.config.ts tests/receiver-coverage-real.integration.test.ts
+      - name: Real PostgreSQL integration — ORM fallback
+        env:
+          AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED: 'false'
+        run: npx vitest run --config vitest.integration.config.ts tests/receiver-coverage-real.integration.test.ts
+      - name: Matched PostgreSQL 17 A/B benchmark with transaction locks
+        run: node scripts/benchmark-receiver-coverage-writes.mjs
+      - name: Validate benchmark parity and report results
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const file = process.env.RECEIVER_COVERAGE_BENCHMARK_ARTIFACT;
+          const report = JSON.parse(readFileSync(file, "utf8"));
+          for (const size of [50, 250, 1000, 5000]) {
+            const result = report.sizes[String(size)];
+            if (!result || !result.parityBetweenModes || !result.legacy.parity || !result.atomic.parity) {
+              throw new Error(`Coverage parity failed for ${size} buckets`);
+            }
+            if (result.atomic.roundTrips >= result.legacy.roundTrips) {
+              throw new Error(`No round-trip improvement for ${size} buckets`);
+            }
+            console.log(JSON.stringify({
+              buckets: size, legacyP50Ms: result.legacy.latency.p50Ms,
+              atomicP50Ms: result.atomic.latency.p50Ms,
+              legacyRoundTrips: result.legacy.roundTrips,
+              atomicRoundTrips: result.atomic.roundTrips,
+              legacyWalBytesP50: result.legacy.walBytes.p50Ms,
+              atomicWalBytesP50: result.atomic.walBytes.p50Ms,
+              parity: result.parityBetweenModes,
+            }));
+          }
+          NODE
+      - name: Preserve benchmark artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: receiver-coverage-postgres-ab-${{ github.sha }}
+          path: artifacts/performance/receiver-coverage-hourly-ab-pr1129-verified.json
+          if-no-files-found: warn
+          retention-days: 7

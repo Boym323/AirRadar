@@ -196,6 +196,9 @@ export class ReceiverCoverageAnalytics {
     const database = getPrisma();
     if (!this.pending.size || !database) return Promise.resolve();
 
+    // Snapshot the rollout mode per flush so concurrent instances can use
+    // different modes safely during a rolling deployment or canary change.
+    const atomicBatchEnabled = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED?.trim().toLowerCase() !== "false";
     const batch = this.pending;
     this.pending = new Map();
     this.flushing = batch;
@@ -226,21 +229,140 @@ export class ReceiverCoverageAnalytics {
       try {
         await trackDbTransaction("receiver.coverage", () => database.transaction(async (transaction) => {
           const schema = transaction.orm.public;
+
+          // The production PostgreSQL runtime supports a raw plan on the
+          // transaction. Use one set-based atomic statement for the normal
+          // path: the counters are deltas, so read-modify-write through the
+          // ORM is both round-trip heavy and racy across service processes.
+          // Keep the row-wise path below for narrow test adapters and older
+          // runtimes that do not expose the raw transaction capability.
+          const raw = (database as unknown as {
+            raw?: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
+              returnsRow: (shape: Record<string, string>) => { build: () => unknown };
+              affectedCount: () => { build: () => unknown };
+            } };
+          }).raw;
+          const execute = (transaction as unknown as { execute?: (query: unknown) => Promise<unknown> }).execute;
+          const query = (transaction as unknown as {
+            query?: (query: unknown) => Promise<Array<{
+              hour: string;
+              bucketKey: string;
+              availableCount: number;
+              capturedCount: number;
+              referenceProviders: string;
+              inserted: boolean;
+            }>>;
+          }).query;
+          if (atomicBatchEnabled && raw && typeof query === "function" && typeof execute === "function" && rows.length > 0) {
+            // Shared advisory lock allows concurrent atomic writers, but
+            // excludes the exclusive-lock ORM fallback. The fallback must
+            // never read a row while an atomic writer is updating it.
+            await execute(raw.sql`SELECT pg_advisory_xact_lock_shared(784231947)`.affectedCount().build());
+            const payload = JSON.stringify(rows.map((row) => ({
+              hour: row.hour.toString(),
+              dimension: row.dimension,
+              bucketKey: row.bucketKey,
+              availableCount: row.availableCount,
+              capturedCount: row.capturedCount,
+              referenceProviders: row.referenceProviders,
+            })));
+            const committedRows = await query(raw.sql`
+              WITH input AS MATERIALIZED (
+                SELECT x."hour", x."dimension", x."bucketKey", x."availableCount", x."capturedCount", x."referenceProviders"
+                FROM jsonb_to_recordset(${payload}::jsonb) AS x(
+                  "hour" timestamptz, "dimension" text, "bucketKey" text,
+                  "availableCount" integer, "capturedCount" integer, "referenceProviders" text
+                )
+              ), updated AS (
+                UPDATE "public"."receiverCoverageHourly" AS target
+                SET "availableCount" = target."availableCount" + input."availableCount",
+                    "capturedCount" = target."capturedCount" + input."capturedCount",
+                    "referenceProviders" = (
+                      SELECT string_agg(DISTINCT provider, ',' ORDER BY provider)
+                      FROM unnest(string_to_array(concat_ws(',', target."referenceProviders", input."referenceProviders"), ',')) AS providers(provider)
+                      WHERE provider <> ''
+                    )
+                FROM input
+                WHERE target."hour" = input."hour" AND target."bucketKey" = input."bucketKey"
+                RETURNING target."hour"::text AS "hour", target."bucketKey", target."availableCount", target."capturedCount",
+                  target."referenceProviders", false AS "inserted"
+              ), inserted AS (
+                INSERT INTO "public"."receiverCoverageHourly"
+                  ("hour", "dimension", "bucketKey", "availableCount", "capturedCount", "referenceProviders")
+                SELECT input."hour", input."dimension", input."bucketKey", input."availableCount", input."capturedCount", input."referenceProviders"
+                FROM input
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM updated
+                  WHERE updated."hour" = input."hour"::text AND updated."bucketKey" = input."bucketKey"
+                )
+                ON CONFLICT ("hour", "bucketKey") DO UPDATE
+                SET "availableCount" = "receiverCoverageHourly"."availableCount" + EXCLUDED."availableCount",
+                    "capturedCount" = "receiverCoverageHourly"."capturedCount" + EXCLUDED."capturedCount",
+                    "referenceProviders" = (
+                      SELECT string_agg(DISTINCT provider, ',' ORDER BY provider)
+                      FROM unnest(string_to_array(concat_ws(',', "receiverCoverageHourly"."referenceProviders", EXCLUDED."referenceProviders"), ',')) AS providers(provider)
+                      WHERE provider <> ''
+                    )
+                RETURNING "hour"::text AS "hour", "bucketKey", "availableCount", "capturedCount",
+                  "referenceProviders", (xmax = 0) AS "inserted"
+              )
+              SELECT * FROM updated
+              UNION ALL
+              SELECT * FROM inserted
+              `.returnsRow({
+                hour: "pg/text@1",
+                bucketKey: "pg/text@1",
+                availableCount: "pg/int4@1",
+                capturedCount: "pg/int4@1",
+                referenceProviders: "pg/text@1",
+                inserted: "pg/bool@1",
+              }).build());
+
+            // The mutation itself is atomic. Cache updates are staged and
+            // published only after commit, exactly like the fallback path.
+            // Use returned durable totals, not the delta, so a cold cache
+            // after restart becomes consistent immediately after commit.
+            for (const committed of committedRows) {
+              const hourMs = Date.parse(committed.hour);
+              const rowKey = committed.bucketKey;
+              if (committed.inserted) inserted += 1;
+              else updated += 1;
+              const providers = new Set([
+                ...committed.referenceProviders.split(",").map((item) => item.trim()).filter(Boolean),
+              ]);
+              stagedCacheUpdates.set(`${hourMs}:${rowKey}`, {
+                hourMs,
+                bucketKey: rowKey,
+                value: {
+                  availableCount: committed.availableCount,
+                  capturedCount: committed.capturedCount,
+                  referenceProviders: [...providers].sort().join(","),
+                },
+              });
+            }
+            return;
+          }
+
+          // The compatibility path takes the EXCLUSIVE counterpart to the
+          // atomic path's SHARED lock. Every cooperating writer must acquire
+          // the lock before touching coverage rows, including in mixed mode.
+          if (raw && typeof execute === "function") {
+            await execute(raw.sql`SELECT pg_advisory_xact_lock(784231947)`.affectedCount().build());
+          }
+
           for (const row of rows) {
             const hourMs = row.hour.epochMilliseconds;
             const rowKey = row.bucketKey;
-            const hourCache = this.persistedRows.get(hourMs);
-            let existing = hourCache?.get(rowKey);
-            if (!existing) {
-              const loaded = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
-              if (loaded) {
-                existing = {
-                  availableCount: loaded.availableCount,
-                  capturedCount: loaded.capturedCount,
-                  referenceProviders: loaded.referenceProviders,
-                };
-              }
-            }
+            // The persisted cache belongs to this process and can be stale
+            // after another instance commits. Always load the durable row
+            // UNDER the exclusive lock, never build absolute counters from
+            // a cached pre-lock snapshot.
+            const loaded = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
+            const existing = loaded ? {
+              availableCount: loaded.availableCount,
+              capturedCount: loaded.capturedCount,
+              referenceProviders: loaded.referenceProviders,
+            } : null;
             if (existing) {
               const providers = new Set([
                 ...existing.referenceProviders.split(",").map((item: string) => item.trim()).filter(Boolean),
