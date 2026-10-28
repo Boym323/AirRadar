@@ -66,10 +66,21 @@ timer automatically.
 ## 24-hour evidence and dashboard proposal
 
 After at least 24 hours, produce `npm run monitor:report` and retain the
-sanitized report with the deployment record. Compare cumulative PostgreSQL
-counter deltas over the same window: transactions (commit/rollback), WAL
-records/bytes, and lock waits. A stable process identity and continuous sample
-timestamps are required; gaps are gaps, not healthy zeroes.
+sanitized report with the deployment record. The sampler now reads the existing
+authenticated `/api/system/status` diagnostic and persists only a SHA-256
+fingerprint of `application.startedAt` plus `application.commit`; it never
+persists PID, a secret, or an internal diagnostics-store ID. A missing identity
+in any sample makes identity evidence `unknown`, while a changed fingerprint
+proves a restart or deployed-commit change.
+
+The report uses explicit window boundaries with a terminal tolerance of
+`OnUnitActiveSec + RandomizedDelaySec`; it does not demand that two samples be
+exactly 86400 seconds apart. Interior gaps remain gaps. For PostgreSQL counters,
+`observedContinuity` means only that adjacent values were monotone, while
+`verifiedContinuity` additionally requires a known, unchanged `stats_reset`.
+When `stats_reset` is null or absent, the counter delta remains `UNKNOWN`.
+Compare cumulative PostgreSQL counter deltas over the same window: transactions
+(commit/rollback), WAL records/bytes, and lock waits.
 
 Grafana should be planned only against observed fields: process CPU and RSS,
 event-loop P99, WAL bytes/records per minute, commit/rollback rates, lock-wait

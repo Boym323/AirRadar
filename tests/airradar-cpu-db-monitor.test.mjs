@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { collectDatabase, createAdminCookie, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
+import { collectDatabase, createAdminCookie, createProcessFingerprint, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
 import { summarize } from "../scripts/monitoring/airradar-monitor-report.mjs";
 
 const runtime = (overrides = {}) => projectRuntimeTelemetry({
@@ -12,6 +12,16 @@ const runtime = (overrides = {}) => projectRuntimeTelemetry({
 });
 
 describe("AirRadar CPU/DB monitoring contract", () => {
+  it("creates a stable privacy-safe fingerprint only from startedAt and commit", () => {
+    const application = { startedAt: "2026-10-28T12:00:00.123Z", commit: "ABCDEF1234567" };
+    const fingerprint = createProcessFingerprint(application);
+    assert.match(fingerprint, /^[a-f0-9]{64}$/);
+    assert.equal(createProcessFingerprint({ ...application, startedAt: "2026-10-28T12:00:00.123Z" }), fingerprint);
+    assert.notEqual(createProcessFingerprint({ ...application, startedAt: "2026-10-28T12:01:00.123Z" }), fingerprint);
+    assert.notEqual(createProcessFingerprint({ ...application, commit: "fedcba7654321" }), fingerprint);
+    assert.equal(createProcessFingerprint({ ...application, pid: 123, diagnosticsStoreId: "secret" }), fingerprint);
+    assert.equal(createProcessFingerprint({ startedAt: application.startedAt }), null);
+  });
   it("collects PostgreSQL statistics only inside an explicit read-only transaction", async () => {
     const queries = [];
     const client = {
@@ -111,8 +121,8 @@ describe("AirRadar CPU/DB monitoring contract", () => {
   it("marks a process restart and PostgreSQL counter reset as invalid evidence", () => {
     const base = { schemaVersion: 1, runtime: {}, database: { database: { xact_commit: "10", xact_rollback: "1", stats_reset: "2026-10-01T00:00:00Z" } } };
     const report = summarize([
-      { ...base, recordedAt: "2026-10-28T12:00:00.000Z", processIdentity: "a" },
-      { ...base, recordedAt: "2026-10-28T12:01:00.000Z", processIdentity: "b", database: { database: { xact_commit: "2", xact_rollback: "0", stats_reset: "2026-10-02T00:00:00Z" } } },
+      { ...base, recordedAt: "2026-10-28T12:00:00.000Z", processFingerprint: "a".repeat(64) },
+      { ...base, recordedAt: "2026-10-28T12:01:00.000Z", processFingerprint: "b".repeat(64), database: { database: { xact_commit: "2", xact_rollback: "0", stats_reset: "2026-10-02T00:00:00Z" } } },
     ], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
     assert.equal(report.diagnostics.restarts, true);
     assert.equal(report.database.transactionDelta.commits, null);
@@ -130,10 +140,10 @@ describe("AirRadar CPU/DB monitoring contract", () => {
   });
 
   it("does not expose process identifiers and does not infer stability without one", () => {
-    const sample = (recordedAt, processIdentity) => ({ schemaVersion: 1, recordedAt, processIdentity, runtime: {}, database: { database: { xact_commit: "1", xact_rollback: "0", stats_reset: "2026-10-01T00:00:00Z" } } });
-    const report = summarize([sample("2026-10-28T12:00:00.000Z", "secret-pid-or-id"), sample("2026-10-28T12:01:00.000Z", "secret-pid-or-id")], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    const sample = (recordedAt, processFingerprint) => ({ schemaVersion: 1, recordedAt, processFingerprint, runtime: {}, database: { database: { xact_commit: "1", xact_rollback: "0", stats_reset: "2026-10-01T00:00:00Z" } } });
+    const report = summarize([sample("2026-10-28T12:00:00.000Z", "a".repeat(64)), sample("2026-10-28T12:01:00.000Z", "a".repeat(64))], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
     assert.equal(report.diagnostics.identityStatus, "stable_observed");
-    assert.equal(JSON.stringify(report).includes("secret-pid-or-id"), false);
+    assert.equal(JSON.stringify(report).includes("a".repeat(64)), false);
     const unknown = summarize([sample("2026-10-28T12:00:00.000Z"), sample("2026-10-28T12:01:00.000Z")], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
     assert.equal(unknown.diagnostics.identityStatus, "unknown");
     assert.equal(unknown.qualityStatus, "INSUFFICIENT_EVIDENCE");
@@ -149,5 +159,38 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     assert.equal(report.sampleCount, 2);
     assert.equal(report.windowStart, "2026-10-28T18:40:00.000Z");
     assert.equal(report.windowEnd, "2026-10-28T18:42:00.000Z");
+  });
+
+  it("uses window boundaries, endpoint tolerance and does not require a 24h sample-to-sample gap", () => {
+    const fingerprint = "c".repeat(64);
+    const sample = (recordedAt, count) => ({ schemaVersion: 1, recordedAt, processFingerprint: fingerprint,
+      runtime: { cpuIntervalPercent: 1, rssBytes: 2, eventLoopP99Ms: 3 },
+      database: { database: { xact_commit: String(count), xact_rollback: "0", stats_reset: "2026-10-01T00:00:00Z" } } });
+    const start = "2026-10-27T12:00:00.000Z";
+    const end = "2026-10-28T12:00:00.000Z";
+    const samples = Array.from({ length: 1441 }, (_, index) => sample(new Date(Date.parse(start) + index * 60_000 + (index === 0 ? 10_000 : index === 1440 ? -10_000 : 0)).toISOString(), index + 1));
+    const report = summarize(samples, { startAt: start, endAt: end, asOf: Date.parse(end), cadenceSeconds: 60, randomizedDelaySeconds: 15 });
+    assert.equal(report.elapsed24h, true);
+    assert.equal(report.completeWindow, true);
+    assert.equal(report.qualityStatus, "SUFFICIENT");
+    assert.equal(report.database.transactionDelta.commits, 1440);
+  });
+
+  it("keeps observed monotonicity separate from verified continuity when stats_reset is unknown", () => {
+    const fingerprint = "d".repeat(64);
+    const sample = (recordedAt, count) => ({ schemaVersion: 1, recordedAt, processFingerprint: fingerprint,
+      runtime: {}, database: { database: { xact_commit: String(count), xact_rollback: "0", stats_reset: null } } });
+    const report = summarize([sample("2026-10-28T12:00:00.000Z", 1), sample("2026-10-28T12:01:00.000Z", 2)], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    assert.equal(report.database.counterDiagnostics.observedContinuity.commits, "monotonic_between_samples");
+    assert.equal(report.database.counterDiagnostics.verifiedContinuity.commits, "unknown_stats_reset");
+    assert.equal(report.database.transactionDelta.commits, null);
+  });
+
+  it("does not turn a partially missing identity sequence into a stable identity", () => {
+    const sample = (recordedAt, processFingerprint) => ({ schemaVersion: 1, recordedAt, processFingerprint,
+      runtime: {}, database: { database: { xact_commit: "1", xact_rollback: "0", stats_reset: "2026-10-01T00:00:00Z" } } });
+    const report = summarize([sample("2026-10-28T12:00:00.000Z", "e".repeat(64)), sample("2026-10-28T12:01:00.000Z", null)], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    assert.equal(report.diagnostics.identityStatus, "unknown");
+    assert.equal(report.qualityStatus, "INSUFFICIENT_EVIDENCE");
   });
 });
