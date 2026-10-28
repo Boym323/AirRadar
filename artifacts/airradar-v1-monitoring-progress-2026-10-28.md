@@ -339,3 +339,29 @@ This remains an automation limitation, not evidence of an AirRadar outage.
 The exact production commit remains `fbd30d4682ac0ce348cafce20496410d463e8386`;
 the monitor's own timer-backed JSONL and journal remain the authoritative
 follow-up evidence source.
+
+## Revalidation after automatic production deployment (2026-10-28)
+
+The post-deploy fingerprint check detected a real application restart between
+`2026-10-28T19:40:36.252Z` and `2026-10-28T19:41:45.709Z`. The production journal
+attributes it to the automated `Deploy production` job: `airradar.service`
+received SIGTERM at `19:41:32Z`, completed its graceful shutdown, and started
+again at `19:41:33Z`. This was not caused by the monitor and did not produce an
+ingest outage; `/api/health` remained OK with fresh local-beast/readsb data.
+
+The authoritative production version after that deployment is `1.0.572`,
+commit `5a5a607665e8bb8d139fcc0f20dd9e701fa04bbb`, confirmed by both local and
+public `/api/version`. The new post-restart evidence boundary is the first
+sample at `2026-10-28T19:41:45.709Z`. The current file has only a few samples
+after that boundary, so it remains **INSUFFICIENT_EVIDENCE**; the earlier window
+must not be combined across the detected restart.
+
+At the latest local audit there were 52 samples spanning
+`16:58:03.944Z`–`19:41:45.709Z`; 47 lack the repaired fingerprint because they
+predate activation, and the default report correctly remains
+**INSUFFICIENT_EVIDENCE**. The focused monitoring regression suite passes all
+16 tests. The exact follow-up is to run the report with explicit boundaries
+starting at `2026-10-28T19:41:45.709Z` after 24 hours, include the systemd
+journal events, and retain PASS only if identity, counter reset evidence,
+interior cadence, endpoint tolerance, and all requested runtime/database
+metrics are proven.
