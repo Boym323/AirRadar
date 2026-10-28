@@ -19,7 +19,7 @@ export function summarize(samples, { hours = 24 } = {}) {
   return {
     schemaVersion: 1, windowHours, sampleCount: valid.length,
     firstRecordedAt: valid[0]?.recordedAt ?? null, lastRecordedAt: valid.at(-1)?.recordedAt ?? null,
-    availabilityPercent: valid.length > 0 ? Number((valid.length / Math.max(1, Math.round(windowHours * 60))).toFixed(2)) * 100 : 0,
+    availabilityPercent: valid.length > 0 ? Number((valid.length / Math.max(1, windowHours * 60) * 100).toFixed(2)) : 0,
     runtime: {
       cpuPercent: summary(valid.map((x) => x.runtime?.cpuIntervalPercent)),
       rssBytes: summary(valid.map((x) => x.runtime?.rssBytes)),

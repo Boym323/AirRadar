@@ -21,13 +21,15 @@ Po instalaci jednotek vytvořte `/etc/airradar/monitoring.env` s režimem `0600`
 
 ```dotenv
 AIRRADAR_MONITOR_BASE_URL=http://127.0.0.1:3000
-AIRRADAR_MONITOR_ADMIN_COOKIE=airradar_watchlist_session=...
+# Preferujte existující serverový admin secret, session se obnoví při každém běhu:
+AIRRADAR_MONITOR_ADMIN_TOKEN=...
 DATABASE_URL=postgresql://airradar:...@db-host:5432/airradar?sslmode=require
 # Volitelná URL soukromého exporteru, například http://10.0.0.20:9100
 # AIRRADAR_MONITOR_NODE_EXPORTER_URL=http://10.0.0.20:9100
 ```
 
-Cookie je existující krátkodobá admin session, nikoli nové oprávnění databáze.
+Token je existující serverový admin secret; sampler při každém běhu vytvoří
+osmihodinovou session. Nejde o nové oprávnění databáze.
 Exporter nesmí poslouchat na veřejném rozhraní a monitor nesmí zapisovat do DB.
 Nepřidávejte superuser ani široká tabulková oprávnění.
 
