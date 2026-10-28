@@ -25,7 +25,9 @@ Install the two unit files and create `/etc/airradar/monitoring.env` readable
 only by root and `airradar` (mode `0600`):
 
 ```dotenv
-AIRRADAR_MONITOR_BASE_URL=http://127.0.0.1:3000
+# Must match airradar.service. Current production listens on 192.168.1.142:3000,
+# not on 127.0.0.1:3000.
+AIRRADAR_MONITOR_BASE_URL=http://192.168.1.142:3000
 # Prefer the existing server-only admin secret so the timer renews its session:
 AIRRADAR_MONITOR_ADMIN_TOKEN=...
 DATABASE_URL=postgresql://airradar:...@db-host:5432/airradar?sslmode=require
@@ -69,3 +71,34 @@ counts, sample availability, and optional whole-host CPU. Suggested alerts are
 sample gap, runtime telemetry unavailable, RSS growth, event-loop P99, lock
 waits, rollback-rate anomaly, and WAL growth. No Grafana or exporter is
 installed by this change.
+
+## Production evidence (2026-10-28)
+
+The standard production deployment completed successfully for commit
+`83c183b0aa3409961553052d76d557533cb2a850` (version `1.0.567`, production
+channel). CI run [40732407283](https://github.com/Boym323/AirRadar/actions/runs/40732407283)
+passed, including production validation, performance regression and deploy;
+CodeQL run [40732407279](https://github.com/Boym323/AirRadar/actions/runs/40732407279)
+passed. The deployed `/api/version` and public/local `/api/health` checks were
+successful.
+
+The production checkout was made clean without a blind reset. The two dirty
+MapLibre files were byte-for-byte output of `node_modules/maplibre-gl@6.14.0`
+from `scripts/sync-maplibre-worker.mjs`; the previous generated state remains
+auditable as local ref `backup/production-generated-maplibre-4eabcd6`.
+
+Two real systemd canaries succeeded after installing the unit from this commit:
+V8 JIT started normally, authenticated runtime schema 4 was read, PostgreSQL
+statistics were read, four JSONL samples parsed successfully, files remained
+`0600`, and no credential value occurred in the samples. Whole-host PostgreSQL
+CPU is `unavailable` (`not_configured`), not zero. The application listens on
+`192.168.1.142:3000`.
+
+Activation remains intentionally blocked. The configured `airradar` database
+role is not read-only: it has write grants on 35 application tables (and CREATE
+on the database/schema). A dedicated least-privilege monitoring role or an
+explicitly approved equivalent is required before enabling the timer. The timer
+is therefore still disabled. The current local report contains only four
+samples over a partial window, so 24-hour continuity, retention, outage
+recovery, and time-aligned CPU/DB aggregation are not yet proven and must not
+be reported as complete.

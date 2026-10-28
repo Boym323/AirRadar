@@ -20,7 +20,9 @@ Nedostupný exporter je `unavailable`, nikoli nulová hodnota.
 Po instalaci jednotek vytvořte `/etc/airradar/monitoring.env` s režimem `0600`:
 
 ```dotenv
-AIRRADAR_MONITOR_BASE_URL=http://127.0.0.1:3000
+# Musí odpovídat airradar.service. Produkce naslouchá na
+# 192.168.1.142:3000, nikoliv na 127.0.0.1:3000.
+AIRRADAR_MONITOR_BASE_URL=http://192.168.1.142:3000
 # Preferujte existující serverový admin secret, session se obnoví při každém běhu:
 AIRRADAR_MONITOR_ADMIN_TOKEN=...
 DATABASE_URL=postgresql://airradar:...@db-host:5432/airradar?sslmode=require
@@ -57,3 +59,26 @@ event-loop P99, WAL za minutu, commit/rollback rate, lock waits, dostupnost
 vzorků a případně CPU celého hostitele. Navržené alerty pokrývají mezeru ve
 vzorcích, nedostupnou telemetrii, růst RSS, event-loop P99, lock waits,
 anomálii rollbacků a růst WAL. Tato změna Grafanu ani exporter neinstaluje.
+
+## Produkční evidence (2026-10-28)
+
+Standardní deployment dokončil commit `83c183b0aa3409961553052d76d557533cb2a850`,
+verzi `1.0.567`, kanál `production`. CI
+[40732407283](https://github.com/Boym323/AirRadar/actions/runs/40732407283) a
+CodeQL [40732407279](https://github.com/Boym323/AirRadar/actions/runs/40732407279)
+prošly; `/api/version` i health endpointy v produkci vrátily úspěch.
+
+Dirty checkout byl obnoven cíleně, bez slepého resetu. Dva soubory MapLibre
+byly výstupem `maplibre-gl@6.14.0`; původní stav je zachován v lokální auditní
+referenci `backup/production-generated-maplibre-4eabcd6`.
+
+Dva skutečné systemd canary běhy prošly včetně Node V8 JIT, autentizované
+runtime telemetrie, PostgreSQL statistik, validního JSONL, režimů `0600` a
+kontroly úniku credentials. CPU vzdáleného PostgreSQL hostitele je
+`unavailable` (`not_configured`), nikoli nula.
+
+Timer zůstává záměrně vypnutý. Role `airradar` není read-only: má zápisová
+oprávnění na 35 aplikačních tabulkách a CREATE na databázi/schema. Je nutná
+samostatná least-privilege monitorovací role nebo schválená ekvivalentní změna.
+Dosavadní evidence má pouze čtyři vzorky v neúplném okně; 24hodinová
+kontinuita, retence, výpadky a časově sladěné agregace proto nejsou potvrzené.
