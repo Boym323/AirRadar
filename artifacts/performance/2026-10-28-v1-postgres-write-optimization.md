@@ -12,6 +12,34 @@ audited and a bounded, isolated optimization was implemented on branch
 as a production result. The follow-up implementation is validated locally and
 is submitted on PR `#1129`.
 
+## Concurrency hardening follow-up (after the original benchmark)
+
+The atomic path now acquires a transaction-scoped SHARED advisory lock
+(`pg_advisory_xact_lock_shared(784231947)`), while the ORM fallback acquires
+the EXCLUSIVE counterpart before reading any coverage rows. Concurrent atomic
+writers may still proceed together; fallback writers are serialized with each
+other and with the atomic path. Fallback reads the durable row under the lock
+on *every* update, even if this process has cached older counters.
+
+The rollout mode is captured at the beginning of each flush, making mixed
+atomic/fallback operation deterministic for the duration of that transaction.
+Added unit and real-PostgreSQL integration regression tests for a stale fallback
+cache, mixed-mode concurrent writers and two concurrent fallback writers.
+These added tests and the final PR HEAD still require CI and PostgreSQL
+integration revalidation.
+
+**Benchmark scope caveat:** The committed A/B JSON below was measured before
+this follow-up lock protocol. The benchmark *script* now includes both lock
+calls (atomic mode has 4 round-trips instead of the previously measured 3;
+fallback has one additional round-trip). The original JSON remains valid
+historical evidence for the pre-hardening revision, **not** a fresh measurement
+of this follow-up code. Repeat the benchmark before claiming the exact p50,
+CPU or round-trip numbers for the current PR HEAD.
+
+The protocol protects cooperating writers running this revision. It cannot
+force an older deployed version without advisory locking to participate during
+a rolling upgrade; use controlled rollout and monitor counter parity.
+
 ## Evidence and change
 
 The existing production evidence in `artifacts/final-post-optimization-baseline.md`
