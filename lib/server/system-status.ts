@@ -71,6 +71,12 @@ interface DatabaseProbe {
 export const AIRPORT_STATUS_QUERY_LIMIT = 10_000;
 export const ATC_STATUS_STALE_AFTER_MS = 90 * 24 * 60 * 60_000;
 
+// Capture the wall-clock representation of this Node process exactly once.
+// Recomputing `now - process.uptime()` during every status request makes the
+// public process fingerprint change with clock adjustments and sub-second
+// rounding, even though the process did not restart.
+const PROCESS_STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
+
 function nonNegativeInteger(value: number, maximum = Number.MAX_SAFE_INTEGER): number {
   return Number.isFinite(value) ? Math.min(maximum, Math.max(0, Math.trunc(value))) : 0;
 }
@@ -114,10 +120,10 @@ function safeDateKey(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "unknown";
 }
 
-function applicationRuntime(now: Date, runtime: SystemStatusBuildInput["runtime"]): SystemStatusResponse["application"] {
+function applicationRuntime(runtime: SystemStatusBuildInput["runtime"]): SystemStatusResponse["application"] {
   const build = getBuildMetadata();
   const uptimeSeconds = nonNegativeNumber(runtime?.uptimeSeconds ?? process.uptime());
-  const startedAt = safeTimestamp(runtime?.startedAt) ?? new Date(now.getTime() - uptimeSeconds * 1000).toISOString();
+  const startedAt = safeTimestamp(runtime?.startedAt) ?? PROCESS_STARTED_AT;
   const version = runtime?.version === undefined ? build.version : runtime.version;
   const commit = runtime?.commit === undefined ? build.shortCommit ?? build.commit : runtime.commit;
   const buildTime = runtime?.buildTime === undefined ? build.buildTime : runtime.buildTime;
@@ -637,7 +643,7 @@ function weatherPersistenceStatus(value: Partial<AviationWeatherPersistenceDiagn
 
 export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusResponse {
   const now = input.now ?? new Date();
-  const application = applicationRuntime(now, input.runtime);
+  const application = applicationRuntime(input.runtime);
   const lastSnapshot = safeTimestamp(input.snapshot.lastReadsbUpdate ?? input.snapshot.lastSourceUpdate);
   const latestPositionAt = input.snapshot.aircraft.map((item) => item.lastSeen).filter((value) => Number.isFinite(Date.parse(value))).sort().at(-1) ?? null;
   const provider = safeLabel(input.snapshot.provider, "unknown");

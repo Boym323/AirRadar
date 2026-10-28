@@ -127,6 +127,18 @@ describe("Production integration diagnostics boundary", () => {
 });
 
 describe("SYSTEM / RECEIVER STATUS V1", () => {
+  it("keeps the derived process start stable across repeated reads and wall-clock shifts", () => {
+    const first = build({ now: new Date("2026-09-08T12:00:00.000Z"), runtime: { uptimeSeconds: 120 } });
+    const repeated = build({ now: new Date("2026-09-08T12:01:00.000Z"), runtime: { uptimeSeconds: 180 } });
+    expect(repeated.application.startedAt).toBe(first.application.startedAt);
+  });
+
+  it("honors an explicit start time so a real restart remains observable", () => {
+    const first = build({ runtime: { uptimeSeconds: 120, startedAt: "2026-09-08T11:58:00.000Z" } });
+    const restarted = build({ runtime: { uptimeSeconds: 1, startedAt: "2026-09-08T12:01:00.000Z" } });
+    expect(restarted.application.startedAt).not.toBe(first.application.startedAt);
+  });
+
   it("limits route-enrichment metrics to administrator system status", () => {
     const telemetry = new RouteEnrichmentTelemetry(null, () => checkedAt.getTime());
     telemetry.record("dbHit", 5);
