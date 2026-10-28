@@ -52,7 +52,39 @@ jobs:
       - name: Generate Prisma contract
         run: npm run prisma:generate
       - name: Apply application schema to disposable PostgreSQL
-        run: npm run prisma:deploy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          # The application intentionally manages its flight history index
+          # outside Prisma migrations (CREATE INDEX CONCURRENTLY in production).
+          # A new empty test DB therefore fails final contract verification
+          # until that one index exists. Reject all other migration failures.
+          if npm run prisma:deploy > /tmp/coverage-prisma-migrate.log 2>&1; then
+            cat /tmp/coverage-prisma-migrate.log
+          else
+            cat /tmp/coverage-prisma-migrate.log
+            if ! grep -Fq 'flight_aircraftId_lastSeenAt_desc_idx' /tmp/coverage-prisma-migrate.log; then
+              echo "::error::Unexpected Prisma migration failure; refusing any repair"
+              exit 1
+            fi
+            node --input-type=module <<'NODE'
+          import { Client } from "pg";
+          const url = new URL(process.env.DATABASE_URL);
+          if (url.pathname !== "/airradar_v1_cov_pr1129" || !["127.0.0.1", "localhost"].includes(url.hostname)) {
+            throw new Error("Refusing index creation outside disposable PR #1129 database");
+          }
+          const client = new Client({ connectionString: process.env.DATABASE_URL });
+          await client.connect();
+          try {
+            const result = await client.query('SELECT to_regclass(\'public."flight"\')::text AS table_name');
+            if (!result.rows[0]?.table_name) throw new Error("Flight table does not exist after migrations");
+            await client.query('CREATE INDEX CONCURRENTLY IF NOT EXISTS "flight_aircraftId_lastSeenAt_desc_idx" ON public."flight" ("aircraftId", "lastSeenAt" DESC)');
+          } finally {
+            await client.end();
+          }
+          NODE
+            npm run prisma:deploy
+          fi
       - name: Unit regression for stale cache and shared advisory lock
         run: npx vitest run tests/receiver-coverage-persistence.test.ts
       - name: Real PostgreSQL integration — atomic path
