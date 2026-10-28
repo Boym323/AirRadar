@@ -70,6 +70,8 @@
     "audit:navigation-integrity": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-quality.ts",
     "audit:navigation-integrity-candidates": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-candidates.ts",
     "audit:db-write-amplification": "node scripts/audit-db-write-amplification.mjs",
+    "monitor:sample": "node scripts/monitoring/airradar-cpu-db-monitor.mjs",
+    "monitor:report": "node scripts/monitoring/airradar-monitor-report.mjs",
     "audit:integrations": "node scripts/integration-audit.mjs",
     "release-scope": "node scripts/release-scope.mjs",
     "features:check": "node scripts/features-registry.mjs check",
