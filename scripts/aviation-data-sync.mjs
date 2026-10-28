@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = process.cwd();
 const jiti = `${root}/node_modules/jiti/lib/jiti-cli.mjs`;
-const jobs = [
+export const AVIATION_DATA_JOBS = [
   ["ATC CZ", "scripts/atc-sync-cz.ts", []],
   ["ATC SK", "scripts/atc-sync-sk.ts", []],
   ["ATC AT", "scripts/atc-sync-at.ts", ["--apply"]],
-  ["SID/STAR", "scripts/procedures-sync.ts", []],
 ];
 
 function run(label, script, args) {
@@ -30,10 +31,14 @@ function run(label, script, args) {
   });
 }
 
-const results = [];
-for (const [label, script, args] of jobs) results.push(await run(label, script, args));
-if (results.every(Boolean)) process.exitCode = 0;
-else {
+export async function main() {
+  const results = [];
+  for (const [label, script, args] of AVIATION_DATA_JOBS) results.push(await run(label, script, args));
+  if (results.every(Boolean)) return 0;
   console.error("[aviation-data] one or more sources failed; successful datasets were kept");
-  process.exitCode = 1;
+  return 1;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = await main();
 }
