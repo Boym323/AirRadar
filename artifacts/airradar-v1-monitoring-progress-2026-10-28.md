@@ -262,3 +262,40 @@ DB-host CPU unavailable for all 25 samples.
 This remains **INSUFFICIENT_EVIDENCE**. The timer is still active; no clock,
 restart, exporter, collector, authentication, database privilege, or timer
 configuration change was made.
+
+## Implementation and production recheck — 2026-10-28 19:32 UTC
+
+The evidence-safe collector/report repair was merged to `main` in PR
+[#1145](https://github.com/Boym323/AirRadar/pull/1145), merge commit
+`fbd30d4`. CI
+([40754803395](https://github.com/Boym323/AirRadar/actions/runs/40754803395)),
+Monitoring validation
+([40754803273](https://github.com/Boym323/AirRadar/actions/runs/40754803273)),
+CodeQL
+([40754803287](https://github.com/Boym323/AirRadar/actions/runs/40754803287))
+and runtime load scaling
+([40754803417](https://github.com/Boym323/AirRadar/actions/runs/40754803417))
+passed. The deploy job was intentionally skipped; production still runs exact
+commit `e6af8056123d2127b8a3268a182897e213465a37` (`1.0.570`).
+
+The new collector persists only a SHA-256 fingerprint of the authorized
+`application.startedAt` and `application.commit` diagnostic. It does not store
+PID, secret, or diagnostic-store ID. The report now distinguishes observed
+monotonicity from verified continuity and keeps counters unknown when
+`stats_reset` is null. Its current live report has 40 samples through
+`2026-10-28T19:30:47.849Z`, but those are pre-repair production samples and
+therefore still have `identityStatus=unknown`; the report is
+**INSUFFICIENT_EVIDENCE**, not PASS.
+
+The current production canary was read-only and non-disruptive: `/api/version`
+reported production commit `e6af8056`, `/api/health` reported application and
+database `ok` with a fresh readsb update, and the timer remained `active/waiting`
+with `RandomizedDelayUSec=15s`. No timer, PostgreSQL privilege, DDL, reset,
+restart, or ingest interruption was performed.
+
+The exact next step is to keep the existing timer running until a complete
+post-merge window contains samples with the new fingerprint, corresponding
+timer/service journal events, known or explicitly unknown statistics reset
+boundaries, and no unaccounted interior gaps. Then run the bounded report over
+explicit `startAt`/`endAt` boundaries and retain the final CPU, RSS,
+event-loop, WAL, transaction, lock-wait, outage, and availability evidence.
