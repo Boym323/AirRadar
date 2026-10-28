@@ -67,8 +67,8 @@ anomálii rollbacků a růst WAL. Tato změna Grafanu ani exporter neinstaluje.
 
 ## Produkční evidence (2026-10-28)
 
-Standardní deployment dokončil commit `798ae9107d9a3df0f4be00d8bf08e948b750ae06`,
-verzi `1.0.569`, kanál `production`. Monitoring validation
+Standardní deployment dokončil commit `e6af8056123d2127b8a3268a182897e213465a37`,
+verzi `1.0.570`, kanál `production`. Monitoring validation
 [40746357194](https://github.com/Boym323/AirRadar/actions/runs/40746357194), CI
 [40746355401](https://github.com/Boym323/AirRadar/actions/runs/40746355401) a
 CodeQL [40746354202](https://github.com/Boym323/AirRadar/actions/runs/40746354202)
@@ -81,7 +81,8 @@ referenci `backup/production-generated-maplibre-4eabcd6`.
 Dva skutečné systemd canary běhy prošly včetně Node V8 JIT, autentizované
 runtime telemetrie, PostgreSQL statistik a `pg_read_all_stats=true`. Ochranný
 test potvrdil `transaction_read_only=on`; `CREATE TABLE` skončilo chybou `25006`
-a objekt nevznikl. Osm JSONL vzorků je validních, režimy jsou `0600` a nebyly
+a objekt nevznikl. Canary vzorky i všech 12 aktuálních JSONL vzorků jsou validní,
+režimy jsou `0600` a nebyly
 nalezeny credentials. CPU vzdáleného PostgreSQL hostitele je `unavailable`
 (`not_configured`), nikoli nula. Minutový timer je `enabled/active` a první
 automatický trigger proběhl úspěšně.
@@ -89,7 +90,6 @@ automatický trigger proběhl úspěšně.
 Sdílená role `airradar` zůstává bezpečnostním kompromisem: používá ji aplikace
 a má zápisová oprávnění na aplikačních tabulkách. Explicitní read-only
 transakce brání zápisu tohoto sampleru, ale neodebírá širší oprávnění účtu a
-není least-privilege řešením. Dosavadní evidence má pouze čtyři vzorky v
-neúplném okně; 24hodinová kontinuita, retence, výpadky a časově sladěné
-agregace proto nejsou potvrzené. Aktuální report má 8 vzorků od `16:58:03Z` do
-`18:41:26Z`, tedy stále neúplné 24hodinové okno.
+není least-privilege řešením. Aktuální report má 12 vzorků od `16:58:03Z` do
+`18:46:48Z`, tedy stále neúplné 24hodinové okno. 24hodinová kontinuita,
+retence, výpadky a časově sladěné agregace proto nejsou potvrzené.

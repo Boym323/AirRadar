@@ -81,7 +81,7 @@ installed by this change.
 ## Production evidence (2026-10-28)
 
 The standard production deployment completed successfully for commit
-`798ae9107d9a3df0f4be00d8bf08e948b750ae06` (version `1.0.569`, production
+`e6af8056123d2127b8a3268a182897e213465a37` (version `1.0.570`, production
 channel). Monitoring validation [40746357194](https://github.com/Boym323/AirRadar/actions/runs/40746357194),
 CI [40746355401](https://github.com/Boym323/AirRadar/actions/runs/40746355401),
 and CodeQL [40746354202](https://github.com/Boym323/AirRadar/actions/runs/40746354202)
@@ -97,9 +97,9 @@ Two real systemd canaries succeeded after installing the unit from this commit:
 V8 JIT started normally, authenticated runtime schema 4 was read, PostgreSQL
 statistics were read, and the shared account reported `pg_read_all_stats=true`.
 The read-only guard showed `transaction_read_only=on`; a `CREATE TABLE` probe
-was rejected with PostgreSQL error `25006` and created no object. Eight JSONL
-samples parsed successfully, files remained `0600`, and no credential value
-occurred in the samples. Whole-host PostgreSQL CPU is `unavailable`
+was rejected with PostgreSQL error `25006` and created no object. The canary
+JSONL samples and all 12 current samples parsed successfully, files remained
+`0600`, and no credential value occurred in the samples. Whole-host PostgreSQL CPU is `unavailable`
 (`not_configured`), not zero. The application listens on `192.168.1.142:3000`.
 The systemd timer is now enabled and active; its first automatic minute trigger
 completed successfully.
@@ -108,8 +108,8 @@ The configured `airradar` database role remains a documented security
 compromise: it is shared with the application and has write grants on
 application tables. The explicit read-only transaction prevents this sampler
 from writing, but does not remove the account's broader privileges and is not a
-least-privilege solution. The current report contains 8 samples from
-`16:58:03Z` through `18:41:26Z`, with 8 WAL/database/activity samples and
+least-privilege solution. The current report contains 12 samples from
+`16:58:03Z` through `18:46:48Z`, with 12 WAL/database/activity samples and
 `maxLockWaiting=0`; this is still only a partial 24-hour window. Continuity,
 retention, outage recovery, and time-aligned CPU/DB aggregation are therefore
 not yet proven and must not be reported as complete.
