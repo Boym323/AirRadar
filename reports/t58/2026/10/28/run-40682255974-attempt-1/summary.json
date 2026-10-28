@@ -1,0 +1,355 @@
+{
+  "verdict": "PASS_WITH_LIMITATIONS",
+  "telemetryMode": "public",
+  "stableProcessAndCommit": true,
+  "segments": 1,
+  "segmentSummaries": [
+    {
+      "segment": 1,
+      "processIdentity": "95d1466b738aeb41dc9f1e26",
+      "commit": "3cbd777f",
+      "version": "1.0.563",
+      "samples": 61,
+      "from": "2026-10-28T11:44:28.306Z",
+      "to": "2026-10-28T12:44:29.910Z",
+      "durationSeconds": 3601.604
+    }
+  ],
+  "segmentChanges": [],
+  "sampleGaps": [],
+  "samples": 61,
+  "missing": 0,
+  "failureCategories": {
+    "http_timeout": 0,
+    "authentication_failure": 0,
+    "response_validation_failure": 0,
+    "collection_interruption": 0,
+    "network_failure": 0,
+    "http_failure": 0,
+    "unclassified_legacy": 0
+  },
+  "pollingFailureContext": {
+    "delayedPollingMisses": 0,
+    "eventLoopSchedulingDelayCorrelatedMisses": 0,
+    "interpretation": "Correlation with a completed service event-loop window is not proof that scheduling delay caused a failed sample."
+  },
+  "expected": 61,
+  "durationSeconds": 3601.604,
+  "commit": "3cbd777f",
+  "version": "1.0.563",
+  "steadyStateSamples": 51,
+  "majorGcBaselines": 0,
+  "memoryMiB": {
+    "rss": {
+      "count": 51,
+      "min": 694.508,
+      "p50": 757.469,
+      "p95": 780.965,
+      "max": 797.184,
+      "mean": 752.95
+    },
+    "heapUsed": {
+      "count": 51,
+      "min": 298.471,
+      "p50": 333.706,
+      "p95": 419.104,
+      "max": 424.593,
+      "mean": 351.619
+    },
+    "heapTotal": {
+      "count": 51,
+      "min": 410.965,
+      "p50": 465.824,
+      "p95": 508.852,
+      "max": 529.746,
+      "mean": 467.133
+    },
+    "external": {
+      "count": 51,
+      "min": 4.386,
+      "p50": 4.753,
+      "p95": 5.321,
+      "max": 5.657,
+      "mean": 4.801
+    },
+    "arrayBuffers": null,
+    "oldSpace": null,
+    "cgroupMemoryCurrent": null,
+    "cgroupMemoryMax": null
+  },
+  "postMajorGcTrendMiB": {
+    "heapUsed": null,
+    "rss": null,
+    "oldSpace": null
+  },
+  "cpuPercent": {
+    "count": 51,
+    "min": 13.223,
+    "p50": 14.455,
+    "p95": 17.671,
+    "max": 19.99,
+    "mean": 15.018
+  },
+  "cgroupCpuThrottleTelemetry": {
+    "statuses": {
+      "available": 0,
+      "controller_disabled": 0,
+      "unavailable": 0
+    },
+    "coverageComplete": false
+  },
+  "pollDelayMs": {
+    "count": 61,
+    "min": 0,
+    "p50": 39,
+    "p95": 50,
+    "max": 51,
+    "mean": 34.295
+  },
+  "delayedPollingSamples": 0,
+  "eventLoopWindowP99Ms": {
+    "count": 51,
+    "min": 33.62,
+    "p50": 36.241,
+    "p95": 38.732,
+    "max": 39.453,
+    "mean": 36.118
+  },
+  "eventLoopWindowMaxMs": {
+    "count": 51,
+    "min": 485.753,
+    "p50": 593.494,
+    "p95": 648.02,
+    "max": 672.137,
+    "mean": 590.631
+  },
+  "eventLoopWindows": 51,
+  "stallCorrelations": {
+    "snapshot.operationalTwin": {
+      "samples": 0,
+      "r": null
+    },
+    "twin.eventOutcome.local": {
+      "samples": 0,
+      "r": null
+    },
+    "history.persist": {
+      "samples": 0,
+      "r": null
+    },
+    "network.metadata": {
+      "samples": 0,
+      "r": null
+    },
+    "operationalTwin.nonOverlappingTopLevelPhases": {
+      "samples": 0,
+      "r": null
+    },
+    "gc.pause": {
+      "samples": 51,
+      "r": 0.228
+    },
+    "cgroup.cpuThrottledUsecDelta": {
+      "samples": 0,
+      "r": null
+    }
+  },
+  "stallAttribution": {
+    "thresholdMs": 1000,
+    "confirmedSynchronousBlockers": [],
+    "strongCorrelations": [],
+    "unattributedStalls": [],
+    "interpretation": "A sampled synchronous phase with process CPU over the threshold confirms substantial synchronous CPU in an overlapping window; correlation alone does not assign a stall to a phase."
+  },
+  "load": {
+    "aircraft": null,
+    "sseClients": null,
+    "localTrailPoints": null,
+    "networkTrailPoints": null
+  },
+  "changesFirstLastDecile": {
+    "localAircraft": null,
+    "networkAircraft": null,
+    "localStaleRetained": null,
+    "networkStaleRetained": null,
+    "sourcePreferences": null,
+    "lastHistorySample": null,
+    "networkTrailPoints": null
+  },
+  "overLimit": null,
+  "routeCache": {
+    "measured": false,
+    "reason": "NOT_MEASURED"
+  },
+  "hotPathsByWindowCpuMs": [],
+  "operationalTwinForensics": {
+    "enabled": false,
+    "windows": 0,
+    "phases": {
+      "truthInputFingerprint": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "truthPoints": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "truthStateDiff": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "pendingTraversal": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "pendingTruthEvaluation": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "spatialTruthMatches": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "atcContextComputation": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "atcCacheOperations": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "expiryHeap": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "capacityEviction": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      },
+      "cleanup": {
+        "calls": 0,
+        "sampledCalls": 0,
+        "estimatedCpuMs": 0,
+        "estimatedWallMs": 0,
+        "p95Ms": null,
+        "p99Ms": null,
+        "maxMs": null,
+        "cpuP95Ms": null,
+        "cpuP99Ms": null,
+        "cpuMaxMs": null
+      }
+    },
+    "cacheHitRate": null,
+    "ratesPerMinute": {
+      "captures": null,
+      "expirations": null,
+      "truthInvalidations": null,
+      "actualTruthResolutions": null,
+      "pendingCapacityEvictions": null,
+      "atcCacheEvictions": null,
+      "atcCacheExpirations": null,
+      "cacheHits": null,
+      "cacheMisses": null
+    },
+    "pendingPopulation": {
+      "p50": null,
+      "p95": null,
+      "max": null
+    },
+    "pendingPerAircraftDistribution": {
+      "one": 0,
+      "two": 0,
+      "threeToFour": 0,
+      "fiveToEight": 0,
+      "overEight": 0
+    }
+  },
+  "caveats": [
+    "PUBLIC ONLY: retention, major-GC/old-space, SQL, hot-path/Twin attribution and exact process identity were NOT MEASURED.",
+    "A restart, changed commit, or insufficient coverage yields INSUFFICIENT_EVIDENCE.",
+    "Process CPU attribution for overlapping async paths is not a per-operation profiler.",
+    "Old-space growth and bounded-container counts alone do not prove a leak.",
+    "Traffic mix, cold caches and 0 SSE clients can limit inference.",
+    "No sensitive telemetry, heap object graphs, flight coordinates or raw API responses are stored."
+  ]
+}
