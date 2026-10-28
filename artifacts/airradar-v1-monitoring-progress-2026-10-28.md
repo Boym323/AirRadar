@@ -316,3 +316,12 @@ with a 64-hex process fingerprint. The sample contains no PID or secret;
 not a 24-hour result. The post-deploy window starts at this canary and remains
 **INSUFFICIENT_EVIDENCE** until its complete 24-hour boundary and journal
 coverage are available.
+
+The approved T57 automation run
+[40756019322](https://github.com/Boym323/AirRadar/actions/runs/40756019322)
+did not produce a soak report: its authorized public-endpoint preflight ended
+with `response_validation_failure`. This is an automation/diagnostic-contract
+limitation, not evidence of an AirRadar ingest outage; the local production
+canary above succeeded. The timer-backed monitor JSONL and its journal remain
+the authoritative source for issue #1134 until the T57 endpoint contract is
+repaired or an equivalent approved read-only automation is used.
