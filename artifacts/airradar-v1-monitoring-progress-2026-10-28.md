@@ -101,3 +101,50 @@ verified, TLS/authentication verified, exporter endpoint absent from public
 scans, one non-production scrape test, and then a production read-only scrape
 with rollback consisting of removing the collector target. Until those gates
 are met, PostgreSQL-host CPU remains **unavailable**.
+
+## Evidence update — 2026-10-28 19:00 UTC
+
+The earlier wording around the V8 crash is corrected by the system journal
+timeline. The crash was **during the installation/release sequence, before the
+repaired monitoring timer was activated**:
+
+| Event | Local time | UTC | Evidence |
+|---|---|---|---|
+| Release of the initial monitoring commit `9cd5acb` | 17:59:59 | 16:59:59 | `release.sh` journal entry |
+| V8 fatal error, `status=5/TRAP` | 18:03:01 | 17:03:01 | `airradar-cpu-db-monitor.service` journal |
+| Release of timer/JIT repair `9417f52` | 18:05:40 | 17:05:40 | `release.sh` journal entry |
+| Monitoring timer became active | 19:40:04 | 18:40:04 | `airradar-cpu-db-monitor.timer` journal |
+
+The local-time labels above are from the host's `+01:00` journal output; the
+UTC column is the authoritative comparison. Thus the V8 crash predates the
+repaired timer activation by about 1 h 37 min. It is not evidence of a crash
+after the repaired timer was active. The later successful samples are real
+post-activation samples.
+
+The report implementation now sorts and rejects duplicate `recordedAt` values,
+identifies gaps using the configured `OnUnitActiveSec=60s` plus
+`RandomizedDelaySec=15s` tolerance, reports process-identity changes as restart
+evidence, refuses PostgreSQL counter deltas when `stats_reset` is absent/changed
+or a counter decreases, and uses journal timer events for exact availability
+when supplied. The sample-only fallback is explicitly labelled as an
+inference.
+
+Current read-only evidence contains 21 unique samples from
+`2026-10-28T16:58:03.944Z` through `2026-10-28T18:59:16.594Z`, an elapsed span
+of about 2.02 hours. The exact journal event set available to this report has
+21 successful samples and one pre-activation V8 failure; that yields `95.45%`
+event availability for this mixed installation/activation evidence, not a
+24-hour availability result. There are no duplicate timestamps. The quality
+status is **INSUFFICIENT_EVIDENCE** because the elapsed span is below 24 hours
+and the sample stream contains large gaps.
+
+The current CPU/DB report is descriptive only: process CPU P50/P95/max
+`14.5046% / 89.7898% / 100%`, RSS P50/P95/max `417562624 / 641462272 /
+1193857024` bytes, event-loop P99 P50/P95/max `25.723 / 122.814 / 163.054 ms`,
+maximum lock waiting `0`, and PostgreSQL transaction deltas **unavailable**
+because every observed database `stats_reset` is `null`. All 21 DB-host CPU
+observations are `unavailable/not_configured`; no exporter was installed.
+
+This is still not a final PASS. The 24-hour quality window requires actual
+samples through at least `2026-10-29T16:58:03.944Z` (or a later complete
+validated endpoint), plus the corresponding timer/service journal.
