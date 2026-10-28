@@ -3,7 +3,7 @@ import "dotenv/config";
 import { mkdir, appendFile, chmod, readdir, unlink, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Client } from "pg";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 
 export const MONITOR_SCHEMA_VERSION = 1;
 const DEFAULT_RETENTION_DAYS = 14;
@@ -11,6 +11,15 @@ const DEFAULT_RETENTION_DAYS = 14;
 function finite(value) { return typeof value === "number" && Number.isFinite(value) ? value : null; }
 function nonNegative(value) { const n = finite(value); return n === null || n < 0 ? null : n; }
 function requiredEnv(name) { const value = process.env[name]?.trim(); if (!value) throw new Error(`${name} is required`); return value; }
+
+export function createProcessFingerprint(application) {
+  const startedAt = typeof application?.startedAt === "string" && Number.isFinite(Date.parse(application.startedAt))
+    ? new Date(Date.parse(application.startedAt)).toISOString() : null;
+  const commit = typeof application?.commit === "string" && /^[0-9a-f]{7,64}$/i.test(application.commit.trim())
+    ? application.commit.trim().toLowerCase() : null;
+  if (!startedAt || !commit) return null;
+  return createHash("sha256").update(`airradar-process-v1\0${startedAt}\0${commit}`).digest("hex");
+}
 
 export function createAdminCookie(token, now = Date.now()) {
   if (!token?.trim()) throw new Error("admin token is required");
@@ -53,6 +62,16 @@ async function fetchRuntime(baseUrl, cookie) {
   });
   if (!response.ok) throw new Error(`runtime endpoint HTTP ${response.status}`);
   return projectRuntimeTelemetry(await response.json());
+}
+
+async function fetchProcessFingerprint(baseUrl, cookie) {
+  const response = await fetch(new URL("/api/system/status", baseUrl), {
+    headers: { cookie }, signal: AbortSignal.timeout(10_000), redirect: "error",
+  });
+  if (!response.ok) throw new Error(`system status endpoint HTTP ${response.status}`);
+  const fingerprint = createProcessFingerprint((await response.json())?.application);
+  if (!fingerprint) throw new Error("process identity unavailable");
+  return fingerprint;
 }
 
 async function query(client, text) { return (await client.query(text)).rows; }
@@ -119,10 +138,10 @@ export async function collectSample({ baseUrl, cookie, databaseUrl, now = new Da
   const client = new Client({ connectionString: databaseUrl, max: 1, application_name: "airradar-readonly-monitor" });
   await client.connect();
   try {
-    const [runtime, database, hostCpu] = await Promise.all([
-      fetchRuntime(baseUrl, cookie), collectDatabase(client), fetchHostCpu(),
+    const [runtime, processFingerprint, database, hostCpu] = await Promise.all([
+      fetchRuntime(baseUrl, cookie), fetchProcessFingerprint(baseUrl, cookie), collectDatabase(client), fetchHostCpu(),
     ]);
-    return { schemaVersion: MONITOR_SCHEMA_VERSION, recordedAt: now.toISOString(), runtime, database, hostCpu };
+    return { schemaVersion: MONITOR_SCHEMA_VERSION, recordedAt: now.toISOString(), processFingerprint, runtime, database, hostCpu };
   } finally { await client.end(); }
 }
 
