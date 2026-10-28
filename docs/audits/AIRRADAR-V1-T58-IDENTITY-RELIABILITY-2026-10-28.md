@@ -36,11 +36,18 @@ remains a distinct segment by design.
 
 The historical run `#40665798048` remains evidence of the old implementation:
 61/61 samples and 18 reported segments. It cannot distinguish clock-derived
-identity churn from a real restart after the fact. The corrected build must be
-deployed and then measured again with the existing read-only T58 workflow.
+identity churn from a real restart after the fact.
+
+The corrected production run [#40682255974](https://github.com/Boym323/AirRadar/actions/runs/40682255974)
+used public read-only mode against deployed commit `3cbd777f` / version `1.0.563`.
+It collected 61/61 samples over 3601.604 seconds, with zero unavailable samples,
+one process segment, no segment transitions, and `stableProcessAndCommit: true`.
+The sanitized summary is archived in [`audit/t58-history`](https://github.com/Boym323/AirRadar/tree/audit/t58-history/reports/t58/2026/10/28/run-40682255974-attempt-1).
 
 Expected result for one stable process is one segment. A segment transition after
 this fix is evidence of either a real process restart or a commit/version change;
 those cases must be investigated separately. Public T58 measures only sanitized
 CPU/RSS/event-loop data and does not measure private hot-path attribution, GC,
-retention, SQL latency, PID, or internal store identity.
+retention, SQL latency, PID, or internal store identity. One stable run proves
+continuity for that interval; it is not a guarantee that future independent
+deployments will never restart.
