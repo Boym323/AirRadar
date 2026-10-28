@@ -81,10 +81,10 @@ installed by this change.
 ## Production evidence (2026-10-28)
 
 The standard production deployment completed successfully for commit
-`83c183b0aa3409961553052d76d557533cb2a850` (version `1.0.567`, production
-channel). CI run [40732407283](https://github.com/Boym323/AirRadar/actions/runs/40732407283)
-passed, including production validation, performance regression and deploy;
-CodeQL run [40732407279](https://github.com/Boym323/AirRadar/actions/runs/40732407279)
+`798ae9107d9a3df0f4be00d8bf08e948b750ae06` (version `1.0.569`, production
+channel). Monitoring validation [40746357194](https://github.com/Boym323/AirRadar/actions/runs/40746357194),
+CI [40746355401](https://github.com/Boym323/AirRadar/actions/runs/40746355401),
+and CodeQL [40746354202](https://github.com/Boym323/AirRadar/actions/runs/40746354202)
 passed. The deployed `/api/version` and public/local `/api/health` checks were
 successful.
 
@@ -95,16 +95,21 @@ auditable as local ref `backup/production-generated-maplibre-4eabcd6`.
 
 Two real systemd canaries succeeded after installing the unit from this commit:
 V8 JIT started normally, authenticated runtime schema 4 was read, PostgreSQL
-statistics were read, four JSONL samples parsed successfully, files remained
-`0600`, and no credential value occurred in the samples. Whole-host PostgreSQL
-CPU is `unavailable` (`not_configured`), not zero. The application listens on
-`192.168.1.142:3000`.
+statistics were read, and the shared account reported `pg_read_all_stats=true`.
+The read-only guard showed `transaction_read_only=on`; a `CREATE TABLE` probe
+was rejected with PostgreSQL error `25006` and created no object. Eight JSONL
+samples parsed successfully, files remained `0600`, and no credential value
+occurred in the samples. Whole-host PostgreSQL CPU is `unavailable`
+(`not_configured`), not zero. The application listens on `192.168.1.142:3000`.
+The systemd timer is now enabled and active; its first automatic minute trigger
+completed successfully.
 
 The configured `airradar` database role remains a documented security
 compromise: it is shared with the application and has write grants on
 application tables. The explicit read-only transaction prevents this sampler
 from writing, but does not remove the account's broader privileges and is not a
-least-privilege solution. The current local report contains only four samples
-over a partial window, so 24-hour continuity, retention, outage recovery, and
-time-aligned CPU/DB aggregation are not yet proven and must not be reported as
-complete.
+least-privilege solution. The current report contains 8 samples from
+`16:58:03Z` through `18:41:26Z`, with 8 WAL/database/activity samples and
+`maxLockWaiting=0`; this is still only a partial 24-hour window. Continuity,
+retention, outage recovery, and time-aligned CPU/DB aggregation are therefore
+not yet proven and must not be reported as complete.
