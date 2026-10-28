@@ -241,3 +241,24 @@ The report also accepts explicit `startAt`/`endAt` bounds so the final audit can
 select a real post-activation interval and report installation-era gaps
 separately. The current host still has only 2.10 elapsed hours of data, so no
 final 24-hour result is available.
+
+## Continuity-aware live recheck — 2026-10-28 19:13 UTC
+
+The JSONL now contains 31 samples in total. Selecting the explicit
+post-activation window from `2026-10-28T18:40:04.847Z` through
+`2026-10-28T19:13:07.362Z` yields 25 samples over 0.55 hours. The timer
+timeline contains 25 successful events, 12 missing cadence slots, and 37
+expected events, giving `67.57%` availability for this partial interval.
+
+The report now records `identityStatus=unknown` because the safe process
+identity is absent from all production samples; it does not infer process
+stability. Both transaction counters report `unknown_stats_reset` and no delta
+because `pg_stat_database.stats_reset` is `null`. Current post-activation
+descriptive values are CPU P50/P95/max `14.5046% / 100% / 100%`, RSS
+P50/P95/max `605687808 / 641462272 / 1193857024` bytes, event-loop P99
+P50/P95/max `26.296 / 127.205 / 163.054 ms`, maximum lock waiting `0`, and
+DB-host CPU unavailable for all 25 samples.
+
+This remains **INSUFFICIENT_EVIDENCE**. The timer is still active; no clock,
+restart, exporter, collector, authentication, database privilege, or timer
+configuration change was made.
