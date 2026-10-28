@@ -4,12 +4,13 @@
 
 **OPTIMIZATION_PASS_NOT_DEPLOYED**
 
+Validated implementation commit: `0008c83e4ead4acfdc53214cad4af1ae8d3b0b0a`.
+
 The current `origin/main` (`ac0e758678b8c0262da485c3f65786235f02ac33`) was
 audited and a bounded, isolated optimization was implemented on branch
 `perf/v1-postgres-write-optimization`. It is not merged, deployed, or claimed
 as a production result. The follow-up implementation is validated locally and
-is being submitted as the next commit on PR `#1129`; the implementation commit
-SHA is recorded in the final handoff.
+is submitted on PR `#1129`.
 
 ## Evidence and change
 
@@ -54,9 +55,9 @@ and cache-after-commit semantics were not otherwise changed.
 | ESLint | PASS; 0 errors, 4 pre-existing warnings |
 | Full Vitest suite | PASS; 297 files passed, 5 skipped; 1,987 tests passed, 18 skipped |
 | Production build | PASS |
-| CI for follow-up commit | Pending; predecessor PR checks were green |
+| CI for implementation commit | PASS; validate, CodeQL, and synthetic 1x/2x/4x checks all SUCCESS |
 | Production read-only baseline / A-B window | BLOCKED; no authorized production DB/runtime access |
-| GitHub PR / Actions | PR #1129 open; follow-up CI required |
+| GitHub PR / Actions | PR #1129 OPEN/CLEAN at implementation commit; release/deploy jobs skipped by PR policy |
 
 The local SQL smoke test verified that an existing row changed from
 `100/80, adsbhub` to `110/88, adsbhub,network` while a new bucket was inserted.
