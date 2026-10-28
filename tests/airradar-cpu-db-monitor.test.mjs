@@ -79,6 +79,9 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     assert.equal(report.availabilityPercent, 100);
     assert.deepEqual(report.diagnostics.duplicates, ["2026-10-28T12:01:00.000Z"]);
     assert.deepEqual(report.database.transactionDelta, { commits: 5, rollbacks: 1 });
+    assert.deepEqual(report.database.counterDiagnostics.continuity, { commits: "continuous_since_stats_reset", rollbacks: "continuous_since_stats_reset" });
+    assert.equal(report.diagnostics.identityStatus, "unknown");
+    assert.equal(report.qualityStatus, "INSUFFICIENT_EVIDENCE");
     assert.equal(report.database.maxLockWaiting, 2);
     assert.equal(report.hostCpu.unavailableSamples, 1);
     assert.equal(report.schedule.serviceDurationSeconds.p95, 1);
@@ -114,12 +117,37 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     assert.equal(report.diagnostics.restarts, true);
     assert.equal(report.database.transactionDelta.commits, null);
     assert.equal(report.database.counterDiagnostics.commits, "counter_reset");
+    assert.equal(report.database.counterDiagnostics.continuity.commits, "reset_detected");
+    assert.equal(report.diagnostics.identityStatus, "restart_detected");
   });
 
   it("does not claim a counter delta when stats_reset is missing", () => {
     const sample = (recordedAt, count) => ({ schemaVersion: 1, recordedAt, runtime: {}, database: { database: { xact_commit: String(count), xact_rollback: "0" } } });
     const report = summarize([sample("2026-10-28T12:00:00.000Z", 1), sample("2026-10-28T12:01:00.000Z", 2)], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
     assert.equal(report.database.transactionDelta.commits, null);
-    assert.equal(report.database.counterDiagnostics.commits, "stats_reset_unavailable");
+    assert.equal(report.database.counterDiagnostics.commits, "stats_reset_missing");
+    assert.equal(report.database.counterDiagnostics.continuity.commits, "unknown_stats_reset");
+  });
+
+  it("does not expose process identifiers and does not infer stability without one", () => {
+    const sample = (recordedAt, processIdentity) => ({ schemaVersion: 1, recordedAt, processIdentity, runtime: {}, database: { database: { xact_commit: "1", xact_rollback: "0", stats_reset: "2026-10-01T00:00:00Z" } } });
+    const report = summarize([sample("2026-10-28T12:00:00.000Z", "secret-pid-or-id"), sample("2026-10-28T12:01:00.000Z", "secret-pid-or-id")], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    assert.equal(report.diagnostics.identityStatus, "stable_observed");
+    assert.equal(JSON.stringify(report).includes("secret-pid-or-id"), false);
+    const unknown = summarize([sample("2026-10-28T12:00:00.000Z"), sample("2026-10-28T12:01:00.000Z")], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    assert.equal(unknown.diagnostics.identityStatus, "unknown");
+    assert.equal(unknown.qualityStatus, "INSUFFICIENT_EVIDENCE");
+  });
+
+  it("supports an explicit post-activation audit window", () => {
+    const sample = (recordedAt) => ({ schemaVersion: 1, recordedAt, runtime: {}, database: { database: { xact_commit: "1", xact_rollback: "0", stats_reset: "2026-10-01T00:00:00Z" } } });
+    const report = summarize([
+      sample("2026-10-28T17:03:01.000Z"),
+      sample("2026-10-28T18:40:04.000Z"),
+      sample("2026-10-28T18:41:04.000Z"),
+    ], { startAt: "2026-10-28T18:40:00.000Z", endAt: "2026-10-28T18:42:00.000Z", asOf: Date.parse("2026-10-28T18:42:00.000Z"), hours: 24 });
+    assert.equal(report.sampleCount, 2);
+    assert.equal(report.windowStart, "2026-10-28T18:40:00.000Z");
+    assert.equal(report.windowEnd, "2026-10-28T18:42:00.000Z");
   });
 });
