@@ -7,6 +7,7 @@ function percentile(values, p) { const sorted = [...values].sort((a, b) => a - b
 function summary(values) { const valid = values.filter(Number.isFinite); return { count: valid.length, p50: percentile(valid, .5), p95: percentile(valid, .95), max: valid.length ? Math.max(...valid) : null }; }
 function parseTime(value) { const time = Date.parse(value); return Number.isFinite(time) ? time : null; }
 function round(value) { return Number(value.toFixed(2)); }
+function timerEventTime(event) { return parseTime(event?.startedAt ?? event?.recordedAt ?? event?.finishedAt); }
 
 export function summarize(samples, {
   hours = 24, asOf = Date.now(), cadenceSeconds = 60, randomizedDelaySeconds = 15,
@@ -55,7 +56,27 @@ export function summarize(samples, {
     };
   };
   const timerSuccesses = timerEvents.filter((event) => event?.success === true).length;
-  const timerAvailability = timerEvents.length > 0 ? round(timerSuccesses / timerEvents.length * 100) : null;
+  const timedEvents = timerEvents.map((event) => ({ event, time: timerEventTime(event) }))
+    .filter((entry) => entry.time !== null).sort((a, b) => a.time - b.time);
+  const timerMissingIntervals = [];
+  for (let index = 1; index < timedEvents.length; index += 1) {
+    const gapSeconds = (timedEvents[index].time - timedEvents[index - 1].time) / 1000;
+    if (gapSeconds > gapLimitSeconds) {
+      timerMissingIntervals.push({
+        from: new Date(timedEvents[index - 1].time).toISOString(),
+        to: new Date(timedEvents[index].time).toISOString(), gapSeconds: round(gapSeconds),
+        missedIntervals: Math.max(1, Math.ceil((gapSeconds - randomizedDelaySeconds) / cadenceSeconds) - 1),
+      });
+    }
+  }
+  const missedTimerIntervals = timerMissingIntervals.reduce((sum, gap) => sum + gap.missedIntervals, 0);
+  const timerExpectedEvents = timerEvents.length > 0 ? timerEvents.length + missedTimerIntervals : 0;
+  const timerAvailability = timerEvents.length > 0
+    ? round(timerSuccesses / Math.max(1, timerExpectedEvents) * 100) : null;
+  const serviceDurations = timerEvents.map((event) => {
+    const started = parseTime(event?.startedAt); const finished = parseTime(event?.finishedAt);
+    return started !== null && finished !== null && finished >= started ? (finished - started) / 1000 : null;
+  }).filter((value) => value !== null);
   // Without the journal, only a conservative lower-bound estimate is possible:
   // OnUnitActiveSec plus the maximum RandomizedDelaySec is the widest legal
   // interval. Exact availability therefore requires timerEvents.
@@ -71,8 +92,8 @@ export function summarize(samples, {
     qualityStatus: elapsedSeconds >= 24 * 3_600 && duplicates.length === 0 && missingIntervals.length === 0 && !restarts ? "SUFFICIENT" : "INSUFFICIENT_EVIDENCE",
     availabilityPercent,
     availabilityMethod: timerEvents.length > 0 ? "journal_timer_events" : "sample_cadence_inference",
-    schedule: { cadenceSeconds, randomizedDelaySeconds, inferredExpectedSamples, timerEvents: timerEvents.length, successfulTimerEvents: timerSuccesses },
-    diagnostics: { duplicates, missingIntervals, restarts, restartEvidence: identities.length ? identities : "unavailable" },
+    schedule: { cadenceSeconds, randomizedDelaySeconds, inferredExpectedSamples, timerEvents: timerEvents.length, successfulTimerEvents: timerSuccesses, missedTimerIntervals, expectedTimerEvents: timerExpectedEvents, serviceDurationSeconds: summary(serviceDurations) },
+    diagnostics: { duplicates, missingIntervals, timerMissingIntervals, restarts, restartEvidence: identities.length ? identities : "unavailable" },
     runtime: {
       cpuPercent: summary(valid.map((x) => x.runtime?.cpuIntervalPercent)),
       rssBytes: summary(valid.map((x) => x.runtime?.rssBytes)),

@@ -70,7 +70,10 @@ describe("AirRadar CPU/DB monitoring contract", () => {
       { schemaVersion: 1, recordedAt: "2026-10-28T12:00:00.000Z", runtime: { cpuIntervalPercent: 10, rssBytes: 100, eventLoopP99Ms: 4 }, database: { wal: {}, database: { xact_commit: "10", xact_rollback: "1", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 0 } }, hostCpu: { status: "available" } },
       { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { wal: null, database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 2 } }, hostCpu: { status: "unavailable", reason: "not_configured" } },
       { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" } } },
-    ], { hours: 1, asOf: now, timerEvents: [{ success: true }, { success: true }] });
+    ], { hours: 1, asOf: now, timerEvents: [
+      { success: true, startedAt: "2026-10-28T12:00:00.000Z", finishedAt: "2026-10-28T12:00:01.000Z" },
+      { success: true, startedAt: "2026-10-28T12:01:00.000Z", finishedAt: "2026-10-28T12:01:01.000Z" },
+    ] });
     assert.deepEqual(report.runtime.cpuPercent, { count: 2, p50: 10, p95: 20, max: 20 });
     assert.equal(report.database.walSamples, 1);
     assert.equal(report.availabilityPercent, 100);
@@ -78,6 +81,19 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     assert.deepEqual(report.database.transactionDelta, { commits: 5, rollbacks: 1 });
     assert.equal(report.database.maxLockWaiting, 2);
     assert.equal(report.hostCpu.unavailableSamples, 1);
+    assert.equal(report.schedule.serviceDurationSeconds.p95, 1);
+  });
+
+  it("counts missing timer slots in journal-based availability", () => {
+    const report = summarize([], { timerEvents: [
+      { success: true, startedAt: "2026-10-28T12:00:00.000Z" },
+      { success: false, startedAt: "2026-10-28T12:01:00.000Z" },
+      { success: true, startedAt: "2026-10-28T12:03:16.000Z" },
+    ] });
+    assert.equal(report.availabilityPercent, 40);
+    assert.equal(report.schedule.missedTimerIntervals, 2);
+    assert.equal(report.schedule.expectedTimerEvents, 5);
+    assert.equal(report.diagnostics.timerMissingIntervals[0].missedIntervals, 2);
   });
 
   it("reports missing intervals after the cadence plus randomized delay", () => {

@@ -148,3 +148,34 @@ observations are `unavailable/not_configured`; no exporter was installed.
 This is still not a final PASS. The 24-hour quality window requires actual
 samples through at least `2026-10-29T16:58:03.944Z` (or a later complete
 validated endpoint), plus the corresponding timer/service journal.
+
+## Availability correction — 2026-10-28 19:02 UTC
+
+Re-running the merged report against the live timer timestamps exposed one
+more reporting defect: counting successful journal events alone falsely gave
+100% post-activation availability. PR [#1139](https://github.com/Boym323/AirRadar/pull/1139)
+now counts missing cadence slots between actual event timestamps. With
+`OnUnitActiveSec=60s` and `RandomizedDelaySec=15s`, the current post-activation
+evidence is:
+
+| Quantity | Value |
+|---|---:|
+| Successful timer events | 19 |
+| Missing timer slots | 8 |
+| Expected timer events | 27 |
+| Availability | **70.37%** |
+
+The current JSONL contains 23 unique samples from
+`2026-10-28T16:58:03.944Z` through `2026-10-28T19:01:41.005Z`, an elapsed span
+of 2.06 hours. Quality remains **INSUFFICIENT_EVIDENCE**: this is not a 24-hour
+quality window. Current descriptive metrics are process CPU P50/P95/max
+`14.5046% / 89.7898% / 100%`, RSS P50/P95/max `418045952 / 641462272 /
+1193857024` bytes, event-loop P99 P50/P95/max `26.296 / 122.814 / 163.054 ms`,
+and maximum lock waiting `0`. PostgreSQL transaction deltas remain unavailable
+because `stats_reset` is null in all 23 samples. DB-host CPU remains
+`unavailable/not_configured` for all 23 samples.
+
+The report now accepts optional start/finish timestamps for service duration;
+duration is reported separately from trigger cadence. No production collection,
+authentication, PostgreSQL privilege, timer configuration, or exporter was
+changed.
