@@ -20,9 +20,9 @@ production feature flag was changed during this audit.
 
 | Item | Evidence |
 |---|---|
-| GitHub `main` audited | `11647e8411b0d6b1e834f270c63c0863c7f02a07` |
-| Deployed commit | `f17a19f635f0cec38e03a7bff786e7cdf24a3197` |
-| Deployed release | `1.0.565`, build `2026-10-28T13:25:05Z` |
+| GitHub `main` audited | `b105f3379db62fa2cec4bbd03650b51d739ed5c1` |
+| Optimization implementation | `f17a19f635f0cec38e03a7bff786e7cdf24a3197` |
+| Final deployed commit/release | `b105f337`, `1.0.566`, build `2026-10-28T16:21:08Z` |
 | Process start | `2026-10-28T13:28:12.500Z` |
 | Process identity | stable PID/store identity during authorized sample |
 | Native acceleration | Rust BEAST parser and Rust CRC active |
@@ -170,8 +170,8 @@ are **not applicable**. The defensible comparison is:
 - CI and CodeQL: passed on the merged implementation commit
   [CI #40696132199](https://github.com/Boym323/AirRadar/actions/runs/40696132199)
   and [CodeQL #40696132276](https://github.com/Boym323/AirRadar/actions/runs/40696132276).
-- Deployment: PR #1129 is merged and deployed as `f17a19f`; no additional
-  deployment was performed for this audit.
+- Deployment: PR #1129 is merged; the final documentation release is deployed
+  as `b105f337` / `1.0.566` by the standard workflow.
 - Rollback: standard code rollback/redeploy of the implementation commit;
   no schema rollback is required.
 
