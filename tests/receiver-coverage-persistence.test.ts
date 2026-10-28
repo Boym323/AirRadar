@@ -151,6 +151,36 @@ describe("ReceiverCoverageAnalytics persistence", () => {
     expect(analytics.getDiagnostics().flushSuccesses).toBe(1);
   });
 
+  it("uses one atomic set-based statement when the PostgreSQL raw transaction capability is available", async () => {
+    const hour = Date.parse("2026-09-22T10:00:00.000Z");
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const where = vi.fn();
+    const database = {
+      orm: { public: { ReceiverCoverageHourly: { where, create: vi.fn() } } },
+      raw: { sql: vi.fn(() => ({ affectedCount: () => ({ build: () => ({ sql: "atomic coverage upsert" }) }) })) },
+      transaction: async (callback: (transaction: unknown) => Promise<void>) => callback({
+        orm: database.orm,
+        execute,
+      }),
+    };
+    mocks.getPrisma.mockReturnValue(database);
+
+    const analytics = new ReceiverCoverageAnalytics({ enabled: true });
+    const internals = analytics as unknown as {
+      pending: Map<number, { buckets: Map<string, { available: number; captured: number }>; providers: Set<string> }>;
+    };
+    internals.pending.set(hour, {
+      buckets: new Map([["overall", { available: 10, captured: 8 }]]),
+      providers: new Set(["adsbhub"]),
+    });
+
+    await analytics.flush();
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(where).not.toHaveBeenCalled();
+    expect(analytics.getDiagnostics()).toMatchObject({ flushFailures: 0, flushSuccesses: 1, rowsInserted: 1, rowsUpdated: 0 });
+  });
+
   it("bounds durable cache retention to the current and previous hour", () => {
     const analytics = new ReceiverCoverageAnalytics({ enabled: true });
     const internals = analytics as unknown as {

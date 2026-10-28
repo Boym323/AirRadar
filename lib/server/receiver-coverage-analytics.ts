@@ -226,6 +226,77 @@ export class ReceiverCoverageAnalytics {
       try {
         await trackDbTransaction("receiver.coverage", () => database.transaction(async (transaction) => {
           const schema = transaction.orm.public;
+
+          // The production PostgreSQL runtime supports a raw plan on the
+          // transaction. Use one set-based atomic statement for the normal
+          // path: the counters are deltas, so read-modify-write through the
+          // ORM is both round-trip heavy and racy across service processes.
+          // Keep the row-wise path below for narrow test adapters and older
+          // runtimes that do not expose the raw transaction capability.
+          const raw = (database as unknown as {
+            raw?: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
+              affectedCount: () => { build: () => unknown };
+            } };
+          }).raw;
+          const execute = (transaction as unknown as { execute?: (query: unknown) => Promise<unknown> }).execute;
+          if (raw && typeof execute === "function" && rows.length > 0) {
+            const payload = JSON.stringify(rows.map((row) => ({
+              hour: row.hour.toString(),
+              dimension: row.dimension,
+              bucketKey: row.bucketKey,
+              availableCount: row.availableCount,
+              capturedCount: row.capturedCount,
+              referenceProviders: row.referenceProviders,
+            })));
+            await execute(raw.sql`
+              INSERT INTO "public"."receiverCoverageHourly"
+                ("hour", "dimension", "bucketKey", "availableCount", "capturedCount", "referenceProviders")
+              SELECT x."hour", x."dimension", x."bucketKey", x."availableCount", x."capturedCount", x."referenceProviders"
+              FROM jsonb_to_recordset(${payload}::jsonb) AS x(
+                "hour" timestamptz, "dimension" text, "bucketKey" text,
+                "availableCount" integer, "capturedCount" integer, "referenceProviders" text
+              )
+              ON CONFLICT ("hour", "bucketKey") DO UPDATE
+              SET "availableCount" = "receiverCoverageHourly"."availableCount" + EXCLUDED."availableCount",
+                  "capturedCount" = "receiverCoverageHourly"."capturedCount" + EXCLUDED."capturedCount",
+                  "referenceProviders" = (
+                    SELECT string_agg(DISTINCT provider, ',' ORDER BY provider)
+                    FROM unnest(string_to_array(
+                      concat_ws(',', "receiverCoverageHourly"."referenceProviders", EXCLUDED."referenceProviders"), ','
+                    )) AS providers(provider)
+                    WHERE provider <> ''
+                  )
+              `.affectedCount().build());
+
+            // The mutation itself is atomic. Cache updates are staged and
+            // published only after commit, exactly like the fallback path.
+            // Counters are classified from the local cache when possible;
+            // unknown rows are conservatively counted as inserts because a
+            // restart may have left them durable but uncached. These are
+            // diagnostics only; the database mutation is authoritative.
+            for (const row of rows) {
+              const hourMs = row.hour.epochMilliseconds;
+              const rowKey = row.bucketKey;
+              const existing = this.persistedRows.get(hourMs)?.get(rowKey);
+              if (existing) updated += 1;
+              else inserted += 1;
+              const providers = new Set([
+                ...(existing?.referenceProviders ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+                ...row.referenceProviders.split(",").map((item) => item.trim()).filter(Boolean),
+              ]);
+              stagedCacheUpdates.set(`${hourMs}:${rowKey}`, {
+                hourMs,
+                bucketKey: rowKey,
+                value: {
+                  availableCount: (existing?.availableCount ?? 0) + row.availableCount,
+                  capturedCount: (existing?.capturedCount ?? 0) + row.capturedCount,
+                  referenceProviders: [...providers].sort().join(","),
+                },
+              });
+            }
+            return;
+          }
+
           for (const row of rows) {
             const hourMs = row.hour.epochMilliseconds;
             const rowKey = row.bucketKey;
