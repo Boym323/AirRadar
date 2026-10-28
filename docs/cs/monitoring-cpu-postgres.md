@@ -53,9 +53,20 @@ sudo systemctl start airradar-cpu-db-monitor.service
 sudo journalctl -u airradar-cpu-db-monitor.service -n 50 --no-pager
 ```
 
-Po nejméně 24 hodinách spusťte `npm run monitor:report`. Ve stejném časovém
-okně porovnejte delta čítačů transakcí, WAL a lock waitů. Mezery ve vzorcích
-jsou mezery, nikoli zdravé nuly.
+Po nejméně 24 hodinách spusťte `npm run monitor:report`. Sampler nyní čte
+existující autentizovanou diagnostiku `/api/system/status` a ukládá pouze
+SHA-256 fingerprint z `application.startedAt` a `application.commit`; PID,
+secret ani interní ID diagnostického store se neukládají. Chybějící identita v
+kterémkoli vzorku znamená `unknown`; změněný fingerprint prokazuje restart nebo
+změnu nasazeného commitu.
+
+Report používá explicitní hranice okna a koncovou toleranci
+`OnUnitActiveSec + RandomizedDelaySec`; nevyžaduje, aby dva vzorky byly od sebe
+přesně 86400 sekund. Vnitřní mezery zůstávají mezerami. U PostgreSQL čítačů
+`observedContinuity` znamená pouze monotónnost mezi sousedními vzorky,
+`verifiedContinuity` navíc vyžaduje známé a nezměněné `stats_reset`. Pokud je
+`stats_reset` null nebo chybí, delta čítače zůstává `UNKNOWN`. Ve stejném okně
+porovnejte delta čítačů transakcí, WAL a lock waitů.
 
 ## 24hodinová evidence a návrh dashboardu
 
@@ -93,3 +104,6 @@ transakce brání zápisu tohoto sampleru, ale neodebírá širší oprávnění
 není least-privilege řešením. Aktuální report má 12 vzorků od `16:58:03Z` do
 `18:46:48Z`, tedy stále neúplné 24hodinové okno. 24hodinová kontinuita,
 retence, výpadky a časově sladěné agregace proto nejsou potvrzené.
+
+Navazující živý audit a přesný další krok jsou v
+[`artifacts/airradar-v1-monitoring-progress-2026-10-28.md`](../../artifacts/airradar-v1-monitoring-progress-2026-10-28.md).
