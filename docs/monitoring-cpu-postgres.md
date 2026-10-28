@@ -113,3 +113,9 @@ least-privilege solution. The current report contains 12 samples from
 `maxLockWaiting=0`; this is still only a partial 24-hour window. Continuity,
 retention, outage recovery, and time-aligned CPU/DB aggregation are therefore
 not yet proven and must not be reported as complete.
+
+The subsequent live audit found 17 unique samples through
+`2026-10-28T18:53:48.721Z`, including several real gaps and a monitor V8 crash.
+The elapsed span is still only `1:55:44.777`; the exact remaining requirement
+and the private database-host CPU monitoring proposal are recorded in
+[`artifacts/airradar-v1-monitoring-progress-2026-10-28.md`](../artifacts/airradar-v1-monitoring-progress-2026-10-28.md).
