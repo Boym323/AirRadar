@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { createAdminCookie, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
 import { summarize } from "../scripts/monitoring/airradar-monitor-report.mjs";
@@ -11,6 +12,11 @@ const runtime = (overrides = {}) => projectRuntimeTelemetry({
 });
 
 describe("AirRadar CPU/DB monitoring contract", () => {
+  it("does not deny V8 executable memory in the Node systemd sampler", () => {
+    const unit = readFileSync(new URL("../deploy/systemd/airradar-cpu-db-monitor.service", import.meta.url), "utf8");
+    assert.doesNotMatch(unit, /^MemoryDenyWriteExecute=yes$/m);
+  });
+
   it("creates a bounded session cookie from the existing admin secret", () => {
     const cookie = createAdminCookie("test-secret", 1_700_000_000_000);
     assert.match(cookie, /^airradar_watchlist_session=1700028800\.[A-Za-z0-9_-]+$/);

@@ -19,7 +19,6 @@ ReadWritePaths=/var/lib/airradar/monitoring
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 CapabilityBoundingSet=
 LockPersonality=yes
-MemoryDenyWriteExecute=yes
 
 [Install]
 WantedBy=multi-user.target
