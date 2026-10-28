@@ -153,6 +153,7 @@ describe("ReceiverCoverageAnalytics persistence", () => {
 
   it("uses one atomic set-based statement when the PostgreSQL raw transaction capability is available", async () => {
     const hour = Date.parse("2026-09-22T10:00:00.000Z");
+    const execute = vi.fn().mockResolvedValue(undefined);
     const query = vi.fn().mockResolvedValue([{
       hour: new Date(hour).toISOString(), bucketKey: "overall",
       availableCount: 10, capturedCount: 8, referenceProviders: "adsbhub", inserted: true,
@@ -160,9 +161,13 @@ describe("ReceiverCoverageAnalytics persistence", () => {
     const where = vi.fn();
     const database = {
       orm: { public: { ReceiverCoverageHourly: { where, create: vi.fn() } } },
-      raw: { sql: vi.fn(() => ({ returnsRow: () => ({ build: () => ({ sql: "atomic coverage upsert" }) }) })) },
+      raw: { sql: vi.fn(() => ({
+        affectedCount: () => ({ build: () => ({ sql: "advisory shared lock" }) }),
+        returnsRow: () => ({ build: () => ({ sql: "atomic coverage upsert" }) }),
+      })) },
       transaction: async (callback: (transaction: unknown) => Promise<void>) => callback({
         orm: database.orm,
+        execute,
         query,
       }),
     };
@@ -179,9 +184,59 @@ describe("ReceiverCoverageAnalytics persistence", () => {
 
     await analytics.flush();
 
+    expect(execute).toHaveBeenCalledOnce();
     expect(query).toHaveBeenCalledOnce();
     expect(where).not.toHaveBeenCalled();
     expect(analytics.getDiagnostics()).toMatchObject({ flushFailures: 0, flushSuccesses: 1, rowsInserted: 1, rowsUpdated: 0 });
+  });
+
+  it("reads durable totals under the fallback lock even with a stale local cache", async () => {
+    const hour = Date.parse("2026-09-22T10:00:00.000Z");
+    const first = vi.fn().mockResolvedValue({
+      availableCount: 100, capturedCount: 80, referenceProviders: "seed",
+    });
+    const update = vi.fn().mockResolvedValue(undefined);
+    const where = vi.fn(() => ({ first, update }));
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const database = {
+      orm: { public: { ReceiverCoverageHourly: { where, create: vi.fn() } } },
+      raw: { sql: vi.fn(() => ({ affectedCount: () => ({ build: () => ({ sql: "exclusive advisory lock" }) }) })) },
+      transaction: async (callback: (transaction: unknown) => Promise<void>) => callback({
+        orm: database.orm,
+        execute,
+      }),
+    };
+    mocks.getPrisma.mockReturnValue(database);
+    const analytics = new ReceiverCoverageAnalytics({ enabled: true });
+    const internals = analytics as unknown as {
+      pending: Map<number, { buckets: Map<string, { available: number; captured: number }>; providers: Set<string> }>;
+      persistedRows: Map<number, Map<string, { availableCount: number; capturedCount: number; referenceProviders: string }>>;
+    };
+    internals.persistedRows.set(hour, new Map([["overall", {
+      availableCount: 1, capturedCount: 1, referenceProviders: "stale",
+    }]]));
+    internals.pending.set(hour, {
+      buckets: new Map([["overall", { available: 10, captured: 8 }]]),
+      providers: new Set(["local"]),
+    });
+
+    const original = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED;
+    process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = "false";
+    try {
+      await analytics.flush();
+    } finally {
+      if (original === undefined) delete process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED;
+      else process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED = original;
+    }
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(first).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith({
+      availableCount: 110, capturedCount: 88, referenceProviders: "local,seed",
+    });
+    expect(internals.persistedRows.get(hour)?.get("overall")).toEqual({
+      availableCount: 110, capturedCount: 88, referenceProviders: "local,seed",
+    });
   });
 
   it("bounds durable cache retention to the current and previous hour", () => {
