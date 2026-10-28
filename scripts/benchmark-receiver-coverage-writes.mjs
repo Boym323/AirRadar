@@ -25,12 +25,17 @@ function percentile(values, p) {
 }
 
 function stats(values) {
+  // PostgreSQL can run in a separate PID namespace (GitHub Actions service),
+  // where backend CPU accounting is unavailable to the Node.js benchmark.
+  // Report missing measurements as null, never as a fictitious 0 jiffies.
+  const valid = values.filter((value) => typeof value === "number" && Number.isFinite(value));
+  if (!valid.length) return { p50Ms: null, p95Ms: null, p99Ms: null, minMs: null, maxMs: null };
   return {
-    p50Ms: Number(percentile(values, 50).toFixed(3)),
-    p95Ms: Number(percentile(values, 95).toFixed(3)),
-    p99Ms: Number(percentile(values, 99).toFixed(3)),
-    minMs: Number(Math.min(...values).toFixed(3)),
-    maxMs: Number(Math.max(...values).toFixed(3)),
+    p50Ms: Number(percentile(valid, 50).toFixed(3)),
+    p95Ms: Number(percentile(valid, 95).toFixed(3)),
+    p99Ms: Number(percentile(valid, 99).toFixed(3)),
+    minMs: Number(Math.min(...valid).toFixed(3)),
+    maxMs: Number(Math.max(...valid).toFixed(3)),
   };
 }
 
@@ -51,8 +56,13 @@ async function scalar(sql, params = []) {
 }
 
 function readCpu(pid) {
-  const fields = readFileSync(`/proc/${pid}/stat`, "utf8").trim().split(" ");
-  return Number(fields[13]) + Number(fields[14]);
+  try {
+    const fields = readFileSync(`/proc/${pid}/stat`, "utf8").trim().split(" ");
+    return Number(fields[13]) + Number(fields[14]);
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "EACCES") return null;
+    throw error;
+  }
 }
 
 async function walPosition() {
@@ -162,7 +172,7 @@ async function runCase(size, mode) {
   const afterCpu = readCpu(pid);
   const afterWal = await walPosition();
   const walBytes = Number((await scalar("SELECT pg_wal_lsn_diff($1, $2)::bigint AS bytes", [afterWal, beforeWal])).bytes);
-  return { elapsedMs, roundTrips, walBytes, postgresCpuJiffies: afterCpu - beforeCpu, digest: await digest() };
+  return { elapsedMs, roundTrips, walBytes, postgresCpuJiffies: beforeCpu === null || afterCpu === null ? null : afterCpu - beforeCpu, digest: await digest() };
 }
 
 await client.connect();
