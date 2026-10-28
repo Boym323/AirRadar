@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
+import { createAdminCookie, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
 import { summarize } from "../scripts/monitoring/airradar-monitor-report.mjs";
 
 const runtime = (overrides = {}) => projectRuntimeTelemetry({
@@ -11,6 +11,11 @@ const runtime = (overrides = {}) => projectRuntimeTelemetry({
 });
 
 describe("AirRadar CPU/DB monitoring contract", () => {
+  it("creates a bounded session cookie from the existing admin secret", () => {
+    const cookie = createAdminCookie("test-secret", 1_700_000_000_000);
+    assert.match(cookie, /^airradar_watchlist_session=1700028800\.[A-Za-z0-9_-]+$/);
+  });
+
   it("accepts only the real admin runtime schema and projects bounded fields", () => {
     assert.equal(runtime().eventLoopP99Ms, 9);
     assert.throws(() => projectRuntimeTelemetry({ schemaVersion: 4, scope: "process-local", runtime: {} }), /disabled/);
@@ -26,6 +31,7 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     ], { hours: 1 });
     assert.deepEqual(report.runtime.cpuPercent, { count: 2, p50: 10, p95: 20, max: 20 });
     assert.equal(report.database.walSamples, 1);
+    assert.equal(report.availabilityPercent, 3.33);
     assert.deepEqual(report.database.transactionDelta, { commits: 5, rollbacks: 1 });
     assert.equal(report.database.maxLockWaiting, 2);
     assert.equal(report.hostCpu.unavailableSamples, 1);

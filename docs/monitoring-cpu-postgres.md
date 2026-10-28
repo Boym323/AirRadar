@@ -26,15 +26,17 @@ only by root and `airradar` (mode `0600`):
 
 ```dotenv
 AIRRADAR_MONITOR_BASE_URL=http://127.0.0.1:3000
-AIRRADAR_MONITOR_ADMIN_COOKIE=airradar_watchlist_session=...
+# Prefer the existing server-only admin secret so the timer renews its session:
+AIRRADAR_MONITOR_ADMIN_TOKEN=...
 DATABASE_URL=postgresql://airradar:...@db-host:5432/airradar?sslmode=require
 # Optional private-only exporter URL, for example http://10.0.0.20:9100
 # AIRRADAR_MONITOR_NODE_EXPORTER_URL=
 ```
 
-The cookie is an existing short-lived administrator session, not a new
-database privilege. Do not put the exporter on a public interface and do not
-grant the monitor write access. The PostgreSQL role needs only `CONNECT` and
+The token is the existing server-only administrator secret; the sampler derives
+an 8-hour session cookie for each run. It is not a new database privilege. Do
+not put the exporter on a public interface and do not grant the monitor write
+access. The PostgreSQL role needs only `CONNECT` and
 the normal statistics visibility; do not add superuser or broad table grants.
 
 Before activation, install the unit files and environment file, then run a

@@ -3,6 +3,7 @@ import "dotenv/config";
 import { mkdir, appendFile, chmod, readdir, unlink, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Client } from "pg";
+import { createHmac } from "node:crypto";
 
 export const MONITOR_SCHEMA_VERSION = 1;
 const DEFAULT_RETENTION_DAYS = 14;
@@ -10,6 +11,13 @@ const DEFAULT_RETENTION_DAYS = 14;
 function finite(value) { return typeof value === "number" && Number.isFinite(value) ? value : null; }
 function nonNegative(value) { const n = finite(value); return n === null || n < 0 ? null : n; }
 function requiredEnv(name) { const value = process.env[name]?.trim(); if (!value) throw new Error(`${name} is required`); return value; }
+
+export function createAdminCookie(token, now = Date.now()) {
+  if (!token?.trim()) throw new Error("admin token is required");
+  const expiresAt = Math.floor(now / 1000) + 8 * 60 * 60;
+  const signature = createHmac("sha256", token.trim()).update(String(expiresAt)).digest("base64url");
+  return `airradar_watchlist_session=${expiresAt}.${signature}`;
+}
 
 export function projectRuntimeTelemetry(payload) {
   // The real route deliberately does not expose a detailLevel field. Admin
@@ -124,7 +132,9 @@ export async function writeSample(sample, directory) {
 
 export async function runOnce() {
   const baseUrl = requiredEnv("AIRRADAR_MONITOR_BASE_URL");
-  const cookie = requiredEnv("AIRRADAR_MONITOR_ADMIN_COOKIE");
+  const cookie = process.env.AIRRADAR_MONITOR_ADMIN_COOKIE?.trim()
+    || (process.env.AIRRADAR_MONITOR_ADMIN_TOKEN ? createAdminCookie(process.env.AIRRADAR_MONITOR_ADMIN_TOKEN) : null);
+  if (!cookie) throw new Error("AIRRADAR_MONITOR_ADMIN_COOKIE or AIRRADAR_MONITOR_ADMIN_TOKEN is required");
   const databaseUrl = requiredEnv("DATABASE_URL");
   const sample = await collectSample({ baseUrl, cookie, databaseUrl });
   const file = await writeSample(sample, process.env.AIRRADAR_MONITOR_OUTPUT_DIR ?? "/var/lib/airradar/monitoring");
