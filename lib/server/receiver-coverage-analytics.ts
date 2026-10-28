@@ -235,11 +235,23 @@ export class ReceiverCoverageAnalytics {
           // runtimes that do not expose the raw transaction capability.
           const raw = (database as unknown as {
             raw?: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
+              returnsRow: (shape: Record<string, string>) => { build: () => unknown };
               affectedCount: () => { build: () => unknown };
             } };
           }).raw;
           const execute = (transaction as unknown as { execute?: (query: unknown) => Promise<unknown> }).execute;
-          if (raw && typeof execute === "function" && rows.length > 0) {
+          const query = (transaction as unknown as {
+            query?: (query: unknown) => Promise<Array<{
+              hour: string;
+              bucketKey: string;
+              availableCount: number;
+              capturedCount: number;
+              referenceProviders: string;
+              inserted: boolean;
+            }>>;
+          }).query;
+          const atomicBatchEnabled = process.env.AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED?.trim().toLowerCase() !== "false";
+          if (atomicBatchEnabled && raw && typeof query === "function" && rows.length > 0) {
             const payload = JSON.stringify(rows.map((row) => ({
               hour: row.hour.toString(),
               dimension: row.dimension,
@@ -248,53 +260,89 @@ export class ReceiverCoverageAnalytics {
               capturedCount: row.capturedCount,
               referenceProviders: row.referenceProviders,
             })));
-            await execute(raw.sql`
-              INSERT INTO "public"."receiverCoverageHourly"
-                ("hour", "dimension", "bucketKey", "availableCount", "capturedCount", "referenceProviders")
-              SELECT x."hour", x."dimension", x."bucketKey", x."availableCount", x."capturedCount", x."referenceProviders"
-              FROM jsonb_to_recordset(${payload}::jsonb) AS x(
-                "hour" timestamptz, "dimension" text, "bucketKey" text,
-                "availableCount" integer, "capturedCount" integer, "referenceProviders" text
+            const committedRows = await query(raw.sql`
+              WITH input AS MATERIALIZED (
+                SELECT x."hour", x."dimension", x."bucketKey", x."availableCount", x."capturedCount", x."referenceProviders"
+                FROM jsonb_to_recordset(${payload}::jsonb) AS x(
+                  "hour" timestamptz, "dimension" text, "bucketKey" text,
+                  "availableCount" integer, "capturedCount" integer, "referenceProviders" text
+                )
+              ), updated AS (
+                UPDATE "public"."receiverCoverageHourly" AS target
+                SET "availableCount" = target."availableCount" + input."availableCount",
+                    "capturedCount" = target."capturedCount" + input."capturedCount",
+                    "referenceProviders" = (
+                      SELECT string_agg(DISTINCT provider, ',' ORDER BY provider)
+                      FROM unnest(string_to_array(concat_ws(',', target."referenceProviders", input."referenceProviders"), ',')) AS providers(provider)
+                      WHERE provider <> ''
+                    )
+                FROM input
+                WHERE target."hour" = input."hour" AND target."bucketKey" = input."bucketKey"
+                RETURNING target."hour"::text AS "hour", target."bucketKey", target."availableCount", target."capturedCount",
+                  target."referenceProviders", false AS "inserted"
+              ), inserted AS (
+                INSERT INTO "public"."receiverCoverageHourly"
+                  ("hour", "dimension", "bucketKey", "availableCount", "capturedCount", "referenceProviders")
+                SELECT input."hour", input."dimension", input."bucketKey", input."availableCount", input."capturedCount", input."referenceProviders"
+                FROM input
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM updated
+                  WHERE updated."hour" = input."hour"::text AND updated."bucketKey" = input."bucketKey"
+                )
+                ON CONFLICT ("hour", "bucketKey") DO UPDATE
+                SET "availableCount" = "receiverCoverageHourly"."availableCount" + EXCLUDED."availableCount",
+                    "capturedCount" = "receiverCoverageHourly"."capturedCount" + EXCLUDED."capturedCount",
+                    "referenceProviders" = (
+                      SELECT string_agg(DISTINCT provider, ',' ORDER BY provider)
+                      FROM unnest(string_to_array(concat_ws(',', "receiverCoverageHourly"."referenceProviders", EXCLUDED."referenceProviders"), ',')) AS providers(provider)
+                      WHERE provider <> ''
+                    )
+                RETURNING "hour"::text AS "hour", "bucketKey", "availableCount", "capturedCount",
+                  "referenceProviders", (xmax = 0) AS "inserted"
               )
-              ON CONFLICT ("hour", "bucketKey") DO UPDATE
-              SET "availableCount" = "receiverCoverageHourly"."availableCount" + EXCLUDED."availableCount",
-                  "capturedCount" = "receiverCoverageHourly"."capturedCount" + EXCLUDED."capturedCount",
-                  "referenceProviders" = (
-                    SELECT string_agg(DISTINCT provider, ',' ORDER BY provider)
-                    FROM unnest(string_to_array(
-                      concat_ws(',', "receiverCoverageHourly"."referenceProviders", EXCLUDED."referenceProviders"), ','
-                    )) AS providers(provider)
-                    WHERE provider <> ''
-                  )
-              `.affectedCount().build());
+              SELECT * FROM updated
+              UNION ALL
+              SELECT * FROM inserted
+              `.returnsRow({
+                hour: "pg/text@1",
+                bucketKey: "pg/text@1",
+                availableCount: "pg/int4@1",
+                capturedCount: "pg/int4@1",
+                referenceProviders: "pg/text@1",
+                inserted: "pg/bool@1",
+              }).build());
 
             // The mutation itself is atomic. Cache updates are staged and
             // published only after commit, exactly like the fallback path.
-            // Counters are classified from the local cache when possible;
-            // unknown rows are conservatively counted as inserts because a
-            // restart may have left them durable but uncached. These are
-            // diagnostics only; the database mutation is authoritative.
-            for (const row of rows) {
-              const hourMs = row.hour.epochMilliseconds;
-              const rowKey = row.bucketKey;
-              const existing = this.persistedRows.get(hourMs)?.get(rowKey);
-              if (existing) updated += 1;
-              else inserted += 1;
+            // Use returned durable totals, not the delta, so a cold cache
+            // after restart becomes consistent immediately after commit.
+            for (const committed of committedRows) {
+              const hourMs = Date.parse(committed.hour);
+              const rowKey = committed.bucketKey;
+              if (committed.inserted) inserted += 1;
+              else updated += 1;
               const providers = new Set([
-                ...(existing?.referenceProviders ?? "").split(",").map((item) => item.trim()).filter(Boolean),
-                ...row.referenceProviders.split(",").map((item) => item.trim()).filter(Boolean),
+                ...committed.referenceProviders.split(",").map((item) => item.trim()).filter(Boolean),
               ]);
               stagedCacheUpdates.set(`${hourMs}:${rowKey}`, {
                 hourMs,
                 bucketKey: rowKey,
                 value: {
-                  availableCount: (existing?.availableCount ?? 0) + row.availableCount,
-                  capturedCount: (existing?.capturedCount ?? 0) + row.capturedCount,
+                  availableCount: committed.availableCount,
+                  capturedCount: committed.capturedCount,
                   referenceProviders: [...providers].sort().join(","),
                 },
               });
             }
             return;
+          }
+
+          // The compatibility path still has to be safe when the canary is
+          // disabled. Serialize fallback read-modify-write flushes across
+          // processes using a transaction-scoped advisory lock. This is only
+          // a safety net for runtimes without the atomic raw query path.
+          if (raw && typeof execute === "function") {
+            await execute(raw.sql`SELECT pg_advisory_xact_lock(784231947)`.affectedCount().build());
           }
 
           for (const row of rows) {

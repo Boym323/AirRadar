@@ -1,0 +1,766 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-28T11:17:55.894Z",
+  "database": "airradar_v1_cov_pr1129",
+  "postgres": "PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "sizes": {
+    "50": {
+      "legacy": {
+        "latency": {
+          "p50Ms": 17.952,
+          "p95Ms": 20.189,
+          "p99Ms": 20.189,
+          "minMs": 16.119,
+          "maxMs": 20.189
+        },
+        "roundTrips": 102,
+        "walBytes": {
+          "p50Ms": 8312,
+          "p95Ms": 8312,
+          "p99Ms": 8312,
+          "minMs": 8312,
+          "maxMs": 8312
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 1,
+          "p95Ms": 1,
+          "p99Ms": 1,
+          "minMs": 1,
+          "maxMs": 1
+        },
+        "parity": true,
+        "digest": {
+          "rows": 50,
+          "available": 5647,
+          "captured": 2800,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 18.567605,
+            "roundTrips": 102,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 17.951934,
+            "roundTrips": 102,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 16.119153,
+            "roundTrips": 102,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 20.188581,
+            "roundTrips": 102,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 17.650429,
+            "roundTrips": 102,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "atomic": {
+        "latency": {
+          "p50Ms": 1.691,
+          "p95Ms": 1.862,
+          "p99Ms": 1.862,
+          "minMs": 1.496,
+          "maxMs": 1.862
+        },
+        "roundTrips": 3,
+        "walBytes": {
+          "p50Ms": 8312,
+          "p95Ms": 8312,
+          "p99Ms": 8312,
+          "minMs": 8312,
+          "maxMs": 8312
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 0,
+          "p95Ms": 1,
+          "p99Ms": 1,
+          "minMs": 0,
+          "maxMs": 1
+        },
+        "parity": true,
+        "digest": {
+          "rows": 50,
+          "available": 5647,
+          "captured": 2800,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 1.862392,
+            "roundTrips": 3,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 0,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1.496336,
+            "roundTrips": 3,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 0,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1.706969,
+            "roundTrips": 3,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 0,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1.690899,
+            "roundTrips": 3,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 0,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1.603597,
+            "roundTrips": 3,
+            "walBytes": 8312,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 50,
+              "available": 5647,
+              "captured": 2800,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "parityBetweenModes": true
+    },
+    "250": {
+      "legacy": {
+        "latency": {
+          "p50Ms": 68.554,
+          "p95Ms": 74.909,
+          "p99Ms": 74.909,
+          "minMs": 63.233,
+          "maxMs": 74.909
+        },
+        "roundTrips": 502,
+        "walBytes": {
+          "p50Ms": 105464,
+          "p95Ms": 105464,
+          "p99Ms": 105464,
+          "minMs": 105440,
+          "maxMs": 105464
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 4,
+          "p95Ms": 4,
+          "p99Ms": 4,
+          "minMs": 3,
+          "maxMs": 4
+        },
+        "parity": true,
+        "digest": {
+          "rows": 250,
+          "available": 28245,
+          "captured": 14000,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 70.163529,
+            "roundTrips": 502,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 3,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 74.908609,
+            "roundTrips": 502,
+            "walBytes": 105440,
+            "postgresCpuJiffies": 3,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 68.554312,
+            "roundTrips": 502,
+            "walBytes": 105440,
+            "postgresCpuJiffies": 4,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 63.233302,
+            "roundTrips": 502,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 4,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 65.272946,
+            "roundTrips": 502,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 4,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "atomic": {
+        "latency": {
+          "p50Ms": 4.557,
+          "p95Ms": 4.766,
+          "p99Ms": 4.766,
+          "minMs": 4.423,
+          "maxMs": 4.766
+        },
+        "roundTrips": 3,
+        "walBytes": {
+          "p50Ms": 105464,
+          "p95Ms": 105464,
+          "p99Ms": 105464,
+          "minMs": 105464,
+          "maxMs": 105464
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 1,
+          "p95Ms": 1,
+          "p99Ms": 1,
+          "minMs": 0,
+          "maxMs": 1
+        },
+        "parity": true,
+        "digest": {
+          "rows": 250,
+          "available": 28245,
+          "captured": 14000,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 4.713549,
+            "roundTrips": 3,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 4.472776,
+            "roundTrips": 3,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 0,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 4.556547,
+            "roundTrips": 3,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 4.422605,
+            "roundTrips": 3,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 0,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 4.766011,
+            "roundTrips": 3,
+            "walBytes": 105464,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 250,
+              "available": 28245,
+              "captured": 14000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "parityBetweenModes": true
+    },
+    "1000": {
+      "legacy": {
+        "latency": {
+          "p50Ms": 236.489,
+          "p95Ms": 249.942,
+          "p99Ms": 249.942,
+          "minMs": 222.945,
+          "maxMs": 249.942
+        },
+        "roundTrips": 2002,
+        "walBytes": {
+          "p50Ms": 435528,
+          "p95Ms": 435552,
+          "p99Ms": 435552,
+          "minMs": 435528,
+          "maxMs": 435552
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 17,
+          "p95Ms": 17,
+          "p99Ms": 17,
+          "minMs": 16,
+          "maxMs": 17
+        },
+        "parity": true,
+        "digest": {
+          "rows": 1000,
+          "available": 112997,
+          "captured": 56000,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 229.173952,
+            "roundTrips": 2002,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 17,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 222.944766,
+            "roundTrips": 2002,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 16,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 242.989177,
+            "roundTrips": 2002,
+            "walBytes": 435552,
+            "postgresCpuJiffies": 17,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 236.489286,
+            "roundTrips": 2002,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 17,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 249.941914,
+            "roundTrips": 2002,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 17,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "atomic": {
+        "latency": {
+          "p50Ms": 17.022,
+          "p95Ms": 19.294,
+          "p99Ms": 19.294,
+          "minMs": 16.563,
+          "maxMs": 19.294
+        },
+        "roundTrips": 3,
+        "walBytes": {
+          "p50Ms": 435528,
+          "p95Ms": 435552,
+          "p99Ms": 435552,
+          "minMs": 435528,
+          "maxMs": 435552
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 1,
+          "p95Ms": 2,
+          "p99Ms": 2,
+          "minMs": 1,
+          "maxMs": 2
+        },
+        "parity": true,
+        "digest": {
+          "rows": 1000,
+          "available": 112997,
+          "captured": 56000,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 16.752644,
+            "roundTrips": 3,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 17.022158,
+            "roundTrips": 3,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 2,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 17.400504,
+            "roundTrips": 3,
+            "walBytes": 435552,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 19.293887,
+            "roundTrips": 3,
+            "walBytes": 435544,
+            "postgresCpuJiffies": 1,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 16.562671,
+            "roundTrips": 3,
+            "walBytes": 435528,
+            "postgresCpuJiffies": 2,
+            "digest": {
+              "rows": 1000,
+              "available": 112997,
+              "captured": 56000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "parityBetweenModes": true
+    },
+    "5000": {
+      "legacy": {
+        "latency": {
+          "p50Ms": 1204.316,
+          "p95Ms": 1236.572,
+          "p99Ms": 1236.572,
+          "minMs": 1194.262,
+          "maxMs": 1236.572
+        },
+        "roundTrips": 10002,
+        "walBytes": {
+          "p50Ms": 2145496,
+          "p95Ms": 2145496,
+          "p99Ms": 2145496,
+          "minMs": 2145472,
+          "maxMs": 2145496
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 85,
+          "p95Ms": 87,
+          "p99Ms": 87,
+          "minMs": 84,
+          "maxMs": 87
+        },
+        "parity": true,
+        "digest": {
+          "rows": 5000,
+          "available": 564995,
+          "captured": 280000,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 1236.571668,
+            "roundTrips": 10002,
+            "walBytes": 2145496,
+            "postgresCpuJiffies": 87,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1200.273733,
+            "roundTrips": 10002,
+            "walBytes": 2145472,
+            "postgresCpuJiffies": 84,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1194.261701,
+            "roundTrips": 10002,
+            "walBytes": 2145496,
+            "postgresCpuJiffies": 84,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1206.816264,
+            "roundTrips": 10002,
+            "walBytes": 2145496,
+            "postgresCpuJiffies": 86,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 1204.316372,
+            "roundTrips": 10002,
+            "walBytes": 2145472,
+            "postgresCpuJiffies": 85,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "atomic": {
+        "latency": {
+          "p50Ms": 80.369,
+          "p95Ms": 89.358,
+          "p99Ms": 89.358,
+          "minMs": 79.604,
+          "maxMs": 89.358
+        },
+        "roundTrips": 3,
+        "walBytes": {
+          "p50Ms": 2145496,
+          "p95Ms": 2145496,
+          "p99Ms": 2145496,
+          "minMs": 2145472,
+          "maxMs": 2145496
+        },
+        "postgresCpuJiffies": {
+          "p50Ms": 8,
+          "p95Ms": 8,
+          "p99Ms": 8,
+          "minMs": 6,
+          "maxMs": 8
+        },
+        "parity": true,
+        "digest": {
+          "rows": 5000,
+          "available": 564995,
+          "captured": 280000,
+          "providers": "adsbhub,seed,local,seed"
+        },
+        "samples": [
+          {
+            "elapsedMs": 89.357554,
+            "roundTrips": 3,
+            "walBytes": 2145472,
+            "postgresCpuJiffies": 8,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 79.603689,
+            "roundTrips": 3,
+            "walBytes": 2145496,
+            "postgresCpuJiffies": 8,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 82.256093,
+            "roundTrips": 3,
+            "walBytes": 2145496,
+            "postgresCpuJiffies": 6,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 80.368941,
+            "roundTrips": 3,
+            "walBytes": 2145488,
+            "postgresCpuJiffies": 8,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          },
+          {
+            "elapsedMs": 79.895294,
+            "roundTrips": 3,
+            "walBytes": 2145496,
+            "postgresCpuJiffies": 8,
+            "digest": {
+              "rows": 5000,
+              "available": 564995,
+              "captured": 280000,
+              "providers": "adsbhub,seed,local,seed"
+            }
+          }
+        ]
+      },
+      "parityBetweenModes": true
+    }
+  },
+  "repeats": 5,
+  "warmups": 2
+}

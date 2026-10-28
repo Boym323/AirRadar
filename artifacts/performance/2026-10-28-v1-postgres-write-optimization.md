@@ -7,7 +7,9 @@
 The current `origin/main` (`ac0e758678b8c0262da485c3f65786235f02ac33`) was
 audited and a bounded, isolated optimization was implemented on branch
 `perf/v1-postgres-write-optimization`. It is not merged, deployed, or claimed
-as a production result. Local commit: `768d6d2f44fa230f94ae8f1c835b64b7f8b9eeac`.
+as a production result. The follow-up implementation is validated locally and
+is being submitted as the next commit on PR `#1129`; the implementation commit
+SHA is recorded in the final handoff.
 
 ## Evidence and change
 
@@ -21,12 +23,17 @@ lose a concurrent counter increment between the lookup and update.
 The change in `lib/server/receiver-coverage-analytics.ts` adds a PostgreSQL
 fast path using one parameterized `jsonb_to_recordset` statement per flush:
 
-- `INSERT ... SELECT ... ON CONFLICT (hour, bucketKey) DO UPDATE`;
+- `UPDATE ... FROM` for existing buckets plus bounded insert/upsert handling
+  for new/concurrently-created keys;
 - additive counter updates are performed by PostgreSQL atomically;
 - provider names are unioned deterministically;
 - pending rows and the in-memory durable cache are published only after commit;
 - failed batches still merge back into the pending queue;
-- the previous row-wise ORM path remains as a compatibility fallback.
+- the previous row-wise ORM path remains as a compatibility fallback and is
+  protected by a transaction-scoped advisory lock when the canary is off.
+
+The canary flag is `AIRRADAR_RECEIVER_COVERAGE_ATOMIC_BATCH_ENABLED`; it is ON
+by default and `false` selects the locked ORM fallback.
 
 The fallback and existing Flight/FlightPosition bounded batching, Aircraft
 write suppression, navigation deduplication, weather batching, retry handling,
@@ -37,16 +44,19 @@ and cache-after-commit semantics were not otherwise changed.
 | Check | Result |
 |---|---|
 | `origin/main` synchronization | PASS; clean at start, SHA `ac0e758` |
-| Targeted coverage/history/navigation tests | PASS; 27 passed, 2 skipped |
-| New raw-path unit test | PASS; one transaction execute, no per-row lookup |
+| Targeted coverage/history/navigation tests | PASS; prior suite 27 passed, 2 skipped |
+| Real PostgreSQL 17 integration | PASS; 3/3 raw-path tests, 3/3 fallback tests, 8/8 including unit path |
+| Runtime `transaction.execute` | PASS; direct rc.9 transaction method invoked against PostgreSQL |
+| Cache restart / cold miss parity | PASS; durable totals returned with `RETURNING` and cached after commit |
+| Concurrent writers | PASS; additive counts and provider union preserved in raw and locked fallback paths |
+| Rollback/retry and repeated flush | PASS; real trigger failure rolled back and retry applied once |
 | TypeScript typecheck | PASS (`npm run typecheck:prepared`) |
-| ESLint | PASS (`npm run lint -- --no-cache`) |
-| PostgreSQL SQL smoke test | PASS on local PostgreSQL 17.11, temporary table only |
-| Full Vitest suite | PASS; 297 files, 1,987 passed, 5 skipped files / 17 skipped tests |
-| Production build | PASS; Next.js optimized build completed |
-| Real PostgreSQL integration with application schema | BLOCKED; no `DATABASE_URL` configured |
-| Production read-only baseline / A-B window | BLOCKED; no production DB or runtime credentials in this workspace |
-| GitHub PR / Actions / merge / deploy | BLOCKED; no PR or deployment authorization/mechanism available |
+| ESLint | PASS; 0 errors, 4 pre-existing warnings |
+| Full Vitest suite | PASS; 297 files passed, 5 skipped; 1,987 tests passed, 18 skipped |
+| Production build | PASS |
+| CI for follow-up commit | Pending; predecessor PR checks were green |
+| Production read-only baseline / A-B window | BLOCKED; no authorized production DB/runtime access |
+| GitHub PR / Actions | PR #1129 open; follow-up CI required |
 
 The local SQL smoke test verified that an existing row changed from
 `100/80, adsbhub` to `110/88, adsbhub,network` while a new bucket was inserted.
@@ -54,13 +64,25 @@ No application or production data was modified.
 
 ## Performance interpretation
 
-The implementation reduces the coverage flush database statement shape from
-approximately one `SELECT` plus one `UPDATE/INSERT` per dirty bucket to one
-set-based mutation per flush on the production raw-runtime path. This proves a
-round-trip reduction at the code/SQL level, but no percentage improvement in
-latency, CPU, WAL, or throughput is claimed: the required matched PostgreSQL
-A/B workload and production observation window could not be run without an
-isolated `DATABASE_URL` and approved runtime access.
+The reproducible benchmark is
+`scripts/benchmark-receiver-coverage-writes.mjs`; it ran against PostgreSQL
+17.11 and the complete emitted application schema in isolated database
+`airradar_v1_cov_pr1129`, with 5 measured repeats and 2 warmups per mode. The
+artifact is `artifacts/performance/receiver-coverage-hourly-ab-20261028.json`.
+
+| Buckets | Legacy round-trips | Atomic round-trips | Legacy p50/p95/p99 ms | Atomic p50/p95/p99 ms | Legacy/atomic WAL p50 bytes | Legacy/atomic backend CPU jiffies | Parity |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 50 | 102 | 3 | 17.952 / 20.189 / 20.189 | 1.691 / 1.862 / 1.862 | 8,312 / 8,312 | 1 / 0 | PASS |
+| 250 | 502 | 3 | 68.554 / 74.909 / 74.909 | 4.557 / 4.766 / 4.766 | 105,464 / 105,464 | 4 / 1 | PASS |
+| 1,000 | 2,002 | 3 | 236.489 / 249.942 / 249.942 | 17.022 / 19.294 / 19.294 | 435,528 / 435,528 | 17 / 1 | PASS |
+| 5,000 | 10,002 | 3 | 1,204.316 / 1,236.572 / 1,236.572 | 80.369 / 89.358 / 89.358 | 2,145,496 / 2,145,496 | 85 / 8 | PASS |
+
+The measured atomic path reduced p50 latency by approximately 90.6%, 93.3%,
+92.8%, and 93.3% respectively, reduced backend CPU, kept WAL equal in this
+matched existing-row workload, and produced identical aggregate counts and
+provider sets. The prior simpler `ON CONFLICT` implementation was rejected
+after measurement because it increased WAL by approximately 13%; it is not
+the implementation under validation.
 
 Historical production evidence remains the reference baseline: approximately
 3.82 MB/min WAL, 404 transactions/min, 334 inserts/min, 284 updates/min,
@@ -70,14 +92,14 @@ branch.
 
 ## Rollback and release gates
 
-Rollback is a normal code rollback: revert this branch commit. No schema
+Rollback is a normal code rollback: revert the implementation commit on this
+branch. No schema
 migration, index, PostgreSQL setting, production data mutation, or sampling /
-retention change was made. Before merge, run a protected `_test_` PostgreSQL
-integration database, the full test suite to completion, typecheck, lint, build,
-and an A/B benchmark at 50/250/1,000/5,000 bucket rows with WAL and latency
-deltas. Before deployment, run the existing release gates and a synchronized
-read-only production window; do not enable invasive SQL logging merely for
-this experiment.
+retention change was made. The protected isolated PostgreSQL 17 integration
+database, full test suite, typecheck, lint, and build have passed. The A/B
+benchmark is recorded above. Before deployment, run the existing release gates
+and a synchronized read-only production window; do not enable invasive SQL
+logging merely for this experiment.
 
 ## Remaining bottlenecks
 

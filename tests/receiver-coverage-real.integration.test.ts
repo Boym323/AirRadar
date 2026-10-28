@@ -14,7 +14,7 @@ describe.skipIf(!enabled)("ReceiverCoverageHourly real PostgreSQL integration", 
     Math.floor(Date.now() / 3_600_000) * 3_600_000,
   );
   const suffix = `real-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const keys = [`${suffix}-a`, `${suffix}-b`, `${suffix}-c`, `${suffix}-d`];
+  const keys = [`${suffix}-a`, `${suffix}-b`, `${suffix}-c`, `${suffix}-d`, `${suffix}-concurrent`];
   const triggerName = `airradar_${suffix.replace(/[^a-z0-9]/gi, "_")}_fail`;
   const functionName = `${triggerName}_fn`;
 
@@ -100,5 +100,30 @@ describe.skipIf(!enabled)("ReceiverCoverageHourly real PostgreSQL integration", 
     const row = await database.orm.public.ReceiverCoverageHourly.where({ hour, bucketKey: keys[2] }).first();
     expect(row).toMatchObject({ availableCount: 29, capturedCount: 17 });
     expect(second.getDiagnostics().rowsUpdated).toBe(1);
+  });
+
+  it("uses the real transaction execute method and atomically combines concurrent writers", async () => {
+    let executeResult: unknown;
+    await database.transaction(async (transaction) => {
+      const execute = (transaction as unknown as { execute?: (plan: unknown) => Promise<unknown> }).execute;
+      expect(typeof execute).toBe("function");
+      executeResult = await execute!(database.raw.sql`SELECT 1`.affectedCount().build());
+    });
+    expect(executeResult).toBeDefined();
+
+    const first = new ReceiverCoverageAnalytics({ enabled: true });
+    const second = new ReceiverCoverageAnalytics({ enabled: true });
+    const firstInternals = first as unknown as Pending;
+    const secondInternals = second as unknown as Pending;
+    firstInternals.pending.set(hour.epochMilliseconds, {
+      buckets: new Map([[keys[4]!, { available: 7, captured: 5 }]]), providers: new Set(["local"]),
+    });
+    secondInternals.pending.set(hour.epochMilliseconds, {
+      buckets: new Map([[keys[4]!, { available: 11, captured: 9 }]]), providers: new Set(["adsbhub"]),
+    });
+
+    await Promise.all([first.flush(), second.flush()]);
+    const row = await database.orm.public.ReceiverCoverageHourly.where({ hour, bucketKey: keys[4] }).first();
+    expect(row).toMatchObject({ availableCount: 18, capturedCount: 14, referenceProviders: "adsbhub,local" });
   });
 });
