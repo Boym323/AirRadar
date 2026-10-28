@@ -64,17 +64,46 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     assert.throws(() => runtime({ rssBytes: null }), /required runtime telemetry/);
   });
 
-  it("summarizes runtime and availability without turning missing DB-host CPU into zero", () => {
-    const now = Date.now();
+  it("uses actual elapsed cadence and rejects duplicate timestamps", () => {
+    const now = Date.parse("2026-10-28T12:01:00.000Z");
     const report = summarize([
-      { schemaVersion: 1, recordedAt: new Date(now - 60_000).toISOString(), runtime: { cpuIntervalPercent: 10, rssBytes: 100, eventLoopP99Ms: 4 }, database: { wal: {}, database: { xact_commit: "10", xact_rollback: "1" }, activity: { lock_waiting: 0 } }, hostCpu: { status: "available" } },
-      { schemaVersion: 1, recordedAt: new Date(now).toISOString(), runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { wal: null, database: { xact_commit: "15", xact_rollback: "2" }, activity: { lock_waiting: 2 } }, hostCpu: { status: "unavailable", reason: "not_configured" } },
-    ], { hours: 1 });
+      { schemaVersion: 1, recordedAt: "2026-10-28T12:00:00.000Z", runtime: { cpuIntervalPercent: 10, rssBytes: 100, eventLoopP99Ms: 4 }, database: { wal: {}, database: { xact_commit: "10", xact_rollback: "1", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 0 } }, hostCpu: { status: "available" } },
+      { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { wal: null, database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 2 } }, hostCpu: { status: "unavailable", reason: "not_configured" } },
+      { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" } } },
+    ], { hours: 1, asOf: now, timerEvents: [{ success: true }, { success: true }] });
     assert.deepEqual(report.runtime.cpuPercent, { count: 2, p50: 10, p95: 20, max: 20 });
     assert.equal(report.database.walSamples, 1);
-    assert.equal(report.availabilityPercent, 3.33);
+    assert.equal(report.availabilityPercent, 100);
+    assert.deepEqual(report.diagnostics.duplicates, ["2026-10-28T12:01:00.000Z"]);
     assert.deepEqual(report.database.transactionDelta, { commits: 5, rollbacks: 1 });
     assert.equal(report.database.maxLockWaiting, 2);
     assert.equal(report.hostCpu.unavailableSamples, 1);
+  });
+
+  it("reports missing intervals after the cadence plus randomized delay", () => {
+    const report = summarize([
+      { schemaVersion: 1, recordedAt: "2026-10-28T12:00:00.000Z", runtime: {}, database: {} },
+      { schemaVersion: 1, recordedAt: "2026-10-28T12:03:16.000Z", runtime: {}, database: {} },
+    ], { asOf: Date.parse("2026-10-28T12:04:00.000Z"), hours: 1 });
+    assert.equal(report.diagnostics.missingIntervals[0].missedIntervals, 3);
+    assert.equal(report.qualityStatus, "INSUFFICIENT_EVIDENCE");
+  });
+
+  it("marks a process restart and PostgreSQL counter reset as invalid evidence", () => {
+    const base = { schemaVersion: 1, runtime: {}, database: { database: { xact_commit: "10", xact_rollback: "1", stats_reset: "2026-10-01T00:00:00Z" } } };
+    const report = summarize([
+      { ...base, recordedAt: "2026-10-28T12:00:00.000Z", processIdentity: "a" },
+      { ...base, recordedAt: "2026-10-28T12:01:00.000Z", processIdentity: "b", database: { database: { xact_commit: "2", xact_rollback: "0", stats_reset: "2026-10-02T00:00:00Z" } } },
+    ], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    assert.equal(report.diagnostics.restarts, true);
+    assert.equal(report.database.transactionDelta.commits, null);
+    assert.equal(report.database.counterDiagnostics.commits, "counter_reset");
+  });
+
+  it("does not claim a counter delta when stats_reset is missing", () => {
+    const sample = (recordedAt, count) => ({ schemaVersion: 1, recordedAt, runtime: {}, database: { database: { xact_commit: String(count), xact_rollback: "0" } } });
+    const report = summarize([sample("2026-10-28T12:00:00.000Z", 1), sample("2026-10-28T12:01:00.000Z", 2)], { asOf: Date.parse("2026-10-28T12:02:00.000Z"), hours: 1 });
+    assert.equal(report.database.transactionDelta.commits, null);
+    assert.equal(report.database.counterDiagnostics.commits, "stats_reset_unavailable");
   });
 });
