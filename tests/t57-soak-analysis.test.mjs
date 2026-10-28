@@ -391,6 +391,26 @@ describe("T58 anonymous public observation", () => {
     expect(() => projectT57PublicSoakSample(status, { ...metrics, runtime: { ...metrics.runtime, cpuIntervalPercent: null } }))
       .toThrow("t57_public_telemetry_unavailable");
   });
+
+  it("keeps a public fingerprint stable across reads and clock shifts, but changes on restart or commit", () => {
+    const first = publicInput(1);
+    const repeated = publicInput(2);
+    // A correct server-side startedAt stays unchanged even when the wall clock
+    // and observation time advance between requests.
+    repeated.status.application.startedAt = first.status.application.startedAt;
+    expect(projectT57PublicSoakSample(first.status, first.metrics, at(1)).sample.processIdentity)
+      .toBe(projectT57PublicSoakSample(repeated.status, repeated.metrics, at(2)).sample.processIdentity);
+
+    const restarted = publicInput(3);
+    restarted.status.application.startedAt = at(3);
+    expect(projectT57PublicSoakSample(restarted.status, restarted.metrics, at(3)).sample.processIdentity)
+      .not.toBe(projectT57PublicSoakSample(first.status, first.metrics, at(1)).sample.processIdentity);
+
+    const newCommit = publicInput(4);
+    newCommit.status.application.commit = "b".repeat(40);
+    expect(projectT57PublicSoakSample(newCommit.status, newCommit.metrics, at(4)).sample.processIdentity)
+      .not.toBe(projectT57PublicSoakSample(first.status, first.metrics, at(1)).sample.processIdentity);
+  });
   it("analyzes public CPU/RSS/event-loop windows but leaves private evidence unmeasured", () => {
     const seen = new Map();
     const rows = [{ type: "header", schemaVersion: 1, telemetryMode: "public",
