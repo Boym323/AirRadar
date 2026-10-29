@@ -39,6 +39,7 @@ AIRRADAR_MONITOR_ADMIN_TOKEN=...
 DATABASE_URL=postgresql://airradar:...@db-host:5432/airradar?sslmode=require
 # Optional private-only exporter URL, for example http://10.0.0.20:9100
 # AIRRADAR_MONITOR_NODE_EXPORTER_URL=
+# AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN=...
 ```
 
 The token is the existing server-only administrator secret; the sampler derives
