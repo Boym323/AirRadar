@@ -64,9 +64,13 @@ describe("AirRadar CPU/DB monitoring contract", () => {
 
   it("pins timer accuracy so the one-minute cadence cannot be coalesced into 80-120 second gaps", () => {
     const timer = readFileSync(new URL("../deploy/systemd/airradar-cpu-db-monitor.timer", import.meta.url), "utf8");
+    const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
     assert.match(timer, /^OnUnitActiveSec=1min$/m);
     assert.match(timer, /^RandomizedDelaySec=15s$/m);
     assert.match(timer, /^AccuracySec=1s$/m);
+    assert.match(release, /deploy_monitoring_systemd_units/);
+    assert.match(release, /MONITOR_TIMER_SOURCE/);
+    assert.match(release, /AccuracyUSec/);
   });
 
   it("reports unavailable DB-host CPU as UNKNOWN and never fabricates zero", async () => {
