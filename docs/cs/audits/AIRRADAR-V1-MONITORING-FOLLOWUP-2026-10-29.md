@@ -64,3 +64,9 @@ canary běhy bez restartu aplikace a poté spustit nový 24hodinový audit. Jeho
 počátek i konec musí být stanoveny předem; při neúplném endpointu, mezeře,
 neznámém fingerprintu, `stats_reset=null` nebo `hostCpu=unknown` musí zůstat
 verdikt `INSUFFICIENT_EVIDENCE`.
+
+Následná kontrola po merge odhalila, že původní release skript kopíroval jen
+`airradar.service`; nový timer proto zůstal v systemd manageru s
+`AccuracyUSec=1min`, přestože nový soubor už byl v checkoutu. Follow-up oprava
+rozšiřuje deployment o oba monitoringové unity a po reloadu ověřuje
+`AccuracyUSec=1s`. Kontrolní sběr se spouští až po tomto ověření.

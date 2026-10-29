@@ -16,6 +16,10 @@ readonly HEALTH_DELAY_SECONDS=2
 readonly PUBLIC_HEALTH_ATTEMPTS=3
 readonly PUBLIC_HEALTH_DELAY_SECONDS=2
 readonly SYSTEMD_UNIT_SOURCE="${APP_DIR}/deploy/airradar.service"
+readonly MONITOR_SERVICE_NAME="airradar-cpu-db-monitor.service"
+readonly MONITOR_TIMER_NAME="airradar-cpu-db-monitor.timer"
+readonly MONITOR_SERVICE_SOURCE="${APP_DIR}/deploy/systemd/${MONITOR_SERVICE_NAME}"
+readonly MONITOR_TIMER_SOURCE="${APP_DIR}/deploy/systemd/${MONITOR_TIMER_NAME}"
 readonly VERSION_SCRIPT="${APP_DIR}/scripts/version.mjs"
 readonly EXPECTED_SYSTEMD_UNIT_NAME="${SERVICE_NAME}.service"
 readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs"
@@ -818,6 +822,40 @@ validate_systemd_unit_destination() {
   [[ ! -e "${destination}" || -f "${destination}" ]] || die "Systemd unit destination is not a regular file: ${destination}"
 }
 
+validate_named_systemd_unit_destination() {
+  local destination="$1"
+  local unit_name="$2"
+  local destination_directory
+
+  case "${destination}" in
+    /etc/systemd/system/${unit_name}|/usr/lib/systemd/system/${unit_name}|/lib/systemd/system/${unit_name})
+      ;;
+    *)
+      die "Unsupported or non-persistent systemd FragmentPath for ${unit_name}: ${destination}"
+      ;;
+  esac
+
+  destination_directory="$(dirname -- "${destination}")"
+  [[ -d "${destination_directory}" ]] || die "Systemd unit destination directory does not exist: ${destination_directory}"
+  if ! run_privileged test -w "${destination_directory}"; then
+    die "Systemd unit destination directory is not writable: ${destination_directory}"
+  fi
+  [[ ! -L "${destination}" ]] || die "Systemd unit destination must not be a symlink: ${destination}"
+  [[ ! -e "${destination}" || -f "${destination}" ]] || die "Systemd unit destination is not a regular file: ${destination}"
+}
+
+resolve_named_systemd_unit_destination() {
+  local unit_name="$1"
+  local fragment_path
+
+  if ! fragment_path="$(run_privileged systemctl show "${unit_name}" -p FragmentPath --value)"; then
+    die "Could not determine FragmentPath for ${unit_name}."
+  fi
+  [[ -n "${fragment_path}" ]] || die "systemd returned an empty FragmentPath for ${unit_name}."
+  validate_named_systemd_unit_destination "${fragment_path}" "${unit_name}"
+  printf '%s\n' "${fragment_path}"
+}
+
 resolve_systemd_unit_destination() {
   local fragment_path
 
@@ -959,6 +997,39 @@ deploy_systemd_unit() {
   fi
 
   verify_loaded_systemd_unit_contract
+}
+
+deploy_monitoring_systemd_units() {
+  local unit unit_source destination unit_name changed=0
+  local -a units=(
+    "${MONITOR_SERVICE_SOURCE}|${MONITOR_SERVICE_NAME}"
+    "${MONITOR_TIMER_SOURCE}|${MONITOR_TIMER_NAME}"
+  )
+
+  for unit in "${units[@]}"; do
+    unit_source="${unit%%|*}"
+    unit_name="${unit##*|}"
+    validate_repository_systemd_unit "${unit_source}"
+    destination="$(resolve_named_systemd_unit_destination "${unit_name}")"
+    if [[ ! -f "${destination}" ]] || ! cmp --silent -- "${unit_source}" "${destination}"; then
+      log "Monitoring systemd unit updated: ${unit_name}"
+      install_systemd_unit "${unit_source}" "${destination}"
+      changed=1
+    else
+      log "Monitoring systemd unit unchanged: ${unit_name}"
+    fi
+  done
+
+  if (( changed == 1 )); then
+    run_privileged systemctl daemon-reload || die "systemd daemon-reload failed after monitoring unit update."
+    log "systemd reloaded after monitoring unit update"
+  fi
+
+  local accuracy
+  accuracy="$(run_privileged systemctl show "${MONITOR_TIMER_NAME}" -p AccuracyUSec --value)" \
+    || die "Could not read loaded ${MONITOR_TIMER_NAME} AccuracyUSec."
+  [[ "${accuracy}" == "1s" || "${accuracy}" == "1s"* ]] \
+    || die "Loaded ${MONITOR_TIMER_NAME} AccuracyUSec is ${accuracy}; expected 1s."
 }
 
 health_check_once() {
@@ -1221,6 +1292,7 @@ main() {
   prepare_release_version
   run_release_steps
   deploy_systemd_unit
+  deploy_monitoring_systemd_units
   migrate_legacy_alert_config
   activate_staged_build_and_check
   create_release_tag

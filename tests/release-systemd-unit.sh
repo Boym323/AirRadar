@@ -146,6 +146,12 @@ run_privileged() {
   fake_run_privileged "$@"
 }
 
+# The systemd-unit contract tests do not exercise a full release identity or
+# public deployment. Keep the test focused on unit installation/reload order.
+check_deployed_version_identity() {
+  :
+}
+
 resolve_test_destination() {
   SYSTEMD_UNIT_DESTINATION="${TEST_DESTINATION}"
 }
