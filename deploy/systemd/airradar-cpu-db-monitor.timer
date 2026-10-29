@@ -5,6 +5,7 @@ Description=AirRadar CPU and PostgreSQL monitoring sample timer
 OnBootSec=2min
 OnUnitActiveSec=1min
 RandomizedDelaySec=15s
+AccuracySec=1s
 Persistent=true
 Unit=airradar-cpu-db-monitor.service
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { collectDatabase, createAdminCookie, createProcessFingerprint, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
+import { collectDatabase, createAdminCookie, createProcessFingerprint, fetchHostCpu, projectRuntimeTelemetry } from "../scripts/monitoring/airradar-cpu-db-monitor.mjs";
 import { summarize } from "../scripts/monitoring/airradar-monitor-report.mjs";
 
 const runtime = (overrides = {}) => projectRuntimeTelemetry({
@@ -62,6 +62,58 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     assert.doesNotMatch(unit, /^MemoryDenyWriteExecute=yes$/m);
   });
 
+  it("pins timer accuracy so the one-minute cadence cannot be coalesced into 80-120 second gaps", () => {
+    const timer = readFileSync(new URL("../deploy/systemd/airradar-cpu-db-monitor.timer", import.meta.url), "utf8");
+    assert.match(timer, /^OnUnitActiveSec=1min$/m);
+    assert.match(timer, /^RandomizedDelaySec=15s$/m);
+    assert.match(timer, /^AccuracySec=1s$/m);
+  });
+
+  it("reports unavailable DB-host CPU as UNKNOWN and never fabricates zero", async () => {
+    const previous = process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL;
+    delete process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL;
+    try {
+      assert.deepEqual(await fetchHostCpu(), { status: "unknown", reason: "not_configured" });
+    } finally {
+      if (previous === undefined) delete process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL;
+      else process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL = previous;
+    }
+  });
+
+  it("uses a private exporter as an authenticated read-only metrics GET", async () => {
+    const previousUrl = process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL;
+    const previousToken = process.env.AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN;
+    const previousFetch = globalThis.fetch;
+    process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL = "http://127.0.0.1:9100";
+    process.env.AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN = "test-exporter-token";
+    let request;
+    globalThis.fetch = async (url, options) => {
+      request = { url: String(url), options };
+      return { ok: true, async text() { return 'node_cpu_seconds_total{cpu="0",mode="idle"} 2\nnode_cpu_seconds_total{cpu="0",mode="user"} 1\n'; } };
+    };
+    try {
+      assert.deepEqual(await fetchHostCpu(), { status: "available", idleSeconds: 2, totalSeconds: 3 });
+      assert.equal(request.url, "http://127.0.0.1:9100/metrics");
+      assert.equal(request.options.method, undefined);
+      assert.equal(request.options.redirect, "error");
+      assert.equal(request.options.headers.authorization, "Bearer test-exporter-token");
+    } finally {
+      globalThis.fetch = previousFetch;
+      if (previousUrl === undefined) delete process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL;
+      else process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL = previousUrl;
+      if (previousToken === undefined) delete process.env.AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN;
+      else process.env.AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN = previousToken;
+    }
+  });
+
+  it("preserves bounded GC context needed to investigate event-loop stalls", () => {
+    const projected = runtime({ gcCount: 7, gcTotalPauseMs: 123.5, gcMaxPauseMs: 98.2,
+      eventLoopLagWindows: [{ from: "a", to: "b", p95Ms: 1, p99Ms: 2, maxMs: 3602.907, gcCount: 1, gcPauseMs: 98.2 }] });
+    assert.equal(projected.gcCount, 7);
+    assert.equal(projected.gcMaxPauseMs, 98.2);
+    assert.deepEqual(projected.eventLoopWindows[0], { from: "a", to: "b", p95Ms: 1, p99Ms: 2, maxMs: 3602.907, gcCount: 1, gcPauseMs: 98.2 });
+  });
+
   it("creates a bounded session cookie from the existing admin secret", () => {
     const cookie = createAdminCookie("test-secret", 1_700_000_000_000);
     assert.match(cookie, /^airradar_watchlist_session=1700028800\.[A-Za-z0-9_-]+$/);
@@ -78,7 +130,7 @@ describe("AirRadar CPU/DB monitoring contract", () => {
     const now = Date.parse("2026-10-28T12:01:00.000Z");
     const report = summarize([
       { schemaVersion: 1, recordedAt: "2026-10-28T12:00:00.000Z", runtime: { cpuIntervalPercent: 10, rssBytes: 100, eventLoopP99Ms: 4 }, database: { wal: {}, database: { xact_commit: "10", xact_rollback: "1", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 0 } }, hostCpu: { status: "available" } },
-      { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { wal: null, database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 2 } }, hostCpu: { status: "unavailable", reason: "not_configured" } },
+      { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { wal: null, database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" }, activity: { lock_waiting: 2 } }, hostCpu: { status: "unknown", reason: "not_configured" } },
       { schemaVersion: 1, recordedAt: "2026-10-28T12:01:00.000Z", runtime: { cpuIntervalPercent: 20, rssBytes: 200, eventLoopP99Ms: 8 }, database: { database: { xact_commit: "15", xact_rollback: "2", stats_reset: "2026-10-01T00:00:00Z" } } },
     ], { hours: 1, asOf: now, timerEvents: [
       { success: true, startedAt: "2026-10-28T12:00:00.000Z", finishedAt: "2026-10-28T12:00:01.000Z" },
