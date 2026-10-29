@@ -13,7 +13,10 @@ node_exporter se označuje jako CPU celého DB hostitele, nikdy jako CPU procesu
 PostgreSQL.
 
 Při chybějícím admin cookie nebo povinné telemetrii sampler skončí chybou.
-Nedostupný exporter je `unavailable`, nikoli nulová hodnota.
+Nedostupný exporter je `unknown`, nikoli nulová hodnota. Pokud je nastaven
+`AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN`, sampler jej pošle pouze jako
+Bearer hlavičku při read-only GET na `/metrics`; token se nezapisuje do vzorku
+ani journalu.
 
 Všechny PostgreSQL dotazy vzorku běží v jedné explicitní transakci
 `BEGIN TRANSACTION READ ONLY` / `COMMIT`. Volitelné statistiky používají
@@ -33,6 +36,7 @@ AIRRADAR_MONITOR_ADMIN_TOKEN=...
 DATABASE_URL=postgresql://airradar:...@db-host:5432/airradar?sslmode=require
 # Volitelná URL soukromého exporteru, například http://10.0.0.20:9100
 # AIRRADAR_MONITOR_NODE_EXPORTER_URL=http://10.0.0.20:9100
+# AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN=...
 ```
 
 Token je existující serverový admin secret; sampler při každém běhu vytvoří
@@ -68,6 +72,10 @@ přesně 86400 sekund. Vnitřní mezery zůstávají mezerami. U PostgreSQL čí
 `stats_reset` null nebo chybí, delta čítače zůstává `UNKNOWN`. Ve stejném okně
 porovnejte delta čítačů transakcí, WAL a lock waitů.
 
+Timer musí mít explicitní `AccuracySec=1s`. Výchozí systemd přesnost může při
+kombinaci s `OnUnitActiveSec=1min` a `RandomizedDelaySec=15s` posunout spuštění
+o další desítky sekund a vytvořit výpadky minutového sběru.
+
 ## 24hodinová evidence a návrh dashboardu
 
 Grafana má být navržena až podle skutečně nasbíraných polí: CPU/RSS procesu,
@@ -94,7 +102,7 @@ runtime telemetrie, PostgreSQL statistik a `pg_read_all_stats=true`. Ochranný
 test potvrdil `transaction_read_only=on`; `CREATE TABLE` skončilo chybou `25006`
 a objekt nevznikl. Canary vzorky i všech 12 aktuálních JSONL vzorků jsou validní,
 režimy jsou `0600` a nebyly
-nalezeny credentials. CPU vzdáleného PostgreSQL hostitele je `unavailable`
+nalezeny credentials. CPU vzdáleného PostgreSQL hostitele je `unknown`
 (`not_configured`), nikoli nula. Minutový timer je `enabled/active` a první
 automatický trigger proběhl úspěšně.
 

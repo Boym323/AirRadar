@@ -48,7 +48,11 @@ export function projectRuntimeTelemetry(payload) {
       from: typeof window?.from === "string" ? window.from : null,
       to: typeof window?.to === "string" ? window.to : null,
       p95Ms: nonNegative(window?.p95Ms), p99Ms: nonNegative(window?.p99Ms), maxMs: nonNegative(window?.maxMs),
+      gcCount: nonNegative(window?.gcCount), gcPauseMs: nonNegative(window?.gcPauseMs),
     })) : [],
+    gcCount: nonNegative(runtime.gcCount),
+    gcTotalPauseMs: nonNegative(runtime.gcTotalPauseMs),
+    gcMaxPauseMs: nonNegative(runtime.gcMaxPauseMs),
   };
   if ([values.cpuIntervalPercent, values.rssBytes, values.eventLoopP99Ms].some((value) => value === null)) {
     throw new Error("required runtime telemetry missing");
@@ -111,6 +115,9 @@ export async function collectDatabase(client) {
         coalesce(sum(total_exec_time), 0)::double precision AS total_exec_time_ms,
         coalesce(max(mean_exec_time), 0)::double precision AS max_mean_exec_time_ms
       FROM pg_stat_statements`))[0] ?? null;
+    // PostgreSQL may legitimately return NULL for pg_stat_database.stats_reset.
+    // Preserve that value: without a reset boundary, counter deltas are only
+    // observed monotonicity and must remain UNKNOWN in the audit.
     await client.query("COMMIT");
     return { database, wal, activity, statementsAvailable: statements !== null, statements };
   } catch (error) {
@@ -119,19 +126,22 @@ export async function collectDatabase(client) {
   }
 }
 
-async function fetchHostCpu() {
+export async function fetchHostCpu() {
   const endpoint = process.env.AIRRADAR_MONITOR_NODE_EXPORTER_URL?.trim();
-  if (!endpoint) return { status: "unavailable", reason: "not_configured" };
+  if (!endpoint) return { status: "unknown", reason: "not_configured" };
   const url = new URL("metrics", endpoint.endsWith("/") ? endpoint : `${endpoint}/`);
-  if (url.protocol !== "http:" && url.protocol !== "https:") return { status: "unavailable", reason: "unsupported_scheme" };
+  if (url.protocol !== "http:" && url.protocol !== "https:") return { status: "unknown", reason: "unsupported_scheme" };
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(5_000), redirect: "error" });
-    if (!response.ok) return { status: "unavailable", reason: `http_${response.status}` };
+    const headers = {};
+    const token = process.env.AIRRADAR_MONITOR_NODE_EXPORTER_AUTH_TOKEN?.trim();
+    if (token) headers.authorization = `Bearer ${token}`;
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(5_000), redirect: "error" });
+    if (!response.ok) return { status: "unknown", reason: `http_${response.status}` };
     const text = await response.text();
     const idle = [...text.matchAll(/^node_cpu_seconds_total\{[^}]*mode="idle"[^}]*\}\s+([\d.eE+-]+)$/gm)].reduce((s, m) => s + Number(m[1]), 0);
     const total = [...text.matchAll(/^node_cpu_seconds_total\{[^}]*mode="[^"]+"[^}]*\}\s+([\d.eE+-]+)$/gm)].reduce((s, m) => s + Number(m[1]), 0);
-    return total > 0 && idle >= 0 ? { status: "available", idleSeconds: idle, totalSeconds: total } : { status: "unavailable", reason: "metric_missing" };
-  } catch { return { status: "unavailable", reason: "request_failed" }; }
+    return total > 0 && idle >= 0 ? { status: "available", idleSeconds: idle, totalSeconds: total } : { status: "unknown", reason: "metric_missing" };
+  } catch { return { status: "unknown", reason: "request_failed" }; }
 }
 
 export async function collectSample({ baseUrl, cookie, databaseUrl, now = new Date() }) {
