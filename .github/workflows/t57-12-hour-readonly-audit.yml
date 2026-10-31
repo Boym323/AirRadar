@@ -25,7 +25,6 @@ jobs:
       T57_TOTAL_SECONDS: "43200"
       T57_INTERVAL_SECONDS: "120"
       T57_WARMUP_SECONDS: "600"
-      T57_OUTPUT: ${{ runner.temp }}/t57-12h/soak.ndjson
     steps:
       - uses: actions/checkout@v7
         with:
@@ -69,6 +68,7 @@ jobs:
         shell: bash
         env:
           T57_CHUNK_SECONDS: "20400"
+          T57_OUTPUT: ${{ runner.temp }}/t57-12h/soak.ndjson
         run: node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-12h/chunk-1.json"
 
       - name: Collect second 5h40m read-only chunk
@@ -76,6 +76,7 @@ jobs:
         env:
           T57_RESUME: "1"
           T57_CHUNK_SECONDS: "20400"
+          T57_OUTPUT: ${{ runner.temp }}/t57-12h/soak.ndjson
         run: node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-12h/chunk-2.json"
 
       - name: Collect final 2h read-only chunk and analyze
@@ -84,6 +85,7 @@ jobs:
           T57_RESUME: "1"
           T57_FINALIZE_CHUNK: "1"
           T57_CHUNK_SECONDS: "7200"
+          T57_OUTPUT: ${{ runner.temp }}/t57-12h/soak.ndjson
         run: node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-12h/final.json"
 
       - name: Verify and publish sanitized report
