@@ -15,7 +15,7 @@ permissions:
 jobs:
   audit:
     name: Collect and publish sanitized 12h T57 report
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/audit/t57-12-hour-20261031' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 760
     env:
