@@ -1,0 +1,109 @@
+name: T57 12-hour read-only performance audit
+
+on:
+  workflow_dispatch:
+
+run-name: "T57 12h read-only audit #${{ github.run_number }}"
+
+concurrency:
+  group: airradar-t57-12-hour-read-only-audit
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Collect and publish sanitized 12h T57 report
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 760
+    env:
+      WATCHLIST_ADMIN_TOKEN: ${{ secrets.T57_WATCHLIST_ADMIN_TOKEN }}
+      T57_BASE_URL: https://airradar.pomykal.cz
+      T57_EXPECTED_COMMIT: ad47772e3250105ccb6aff300160c88511c1e0d6
+      T57_TOTAL_SECONDS: "43200"
+      T57_INTERVAL_SECONDS: "120"
+      T57_WARMUP_SECONDS: "600"
+      T57_OUTPUT: ${{ runner.temp }}/t57-12h/soak.ndjson
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Prepare private audit directory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${WATCHLIST_ADMIN_TOKEN:-}" ]] || {
+            echo "T57_WATCHLIST_ADMIN_TOKEN is not configured" >&2
+            exit 1
+          }
+          umask 077
+          mkdir -p "$RUNNER_TEMP/t57-12h"
+          chmod 700 "$RUNNER_TEMP/t57-12h"
+          node --check scripts/t57-production-soak.mjs
+
+      - name: Read-only preflight and pin production identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node scripts/t57-production-soak.mjs --preflight > "$RUNNER_TEMP/t57-12h/preflight.json"
+          node - "$RUNNER_TEMP/t57-12h/preflight.json" <<'NODE'
+          const fs = require("node:fs");
+          const value = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (value.status !== "TELEMETRY_READY" || value.telemetryMode !== "admin") {
+            throw new Error("T57 admin telemetry preflight did not pass");
+          }
+          if (!String(value.commit).startsWith(process.env.T57_EXPECTED_COMMIT.slice(0, 8))) {
+            throw new Error(`Unexpected production commit: ${value.commit}`);
+          }
+          console.log(`Read-only admin telemetry ready for ${value.commit}`);
+          NODE
+
+      - name: Collect first 5h40m read-only chunk
+        shell: bash
+        env:
+          T57_CHUNK_SECONDS: "20400"
+        run: node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-12h/chunk-1.json"
+
+      - name: Collect second 5h40m read-only chunk
+        shell: bash
+        env:
+          T57_RESUME: "1"
+          T57_CHUNK_SECONDS: "20400"
+        run: node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-12h/chunk-2.json"
+
+      - name: Collect final 2h read-only chunk and analyze
+        shell: bash
+        env:
+          T57_RESUME: "1"
+          T57_FINALIZE_CHUNK: "1"
+          T57_CHUNK_SECONDS: "7200"
+        run: node scripts/t57-production-soak.mjs > "$RUNNER_TEMP/t57-12h/final.json"
+
+      - name: Verify and publish sanitized report
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node scripts/t58-report.mjs verify "$RUNNER_TEMP/t57-12h/soak.summary.json"
+          cat "$RUNNER_TEMP/t57-12h/soak.summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized aggregates only
+        uses: actions/upload-artifact@v7
+        with:
+          name: t57-readonly-12h-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t57-12h/soak.summary.json
+            ${{ runner.temp }}/t57-12h/soak.summary.md
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Remove private raw audit data
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/t57-12h/soak.ndjson" "$RUNNER_TEMP/t57-12h/preflight.json"
